@@ -1,0 +1,9 @@
+{
+    "name": "Dunmca",
+    "slug": "dunmca",
+    "domain": "",
+    "admin_token": "dunmca",
+    "description": "",
+    "contact_email": "",
+    "features": ["bookings"]
+}

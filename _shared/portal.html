@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #6b8cae;
+            --accent-hover: #547a9e;
+            --accent-text: #fff;
+            --danger: #c0392b;
+            --bg: #f5f2ed;
+            --bg2: #ebe7e0;
+            --surface: #ffffff;
+            --surface2: #f0ede7;
+            --border: #ddd8cf;
+            --text: #2a2a28;
+            --text2: #6b6860;
+            --success: #4a9a6a;
+            --warn: #c8a840;
+            --radius: 8px;
+            --mono: 'Monaco', 'Menlo', 'Courier New', monospace;
+            --heading-font: 'Cardo', Georgia, serif;
+            --body-font: 'Inter', -apple-system, sans-serif;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        [data-theme="dark"] {
+            --accent: #7ea3c4;
+            --accent-hover: #96b8d6;
+            --accent-text: #1a1a1e;
+            --danger: #e74c3c;
+            --bg: #1a1a1e;
+            --bg2: #222226;
+            --surface: #2c2c30;
+            --surface2: #343438;
+            --border: #3e3e44;
+            --text: #e8e6e0;
+            --text2: #9a978e;
+            --success: #6dca8a;
+            --warn: #e0c060;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--body-font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-left h1 {
+            font-family: var(--heading-font);
+            font-weight: 400;
+            font-style: italic;
+            font-size: 20px;
+        }
+        .header-left .site-link {
+            font-size: 12px;
+            color: var(--text2);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .header-left .site-link:hover { color: var(--accent); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+
+        button, .btn {
+            font-family: var(--body-font);
+            background: var(--accent);
+            color: var(--accent-text);
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button:hover { background: var(--accent-hover); }
+        .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--bg2); color: var(--text); border-color: var(--text2); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #a93226; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-success { background: var(--success); }
+
+        /* ── Layout ── */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        /* ── Stats Bar ── */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            flex: 1;
+            min-width: 140px;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-card .stat-val {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: var(--heading-font);
+        }
+        .stat-card .stat-label {
+            font-size: 12px;
+            color: var(--text2);
+            margin-top: 2px;
+        }
+
+        /* ── Filters ── */
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 9px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            color: var(--text);
+            font-size: 13px;
+            font-family: var(--body-font);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107,140,174,0.12); }
+        .search-input::placeholder { color: var(--text2); }
+
+        .filter-btn {
+            background: var(--surface);
+            color: var(--text2);
+            border: 1px solid var(--border);
+            padding: 8px 14px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: var(--radius);
+            transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: var(--text2); color: var(--text); background: var(--surface); }
+        .filter-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+        /* ── Post Cards ── */
+        .posts-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .post-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px;
+            align-items: start;
+        }
+        .post-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); }
+        .post-card.hidden-post { opacity: 0.5; }
+        .post-card.hidden-post:hover { opacity: 0.8; }
+
+        .post-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .post-title {
+            font-family: var(--heading-font);
+            font-size: 17px;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .post-title a { color: var(--text); text-decoration: none; transition: color 0.2s; }
+        .post-title a:hover { color: var(--accent); }
+        .post-slug {
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text2);
+            opacity: 0.7;
+        }
+        .post-desc {
+            font-size: 13px;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+        .post-meta {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+        .post-date { font-size: 12px; color: var(--text2); }
+        .post-cats { display: flex; gap: 4px; flex-wrap: wrap; }
+        .cat-tag {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--bg2);
+            color: var(--text2);
+            border: 1px solid var(--border);
+        }
+        .badge-hidden {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--warn);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .post-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        /* ── Inline Edit ── */
+        .edit-area {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .edit-area.open { display: block; }
+        .edit-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: start;
+        }
+        .edit-row label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text2);
+            min-width: 80px;
+            padding-top: 8px;
+        }
+        .edit-row input, .edit-row textarea {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface2);
+            color: var(--text);
+            font-size: 13px;
+            font-family: var(--body-font);
+            outline: none;
+        }
+        .edit-row input:focus, .edit-row textarea:focus { border-color: var(--accent); }
+        .edit-row textarea { min-height: 60px; resize: vertical; line-height: 1.6; }
+        .edit-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+        /* ── Theme Toggle ── */
+        .theme-toggle {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+        }
+        .theme-toggle:hover { background: var(--bg2); color: var(--text); }
+
+        /* ── Toast ── */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            padding: 10px 18px;
+            border-radius: var(--radius);
+            font-size: 13px;
+            color: #fff;
+            background: var(--success);
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.3s ease;
+            max-width: 360px;
+        }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--accent); }
+        @keyframes slideIn { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ── Compiling indicator ── */
+        .compiling-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--accent);
+            z-index: 9999;
+            animation: compileSlide 1.5s ease-in-out infinite;
+            display: none;
+        }
+        .compiling-bar.active { display: block; }
+        @keyframes compileSlide {
+            0% { transform: scaleX(0); transform-origin: left; }
+            50% { transform: scaleX(1); transform-origin: left; }
+            51% { transform-origin: right; }
+            100% { transform: scaleX(0); transform-origin: right; }
+        }
+
+        /* ── Artist Sites Section ── */
+        .section-title {
+            font-family: var(--heading-font);
+            font-style: italic;
+            font-weight: 400;
+            font-size: 18px;
+            margin: 32px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+        .section-title:first-of-type { margin-top: 0; }
+
+        .artist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .artist-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.2s;
+        }
+        .artist-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); }
+        .artist-card h3 { font-family: var(--heading-font); font-weight: 400; font-size: 16px; margin-bottom: 4px; }
+        .artist-card .artist-slug { font-family: var(--mono); font-size: 11px; color: var(--text2); margin-bottom: 8px; }
+        .artist-card .artist-meta { font-size: 12px; color: var(--text2); }
+        .artist-card .artist-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+        /* ── Layout Editor Grid ── */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin-bottom: 16px;
+            min-height: 200px;
+            background: var(--bg2);
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 8px;
+            grid-auto-rows: 50px;
+            grid-auto-flow: dense;
+        }
+        .layout-slot {
+            min-height: 50px;
+            border: 1px dashed var(--border);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            position: relative;
+        }
+        .layout-slot.is-big {
+            grid-column: span 2;
+            grid-row: span 2;
+        }
+        .layout-slot.drag-over {
+            border-color: var(--accent);
+            background: rgba(107,140,174,0.15);
+            box-shadow: inset 0 0 0 2px var(--accent);
+        }
+        .layout-slot.is-gap {
+            background: transparent;
+            opacity: 0.4;
+        }
+        .layout-slot.is-gap::after {
+            content: 'gap';
+            font-size: 10px;
+            color: var(--text2);
+            font-family: var(--mono);
+        }
+        .layout-block {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-family: var(--mono);
+            cursor: grab;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 4px;
+            transition: all 0.15s;
+            user-select: none;
+        }
+        .layout-block:active { cursor: grabbing; }
+        .layout-block:hover { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+        .layout-block .block-type {
+            font-size: 9px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            background: var(--bg2);
+            color: var(--text2);
+        }
+        .layout-block .block-type.type-widget { background: var(--accent); color: var(--accent-text); }
+        .layout-block .block-type.type-system { background: var(--success); color: #fff; }
+        .layout-block .block-type.type-post { background: var(--warn); color: #000; }
+        .layout-block .block-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text);
+        }
+        .layout-block.dragging {
+            opacity: 0.4;
+        }
+        .layout-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .layout-actions .layout-status {
+            font-size: 12px;
+            color: var(--text2);
+            margin-left: auto;
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; }
+            .container { padding: 16px; }
+            .post-card { grid-template-columns: 1fr; }
+            .post-actions { flex-direction: row; }
+            .stats-bar { gap: 8px; }
+            .stat-card { min-width: 100px; padding: 12px; }
+            .stat-card .stat-val { font-size: 22px; }
+            .layout-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="compiling-bar" id="compilingBar"></div>
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+        <div style="background:var(--surface); padding:40px; border-radius:var(--radius); box-shadow:var(--shadow-md); border:1px solid var(--border); max-width:360px; width:100%;">
+            <h2 style="font-family:var(--heading-font); font-weight:400; font-style:italic; margin-bottom:20px; text-align:center;">Site Management</h2>
+            <input type="password" id="loginPassword" placeholder="Admin password" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface2); color:var(--text); font-size:14px; font-family:var(--body-font); outline:none; margin-bottom:12px;"
+                onkeydown="if(event.key==='Enter') portalLogin()">
+            <button onclick="portalLogin()" style="width:100%;">Sign In</button>
+            <p id="loginError" style="color:var(--danger); font-size:12px; text-align:center; margin-top:10px; display:none;"></p>
+        </div>
+    </div>
+
+    <!-- Main Portal -->
+    <div id="portalMain" style="display:none;">
+        <div class="header">
+            <div class="header-left">
+                <h1>Site Management</h1>
+                <a href="/" class="site-link" target="_blank">gabrielpenman.com</a>
+            </div>
+            <div class="header-actions">
+                <button class="btn-ghost btn-sm" onclick="refreshAll()">Refresh</button>
+                <button class="btn-sm" id="compileBtn" onclick="triggerCompile()">Compile &amp; Publish</button>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">
+                    <span id="themeIcon">&#9790;</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-val" id="statTotal">-</div>
+                    <div class="stat-label">Total Posts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="statVisible">-</div>
+                    <div class="stat-label">Visible</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="statHidden">-</div>
+                    <div class="stat-label">Hidden</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="statArtists">-</div>
+                    <div class="stat-label">Artist Sites</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="statWidgets">-</div>
+                    <div class="stat-label">Permanent</div>
+                </div>
+            </div>
+
+            <!-- Artist Sites -->
+            <h2 class="section-title">Artist Sites</h2>
+            <div class="artist-grid" id="artistGrid"></div>
+
+            <!-- Permanent Blocks -->
+            <h2 class="section-title">Permanent Blocks</h2>
+            <p style="color:var(--text2);font-size:12px;margin:-8px 0 12px;">Widgets and app blocks that always appear on the homepage. Defined in <code style="font-family:var(--mono);font-size:11px;background:var(--surface2);padding:2px 4px;border-radius:3px;">widgets.json</code></p>
+            <div class="artist-grid" id="widgetsGrid"></div>
+
+            <!-- Homepage Layout -->
+            <h2 class="section-title">Homepage Layout</h2>
+            <p style="color:var(--text2);font-size:12px;margin:-8px 0 12px;">Drag blocks to reorder the homepage grid. Gaps create empty spaces. Save &amp; compile to publish.</p>
+            <div class="layout-actions">
+                <button class="btn-sm" onclick="addLayoutGap()">+ Add Gap</button>
+                <button class="btn-ghost btn-sm" onclick="removeLastGap()">− Remove Gap</button>
+                <button class="btn-sm" onclick="saveLayout()" id="saveLayoutBtn">Save Layout</button>
+                <button class="btn-sm" onclick="saveLayoutAndCompile()" id="saveCompileBtn">Save &amp; Compile</button>
+                <span class="layout-status" id="layoutStatus"></span>
+            </div>
+            <div class="layout-grid" id="layoutGrid"></div>
+
+            <!-- Blog Posts -->
+            <h2 class="section-title">Blog Posts</h2>
+
+            <div class="filters">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search posts..." oninput="filterPosts()">
+                <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+                <button class="filter-btn" data-filter="visible" onclick="setFilter('visible')">Visible</button>
+                <button class="filter-btn" data-filter="hidden" onclick="setFilter('hidden')">Hidden</button>
+            </div>
+
+            <div class="posts-grid" id="postsGrid"></div>
+        </div>
+    </div>
+
+<script>
+const ADMIN_PASSWORD = 'Lasshamster5!01022366';
+let allPosts = [];
+let currentFilter = 'all';
+let adminToken = '';
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function toast(msg, type = 'success') {
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    document.getElementById('toastContainer').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+// ── Theme ──
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('themeIcon').innerHTML = isDark ? '&#9790;' : '&#9788;';
+    localStorage.setItem('portal-theme', isDark ? 'light' : 'dark');
+}
+(function() {
+    const t = localStorage.getItem('portal-theme') || 'light';
+    if (t === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        setTimeout(() => { document.getElementById('themeIcon').innerHTML = '&#9788;'; }, 0);
+    }
+})();
+
+// ── Auth ──
+function portalLogin() {
+    const pw = document.getElementById('loginPassword').value;
+    if (pw === ADMIN_PASSWORD) {
+        adminToken = pw;
+        localStorage.setItem('portal-token', pw);
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('portalMain').style.display = 'block';
+        refreshAll();
+    } else {
+        const err = document.getElementById('loginError');
+        err.textContent = 'Incorrect password';
+        err.style.display = 'block';
+    }
+}
+
+// Auto-login
+(function() {
+    const saved = localStorage.getItem('portal-token');
+    if (saved === ADMIN_PASSWORD) {
+        adminToken = saved;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('portalMain').style.display = 'block';
+        setTimeout(refreshAll, 100);
+    }
+})();
+
+// ── Data Loading ──
+async function refreshAll() {
+    await Promise.all([loadPosts(), loadArtists(), loadWidgets(), loadLayout()]);
+}
+
+async function loadPosts() {
+    try {
+        const r = await fetch('/api/pages');
+        const data = await r.json();
+        allPosts = (data.pages || []).filter(p => {
+            // Exclude artist subpages and system pages
+            const s = p.slug || '';
+            return !s.startsWith('artists/') && !s.includes('/');
+        });
+        updateStats();
+        renderPosts();
+    } catch (e) {
+        toast('Failed to load posts: ' + e.message, 'error');
+    }
+}
+
+async function loadArtists() {
+    try {
+        const r = await fetch('/api/pages');
+        const data = await r.json();
+        const artistSlugs = new Set();
+        (data.pages || []).forEach(p => {
+            const m = (p.slug || '').match(/^artists\/([^/]+)\//);
+            if (m) artistSlugs.add(m[1]);
+        });
+
+        const grid = document.getElementById('artistGrid');
+        grid.innerHTML = '';
+        const artists = [...artistSlugs].sort();
+
+        document.getElementById('statArtists').textContent = artists.length;
+
+        if (artists.length === 0) {
+            grid.innerHTML = '<p style="color:var(--text2);font-size:13px;">No artist sites yet.</p>';
+            return;
+        }
+
+        artists.forEach(slug => {
+            const pages = (data.pages || []).filter(p => (p.slug || '').startsWith(`artists/${slug}/`));
+            const homeConfig = pages.find(p => p.slug.endsWith('/home'));
+            const name = homeConfig?.title?.replace(' — Photography', '').replace(' — Portfolio', '') || slug;
+            const pageCount = pages.length;
+
+            const card = document.createElement('div');
+            card.className = 'artist-card';
+            card.innerHTML = `
+                <h3>${esc(name)}</h3>
+                <div class="artist-slug">/${slug}</div>
+                <div class="artist-meta">${pageCount} page${pageCount !== 1 ? 's' : ''}</div>
+                <div class="artist-actions">
+                    <a href="/artists/${esc(slug)}/home/" target="_blank" class="btn btn-ghost btn-sm">View Site</a>
+                    <a href="/api/sandbox/dashboard" target="_blank" class="btn btn-ghost btn-sm">Dashboard</a>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (e) {
+        console.error('Failed to load artists', e);
+    }
+}
+
+async function loadWidgets() {
+    try {
+        const r = await fetch('/api/widgets');
+        const data = await r.json();
+        const grid = document.getElementById('widgetsGrid');
+        grid.innerHTML = '';
+
+        const items = [];
+
+        // Widgets (mini blocks)
+        (data.widgets || []).forEach(w => {
+            items.push({
+                title: w.title,
+                label: w.label,
+                url: w.url,
+                type: w.type,
+                kind: 'widget',
+                port: w.port || null
+            });
+        });
+
+        // Standalone blocks
+        (data.blocks || []).forEach(b => {
+            items.push({
+                title: b.title,
+                label: b.description,
+                url: b.url,
+                type: b.type,
+                kind: 'block',
+                port: b.port || null,
+                categories: b.categories || []
+            });
+        });
+
+        document.getElementById('statWidgets').textContent = items.length;
+
+        if (items.length === 0) {
+            grid.innerHTML = '<p style="color:var(--text2);font-size:13px;">No permanent blocks defined.</p>';
+            return;
+        }
+
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'artist-card';
+            const kindBadge = item.kind === 'widget'
+                ? '<span style="font-size:10px;background:var(--accent);color:var(--accent-text);padding:1px 6px;border-radius:3px;margin-left:6px;">widget</span>'
+                : '<span style="font-size:10px;background:var(--warn);color:var(--text);padding:1px 6px;border-radius:3px;margin-left:6px;">block</span>';
+            const portInfo = item.port ? `<div style="font-family:var(--mono);font-size:11px;color:var(--text2);">port :${item.port}</div>` : '';
+            const typeBadge = `<span style="font-size:10px;background:var(--surface2);padding:1px 6px;border-radius:3px;color:var(--text2);">${esc(item.type)}</span>`;
+            const cats = (item.categories || []).map(c => `<span class="cat-tag">${esc(c)}</span>`).join('');
+
+            card.innerHTML = `
+                <h3>${esc(item.title)}${kindBadge}</h3>
+                <div class="artist-slug">${esc(item.url)}</div>
+                <div class="artist-meta">${esc(item.label || '')}</div>
+                ${portInfo}
+                <div style="margin-top:4px;">${typeBadge} ${cats}</div>
+                <div class="artist-actions">
+                    <a href="${esc(item.url)}" target="_blank" class="btn btn-ghost btn-sm">Open</a>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    } catch (e) {
+        console.error('Failed to load widgets', e);
+    }
+}
+
+function updateStats() {
+    const visible = allPosts.filter(p => !p.hidden);
+    const hidden = allPosts.filter(p => p.hidden);
+    document.getElementById('statTotal').textContent = allPosts.length;
+    document.getElementById('statVisible').textContent = visible.length;
+    document.getElementById('statHidden').textContent = hidden.length;
+}
+
+// ── Rendering ──
+function renderPosts() {
+    const grid = document.getElementById('postsGrid');
+    const query = document.getElementById('searchInput').value.toLowerCase().trim();
+
+    let posts = [...allPosts];
+
+    // Apply filter
+    if (currentFilter === 'visible') posts = posts.filter(p => !p.hidden);
+    if (currentFilter === 'hidden') posts = posts.filter(p => p.hidden);
+
+    // Apply search
+    if (query) {
+        posts = posts.filter(p =>
+            (p.title || '').toLowerCase().includes(query) ||
+            (p.slug || '').toLowerCase().includes(query) ||
+            (p.description || '').toLowerCase().includes(query) ||
+            (p.categories || []).some(c => c.toLowerCase().includes(query))
+        );
+    }
+
+    if (posts.length === 0) {
+        grid.innerHTML = '<p style="color:var(--text2);font-size:13px;padding:20px;">No posts match your filters.</p>';
+        return;
+    }
+
+    grid.innerHTML = posts.map(p => {
+        const cats = (p.categories || []).map(c => `<span class="cat-tag">${esc(c)}</span>`).join('');
+        const hiddenBadge = p.hidden ? '<span class="badge-hidden">Hidden</span>' : '';
+        const hiddenClass = p.hidden ? ' hidden-post' : '';
+        const toggleLabel = p.hidden ? 'Show' : 'Hide';
+        const toggleClass = p.hidden ? 'btn-success btn-sm' : 'btn-ghost btn-sm';
+
+        return `
+            <div class="post-card${hiddenClass}" id="post-${esc(p.slug)}">
+                <div class="post-info">
+                    <div class="post-title">
+                        <a href="/${esc(p.slug)}/" target="_blank">${esc(p.title)}</a>
+                        ${hiddenBadge}
+                    </div>
+                    <div class="post-slug">/${esc(p.slug)}</div>
+                    <div class="post-desc" id="desc-${esc(p.slug)}">${esc(p.description || 'No description')}</div>
+                    <div class="post-meta">
+                        <span class="post-date">${esc(p.date || 'No date')}</span>
+                        <div class="post-cats">${cats}</div>
+                    </div>
+                    <div class="edit-area" id="edit-${esc(p.slug)}">
+                        <div class="edit-row">
+                            <label>Title</label>
+                            <input type="text" id="edit-title-${esc(p.slug)}" value="${esc(p.title || '')}">
+                        </div>
+                        <div class="edit-row">
+                            <label>Description</label>
+                            <textarea id="edit-desc-${esc(p.slug)}">${esc(p.description || '')}</textarea>
+                        </div>
+                        <div class="edit-row">
+                            <label>Date</label>
+                            <input type="date" id="edit-date-${esc(p.slug)}" value="${esc(p.date || '')}">
+                        </div>
+                        <div class="edit-row">
+                            <label>Categories</label>
+                            <input type="text" id="edit-cats-${esc(p.slug)}" value="${esc((p.categories || []).join(', '))}" placeholder="comma separated">
+                        </div>
+                        <div class="edit-actions">
+                            <button class="btn-ghost btn-sm" onclick="toggleEdit('${esc(p.slug)}')">Cancel</button>
+                            <button class="btn-sm" onclick="saveEdit('${esc(p.slug)}')">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="post-actions">
+                    <button class="btn-ghost btn-sm" onclick="toggleEdit('${esc(p.slug)}')">Edit</button>
+                    <button class="${toggleClass}" onclick="toggleHidden('${esc(p.slug)}', ${!p.hidden})">${toggleLabel}</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function filterPosts() { renderPosts(); }
+
+function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === f));
+    renderPosts();
+}
+
+// ── Edit ──
+function toggleEdit(slug) {
+    const area = document.getElementById(`edit-${slug}`);
+    area.classList.toggle('open');
+}
+
+async function saveEdit(slug) {
+    const title = document.getElementById(`edit-title-${slug}`).value.trim();
+    const description = document.getElementById(`edit-desc-${slug}`).value.trim();
+    const date = document.getElementById(`edit-date-${slug}`).value;
+    const cats = document.getElementById(`edit-cats-${slug}`).value.split(',').map(s => s.trim()).filter(Boolean);
+
+    try {
+        const r = await fetch(`/api/posts/update/${slug}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, description, date, categories: cats, auto_compile: false })
+        });
+
+        if (r.ok) {
+            toast(`Updated: ${title}`);
+            toggleEdit(slug);
+            await loadPosts();
+        } else {
+            const d = await r.json().catch(() => ({}));
+            toast(d.error || 'Failed to save', 'error');
+        }
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// ── Toggle Hidden ──
+async function toggleHidden(slug, hidden) {
+    try {
+        const r = await fetch(`/api/posts/update/${slug}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hidden, auto_compile: false })
+        });
+
+        if (r.ok) {
+            toast(hidden ? `Hidden: ${slug}` : `Shown: ${slug}`, 'info');
+            await loadPosts();
+        } else {
+            const d = await r.json().catch(() => ({}));
+            toast(d.error || 'Failed to toggle', 'error');
+        }
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+}
+
+// ── Layout Editor ──
+let layoutOrder = [];
+let allBlockDefs = []; // {id, title, type} for all known blocks
+
+function getBlockType(id) {
+    if (id === '__gap__') return 'gap';
+    if (id === 'system-status') return 'system';
+    if (id.startsWith('widget-')) return 'widget';
+    if (id === 'dev-ports') return 'system';
+    if (id === 'admin') return 'system';
+    if (id.startsWith('post-')) return 'post';
+    return 'other';
+}
+
+function isBigBlock(id) {
+    // Big blocks span 2x2 on the homepage; widgets and gaps are 1x1
+    if (id === '__gap__') return false;
+    if (id.startsWith('widget-')) return false;
+    return true;  // posts, system, dev-ports, admin are all 2x2
+}
+
+function getBlockTitle(id) {
+    if (id === '__gap__') return '';
+    if (id === 'system-status') return 'SYSTEM';
+    if (id === 'dev-ports') return 'DEV PORTS';
+    if (id === 'admin') return 'ADMIN';
+    if (id.startsWith('widget-')) return id.replace('widget-', '').toUpperCase();
+    if (id.startsWith('post-')) return id.replace('post-', '/');
+    return id;
+}
+
+function renderLayoutGrid() {
+    const grid = document.getElementById('layoutGrid');
+    grid.innerHTML = '';
+
+    layoutOrder.forEach((blockId, index) => {
+        const slot = document.createElement('div');
+        const big = isBigBlock(blockId);
+        slot.className = 'layout-slot' + (blockId === '__gap__' ? ' is-gap' : '') + (big ? ' is-big' : '');
+        slot.dataset.index = index;
+
+        // Drop target events
+        slot.addEventListener('dragover', (e) => { e.preventDefault(); slot.classList.add('drag-over'); });
+        slot.addEventListener('dragleave', () => { slot.classList.remove('drag-over'); });
+        slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            slot.classList.remove('drag-over');
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const toIndex = index;
+            if (fromIndex !== toIndex) {
+                const [moved] = layoutOrder.splice(fromIndex, 1);
+                layoutOrder.splice(toIndex, 0, moved);
+                renderLayoutGrid();
+            }
+        });
+
+        if (blockId !== '__gap__') {
+            const block = document.createElement('div');
+            block.className = 'layout-block';
+            block.draggable = true;
+            block.dataset.index = index;
+
+            const bType = getBlockType(blockId);
+            const typeClass = bType === 'widget' ? 'type-widget' : bType === 'system' ? 'type-system' : bType === 'post' ? 'type-post' : '';
+
+            block.innerHTML = `
+                <span class="block-type ${typeClass}">${bType}</span>
+                <span class="block-title">${esc(getBlockTitle(blockId))}</span>
+            `;
+
+            block.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', index.toString());
+                block.classList.add('dragging');
+            });
+            block.addEventListener('dragend', () => { block.classList.remove('dragging'); });
+
+            slot.appendChild(block);
+        } else {
+            // Gap slot - still draggable/droppable
+            slot.draggable = true;
+            slot.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', index.toString());
+                slot.classList.add('dragging');
+            });
+            slot.addEventListener('dragend', () => { slot.classList.remove('dragging'); });
+        }
+
+        grid.appendChild(slot);
+    });
+
+    document.getElementById('layoutStatus').textContent =
+        layoutOrder.length + ' slots (' + layoutOrder.filter(x => x === '__gap__').length + ' gaps)';
+}
+
+function addLayoutGap() {
+    layoutOrder.push('__gap__');
+    renderLayoutGrid();
+}
+
+function removeLastGap() {
+    // Remove the last gap
+    for (let i = layoutOrder.length - 1; i >= 0; i--) {
+        if (layoutOrder[i] === '__gap__') {
+            layoutOrder.splice(i, 1);
+            renderLayoutGrid();
+            return;
+        }
+    }
+}
+
+async function loadLayout() {
+    try {
+        // Load layout, posts, and widgets in parallel to build complete block list
+        const [layoutRes, pagesRes, widgetsRes] = await Promise.all([
+            fetch('/api/layout'),
+            fetch('/api/pages'),
+            fetch('/api/widgets')
+        ]);
+        const layoutData = await layoutRes.json();
+        const pagesData = await pagesRes.json();
+        const widgetsData = await widgetsRes.json();
+
+        // Build default block list (same order as compile.py)
+        const defaultOrder = [];
+
+        // System status block
+        defaultOrder.push('system-status');
+
+        // Individual widgets
+        (widgetsData.widgets || []).forEach(w => {
+            defaultOrder.push('widget-' + w.id);
+        });
+
+        // Dev ports
+        defaultOrder.push('dev-ports');
+
+        // Blog posts (same priority as compile.py: photography, music, then rest)
+        const pages = (pagesData.pages || []).filter(p => {
+            const s = p.slug || '';
+            return !s.startsWith('artists/') && !s.includes('/') && !p.hidden;
+        });
+        let photoPost = null, musicPost = null, otherPosts = [];
+        pages.forEach(p => {
+            if (p.slug === 'photography') photoPost = p;
+            else if (p.slug === 'music') musicPost = p;
+            else otherPosts.push(p);
+        });
+        if (photoPost) defaultOrder.push('post-' + photoPost.slug);
+        if (musicPost) defaultOrder.push('post-' + musicPost.slug);
+        otherPosts.forEach(p => defaultOrder.push('post-' + p.slug));
+
+        // Admin
+        defaultOrder.push('admin');
+
+        if (layoutData.order && layoutData.order.length > 0) {
+            layoutOrder = layoutData.order;
+            // Add any new blocks not in saved layout
+            const known = new Set(layoutOrder);
+            defaultOrder.forEach(id => {
+                if (!known.has(id)) layoutOrder.push(id);
+            });
+        } else {
+            layoutOrder = defaultOrder;
+        }
+
+        renderLayoutGrid();
+    } catch (e) {
+        console.error('Failed to load layout', e);
+    }
+}
+
+async function saveLayout() {
+    const btn = document.getElementById('saveLayoutBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    try {
+        const r = await fetch('/api/layout', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: layoutOrder })
+        });
+        if (r.ok) {
+            toast('Layout saved!');
+        } else {
+            const d = await r.json().catch(() => ({}));
+            toast(d.error || 'Failed to save layout', 'error');
+        }
+    } catch (e) {
+        toast('Error: ' + e.message, 'error');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Save Layout';
+}
+
+async function saveLayoutAndCompile() {
+    await saveLayout();
+    await triggerCompile();
+}
+
+// ── Compile ──
+async function triggerCompile() {
+    const btn = document.getElementById('compileBtn');
+    const bar = document.getElementById('compilingBar');
+    btn.disabled = true;
+    btn.textContent = 'Compiling...';
+    bar.classList.add('active');
+
+    try {
+        const r = await fetch('/api/posts/compile', { method: 'POST' });
+        const d = await r.json();
+        if (d.success) {
+            toast('Compiled & published successfully!');
+        } else {
+            toast('Compile failed: ' + (d.error || 'unknown'), 'error');
+        }
+    } catch (e) {
+        toast('Compile error: ' + e.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Compile & Publish';
+    bar.classList.remove('active');
+}
+</script>
+</body>
+</html>

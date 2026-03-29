@@ -1,0 +1,8 @@
+{
+    "name": "Example Artist",
+    "slug": "example-artist",
+    "domain": "example-artist.local",
+    "admin_token": "example-token-change-this",
+    "description": "Example artist portfolio site",
+    "contact_email": "artist@example.com"
+}

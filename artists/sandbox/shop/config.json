@@ -1,0 +1,9 @@
+{
+    "title": "Shop",
+    "slug": "shop",
+    "description": "",
+    "categories": [],
+    "hidden": false,
+    "in_nav": true,
+    "nav_order": 2
+}

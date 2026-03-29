@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Artist assets (backed up separately)
+artists/*/assets/
+
+# Artist snapshots
+artists/*/.snapshots/
+
+# Runtime data
+data/
+logs/
+*.pid
+
+# Secrets
+artists/*/.env
+.env
+
+# Compiled output
+output/
+
+# Temp files
+*.tmp
+.DS_Store

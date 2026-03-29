@@ -1,0 +1,30 @@
+SHARED BRUTALIST STYLES FOR KESKESAY SITE
+
+Colors:
+--primary: #000000
+--accent: #00ff00 (neon green)
+--red-accent: #ff0000
+--bg: #ffffff
+--bg-alt: #f0f0f0
+
+Sidebar:
+- Black background (#000)
+- White text
+- 4px thick borders
+- Bold uppercase navigation
+- Neon green hover effects
+
+Typography:
+- Barlow font family
+- Bold weights (700-900)
+- Uppercase headings
+- Tight letter-spacing
+- Large impact sizes
+
+Aesthetic:
+- High contrast
+- Brutalist/gonzo journalism
+- Bold geometric shapes
+- No rounded corners
+- Thick borders (3-4px)
+- Instant transitions (0.1s)

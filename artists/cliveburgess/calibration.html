@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screen Calibration</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .instructions {
+            margin-bottom: 30px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .calibration-box {
+            width: 100px;
+            height: 100px;
+            background: black;
+            margin: 20px 0;
+        }
+        .label {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="instructions">
+        <h1>Screen Calibration</h1>
+        <p>1. Make sure Chrome is at 100% zoom (press Ctrl+0 or Cmd+0)</p>
+        <p>2. Go fullscreen (F11)</p>
+        <p>3. Use a physical ruler to measure the black box below</p>
+        <p>4. Tell Claude how many millimeters wide the box is</p>
+    </div>
+
+    <div class="calibration-box"></div>
+    <div class="label">This box is exactly 100 pixels wide</div>
+</body>
+</html>

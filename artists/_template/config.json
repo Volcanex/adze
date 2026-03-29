@@ -1,0 +1,8 @@
+{
+    "name": "{{ARTIST_NAME}}",
+    "slug": "{{SLUG}}",
+    "domain": "{{DOMAIN}}",
+    "admin_token": "{{TOKEN}}",
+    "description": "",
+    "contact_email": ""
+}
