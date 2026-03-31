@@ -21,7 +21,7 @@ def get_artist_config(artist_slug):
     Returns:
         dict: Artist config or None if not found
     """
-    config_path = Path(f'pages/artists/{artist_slug}/config.json')
+    config_path = Path(f'artists/{artist_slug}/config.json')
 
     if not config_path.exists():
         return None
@@ -107,22 +107,38 @@ def require_artist_auth(artist_slug):
         401 if auth fails
     """
     token = request.headers.get('X-Admin-Token', '')
+    if verify_artist_token(artist_slug, token):
+        return
 
-    if not verify_artist_token(artist_slug, token):
-        abort(401, description='Invalid or missing admin token')
+    # Cookie fallback
+    session_cookie = request.cookies.get('adze_session', '')
+    if session_cookie and ':' in session_cookie:
+        slug, _, tok = session_cookie.partition(':')
+        if slug == artist_slug and verify_artist_token(slug, tok):
+            return
+
+    abort(401, description='Invalid or missing admin token')
 
 def get_authenticated_artist():
     """
     Get the authenticated artist slug from the request.
-    Checks X-Artist-Slug header and validates the token.
+    Checks X-Artist-Slug/X-Admin-Token headers first, then falls back to
+    the adze_session cookie set by POST /api/adze/login.
 
     Returns:
         str: Artist slug if authenticated, None otherwise
     """
+    # Headers take priority (programmatic/API access, in-memory session)
     artist_slug = request.headers.get('X-Artist-Slug', '')
     token = request.headers.get('X-Admin-Token', '')
-
     if artist_slug and verify_artist_token(artist_slug, token):
         return artist_slug
+
+    # Cookie fallback (persistent browser sessions)
+    session_cookie = request.cookies.get('adze_session', '')
+    if session_cookie and ':' in session_cookie:
+        slug, _, tok = session_cookie.partition(':')
+        if slug and verify_artist_token(slug, tok):
+            return slug
 
     return None

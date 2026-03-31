@@ -9,13 +9,14 @@ import shutil
 import socket
 import subprocess
 from pathlib import Path
-from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context
+from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context, make_response
 from werkzeug.utils import secure_filename
 import sys
 
 # Add parent directory to path to import auth
 sys.path.insert(0, str(Path(__file__).parent))
 from auth import require_artist_auth, get_authenticated_artist, get_all_artists
+from db import insert_pageview, query_analytics, upsert_session, query_sessions, migrate_json_to_sqlite
 
 bp = Blueprint('artist_admin', __name__, url_prefix='/api/adze')
 
@@ -68,6 +69,96 @@ def scan_for_leaked_secrets(artist_slug, content):
     return leaked
 
 
+# ── Analytics ─────────────────────────────────────────────────────────────
+
+@bp.route('/analytics')
+def analytics():
+    """Return aggregated analytics for the authenticated artist."""
+    from datetime import datetime, timedelta
+    import time
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    # Migrate legacy JSON files on first access (no-op if already done)
+    migrate_json_to_sqlite(artist_slug)
+
+    now = int(time.time())
+    today_start      = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    week_start       = int((datetime.now() - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    month_start      = int((datetime.now() - timedelta(days=30)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+    prev_month_start = int((datetime.now() - timedelta(days=60)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+
+    pv = query_analytics(artist_slug, month_start, prev_month_start, today_start, week_start)
+    sess = query_sessions(artist_slug, month_start)
+
+    month_count      = pv['month_count']
+    prev_month_count = pv['prev_month_count']
+
+    if prev_month_count == 0:
+        trend = 'up' if month_count > 0 else 'flat'
+    elif month_count > prev_month_count:
+        trend = 'up'
+    elif month_count < prev_month_count:
+        trend = 'down'
+    else:
+        trend = 'flat'
+
+    return jsonify({
+        'today':          pv['today_count'],
+        'week':           pv['week_count'],
+        'month':          month_count,
+        'trend':          trend,
+        'top_pages':      pv['top_pages'],
+        'sources':        pv['sources'],
+        'countries':      pv['countries'],
+        'daily':          pv['daily'],
+        'bounce_rate':    sess['bounce_rate'],
+        'avg_duration':   sess['avg_duration'],
+        'total_sessions': sess['total_sessions'],
+        'hourly':         pv['hourly_counts'],
+    })
+
+
+@bp.route('/beacon', methods=['POST'])
+def beacon():
+    """Receive session duration beacons from the tracking script (no auth required)."""
+    import time
+
+    try:
+        data = request.get_data(as_text=True)
+        params = {}
+        for pair in data.split('&'):
+            if '=' in pair:
+                k, v = pair.split('=', 1)
+                params[k] = v
+
+        sid = params.get('sid', '')
+        slug = params.get('slug', '')
+        dur = int(params.get('dur', '0'))
+        pc = int(params.get('pc', '1'))
+
+        if not sid or not slug or dur < 1:
+            return '', 204
+
+        # Sanitise slug to prevent path traversal
+        slug = slug.replace('/', '').replace('..', '').replace('\\', '')
+        if not slug:
+            return '', 204
+
+        artist_path = get_artist_path(slug)
+        if not artist_path.exists():
+            return '', 204
+
+        upsert_session(slug, sid, dur, pc, int(time.time()))
+
+    except Exception:
+        pass
+
+    return '', 204
+
+
 # ── Dashboard ──────────────────────────────────────────────────────────────
 
 @bp.route('/dashboard')
@@ -82,6 +173,202 @@ def dashboard():
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
+    return response
+
+
+@bp.route('/login', methods=['POST'])
+def login():
+    """
+    Authenticate an artist and set a persistent session cookie.
+    JSON body: {slug, token}
+    Returns: {ok, slug, name} and sets adze_session httpOnly cookie.
+    """
+    data = request.get_json() or {}
+    slug = data.get('slug', '').strip()
+    token = data.get('token', '').strip()
+    if not slug or not token:
+        return jsonify({'error': 'slug and token required'}), 400
+    from auth import verify_artist_token, get_artist_config
+    if not verify_artist_token(slug, token):
+        return jsonify({'error': 'Invalid credentials'}), 401
+    config = get_artist_config(slug) or {}
+    resp = make_response(jsonify({
+        'ok': True,
+        'slug': slug,
+        'name': config.get('display_name') or config.get('name') or slug,
+        'config': {k: v for k, v in config.items() if k != 'admin_token'}
+    }))
+    # httpOnly — not accessible via JS (XSS protection)
+    # SameSite=Lax — safe for normal navigation, blocks CSRF from cross-site POSTs
+    # secure=False — Flask runs behind nginx which handles TLS; cookie travels localhost only
+    resp.set_cookie('adze_session', f'{slug}:{token}',
+                    httponly=True, samesite='Lax', secure=False,
+                    max_age=30 * 24 * 3600, path='/')
+    return resp
+
+
+@bp.route('/logout', methods=['POST'])
+def logout():
+    """Clear the session cookie."""
+    resp = make_response(jsonify({'ok': True}))
+    resp.delete_cookie('adze_session', path='/')
+    return resp
+
+
+@bp.route('/whoami')
+def whoami():
+    """
+    Return the authenticated artist info based on session cookie or headers.
+    Used by the dashboard on page load to restore a persistent session.
+    """
+    slug = get_authenticated_artist()
+    if not slug:
+        return jsonify({'ok': False}), 401
+    from auth import get_artist_config
+    config = get_artist_config(slug) or {}
+    return jsonify({
+        'ok': True,
+        'slug': slug,
+        'name': config.get('display_name') or config.get('name') or slug,
+        'config': {k: v for k, v in config.items() if k != 'admin_token'}
+    })
+
+
+@bp.route('/docs')
+@bp.route('/docs/<path:doc_path>')
+def serve_docs(doc_path=None):
+    """
+    Render the _shared/docs/ markdown files as a simple HTML page.
+    No login required — shareable with designers and widget authors.
+    """
+    import re as _re
+    docs_dir = Path(__file__).parent / 'docs'
+    doc_files = sorted(docs_dir.glob('[0-9]*.md'))
+
+    # Build nav + content
+    nav_items = []
+    sections = []
+    for f in doc_files:
+        name = f.stem.lstrip('0123456789-')
+        title = name.replace('-', ' ').title()
+        text = f.read_text(encoding='utf-8')
+        # First h1 overrides the title
+        m = _re.match(r'^#\s+(.+)', text.strip())
+        if m:
+            title = m.group(1)
+        anchor = f.stem
+        nav_items.append(f'<a href="#doc-{anchor}">{title}</a>')
+        # Minimal markdown → HTML: headers, code blocks, inline code, bold, tables
+        html = text
+        html = _re.sub(r'^#### (.+)$', r'<h4>\1</h4>', html, flags=_re.M)
+        html = _re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=_re.M)
+        html = _re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=_re.M)
+        html = _re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=_re.M)
+        html = _re.sub(r'```(\w*)\n(.*?)```', lambda m2: f'<pre><code class="lang-{m2.group(1)}">{m2.group(2).replace("<","&lt;").replace(">","&gt;")}</code></pre>', html, flags=_re.S)
+        html = _re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
+        html = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
+        # Tables
+        def render_table(m2):
+            rows = [r.strip() for r in m2.group(0).strip().split('\n') if r.strip() and not _re.match(r'^[\|\s\-:]+$', r)]
+            if not rows: return m2.group(0)
+            out = ['<table>']
+            for i, row in enumerate(rows):
+                cells = [c.strip() for c in row.strip('|').split('|')]
+                tag = 'th' if i == 0 else 'td'
+                out.append('<tr>' + ''.join(f'<{tag}>{c}</{tag}>' for c in cells) + '</tr>')
+            out.append('</table>')
+            return '\n'.join(out)
+        html = _re.sub(r'(\|.+\|\n)+', render_table, html)
+        # Paragraphs
+        paras = _re.split(r'\n{2,}', html)
+        out_parts = []
+        for p in paras:
+            p = p.strip()
+            if not p: continue
+            if p.startswith('<h') or p.startswith('<pre') or p.startswith('<table') or p.startswith('<ul') or p.startswith('<ol'):
+                out_parts.append(p)
+            else:
+                lines = p.split('\n')
+                if all(l.strip().startswith('- ') or l.strip().startswith('* ') for l in lines if l.strip()):
+                    items = ''.join(f'<li>{l.strip().lstrip("-* ").strip()}</li>' for l in lines if l.strip())
+                    out_parts.append(f'<ul>{items}</ul>')
+                elif all(_re.match(r'^\d+\.', l.strip()) for l in lines if l.strip()):
+                    items = ''.join(f'<li>{_re.sub(r"^\d+\.\s*","",l.strip())}</li>' for l in lines if l.strip())
+                    out_parts.append(f'<ol>{items}</ol>')
+                else:
+                    out_parts.append(f'<p>{p}</p>')
+        sections.append(f'<section id="doc-{anchor}">\n{"".join(out_parts)}\n</section>')
+
+    nav_html = '\n'.join(nav_items)
+    body_html = '\n<hr>\n'.join(sections)
+
+    page = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adze Studio — Docs</title>
+<style>
+  :root {{ --bg:#f5f2ed; --surface:#fff; --border:#ddd8cf; --text:#2a2a28; --text2:#5a5750; --accent:#5a8bbe; --radius:6px; --mono:'Monaco','Menlo','Courier New',monospace; }}
+  @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --border:#3e3e44; --text:#e8e6e0; --text2:#aaa79e; }} }}
+  * {{ margin:0; padding:0; box-sizing:border-box; }}
+  body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.7; }}
+  a {{ color:var(--accent); text-decoration:none; }}
+  a:hover {{ text-decoration:underline; }}
+  nav {{ position:fixed; top:0; left:0; width:220px; height:100vh; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; overflow-y:auto; }}
+  nav h2 {{ font-size:13px; font-weight:700; letter-spacing:.5px; color:var(--text2); text-transform:uppercase; margin-bottom:16px; }}
+  nav a {{ display:block; padding:5px 8px; border-radius:var(--radius); font-size:12px; color:var(--text2); margin-bottom:2px; }}
+  nav a:hover {{ background:var(--bg); color:var(--text); text-decoration:none; }}
+  main {{ margin-left:220px; padding:48px; max-width:860px; }}
+  h1 {{ font-size:28px; font-weight:700; margin:0 0 8px; }}
+  h2 {{ font-size:18px; font-weight:600; margin:32px 0 10px; padding-top:8px; border-top:1px solid var(--border); }}
+  h3 {{ font-size:14px; font-weight:600; margin:24px 0 8px; }}
+  h4 {{ font-size:13px; font-weight:600; margin:16px 0 6px; color:var(--text2); }}
+  p {{ margin:0 0 14px; }}
+  ul,ol {{ margin:0 0 14px 20px; }}
+  li {{ margin-bottom:4px; }}
+  pre {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; overflow-x:auto; margin:0 0 16px; }}
+  code {{ font-family:var(--mono); font-size:12px; }}
+  p code, li code, td code {{ background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-size:11px; }}
+  table {{ border-collapse:collapse; width:100%; margin:0 0 16px; font-size:12px; }}
+  th,td {{ border:1px solid var(--border); padding:7px 10px; text-align:left; }}
+  th {{ background:var(--surface); font-weight:600; }}
+  hr {{ border:none; border-top:1px solid var(--border); margin:40px 0; }}
+  section {{ margin-bottom:8px; }}
+  @media(max-width:700px) {{ nav {{ display:none; }} main {{ margin-left:0; padding:24px; }} }}
+</style>
+</head>
+<body>
+<nav>
+  <h2>Adze Docs</h2>
+  {nav_html}
+  <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
+  <a href="/dashboard" style="font-size:11px;">← Dashboard</a>
+</nav>
+<main>
+{body_html}
+</main>
+</body>
+</html>"""
+    return page, 200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache'}
+
+
+@bp.route('/world-map.svg')
+def serve_world_map():
+    """Serve the world map SVG for analytics, stripped of XML preamble for safe DOMParser use."""
+    svg_path = Path(__file__).parent / 'world-map.svg'
+    if not svg_path.exists():
+        abort(404)
+    content = svg_path.read_text(encoding='utf-8')
+    # Strip XML declaration and DOCTYPE — DOMParser chokes on external DTD references
+    import re as _re
+    content = _re.sub(r'<\?xml[^?]*\?>', '', content)
+    content = _re.sub(r'<!DOCTYPE[^>]*>', '', content)
+    content = content.strip()
+    from flask import make_response
+    response = make_response(content)
+    response.headers['Content-Type'] = 'image/svg+xml; charset=utf-8'
+    response.headers['Cache-Control'] = 'public, max-age=86400'
     return response
 
 
@@ -135,7 +422,7 @@ def list_pages():
                     pages.append({
                         'slug': item.name,
                         'title': config.get('title', item.name),
-                        'path': str(item.relative_to('pages')),
+                        'path': str(item.relative_to('.')),
                         'config': config
                     })
                 except (json.JSONDecodeError, IOError):
@@ -238,15 +525,25 @@ def edit_page():
                 json.dump(data['config'], f, indent=4, ensure_ascii=False)
 
         # Trigger compile to regenerate static files
+        compile_ok = True
+        compile_error = None
         compile_script = Path.cwd() / 'compile.py'
         if compile_script.exists():
             import subprocess
-            subprocess.run(['python3', str(compile_script), '--artist', artist_slug], check=False)
+            result = subprocess.run(
+                ['python3', str(compile_script), '--artist', artist_slug],
+                capture_output=True, text=True
+            )
+            compile_ok = result.returncode == 0
+            if not compile_ok:
+                compile_error = (result.stderr or result.stdout or 'Unknown compile error').strip()
 
         return jsonify({
             'success': True,
             'message': 'Page updated successfully',
-            'page_slug': page_slug
+            'page_slug': page_slug,
+            'compile_ok': compile_ok,
+            'compile_error': compile_error
         })
 
     except IOError as e:
@@ -314,7 +611,7 @@ def create_page():
             'success': True,
             'message': 'Page created successfully',
             'page_slug': page_slug,
-            'path': str(page_path.relative_to('pages'))
+            'path': str(page_path.relative_to('.'))
         })
 
     except IOError as e:
@@ -381,7 +678,7 @@ def upload_file():
         return jsonify({
             'success': True,
             'filename': filename,
-            'path': str(file_path.relative_to('pages')),
+            'path': str(file_path.relative_to('.')),
             'url': f'../assets/{rel_path}'
         })
 
@@ -470,6 +767,205 @@ def list_assets():
     return jsonify({'artist': artist_slug, 'assets': assets})
 
 
+# ── Inbox (contact form submissions) ──────────────────────────────────────
+
+@bp.route('/contact', methods=['POST'])
+def public_contact():
+    """
+    Public endpoint — no auth. Accept a contact form submission and store it.
+    Body: { artist_slug, name, email, subject?, message }
+    """
+    import time, uuid
+    data = request.get_json(silent=True) or {}
+    slug    = data.get('artist_slug', '').strip()
+    name    = data.get('name', '').strip()
+    email   = data.get('email', '').strip()
+    subject = data.get('subject', '').strip()
+    message = data.get('message', '').strip()
+
+    if not slug or not message or not email:
+        return jsonify({'error': 'artist_slug, email and message are required'}), 400
+
+    artist_path = get_artist_path(slug)
+    if not artist_path.exists():
+        return jsonify({'error': 'Artist not found'}), 404
+
+    submission = {
+        'id':      str(uuid.uuid4()),
+        'name':    name,
+        'email':   email,
+        'subject': subject,
+        'message': message,
+        'read':    False,
+        'ts':      int(time.time()),
+    }
+
+    sub_file = artist_path / 'submissions.json'
+    submissions = []
+    if sub_file.exists():
+        try:
+            submissions = json.loads(sub_file.read_text())
+        except Exception:
+            submissions = []
+    submissions.insert(0, submission)
+    sub_file.write_text(json.dumps(submissions, indent=2))
+    return jsonify({'success': True}), 201
+
+
+@bp.route('/list-submissions', methods=['GET'])
+def list_submissions():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    sub_file = get_artist_path(artist_slug) / 'submissions.json'
+    submissions = []
+    if sub_file.exists():
+        try:
+            submissions = json.loads(sub_file.read_text())
+        except Exception:
+            pass
+    return jsonify({'submissions': submissions})
+
+
+@bp.route('/delete-submission', methods=['POST'])
+def delete_submission():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    data = request.get_json(silent=True) or {}
+    sid = data.get('id', '')
+    sub_file = get_artist_path(artist_slug) / 'submissions.json'
+    if sub_file.exists():
+        try:
+            submissions = json.loads(sub_file.read_text())
+            submissions = [s for s in submissions if s.get('id') != sid]
+            sub_file.write_text(json.dumps(submissions, indent=2))
+        except Exception:
+            pass
+    return jsonify({'success': True})
+
+
+@bp.route('/mark-submission-read', methods=['POST'])
+def mark_submission_read():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    data = request.get_json(silent=True) or {}
+    sid  = data.get('id', '')
+    read = data.get('read', True)
+    sub_file = get_artist_path(artist_slug) / 'submissions.json'
+    if sub_file.exists():
+        try:
+            submissions = json.loads(sub_file.read_text())
+            for s in submissions:
+                if s.get('id') == sid:
+                    s['read'] = read
+            sub_file.write_text(json.dumps(submissions, indent=2))
+        except Exception:
+            pass
+    return jsonify({'success': True})
+
+
+# ── Subscribers (mailing list) ─────────────────────────────────────────────
+
+@bp.route('/subscribe', methods=['POST'])
+def public_subscribe():
+    """
+    Public endpoint — no auth. Add an email to the artist's subscriber list.
+    Body: { artist_slug, email, name? }
+    """
+    import time
+    data  = request.get_json(silent=True) or {}
+    slug  = data.get('artist_slug', '').strip()
+    email = data.get('email', '').strip().lower()
+    name  = data.get('name', '').strip()
+
+    if not slug or not email or '@' not in email:
+        return jsonify({'error': 'Valid artist_slug and email are required'}), 400
+
+    artist_path = get_artist_path(slug)
+    if not artist_path.exists():
+        return jsonify({'error': 'Artist not found'}), 404
+
+    sub_file = artist_path / 'subscribers.json'
+    subscribers = []
+    if sub_file.exists():
+        try:
+            subscribers = json.loads(sub_file.read_text())
+        except Exception:
+            pass
+
+    # Prevent duplicates
+    if any(s.get('email', '').lower() == email for s in subscribers):
+        return jsonify({'success': True, 'already_subscribed': True})
+
+    subscribers.append({'email': email, 'name': name, 'ts': int(time.time())})
+    sub_file.write_text(json.dumps(subscribers, indent=2))
+    return jsonify({'success': True}), 201
+
+
+@bp.route('/list-subscribers', methods=['GET'])
+def list_subscribers():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    sub_file = get_artist_path(artist_slug) / 'subscribers.json'
+    subscribers = []
+    if sub_file.exists():
+        try:
+            subscribers = json.loads(sub_file.read_text())
+        except Exception:
+            pass
+    return jsonify({'subscribers': subscribers, 'count': len(subscribers)})
+
+
+@bp.route('/delete-subscriber', methods=['POST'])
+def delete_subscriber():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    data  = request.get_json(silent=True) or {}
+    email = data.get('email', '').lower()
+    sub_file = get_artist_path(artist_slug) / 'subscribers.json'
+    if sub_file.exists():
+        try:
+            subscribers = json.loads(sub_file.read_text())
+            subscribers = [s for s in subscribers if s.get('email', '').lower() != email]
+            sub_file.write_text(json.dumps(subscribers, indent=2))
+        except Exception:
+            pass
+    return jsonify({'success': True})
+
+
+@bp.route('/export-subscribers', methods=['GET'])
+def export_subscribers():
+    """Export subscriber list as CSV."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    import io, csv as csv_mod
+    from flask import Response
+    sub_file = get_artist_path(artist_slug) / 'subscribers.json'
+    subscribers = []
+    if sub_file.exists():
+        try:
+            subscribers = json.loads(sub_file.read_text())
+        except Exception:
+            pass
+    output = io.StringIO()
+    writer = csv_mod.writer(output)
+    writer.writerow(['email', 'name', 'subscribed'])
+    for s in subscribers:
+        from datetime import datetime
+        ts = datetime.fromtimestamp(s.get('ts', 0)).strftime('%Y-%m-%d') if s.get('ts') else ''
+        writer.writerow([s.get('email', ''), s.get('name', ''), ts])
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={artist_slug}-subscribers.csv'}
+    )
+
+
 # ── Artist Info ────────────────────────────────────────────────────────────
 
 @bp.route('/artist-info', methods=['GET'])
@@ -541,7 +1037,7 @@ def update_domain():
         return jsonify({'error': f'Error updating config: {str(e)}'}), 500
 
 
-# ── Activate Domain (auto nginx + certbot) ────────────────────────────────
+# ── Activate Domain (nginx config + SSL) ──────────────────────────────────
 
 NGINX_TEMPLATE = """server {{
     server_name {domain} www.{domain};
@@ -555,7 +1051,7 @@ NGINX_TEMPLATE = """server {{
     }}
 
     location /api/ {{
-        proxy_pass http://127.0.0.1:5000;
+        proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -571,7 +1067,7 @@ NGINX_TEMPLATE = """server {{
     }}
 
     location @api {{
-        proxy_pass http://127.0.0.1:5000;
+        proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -585,12 +1081,16 @@ NGINX_TEMPLATE = """server {{
     listen [::]:80;
 }}"""
 
+
 @bp.route('/activate-domain', methods=['POST'])
 def activate_domain():
     """
-    Auto-configure nginx + SSL for an artist's custom domain.
+    Write nginx config for an artist's custom domain and activate SSL.
     Body: { "domain": "example.com" }
-    Requires: sudoers rule for nginx/certbot (see /etc/sudoers.d/adze)
+
+    Flask runs in Docker so it can't call systemctl or certbot directly.
+    This endpoint writes the nginx config to the repo (accessible on the host)
+    and returns the commands to run on the server to complete setup.
     """
     import re as _re
 
@@ -604,78 +1104,22 @@ def activate_domain():
     if not domain:
         return jsonify({'error': 'Domain is required'}), 400
 
-    # Basic domain validation
     if not _re.match(r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$', domain):
         return jsonify({'error': 'Invalid domain format'}), 400
 
-    # Security: prevent path traversal in domain name
     if '..' in domain or '/' in domain:
         return jsonify({'error': 'Invalid domain'}), 400
 
-    steps = []
+    email = os.environ.get('CERTBOT_EMAIL', 'gabrielpenman@gmail.com')
 
     try:
-        # Step 1: Write nginx config
-        nginx_conf = NGINX_TEMPLATE.format(domain=domain, slug=artist_slug)
-        conf_path = f'/etc/nginx/sites-available/{domain}'
-        enabled_path = f'/etc/nginx/sites-enabled/{domain}'
+        # Write nginx config to the repo — readable from the host
+        conf_dir = Path(__file__).parent.parent / 'nginx' / 'sites-available'
+        conf_dir.mkdir(parents=True, exist_ok=True)
+        conf_path = conf_dir / domain
+        conf_path.write_text(NGINX_TEMPLATE.format(domain=domain, slug=artist_slug))
 
-        # Write config via temp file + sudo mv (can't write directly to /etc)
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.conf', delete=False) as tmp:
-            tmp.write(nginx_conf)
-            tmp_path = tmp.name
-
-        result = subprocess.run(['sudo', 'cp', tmp_path, conf_path], capture_output=True, text=True)
-        os.unlink(tmp_path)
-        if result.returncode != 0:
-            return jsonify({'error': f'Failed to write nginx config: {result.stderr}'}), 500
-        steps.append('nginx config written')
-
-        # Step 2: Symlink to sites-enabled
-        if not os.path.exists(enabled_path):
-            result = subprocess.run(['sudo', 'ln', '-s', conf_path, enabled_path], capture_output=True, text=True)
-            if result.returncode != 0:
-                return jsonify({'error': f'Failed to enable site: {result.stderr}'}), 500
-        steps.append('site enabled')
-
-        # Step 3: Test nginx config
-        result = subprocess.run(['sudo', 'nginx', '-t'], capture_output=True, text=True)
-        if result.returncode != 0:
-            # Rollback: remove the broken config
-            subprocess.run(['sudo', 'rm', '-f', enabled_path], capture_output=True)
-            subprocess.run(['sudo', 'rm', '-f', conf_path], capture_output=True)
-            return jsonify({'error': f'Nginx config test failed: {result.stderr}'}), 500
-        steps.append('nginx config valid')
-
-        # Step 4: Reload nginx
-        result = subprocess.run(['sudo', 'systemctl', 'reload', 'nginx'], capture_output=True, text=True)
-        if result.returncode != 0:
-            return jsonify({'error': f'Failed to reload nginx: {result.stderr}'}), 500
-        steps.append('nginx reloaded')
-
-        # Step 5: Run certbot for SSL
-        result = subprocess.run([
-            'sudo', 'certbot', '--nginx',
-            '-d', domain, '-d', f'www.{domain}',
-            '--non-interactive', '--agree-tos',
-            '-m', 'gabrielpenman@gmail.com',
-            '--redirect'
-        ], capture_output=True, text=True, timeout=120)
-
-        if result.returncode != 0:
-            # SSL failed but site still works on HTTP
-            steps.append(f'SSL setup failed (site works on HTTP): {result.stderr[:200]}')
-            return jsonify({
-                'success': True,
-                'partial': True,
-                'steps': steps,
-                'warning': 'Domain is active on HTTP but SSL certificate failed. You may need to check DNS propagation and try again.'
-            })
-
-        steps.append('SSL certificate installed')
-
-        # Step 6: Update config.json with the domain
+        # Update config.json
         artist_path = get_artist_path(artist_slug)
         config_file = artist_path / 'config.json'
         if config_file.exists():
@@ -684,16 +1128,27 @@ def activate_domain():
             config['domain'] = domain
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config, f, indent=4, ensure_ascii=False)
-            steps.append('config.json updated')
+
+        # Return the commands needed on the host to activate nginx + SSL
+        host_conf = f'/etc/nginx/sites-available/{domain}'
+        repo_conf = f'/home/gabriel/adze/nginx/sites-available/{domain}'
+        commands = (
+            f'sudo cp {repo_conf} {host_conf} && '
+            f'sudo ln -sf {host_conf} /etc/nginx/sites-enabled/{domain} && '
+            f'sudo nginx -t && sudo systemctl reload nginx && '
+            f'sudo certbot --nginx -d {domain} -d www.{domain} '
+            f'--non-interactive --agree-tos -m {email} --redirect'
+        )
 
         return jsonify({
             'success': True,
-            'steps': steps,
-            'url': f'https://{domain}'
+            'config_written': str(conf_path),
+            'next_step': 'Run the following on the server to activate nginx and SSL:',
+            'commands': commands
         })
 
-    except subprocess.TimeoutExpired:
-        return jsonify({'error': 'SSL setup timed out. DNS may not have propagated yet. Try again in a few minutes.'}), 504
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e), 'steps': steps}), 500
 
@@ -1062,52 +1517,592 @@ def set_env_raw():
 
 # ── List Widgets ──────────────────────────────────────────────────────────
 
+def _read_widget_manifest(widget_dir, name):
+    """
+    Read manifest for a widget. Checks (in order):
+      1. widget_dir/name/widget.json  (directory-format widget)
+      2. widget_dir/name.manifest.json  (sidecar for simple .js widgets)
+    Falls back to safe defaults.
+    """
+    manifest = {}
+    for candidate in [
+        widget_dir / name / 'widget.json',
+        widget_dir / (name + '.manifest.json'),
+    ]:
+        if candidate.exists():
+            try:
+                with open(candidate, 'r') as f:
+                    manifest = json.load(f)
+                break
+            except (json.JSONDecodeError, IOError):
+                pass
+    return {
+        'name':        manifest.get('name', name),
+        'description': manifest.get('description', ''),
+        'icon':        manifest.get('icon', ''),
+        'author':      manifest.get('author', ''),
+        'version':     manifest.get('version', '1.0'),
+        'marketplace': manifest.get('marketplace', False),
+        'category':    manifest.get('category', 'general'),
+        'forked_from': manifest.get('forked_from', ''),
+    }
+
+
+def _scan_widgets(directory, tier):
+    """Scan a directory for widgets. Supports both name.js and name/widget.js formats."""
+    widgets = []
+    if not directory.exists():
+        return widgets
+
+    for f in sorted(directory.iterdir()):
+        if f.is_file() and f.suffix == '.js':
+            # Simple format: widget-name.js
+            meta = _read_widget_manifest(directory, f.stem)
+            widgets.append({
+                'name': f.stem,
+                'filename': f.name,
+                'tier': tier,
+                **meta
+            })
+        elif f.is_dir():
+            # Directory format: widget-name/widget.js
+            js_file = f / 'widget.js'
+            if js_file.exists():
+                meta = _read_widget_manifest(directory, f.name)
+                widgets.append({
+                    'name': f.name,
+                    'filename': f.name + '/widget.js',
+                    'tier': tier,
+                    **meta
+                })
+    return widgets
+
+
 @bp.route('/list-widgets', methods=['GET'])
 def list_widgets():
     """
-    List all custom widgets for an artist.
-    Each widget is a .js file in pages/artists/{slug}/widgets/
+    List all widgets for an artist across tiers.
+    Tier 2 (platform): from _shared/widgets/, filtered by artist config platform_widgets list.
+    Tier 3 (community): installed community widgets, stored in artist widgets dir with forked_from=community.
+    Tier 4 (artist/custom): from artists/{slug}/widgets/ — forked or custom-built.
     Headers: X-Artist-Slug, X-Admin-Token
     """
     artist_slug = get_authenticated_artist()
-
     if not artist_slug:
         abort(401, description='Authentication required')
 
+    # Read artist config for platform_widgets opt-in
+    config_file = get_artist_path(artist_slug) / 'config.json'
+    enabled_platform = []
+    if config_file.exists():
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            enabled_platform = config.get('platform_widgets', [])
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # Tier 2: Adze official widgets (opt-in per artist)
+    platform_dir = Path(__file__).parent / 'widgets'
+    all_platform = _scan_widgets(platform_dir, 'platform')
+    platform_widgets = [w for w in all_platform if w['name'] in enabled_platform]
+
+    # Tier 4: artist custom/forked widgets (all loaded); T3 community installs also land here
+    artist_dir = get_artist_path(artist_slug) / 'widgets'
+    artist_widgets = _scan_widgets(artist_dir, 'artist')
+
+    # Also return available (not yet enabled) platform widgets for marketplace
+    available_platform = [w for w in all_platform if w['name'] not in enabled_platform]
+
+    return jsonify({
+        'artist': artist_slug,
+        'widgets': platform_widgets + artist_widgets,
+        'available_platform': available_platform
+    })
+
+
+@bp.route('/list-marketplace', methods=['GET'])
+def list_marketplace():
+    """
+    List all widgets available in the marketplace.
+    Includes: platform widgets not yet enabled + artist widgets marked as marketplace=true.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    # Artist's current config
+    config_file = get_artist_path(artist_slug) / 'config.json'
+    enabled_platform = []
+    if config_file.exists():
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            enabled_platform = config.get('platform_widgets', [])
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    # Only platform widgets explicitly marked marketplace:true are publicly listed.
+    # Bespoke platform widgets (marketplace:false, the default) are only visible to
+    # artists Gabriel has manually provisioned them for.
+    platform_dir = Path(__file__).parent / 'widgets'
+    platform_widgets = [w for w in _scan_widgets(platform_dir, 'platform') if w.get('marketplace')]
+    for w in platform_widgets:
+        w['installed'] = w['name'] in enabled_platform
+
+    # Scan all artists for shared (marketplace=true) tier 3 widgets
+    community_widgets = []
+    artists_root = Path('artists')
+    installed_artist_widgets = set()
+    artist_widget_dir = get_artist_path(artist_slug) / 'widgets'
+    if artist_widget_dir.exists():
+        for f in artist_widget_dir.iterdir():
+            if f.is_file() and f.suffix == '.js':
+                installed_artist_widgets.add(f.stem)
+            elif f.is_dir() and (f / 'widget.js').exists():
+                installed_artist_widgets.add(f.name)
+
+    if artists_root.exists():
+        for artist_dir in sorted(artists_root.iterdir()):
+            if not artist_dir.is_dir() or artist_dir.name.startswith('_'):
+                continue
+            widgets_dir = artist_dir / 'widgets'
+            shared = _scan_widgets(widgets_dir, 'community')
+            for w in shared:
+                if w.get('marketplace'):
+                    w['source_artist'] = artist_dir.name
+                    w['installed'] = w['name'] in installed_artist_widgets
+                    # Don't show artist their own widgets in marketplace
+                    if artist_dir.name != artist_slug:
+                        community_widgets.append(w)
+
+    return jsonify({
+        'platform': platform_widgets,
+        'community': community_widgets
+    })
+
+
+@bp.route('/install-widget', methods=['POST'])
+def install_widget():
+    """
+    Install a widget. For platform widgets: adds to config platform_widgets list.
+    For community widgets: copies the JS file to the artist's widgets directory.
+    Body: { "name": "widget-name", "tier": "platform"|"community", "source_artist": "slug" }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    tier = data.get('tier', '')
+
+    if not name:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    if tier == 'platform':
+        # Verify the platform widget exists
+        platform_dir = Path(__file__).parent / 'widgets'
+        found = False
+        for f in platform_dir.iterdir():
+            if (f.is_file() and f.suffix == '.js' and f.stem == name) or \
+               (f.is_dir() and f.name == name and (f / 'widget.js').exists()):
+                found = True
+                break
+        if not found:
+            return jsonify({'error': 'Platform widget not found'}), 404
+
+        # Add to artist's config
+        config_file = get_artist_path(artist_slug) / 'config.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            pw = config.get('platform_widgets', [])
+            if name not in pw:
+                pw.append(name)
+                config['platform_widgets'] = pw
+                with open(config_file, 'w') as f:
+                    json.dump(config, f, indent=4)
+            return jsonify({'ok': True, 'action': 'enabled'})
+        except (json.JSONDecodeError, IOError) as e:
+            return jsonify({'error': str(e)}), 500
+
+    elif tier == 'community':
+        source_artist = data.get('source_artist', '').strip()
+        if not source_artist:
+            return jsonify({'error': 'source_artist required for community widgets'}), 400
+
+        # Find source widget
+        source_dir = Path(f'artists/{source_artist}/widgets')
+        source_file = source_dir / (name + '.js')
+        source_dir_fmt = source_dir / name / 'widget.js'
+
+        dest_dir = get_artist_path(artist_slug) / 'widgets'
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        if source_file.exists():
+            shutil.copy2(source_file, dest_dir / (name + '.js'))
+            # Also copy manifest if exists
+            manifest = source_dir / name / 'widget.json'
+            if manifest.exists():
+                (dest_dir / name).mkdir(exist_ok=True)
+                shutil.copy2(manifest, dest_dir / name / 'widget.json')
+            return jsonify({'ok': True, 'action': 'copied'})
+        elif source_dir_fmt.exists():
+            dest_widget_dir = dest_dir / name
+            if dest_widget_dir.exists():
+                shutil.rmtree(dest_widget_dir)
+            shutil.copytree(source_dir / name, dest_widget_dir)
+            return jsonify({'ok': True, 'action': 'copied'})
+        else:
+            return jsonify({'error': 'Source widget not found'}), 404
+
+    return jsonify({'error': 'Invalid tier'}), 400
+
+
+@bp.route('/uninstall-widget', methods=['POST'])
+def uninstall_widget():
+    """
+    Uninstall a widget. Platform: removes from config. Artist/community: deletes file.
+    Body: { "name": "widget-name", "tier": "platform"|"artist"|"community" }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = data.get('name', '').strip()
+    tier = data.get('tier', '')
+
+    if not name:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    if tier == 'platform':
+        config_file = get_artist_path(artist_slug) / 'config.json'
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+            pw = config.get('platform_widgets', [])
+            if name in pw:
+                pw.remove(name)
+                config['platform_widgets'] = pw
+                with open(config_file, 'w') as f:
+                    json.dump(config, f, indent=4)
+            return jsonify({'ok': True})
+        except (json.JSONDecodeError, IOError) as e:
+            return jsonify({'error': str(e)}), 500
+
+    elif tier in ('artist', 'community'):
+        widgets_dir = get_artist_path(artist_slug) / 'widgets'
+        # Try file first, then directory
+        js_file = widgets_dir / (name + '.js')
+        dir_path = widgets_dir / name
+        if js_file.exists():
+            js_file.unlink()
+        if dir_path.exists() and dir_path.is_dir():
+            shutil.rmtree(dir_path)
+        return jsonify({'ok': True})
+
+    return jsonify({'error': 'Invalid tier'}), 400
+
+
+@bp.route('/save-widget', methods=['POST'])
+def save_widget():
+    """
+    Save (create or update) a Tier 4 (custom/forked) widget's JS source.
+    Body: { "name": "widget-name", "code": "...js..." }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = (data.get('name', '') or '').strip()
+    code = data.get('code', '')
+
+    name = secure_filename(name if name.endswith('.js') else name + '.js')
+    if not name or name == '.js':
+        return jsonify({'error': 'Widget name required'}), 400
+
     widgets_dir = get_artist_path(artist_slug) / 'widgets'
+    widgets_dir.mkdir(parents=True, exist_ok=True)
 
-    if not widgets_dir.exists():
-        return jsonify({'artist': artist_slug, 'widgets': []})
+    try:
+        with open(widgets_dir / name, 'w', encoding='utf-8') as f:
+            f.write(code)
+        return jsonify({'ok': True, 'filename': name})
+    except IOError as e:
+        return jsonify({'error': str(e)}), 500
 
-    widgets = []
-    for f in sorted(widgets_dir.iterdir()):
-        if f.is_file() and f.suffix == '.js':
-            widgets.append({
-                'name': f.stem,
-                'filename': f.name
-            })
 
-    return jsonify({'artist': artist_slug, 'widgets': widgets})
+@bp.route('/new-widget', methods=['POST'])
+def new_widget():
+    """
+    Create a blank new Tier 4 (custom) widget.
+    Body: { "name": "My Widget", "description": "..." }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    raw_name = (data.get('name', '') or '').strip()
+    description = (data.get('description', '') or '').strip()
+
+    if not raw_name:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    import re as _re
+    slug_name = _re.sub(r'[^a-z0-9]+', '-', raw_name.lower()).strip('-')
+    if not slug_name:
+        return jsonify({'error': 'Invalid widget name'}), 400
+
+    widgets_dir = get_artist_path(artist_slug) / 'widgets'
+    widgets_dir.mkdir(parents=True, exist_ok=True)
+
+    js_path = widgets_dir / (slug_name + '.js')
+    if js_path.exists():
+        return jsonify({'error': f'Widget "{slug_name}" already exists'}), 409
+
+    display_name = raw_name.replace('-', ' ').replace('_', ' ').title()
+    blank_js = (
+        f'// Widget: {display_name}\n'
+        f'// {description or "Custom widget"}\n\n'
+        f'(function(ctx) {{\n'
+        f'    const c = ctx.container;\n'
+        f'    c.style.cssText = "display:flex;flex-direction:column;flex:1;padding:24px;overflow:auto;";\n'
+        f'    c.innerHTML = `\n'
+        f'        <h3 style="margin:0 0 8px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">{display_name}</h3>\n'
+        f'        <p style="color:var(--text2);font-size:11px;">Start building here. Use <code>ctx.apiFetch()</code> to call APIs.</p>\n'
+        f'    `;\n'
+        f'}})(ctx);\n'
+    )
+
+    with open(js_path, 'w', encoding='utf-8') as f:
+        f.write(blank_js)
+
+    manifest = {'name': slug_name, 'description': description or display_name,
+                 'author': artist_slug, 'version': '1.0', 'marketplace': False, 'category': 'custom'}
+    with open(widgets_dir / (slug_name + '.manifest.json'), 'w') as f:
+        json.dump(manifest, f, indent=2)
+
+    return jsonify({'ok': True, 'name': slug_name, 'filename': slug_name + '.js'})
+
+
+@bp.route('/share-widget', methods=['POST'])
+def share_widget():
+    """
+    Toggle marketplace sharing for a Tier 4 (custom) widget — publishing it to Tier 3 (community).
+    Shared widgets appear in the community marketplace and can be installed by other artists.
+    Body: { "name": "widget-name", "shared": true|false }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = secure_filename((data.get('name', '') or '').strip())
+    shared = bool(data.get('shared', True))
+    stem = name[:-3] if name.endswith('.js') else name
+
+    if not stem:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    widgets_dir = get_artist_path(artist_slug) / 'widgets'
+    if not (widgets_dir / (stem + '.js')).exists():
+        return jsonify({'error': 'Widget not found'}), 404
+
+    manifest_path = widgets_dir / (stem + '.manifest.json')
+    manifest = {}
+    if manifest_path.exists():
+        try:
+            with open(manifest_path) as f:
+                manifest = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    manifest.update({'name': stem, 'marketplace': shared})
+    manifest.setdefault('version', '1.0')
+
+    with open(manifest_path, 'w') as f:
+        json.dump(manifest, f, indent=2)
+
+    return jsonify({'ok': True, 'shared': shared})
+
+
+@bp.route('/fork-widget', methods=['POST'])
+def fork_widget():
+    """
+    Fork a Tier 2 or Tier 3 widget into the artist's Tier 4 (custom) widgets directory.
+    Creates an editable copy that no longer auto-updates from the source.
+    Body: { "name": "platform-widget-name" }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = (data.get('name', '') or '').strip()
+    if not name:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    platform_dir = Path(__file__).parent / 'widgets'
+    dest_dir = get_artist_path(artist_slug) / 'widgets'
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Don't clobber an existing artist widget
+    dest_stem = name
+    if (dest_dir / (dest_stem + '.js')).exists():
+        dest_stem = name + '-fork'
+
+    src_dir = platform_dir / name
+    src_js  = platform_dir / (name + '.js')
+
+    if src_dir.exists() and (src_dir / 'widget.js').exists():
+        src_code = (src_dir / 'widget.js').read_text(encoding='utf-8')
+        src_meta_path = src_dir / 'widget.json'
+    elif src_js.exists():
+        src_code = src_js.read_text(encoding='utf-8')
+        src_meta_path = platform_dir / (name + '.json')
+    else:
+        return jsonify({'error': 'Platform widget not found'}), 404
+
+    src_meta = {}
+    if src_meta_path.exists():
+        try:
+            with open(src_meta_path) as f:
+                src_meta = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            pass
+
+    fork_header = f'// Forked from Adze platform widget: {name}\n// This copy is yours — edit freely.\n\n'
+    with open(dest_dir / (dest_stem + '.js'), 'w', encoding='utf-8') as f:
+        f.write(fork_header + src_code)
+
+    fork_manifest = {
+        'name': dest_stem,
+        'description': (src_meta.get('description') or '') + ' (forked)',
+        'author': artist_slug, 'version': '1.0',
+        'marketplace': False,
+        'category': src_meta.get('category', 'custom'),
+        'forked_from': name
+    }
+    with open(dest_dir / (dest_stem + '.manifest.json'), 'w') as f:
+        json.dump(fork_manifest, f, indent=2)
+
+    return jsonify({'ok': True, 'name': dest_stem, 'filename': dest_stem + '.js'})
+
+
+@bp.route('/update-widget', methods=['POST'])
+def update_widget():
+    """
+    Update an installed widget to the latest platform version.
+
+    For platform widgets (tier=platform): no file action needed — they always
+    load fresh from _shared/widgets/. Returns ok so the frontend can reload.
+
+    For forked artist widgets (tier=artist, has forked_from in manifest):
+    overwrites the artist's widget.js with the current platform source,
+    preserving the fork header comment.
+
+    Body: { "name": "widget-name", "tier": "platform"|"artist" }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    name = (data.get('name', '') or '').strip()
+    tier = data.get('tier', '')
+
+    if not name:
+        return jsonify({'error': 'Widget name required'}), 400
+
+    platform_dir = Path(__file__).parent / 'widgets'
+
+    if tier == 'platform':
+        # Platform widgets load directly from _shared/widgets/ — always current.
+        # Nothing to copy; just confirm it exists.
+        src_dir = platform_dir / name
+        if not (src_dir / 'widget.js').exists():
+            return jsonify({'error': 'Platform widget source not found'}), 404
+        return jsonify({'ok': True, 'message': 'Platform widget is always up to date'})
+
+    elif tier == 'artist':
+        # Find the manifest to discover forked_from
+        widgets_dir = get_artist_path(artist_slug) / 'widgets'
+        manifest_path = widgets_dir / (name + '.manifest.json')
+        if not manifest_path.exists():
+            return jsonify({'error': 'No manifest found — widget was not forked from a platform widget'}), 400
+
+        try:
+            manifest = json.loads(manifest_path.read_text())
+        except (json.JSONDecodeError, IOError) as e:
+            return jsonify({'error': f'Could not read manifest: {e}'}), 500
+
+        source = manifest.get('forked_from')
+        if not source:
+            return jsonify({'error': 'Widget was not forked from a platform widget'}), 400
+
+        src_js_path = platform_dir / source / 'widget.js'
+        if not src_js_path.exists():
+            src_js_path = platform_dir / (source + '.js')
+        if not src_js_path.exists():
+            return jsonify({'error': f'Platform source "{source}" not found'}), 404
+
+        new_code = src_js_path.read_text(encoding='utf-8')
+        dest_js = widgets_dir / (name + '.js')
+
+        fork_header = f'// Forked from Adze platform widget: {source}\n// This copy is yours — edit freely.\n// Updated from platform source.\n\n'
+        dest_js.write_text(fork_header + new_code, encoding='utf-8')
+
+        return jsonify({'ok': True, 'message': f'Updated from platform widget "{source}"'})
+
+    return jsonify({'error': 'Invalid tier'}), 400
 
 
 @bp.route('/get-widget', methods=['GET'])
 def get_widget():
     """
     Get the JS content of a widget file.
-    Query params: filename
+    Query params: filename, tier (platform|artist, default: artist)
     Headers: X-Artist-Slug, X-Admin-Token
     """
     artist_slug = get_authenticated_artist()
-
     if not artist_slug:
         abort(401, description='Authentication required')
 
     filename = request.args.get('filename')
+    tier = request.args.get('tier', 'artist')
+
     if not filename:
         return jsonify({'error': 'filename parameter required'}), 400
 
-    filename = secure_filename(filename)
-    widget_path = get_artist_path(artist_slug) / 'widgets' / filename
+    # Widgets come in two shapes: "name.js" or "name/widget.js" (directory format).
+    # secure_filename collapses slashes, so we sanitise each component separately
+    # and only allow the specific subpath patterns we generate ourselves.
+    parts = filename.replace('\\', '/').split('/')
+    parts = [secure_filename(p) for p in parts if p and p != '..']
+
+    if len(parts) == 1:
+        # Simple: name.js
+        safe_filename = parts[0]
+    elif len(parts) == 2 and parts[1] == 'widget.js':
+        # Directory format: name/widget.js — only 'widget.js' is a valid leaf
+        safe_filename = parts[0] + '/widget.js'
+    else:
+        return jsonify({'error': 'Invalid widget filename'}), 400
+
+    if tier == 'platform':
+        widget_path = (Path(__file__).parent / 'widgets' / safe_filename).resolve()
+        root = (Path(__file__).parent / 'widgets').resolve()
+    else:
+        widget_path = (get_artist_path(artist_slug) / 'widgets' / safe_filename).resolve()
+        root = (get_artist_path(artist_slug) / 'widgets').resolve()
+
+    # Final path traversal guard — resolved path must stay inside the widgets root
+    if not str(widget_path).startswith(str(root)):
+        abort(403)
 
     if not widget_path.exists():
         return jsonify({'error': 'Widget not found'}), 404
@@ -1511,6 +2506,547 @@ def delete_snapshot():
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': f'Delete failed: {str(e)}'}), 500
+
+
+# ── Integration helpers ───────────────────────────────────────────────────
+
+def _read_env(artist_slug):
+    """Return dict of .env key/value pairs for an artist."""
+    env_path = get_artist_path(artist_slug) / '.env'
+    env = {}
+    if env_path.exists():
+        for line in env_path.read_text().strip().splitlines():
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                k, _, v = line.partition('=')
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    return env
+
+
+# ── YouTube Integration ───────────────────────────────────────────────────
+
+@bp.route('/youtube-stats', methods=['GET'])
+def youtube_stats():
+    """
+    Proxy YouTube Data API v3 — reads YOUTUBE_API_KEY + YOUTUBE_CHANNEL_ID from artist .env.
+    Returns channel stats + recent videos (uses uploads playlist, minimal quota).
+    """
+    import urllib.request, urllib.parse
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    env = _read_env(artist_slug)
+    api_key    = env.get('YOUTUBE_API_KEY', '')
+    channel_id = env.get('YOUTUBE_CHANNEL_ID', '')
+
+    if not api_key or not channel_id:
+        return jsonify({'configured': False})
+
+    def yt_get(endpoint, params):
+        params['key'] = api_key
+        url = f'https://www.googleapis.com/youtube/v3/{endpoint}?' + urllib.parse.urlencode(params)
+        try:
+            with urllib.request.urlopen(url, timeout=8) as r:
+                return json.loads(r.read())
+        except Exception as e:
+            return {'error': str(e)}
+
+    # 1. Channel stats + uploads playlist ID
+    ch = yt_get('channels', {
+        'part': 'statistics,snippet,contentDetails',
+        'id': channel_id
+    })
+    if 'error' in ch or not ch.get('items'):
+        return jsonify({'configured': True, 'error': ch.get('error', {}).get('message', 'Channel not found')})
+
+    channel    = ch['items'][0]
+    stats      = channel['statistics']
+    snippet    = channel['snippet']
+    uploads_pl = channel['contentDetails']['relatedPlaylists']['uploads']
+
+    # 2. Recent uploads (1 quota unit vs 100 for search)
+    pl = yt_get('playlistItems', {
+        'part': 'snippet',
+        'playlistId': uploads_pl,
+        'maxResults': 8
+    })
+    video_ids = [item['snippet']['resourceId']['videoId'] for item in pl.get('items', [])]
+
+    # 3. Video statistics
+    videos = []
+    if video_ids:
+        vr = yt_get('videos', {
+            'part': 'statistics,snippet',
+            'id': ','.join(video_ids)
+        })
+        for v in vr.get('items', []):
+            vs  = v.get('statistics', {})
+            vsn = v.get('snippet', {})
+            thumb = (vsn.get('thumbnails', {}).get('medium') or
+                     vsn.get('thumbnails', {}).get('default') or {}).get('url', '')
+            videos.append({
+                'id':          v['id'],
+                'title':       vsn.get('title', ''),
+                'published':   vsn.get('publishedAt', ''),
+                'thumbnail':   thumb,
+                'views':       int(vs.get('viewCount', 0)),
+                'likes':       int(vs.get('likeCount', 0)),
+                'comments':    int(vs.get('commentCount', 0)),
+            })
+
+    return jsonify({
+        'configured':    True,
+        'channel_id':    channel_id,
+        'name':          snippet.get('title', ''),
+        'description':   snippet.get('description', ''),
+        'thumbnail':     (snippet.get('thumbnails', {}).get('default') or {}).get('url', ''),
+        'subscribers':   int(stats.get('subscriberCount', 0)),
+        'total_views':   int(stats.get('viewCount', 0)),
+        'video_count':   int(stats.get('videoCount', 0)),
+        'videos':        videos,
+    })
+
+
+@bp.route('/youtube-verify', methods=['POST'])
+def youtube_verify():
+    """Verify a YouTube API key + channel ID and save them to .env."""
+    import urllib.request, urllib.parse
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data       = request.get_json(silent=True) or {}
+    api_key    = data.get('api_key', '').strip()
+    channel_id = data.get('channel_id', '').strip()
+
+    if not api_key or not channel_id:
+        return jsonify({'error': 'api_key and channel_id are required'}), 400
+
+    # Verify the key + channel work
+    params = {'part': 'snippet', 'id': channel_id, 'key': api_key}
+    url    = 'https://www.googleapis.com/youtube/v3/channels?' + urllib.parse.urlencode(params)
+    try:
+        with urllib.request.urlopen(url, timeout=8) as r:
+            result = json.loads(r.read())
+    except Exception as e:
+        return jsonify({'error': f'Could not reach YouTube: {e}'}), 502
+
+    if result.get('error'):
+        msg = result['error'].get('message', 'Invalid API key')
+        return jsonify({'error': msg}), 400
+    if not result.get('items'):
+        return jsonify({'error': 'Channel not found. Check your Channel ID.'}), 400
+
+    channel_name = result['items'][0]['snippet']['title']
+
+    # Save to .env
+    env_path = get_artist_path(artist_slug) / '.env'
+    lines    = env_path.read_text().splitlines() if env_path.exists() else []
+    for key, val in [('YOUTUBE_API_KEY', api_key), ('YOUTUBE_CHANNEL_ID', channel_id)]:
+        replaced = False
+        for i, line in enumerate(lines):
+            if line.startswith(f'{key}='):
+                lines[i] = f'{key}={val}'
+                replaced = True
+                break
+        if not replaced:
+            lines.append(f'{key}={val}')
+    env_path.write_text('\n'.join(lines) + '\n')
+
+    return jsonify({'success': True, 'channel_name': channel_name})
+
+
+# ── Beehiiv Integration ───────────────────────────────────────────────────
+
+@bp.route('/beehiiv-stats', methods=['GET'])
+def beehiiv_stats():
+    """Proxy Beehiiv API v2 — reads BEEHIIV_API_KEY + BEEHIIV_PUBLICATION_ID from .env."""
+    import urllib.request
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    env    = _read_env(artist_slug)
+    api_key = env.get('BEEHIIV_API_KEY', '')
+    pub_id  = env.get('BEEHIIV_PUBLICATION_ID', '')
+
+    if not api_key or not pub_id:
+        return jsonify({'configured': False})
+
+    def bh_get(path):
+        url = f'https://api.beehiiv.com/v2{path}'
+        req = urllib.request.Request(url, headers={'Authorization': f'Bearer {api_key}'})
+        try:
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return json.loads(r.read()), None
+        except urllib.error.HTTPError as e:
+            return None, f'HTTP {e.code}: {e.reason}'
+        except Exception as e:
+            return None, str(e)
+
+    # Publication details
+    pub_data, err = bh_get(f'/publications/{pub_id}')
+    if err:
+        return jsonify({'configured': True, 'error': err})
+
+    pub = pub_data.get('data', {})
+
+    # Recent posts (last 8)
+    posts_data, _ = bh_get(f'/publications/{pub_id}/posts?limit=8&status=confirmed&order_by=publish_date&direction=desc')
+    posts = []
+    for p in (posts_data or {}).get('data', []):
+        posts.append({
+            'id':         p.get('id', ''),
+            'title':      p.get('subject', p.get('title', 'Untitled')),
+            'subtitle':   p.get('subtitle', ''),
+            'published':  p.get('publish_date', ''),
+            'status':     p.get('status', ''),
+            'web_url':    p.get('web_url', ''),
+            'stats': {
+                'recipients':   p.get('stats', {}).get('recipients', 0),
+                'opens':        p.get('stats', {}).get('unique_opens', 0),
+                'clicks':       p.get('stats', {}).get('unique_clicks', 0),
+                'open_rate':    round(p.get('stats', {}).get('open_rate', 0) * 100, 1),
+                'click_rate':   round(p.get('stats', {}).get('click_rate', 0) * 100, 1),
+            }
+        })
+
+    # Subscriber stats
+    subs_data, _ = bh_get(f'/publications/{pub_id}/subscriptions?limit=1&status=active')
+    total_subs = (subs_data or {}).get('total_results', pub.get('stats', {}).get('total_active_subscriptions', 0))
+
+    return jsonify({
+        'configured':    True,
+        'name':          pub.get('name', ''),
+        'description':   pub.get('description', ''),
+        'web_url':       pub.get('web_url', ''),
+        'subscribers':   total_subs,
+        'posts':         posts,
+    })
+
+
+@bp.route('/beehiiv-verify', methods=['POST'])
+def beehiiv_verify():
+    """Verify Beehiiv credentials and save to .env."""
+    import urllib.request
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data    = request.get_json(silent=True) or {}
+    api_key = data.get('api_key', '').strip()
+    pub_id  = data.get('publication_id', '').strip()
+
+    if not api_key or not pub_id:
+        return jsonify({'error': 'api_key and publication_id are required'}), 400
+
+    url = f'https://api.beehiiv.com/v2/publications/{pub_id}'
+    req = urllib.request.Request(url, headers={'Authorization': f'Bearer {api_key}'})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            result = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return jsonify({'error': 'Invalid API key'}), 400
+        if e.code == 404:
+            return jsonify({'error': 'Publication not found. Check your Publication ID.'}), 400
+        return jsonify({'error': f'Beehiiv error: HTTP {e.code}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Could not reach Beehiiv: {e}'}), 502
+
+    pub_name = result.get('data', {}).get('name', 'Your publication')
+
+    env_path = get_artist_path(artist_slug) / '.env'
+    lines    = env_path.read_text().splitlines() if env_path.exists() else []
+    for key, val in [('BEEHIIV_API_KEY', api_key), ('BEEHIIV_PUBLICATION_ID', pub_id)]:
+        replaced = False
+        for i, line in enumerate(lines):
+            if line.startswith(f'{key}='):
+                lines[i] = f'{key}={val}'
+                replaced = True
+                break
+        if not replaced:
+            lines.append(f'{key}={val}')
+    env_path.write_text('\n'.join(lines) + '\n')
+
+    return jsonify({'success': True, 'publication_name': pub_name})
+
+
+# ── Vimeo Integration ─────────────────────────────────────────────────────
+
+@bp.route('/vimeo-stats', methods=['GET'])
+def vimeo_stats():
+    """Proxy Vimeo API — reads VIMEO_ACCESS_TOKEN from artist .env."""
+    import urllib.request
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    env   = _read_env(artist_slug)
+    token = env.get('VIMEO_ACCESS_TOKEN', '')
+
+    if not token:
+        return jsonify({'configured': False})
+
+    def vimeo_get(path, params=''):
+        url = f'https://api.vimeo.com{path}{"?" + params if params else ""}'
+        req = urllib.request.Request(url, headers={
+            'Authorization': f'Bearer {token}',
+            'Accept': 'application/vnd.vimeo.*+json;version=3.4'
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return json.loads(r.read()), None
+        except urllib.error.HTTPError as e:
+            return None, f'HTTP {e.code}'
+        except Exception as e:
+            return None, str(e)
+
+    # User profile + stats
+    me, err = vimeo_get('/me')
+    if err:
+        return jsonify({'configured': True, 'error': err})
+
+    # Recent videos (up to 9 for a 3-column grid)
+    vids, _ = vimeo_get('/me/videos', 'per_page=9&fields=uri,name,description,created_time,stats,pictures,link,duration')
+
+    videos = []
+    for v in (vids or {}).get('data', []):
+        thumb = ''
+        for size in (v.get('pictures', {}).get('sizes') or []):
+            if size.get('width', 0) >= 295:
+                thumb = size['link']
+                break
+        if not thumb:
+            sizes = v.get('pictures', {}).get('sizes') or []
+            if sizes:
+                thumb = sizes[-1].get('link', '')
+        dur = v.get('duration', 0)
+        videos.append({
+            'uri':         v.get('uri', ''),
+            'name':        v.get('name', ''),
+            'link':        v.get('link', ''),
+            'created':     v.get('created_time', ''),
+            'plays':       v.get('stats', {}).get('plays', 0) or 0,
+            'thumbnail':   thumb,
+            'duration':    f'{dur // 60}:{dur % 60:02d}' if dur else '',
+        })
+
+    stats = me.get('metadata', {}).get('connections', {})
+    return jsonify({
+        'configured':    True,
+        'name':          me.get('name', ''),
+        'bio':           me.get('bio', ''),
+        'link':          me.get('link', ''),
+        'thumbnail':     (me.get('pictures', {}).get('sizes') or [{}])[-1].get('link', ''),
+        'followers':     me.get('metadata', {}).get('connections', {}).get('followers', {}).get('total', 0),
+        'total_videos':  me.get('metadata', {}).get('connections', {}).get('videos', {}).get('total', 0),
+        'videos':        videos,
+    })
+
+
+@bp.route('/vimeo-verify', methods=['POST'])
+def vimeo_verify():
+    """Verify a Vimeo personal access token and save to .env."""
+    import urllib.request
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data  = request.get_json(silent=True) or {}
+    token = data.get('access_token', '').strip()
+
+    if not token:
+        return jsonify({'error': 'access_token is required'}), 400
+
+    req = urllib.request.Request(
+        'https://api.vimeo.com/me',
+        headers={'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.vimeo.*+json;version=3.4'}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            me = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return jsonify({'error': 'Invalid access token'}), 400
+        return jsonify({'error': f'Vimeo error: HTTP {e.code}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Could not reach Vimeo: {e}'}), 502
+
+    name = me.get('name', 'Your Vimeo account')
+
+    env_path = get_artist_path(artist_slug) / '.env'
+    lines    = env_path.read_text().splitlines() if env_path.exists() else []
+    replaced = False
+    for i, line in enumerate(lines):
+        if line.startswith('VIMEO_ACCESS_TOKEN='):
+            lines[i] = f'VIMEO_ACCESS_TOKEN={token}'
+            replaced = True
+            break
+    if not replaced:
+        lines.append(f'VIMEO_ACCESS_TOKEN={token}')
+    env_path.write_text('\n'.join(lines) + '\n')
+
+    return jsonify({'success': True, 'name': name})
+
+
+# ── Calendly Integration ──────────────────────────────────────────────────
+
+@bp.route('/calendly-stats', methods=['GET'])
+def calendly_stats():
+    """Proxy Calendly API v2 — reads CALENDLY_ACCESS_TOKEN from artist .env."""
+    import urllib.request, urllib.parse
+    from datetime import datetime, timezone, timedelta
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    env   = _read_env(artist_slug)
+    token = env.get('CALENDLY_ACCESS_TOKEN', '')
+
+    if not token:
+        return jsonify({'configured': False})
+
+    def cal_get(path, params=None):
+        url = f'https://api.calendly.com{path}'
+        if params:
+            url += '?' + urllib.parse.urlencode(params)
+        req = urllib.request.Request(url, headers={
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=8) as r:
+                return json.loads(r.read()), None
+        except urllib.error.HTTPError as e:
+            try:
+                body = json.loads(e.read())
+                return None, body.get('message', f'HTTP {e.code}')
+            except Exception:
+                return None, f'HTTP {e.code}'
+        except Exception as e:
+            return None, str(e)
+
+    # Get current user
+    me, err = cal_get('/users/me')
+    if err:
+        return jsonify({'configured': True, 'error': err})
+
+    user_uri  = me['resource']['uri']
+    user_name = me['resource']['name']
+    slug      = me['resource']['slug']
+    tz        = me['resource'].get('timezone', 'UTC')
+
+    # Event types
+    et, _ = cal_get('/event_types', {'user': user_uri, 'active': 'true'})
+    event_types = []
+    for e in (et or {}).get('collection', []):
+        event_types.append({
+            'name':               e.get('name', ''),
+            'duration':           e.get('duration', 0),
+            'scheduling_url':     e.get('scheduling_url', ''),
+            'color':              e.get('color', '#0069ff'),
+            'kind':               e.get('kind', 'solo'),
+        })
+
+    # Upcoming events (next 7 days)
+    now      = datetime.now(timezone.utc)
+    in7days  = now + timedelta(days=7)
+    upcoming, _ = cal_get('/scheduled_events', {
+        'user':            user_uri,
+        'status':          'active',
+        'min_start_time':  now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'max_start_time':  in7days.strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'sort':            'start_time:asc',
+        'count':           10,
+    })
+
+    events = []
+    for ev in (upcoming or {}).get('collection', []):
+        invitees_uri = ev.get('uri', '').split('/')[-1]
+        events.append({
+            'name':       ev.get('name', ''),
+            'start_time': ev.get('start_time', ''),
+            'end_time':   ev.get('end_time', ''),
+            'status':     ev.get('status', ''),
+            'uri':        ev.get('uri', ''),
+            'invitees_count': ev.get('invitees_counter', {}).get('active', 0),
+        })
+
+    # Past 30 days count
+    past30, _ = cal_get('/scheduled_events', {
+        'user':            user_uri,
+        'status':          'active',
+        'min_start_time':  (now - timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'max_start_time':  now.strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'count':           100,
+    })
+    past_count = len((past30 or {}).get('collection', []))
+
+    return jsonify({
+        'configured':    True,
+        'name':          user_name,
+        'slug':          slug,
+        'timezone':      tz,
+        'scheduling_url': f'https://calendly.com/{slug}',
+        'event_types':   event_types,
+        'upcoming':      events,
+        'past_30_days':  past_count,
+    })
+
+
+@bp.route('/calendly-verify', methods=['POST'])
+def calendly_verify():
+    """Verify a Calendly personal access token and save to .env."""
+    import urllib.request
+
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data  = request.get_json(silent=True) or {}
+    token = data.get('access_token', '').strip()
+
+    if not token:
+        return jsonify({'error': 'access_token is required'}), 400
+
+    req = urllib.request.Request(
+        'https://api.calendly.com/users/me',
+        headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            result = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return jsonify({'error': 'Invalid access token — check it was copied correctly'}), 400
+        return jsonify({'error': f'Calendly error: HTTP {e.code}'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Could not reach Calendly: {e}'}), 502
+
+    name = result.get('resource', {}).get('name', 'Your Calendly account')
+
+    env_path = get_artist_path(artist_slug) / '.env'
+    lines    = env_path.read_text().splitlines() if env_path.exists() else []
+    replaced = False
+    for i, line in enumerate(lines):
+        if line.startswith('CALENDLY_ACCESS_TOKEN='):
+            lines[i] = f'CALENDLY_ACCESS_TOKEN={token}'
+            replaced = True
+            break
+    if not replaced:
+        lines.append(f'CALENDLY_ACCESS_TOKEN={token}')
+    env_path.write_text('\n'.join(lines) + '\n')
+
+    return jsonify({'success': True, 'name': name})
 
 
 # ── Stripe Integration ────────────────────────────────────────────────────
@@ -2004,8 +3540,26 @@ _claude_sessions = _load_claude_sessions()
 _claude_processes = {}  # artist_slug -> subprocess.Popen
 
 
+def _load_docs() -> str:
+    """Read all *.md files from _shared/docs/ in filename order and concatenate them."""
+    docs_dir = Path(__file__).parent / 'docs'
+    if not docs_dir.exists():
+        return ''
+    parts = []
+    for f in sorted(docs_dir.glob('[0-9]*.md')):
+        try:
+            parts.append(f.read_text(encoding='utf-8'))
+        except Exception:
+            pass
+    return '\n\n---\n\n'.join(parts)
+
+
 def _get_artist_system_prompt(artist_slug):
-    """Build a system prompt that scopes Claude to the artist's directory."""
+    """
+    Build the system prompt for the Vibe Coder.
+    Static foundation = docs/*.md files (single source of truth).
+    Runtime context = artist-specific data appended at the end.
+    """
     artist_path = get_artist_path(artist_slug)
     config_path = artist_path / 'config.json'
     abs_artist_path = str(Path.cwd() / artist_path)
@@ -2014,144 +3568,38 @@ def _get_artist_system_prompt(artist_slug):
     if config_path.exists():
         try:
             artist_config = json.loads(config_path.read_text())
-        except:
+        except Exception:
             pass
 
-    artist_name = artist_config.get('name', artist_slug)
-    description = artist_config.get('description', '')
-    features = artist_config.get('features', [])
+    artist_name  = artist_config.get('name', artist_slug)
+    description  = artist_config.get('description', '')
+    features     = artist_config.get('features', [])
 
-    # List pages
     pages = []
     for d in sorted(artist_path.iterdir()):
         if d.is_dir() and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups'):
-            content_file = d / 'content.md'
-            if content_file.exists():
+            if (d / 'content.md').exists():
                 pages.append(d.name)
-
     pages_str = ', '.join(pages) if pages else 'none yet'
 
-    # Check for custom api.py
-    api_file = artist_path / 'api.py'
-    has_api = api_file.exists()
-    api_content = ''
-    if has_api:
-        try:
-            api_content = api_file.read_text()
-        except:
-            pass
+    has_api = (artist_path / 'api.py').exists()
 
-    # Build API section
-    api_section = ''
-    if has_api or features:
-        api_section = f"""
+    runtime_context = f"""---
 
-BACKEND API:
-- Your site can have a custom backend at api.py in this directory
-- {'You currently have api.py — read it to understand the existing endpoints before making changes' if has_api else 'No api.py exists yet — you can create one to add custom backend features'}
-- Active features from config.json: {', '.join(features) if features else 'none'}
-- Feature backends live in _shared/features/ (NOT in this directory) — do NOT edit those
-- Custom api.py pattern:
-  ```python
-  from flask import Blueprint, jsonify, request
-  bp = Blueprint('artist_{artist_slug}', __name__, url_prefix='/api/artists/{artist_slug}')
+## Runtime context (this session)
 
-  @bp.route('/my-endpoint')
-  def my_endpoint():
-      return jsonify({{'ok': True}})
-  ```
-- The blueprint MUST be named `bp` and set url_prefix to `/api/artists/{artist_slug}`
-- For data storage, use JSON files in this directory (e.g. `data.json`)
-- After editing api.py, tell the user the server needs a restart to pick up changes
-- NEVER import from or modify files outside this artist directory
-- NEVER use database connections, subprocess calls, or network requests in api.py
-- NEVER kill, restart, or stop the Flask server (pkill, kill, systemctl, etc.) — tell the user to click Save which handles this
-- NEVER run commands that affect other processes or system services
-- Keep it simple — Flask Blueprint with JSON file storage only"""
-
-    return f"""You are an AI assistant helping {artist_name} edit their portfolio website.
-
-Greet {artist_name} warmly by name on first message.
-
-WORKING DIRECTORY: {abs_artist_path}
-You are STRICTLY sandboxed to this directory. All file operations MUST be within it.
-NEVER read, write, list, or access files outside {abs_artist_path}.
-NEVER access other artists' directories or any parent directories.
-If a user asks you to look at another artist's site or files outside your directory, refuse politely.
-
-SITE STRUCTURE:
-- Each page is a folder with content.md and config.json
-- content.md format: <style>CSS here</style>\\n<html>HTML here</html>
-- Assets go in assets/images/ and assets/fonts/
-- Asset references in content use relative paths: ../assets/images/photo.jpg
-- Current pages: {pages_str}
-
-ARTIST INFO:
-- Name: {artist_name}
-- Description: {description}
+- Artist: {artist_name}
 - Slug: {artist_slug}
+- Description: {description}
+- Working directory: {abs_artist_path}
+- Current pages: {pages_str}
+- Custom api.py: {'yes — read it before making backend changes' if has_api else 'no — create one if needed'}
+- Active features: {', '.join(features) if features else 'none'}
 
-CAPABILITIES:
-- Read and edit any page's content.md or config.json
-- Read and edit the site-level config.json in this directory (name, description, domain, favicon, etc.)
-- Create new pages: mkdir pagename, then create content.md and config.json inside it
-- View and manage assets in assets/images/ and assets/fonts/
-- Make CSS/HTML changes across multiple pages at once
-- Read and edit api.py for custom backend endpoints
-- You have FULL file system access within this artist directory
+You are STRICTLY sandboxed to {abs_artist_path}. All file operations must be within it.
+Page slugs must always start with "artists/{artist_slug}/" — never bare slugs."""
 
-ENVIRONMENT VARIABLES:
-- Your site can have secret API keys stored in .env in this directory
-- Load them in api.py with: import os; from dotenv import load_dotenv; load_dotenv(); key = os.getenv('STRIPE_SECRET_KEY')
-- Or without dotenv: read .env manually
-- NEVER output secret values in your chat responses — refer to them by key name only (e.g. "I've set STRIPE_SECRET_KEY" not the actual value)
-- NEVER put secret values in content.md, HTML, CSS, or any frontend code — secrets belong ONLY in .env and api.py
-- Use os.getenv() in api.py to access secrets server-side, then pass only safe data to the frontend
-- Users can also manage secrets via the Settings tab in the dashboard
-- Common keys: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_ENDPOINT_SECRET
-
-STRIPE INTEGRATION:
-- If the artist has Stripe set up (STRIPE_SECRET_KEY in .env), their api.py has checkout routes
-- To add a buy button: create a button that POSTs to /api/artists/{artist_slug}/create-checkout with a JSON body containing price_id, then redirect to the returned url
-- Price IDs look like price_xxxxx — the artist can find them in the Stripe tab
-- You can also create products via the Stripe API in api.py if needed
-- Stripe Checkout handles the entire payment UI — never collect card details on the site
-- Docs: https://docs.stripe.com/payments/checkout/how-checkout-works
-
-SITE CONFIG (config.json in the root of this directory):
-- "favicon": path relative to assets/ (e.g. "images/favicon.png") — used at compile time in the HTML <head>
-- "name": artist display name
-- "description": site description
-- "domain": custom domain (e.g. "mysite.com")
-- "contact_email": contact email
-- To set a favicon, ensure the image exists in assets/ then update config.json's "favicon" field
-- After config changes, tell the user to click Save to recompile
-{api_section}
-
-CREATING A NEW PAGE:
-1. mkdir {abs_artist_path}/pagename
-2. Create config.json: {{"title": "Page Title", "slug": "artists/{artist_slug}/pagename", "description": "...", "categories": []}}
-3. Create content.md: copy the <style>...</style>\\n<html>...</html> pattern from an existing page like home/content.md
-4. Update the nav in other pages to link to the new page: <a href="../pagename/">Page Title</a>
-5. Tell the user to click Save in the dashboard — this runs compile and publishes changes
-
-CRITICAL — SLUG FORMAT:
-- Page slugs MUST always start with "artists/{artist_slug}/" e.g. "artists/{artist_slug}/pagename"
-- NEVER use a bare slug like "photography" or "gallery" — this will OVERWRITE main blog pages!
-- Always use the full path: "artists/{artist_slug}/photography" NOT "photography"
-
-OFF LIMITS — DO NOT TOUCH:
-- The widgets/ directory — widgets run with dashboard privileges (auth tokens, page write access)
-- They must be created by Gabriel, not by you
-- If the user asks for a widget, tell them to text Gabriel
-- You CAN suggest building a self-contained admin page within the site instead (a regular page with password protection that calls api.py endpoints)
-
-IMPORTANT:
-- After making changes, tell the user to click Save in the dashboard to compile and publish
-- Keep responses concise and friendly
-- When editing content.md, always preserve the <style>...</style>\\n<html>...</html> format
-- Use the artist's existing design patterns (fonts, colours, layout) when creating new content
-- When creating pages, copy the full CSS from an existing page so styling is consistent"""
+    return _load_docs() + '\n\n' + runtime_context
 
 
 @bp.route('/claude-stream', methods=['POST'])

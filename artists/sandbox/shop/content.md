@@ -130,12 +130,19 @@ async function checkout(priceId, productName) {
             })
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Network response was not ok');
+        const text = await response.text();
+        let data;
+
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Failed to parse response:', text);
+            throw new Error('Invalid response from server. Please check the console for details.');
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Network response was not ok');
+        }
 
         // Redirect to Stripe Checkout URL
         if (data.url) {

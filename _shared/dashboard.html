@@ -7,7 +7,10 @@
     <link rel="icon" type="image/png" href="/api/adze/favicon.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
+    <!-- Apply saved theme before first paint to prevent light→dark flash -->
+    <script>if(localStorage.getItem('dashboard-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
         /* ── Reset & Variables ── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,7 +28,7 @@
             --surface2: #f0ede7;
             --border: #ddd8cf;
             --text: #2a2a28;
-            --text2: #6b6860;
+            --text2: #5a5750;
             --success: #4a9a6a;
             --warn: #c8a840;
             --radius: 6px;
@@ -49,7 +52,7 @@
             --surface2: #343438;
             --border: #3e3e44;
             --text: #e8e6e0;
-            --text2: #9a978e;
+            --text2: #aaa79e;
             --success: #6dca8a;
             --warn: #e0c060;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
@@ -57,18 +60,23 @@
         }
 
         body { font-family: var(--body-font); background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; height: 100dvh; transition: background 0.3s, color 0.3s; }
-        button { background: var(--accent); color: var(--accent-text); border: none; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+        /* Applied briefly during theme toggle so all elements cross-fade, then removed */
+        body.theme-transitioning *, body.theme-transitioning *::before, body.theme-transitioning *::after {
+            transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, fill 0.25s ease !important;
+        }
+        button { background: var(--accent); color: var(--accent-text); border: none; padding: 6px 13px; border-radius: var(--radius); cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.2s; }
         button:hover { background: var(--accent-hover); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
-        input, textarea, select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 13px; font-family: var(--body-font); transition: border-color 0.2s, background 0.3s; }
+        input, textarea, select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; font-size: 11px; font-family: var(--body-font); transition: border-color 0.2s, background 0.3s; }
         input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107,140,174,0.12); }
-        textarea { font-family: var(--mono); font-size: 12px; line-height: 1.5; resize: none; }
+        textarea { font-family: var(--mono); font-size: 10px; line-height: 1.5; resize: none; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg2); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
         /* ── Login Screen ── */
-        .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+        .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); transition: opacity 0.2s ease; }
+        .login-screen.fading-out { opacity: 0; transition: opacity 0.15s ease; }
         .login-box { background: var(--surface); padding: 40px; border-radius: 12px; border: 1px solid var(--border); width: 100%; max-width: 380px; box-shadow: var(--shadow-md); }
         .login-box h1 { margin-bottom: 8px; font-size: 24px; color: var(--text); font-family: var(--heading-font); font-weight: 400; font-style: italic; }
         .login-box .login-subtitle { margin-bottom: 28px; font-size: 13px; color: var(--text2); font-weight: 400; }
@@ -79,14 +87,15 @@
         .error-msg.show { display: block; }
 
         /* ── Dashboard Shell ── */
-        .dashboard { display: none; height: 100vh; height: 100dvh; }
+        .dashboard { display: none; height: 100vh; height: 100dvh; opacity: 0; transition: opacity 0.15s ease; }
         .dashboard.active { display: flex; flex-direction: column; }
-        .header-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 52px; box-shadow: var(--shadow-sm); position: relative; z-index: 10; }
-        .header-bar h1 { font-size: 15px; font-weight: 400; font-family: var(--heading-font); }
+        .dashboard.faded-in { opacity: 1; }
+        .header-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 42px; box-shadow: var(--shadow-sm); position: relative; z-index: 10; }
+        .header-bar h1 { font-size: 12px; font-weight: 400; font-family: var(--heading-font); }
         .header-bar .artist-name { color: var(--accent); font-style: italic; }
-        .header-actions { display: flex; gap: 6px; align-items: center; }
-        .header-actions button { padding: 6px 12px; font-size: 12px; }
-        .btn-sm { padding: 5px 10px; font-size: 11px; }
+        .header-actions { display: flex; gap: 5px; align-items: center; }
+        .header-actions button { padding: 5px 10px; font-size: 10px; }
+        .btn-sm { padding: 4px 8px; font-size: 9px; }
         .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
         .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
         .btn-danger { background: var(--danger); color: white; }
@@ -100,31 +109,44 @@
         [data-theme="dark"] .adze-logo { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
 
         /* ── Theme Toggle ── */
-        .theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 6px 10px; font-size: 14px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s; line-height: 1; width: 32px; height: 32px; justify-content: center; }
+        .theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 5px 8px; font-size: 11px; border-radius: var(--radius); cursor: pointer; display: flex; align-items: center; gap: 3px; transition: all 0.2s; line-height: 1; justify-content: center; }
         .theme-toggle:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); }
-        .theme-toggle svg { width: 16px; height: 16px; fill: currentColor; }
+        .theme-toggle svg { width: 13px; height: 13px; }
 
         /* ── Main Layout ── */
         .main-layout { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 
         /* ── Sidebar ── */
-        .sidebar { width: 210px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-        .sidebar-header { padding: 14px 16px; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border); }
-        .page-list { flex: 1; overflow-y: auto; padding: 8px; list-style: none; }
-        .page-item { padding: 9px 12px; border-radius: var(--radius); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; }
+        .sidebar { width: 168px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width 0.25s ease; position: relative; }
+        .sidebar.collapsed { width: 20px; min-width: 20px; }
+        .sidebar.collapsed .page-list, .sidebar.collapsed .sidebar-footer, .sidebar.collapsed .sidebar-header span, .sidebar.collapsed .sidebar-header svg, .sidebar.collapsed .sidebar-header button, .sidebar.collapsed .sidebar-autohide-row, .sidebar.collapsed .sidebar-pages-section, .sidebar.collapsed #widgetSidebarSection { display: none; }
+        .sidebar-footer { padding: 8px 6px; border-top: 1px solid var(--border); display: flex; align-items: center; }
+        .sidebar-footer button { white-space: nowrap; overflow: hidden; width: 100%; font-size: 10px; padding: 8px 13px; }
+        .sidebar.collapsed .sidebar-header { padding: 0; justify-content: center; border-bottom: none; height: 100%; }
+        .sidebar-header { padding: 5px 13px; font-size: 10px; font-weight: 500; color: var(--text2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; height: 30px; box-sizing: border-box; cursor: pointer; user-select: none; background: var(--surface); font-family: var(--body-font); }
+        .sidebar-header:hover { color: var(--text); }
+        .sidebar-header svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .sidebar-chevron-track { position: absolute; right: 0; top: 30px; bottom: 0; width: 16px; display: flex; align-items: center; justify-content: center; z-index: 2; background: none; pointer-events: none; }
+        .sidebar-chevron { font-size: 10px; color: var(--text2); opacity: 0.5; transition: transform 0.3s ease; display: inline-block; }
+        .sidebar.collapsed .sidebar-chevron { transform: rotate(180deg); }
+        .sidebar-pages-section { flex: 1; min-height: 120px; display: flex; flex-direction: column; overflow: hidden; }
+        #widgetSidebarSection { flex: 1; min-height: 80px; overflow: hidden; display: none; flex-direction: column; }
+        #widgetSidebarSection.has-widgets { display: flex; }
+        #widgetSidebarSection .page-list { flex: 1; min-height: 0; }
+        .page-list { flex: 1; overflow-y: auto; padding: 6px; list-style: none; min-height: 0; }
+        .page-item { padding: 7px 10px; border-radius: var(--radius); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; min-height: 38px; box-sizing: border-box; }
         .page-item:hover { background: var(--bg2); }
         .page-item.active { background: var(--accent); color: var(--accent-text); }
-        .page-item-title { font-size: 13px; font-weight: 500; }
-        .page-item-slug { font-size: 11px; opacity: 0.5; }
-        .sidebar-footer { padding: 8px; border-top: 1px solid var(--border); }
-        .sidebar-footer button { width: 100%; font-size: 12px; }
+        .page-item-title { font-size: 11px; font-weight: 500; }
+        .page-item-slug { font-size: 9px; opacity: 0.5; }
 
         /* ── Work Area ── */
         .work-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
         /* ── Tab Bar ── */
-        .tab-bar { display: flex; align-items: center; padding: 0 16px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 38px; gap: 2px; }
-        .tab { padding: 7px 14px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 4px 4px 0 0; border: none; background: none; transition: all 0.15s; font-family: var(--body-font); }
+        .tab-bar { display: flex; align-items: center; padding: 0 13px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 30px; gap: 2px; }
+        .tab { padding: 5px 11px; font-size: 10px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 4px 4px 0 0; border: none; background: none; transition: all 0.15s; font-family: var(--body-font); display: inline-flex; align-items: center; gap: 4px; }
+        .tab svg, .tab-icon { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
         .tab:hover { color: var(--text); background: var(--surface); }
         .tab.active { color: var(--accent); background: var(--surface); border-bottom: 2px solid var(--accent); font-weight: 600; }
         .tab-spacer { flex: 1; }
@@ -141,14 +163,14 @@
 
         /* ── AI Chat ── */
         .ai-chat-container { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-        .ai-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-        .ai-msg { padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; max-width: 90%; word-wrap: break-word; }
+        .ai-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .ai-msg { padding: 8px 11px; border-radius: 8px; font-size: 11px; line-height: 1.5; max-width: 90%; word-wrap: break-word; }
         .ai-msg.user { background: var(--accent); color: var(--accent-text); align-self: flex-end; border-bottom-right-radius: 3px; }
         .ai-msg.assistant { background: var(--surface2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; }
-        .ai-msg.system { background: rgba(107,140,174,0.1); color: var(--accent); align-self: center; font-size: 12px; text-align: center; }
+        .ai-msg.system { background: rgba(107,140,174,0.1); color: var(--accent); align-self: center; font-size: 10px; text-align: center; }
         [data-theme="dark"] .ai-msg.system { background: rgba(126,163,196,0.12); }
-        .ai-msg pre { background: var(--bg); padding: 8px; border-radius: 4px; overflow-x: auto; margin: 6px 0; font-size: 11px; font-family: var(--mono); white-space: pre-wrap; }
-        .ai-msg code { font-family: var(--mono); font-size: 11px; background: var(--bg); padding: 1px 4px; border-radius: 2px; }
+        .ai-msg pre { background: var(--bg); padding: 6px; border-radius: 4px; overflow-x: auto; margin: 5px 0; font-size: 9px; font-family: var(--mono); white-space: pre-wrap; }
+        .ai-msg code { font-family: var(--mono); font-size: 9px; background: var(--bg); padding: 1px 3px; border-radius: 2px; }
         .ai-input-bar { display: flex; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; align-items: center; flex-wrap: wrap; }
         .ai-input-bar input { flex: 1; padding: 10px 14px; border-radius: 20px; min-width: 0; background: var(--bg); font-family: var(--body-font); }
         .ai-input-bar button { border-radius: 20px; padding: 8px 18px; }
@@ -179,27 +201,70 @@
         .pointer-highlight { position: absolute; border: 2px solid var(--accent); background: rgba(107,140,174,0.15); pointer-events: none; z-index: 51; border-radius: 2px; }
         .pointer-label { position: absolute; background: var(--accent); color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; pointer-events: none; z-index: 52; white-space: nowrap; font-family: var(--mono); }
 
-        .pane-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 500; color: var(--text2); flex-shrink: 0; height: 34px; }
-        .pane-header .pane-actions { display: flex; gap: 4px; }
+        .pane-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 11px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 500; color: var(--text2); flex-shrink: 0; height: 27px; }
+        .pane-header .pane-actions { display: flex; gap: 5px; flex-shrink: 0; }
+        .pane-header .pane-actions .btn-sm { white-space: nowrap; font-size: 9px; padding: 3px 7px; }
+        .pane-header .pane-actions .btn-sm svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
         /* ── Editors ── */
         .editor-split { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .editor-block { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-        .editor-block-header { display: flex; align-items: center; justify-content: space-between; padding: 4px 14px; background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; flex-shrink: 0; }
-        .editor-block textarea { flex: 1; width: 100%; border: none; border-radius: 0; padding: 10px 12px; min-height: 0; }
+        .editor-block-header { display: flex; align-items: center; justify-content: space-between; padding: 3px 11px; background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 9px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; flex-shrink: 0; }
+        .editor-block textarea { flex: 1; width: 100%; border: none; border-radius: 0; padding: 8px 10px; min-height: 0; }
 
         /* ── Tab Panels ── */
         .tab-panel { display: none; flex: 1; overflow: hidden; min-height: 0; }
         .tab-panel.active { display: flex; flex-direction: column; }
 
         /* ── Widget Tabs ── */
-        .tab.widget-tab { border-left: 1px solid var(--border); margin-left: 4px; padding-left: 14px; }
         .widget-panel { padding: 0; overflow: hidden; flex: 1; min-height: 0; display: flex; flex-direction: column; }
         .widget-panel h3 { margin: 0 0 16px 0; font-size: 16px; }
         .widget-panel .widget-section { margin-bottom: 20px; }
         .widget-panel .widget-btn { padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .widget-panel .widget-btn-primary { background: var(--accent); color: white; border: none; }
         .widget-panel .widget-btn-primary:hover { opacity: 0.9; }
+
+        /* ── Widget Tab Dropdown Groups ── */
+        .widget-group { position: relative; display: inline-flex; align-items: center; border-left: 1px solid var(--border); margin-left: 4px; padding-left: 6px; }
+        .widget-group-btn { padding: 5px 9px; font-size: 10px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 4px 4px 0 0; border: none; background: none; transition: all 0.15s; font-family: var(--body-font); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+        .widget-group-btn:hover { color: var(--text); background: var(--surface); }
+        .widget-group-btn.has-active { color: var(--accent); font-weight: 600; }
+        .widget-group-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2.5; transition: transform 0.15s; flex-shrink: 0; }
+        .widget-group-btn.open svg { transform: rotate(180deg); }
+        .widget-group-dropdown { display: none; position: absolute; top: 100%; left: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 0 var(--radius) var(--radius) var(--radius); box-shadow: var(--shadow-md); z-index: 200; min-width: 160px; padding: 4px; }
+        .widget-group-dropdown.open { display: block; }
+        .widget-group-item { display: flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--text2); white-space: nowrap; transition: all 0.12s; }
+        .widget-group-item:hover { background: var(--bg2); color: var(--text); }
+        .widget-group-item.active { color: var(--accent); font-weight: 600; }
+        .widget-group-item svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+
+        /* ── Sidebar Widget Section ── */
+        .sidebar-section-divider { display: flex; align-items: center; gap: 5px; padding: 10px 13px 3px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text2); border-top: 1px solid var(--border); margin-top: 4px; flex-shrink: 0; }
+        .sidebar-section-divider svg { flex-shrink: 0; opacity: 0.6; }
+        .ssd-add { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text2); font-size: 14px; line-height: 1; padding: 0 2px; font-family: var(--body-font); transition: color 0.15s; }
+        .ssd-add:hover { color: var(--text); }
+
+        /* Widget items in sidebar — left padding 7px so total (6px page-list + 7px) = 13px, matching sidebar-header */
+        .widget-item { padding: 7px 10px 7px 7px; border-radius: var(--radius); cursor: pointer; margin-bottom: 2px; transition: all 0.15s; display: flex; align-items: center; gap: 7px; }
+        .widget-item:hover { background: var(--bg2); }
+        .widget-item.active { background: var(--accent); color: var(--accent-text); }
+        .widget-item svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; opacity: 0.7; }
+        .widget-item.active svg { opacity: 1; }
+        .widget-item-name { font-size: 11px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .widget-item-tier { font-size: 8px; opacity: 0.55; display: block; margin-top: 1px; }
+        .widget-tier-label { padding: 4px 10px 2px 7px; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text2); opacity: 0.6; }
+
+        /* ── Widget Editor Banner ── */
+        .widget-editor-banner { display: none; align-items: center; gap: 8px; padding: 5px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; font-size: 10px; }
+        .widget-editor-banner.show { display: flex; }
+        .widget-editor-banner .we-name { font-weight: 600; color: var(--text); }
+        .widget-editor-banner .we-tier { font-size: 8px; padding: 1px 5px; border-radius: 3px; background: var(--accent); color: var(--accent-text); text-transform: uppercase; letter-spacing: 0.4px; }
+        .widget-editor-banner .we-actions { margin-left: auto; display: flex; gap: 6px; }
+
+        /* ── JS editor pane (widget editing) ── */
+        .js-editor-block { display: none; flex-direction: column; flex: 1; min-height: 0; }
+        .js-editor-block.show { display: flex; }
+        .js-editor-block textarea { flex: 1; font-family: var(--mono); font-size: 10px; line-height: 1.5; resize: none; border: none; border-radius: 0; outline: none; padding: 10px 12px; background: var(--surface); color: var(--text); }
         .widget-panel .widget-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
         .widget-panel .widget-card { border: 2px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: all 0.15s; background: var(--bg); }
         .widget-panel .widget-card:hover { border-color: var(--accent); }
@@ -241,9 +306,9 @@
         .api-empty-custom code { background: var(--bg); padding: 2px 6px; border-radius: 3px; font-size: 12px; }
 
         /* ── About Tab ── */
-        .about-panel { padding: 24px; overflow-y: auto; flex: 1; max-width: 720px; margin: 0 auto; }
-        .about-panel h2 { font-family: var(--heading-font); font-weight: 400; font-style: italic; font-size: 22px; margin: 0 0 6px; color: var(--text); }
-        .about-panel .about-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+        .about-panel { padding: 24px; overflow-y: auto; flex: 1; max-width: 800px; margin: 0 auto; width: 100%; }
+        .about-panel h2 { font-family: var(--heading-font); font-weight: 400; font-style: italic; font-size: 16px; margin: 0 0 4px; color: var(--text); }
+        .about-panel .about-subtitle { font-size: 10px; color: var(--text2); margin-bottom: 16px; }
         .about-level-btns { display: flex; gap: 6px; margin-bottom: 24px; }
         .about-level-btns button { padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
         .about-level-btns button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
@@ -333,7 +398,10 @@
         body.fullscreen-preview .sidebar, body.fullscreen-preview .editor-pane, body.fullscreen-preview .tab-bar { display: none !important; }
         body.fullscreen-preview .preview-pane { width: 100% !important; border: none !important; }
         body.fullscreen-preview .header-bar { display: none !important; }
-        .fullscreen-exit { position: fixed; top: 12px; right: 12px; z-index: 9999; display: none; }
+        body.fullscreen-preview .pane-header { display: none !important; }
+        body.fullscreen-preview .pane-resizer { display: none !important; }
+        .fullscreen-exit { position: fixed; top: 8px; right: 8px; z-index: 9999; display: none; font-size: 9px; padding: 4px 10px; opacity: 0.6; background: rgba(0,0,0,0.5); color: #fff; border: none; }
+        .fullscreen-exit:hover { opacity: 1; }
         body.fullscreen-preview .fullscreen-exit { display: block; }
 
         /* ── Toast ── */
@@ -341,6 +409,7 @@
         .toast { padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; animation: toastIn 0.3s ease; color: white; box-shadow: var(--shadow-md); font-family: var(--body-font); }
         .toast.success { background: var(--success); }
         .toast.error { background: var(--danger); }
+        .toast.warn { background: var(--warn); color: #000; }
         .toast.info { background: var(--accent); color: var(--accent-text); }
         @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -373,38 +442,40 @@
         .claude-term-output::-webkit-scrollbar { width: 6px; }
         .claude-term-output::-webkit-scrollbar-track { background: #222; }
         .claude-term-output::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-        .claude-term-line { margin-bottom: 2px; }
-        .claude-term-line.user-input { color: #5a8bbe; font-weight: 600; }
+        .claude-term-line { margin-bottom: 3px; font-size: 10px; padding: 2px 0; }
+        .claude-term-line.user-input { color: #5a8bbe; font-weight: 600; font-size: 10px; }
         .claude-term-line.user-input::before { content: '❯ '; color: #5a8bbe; }
         .claude-term-line.queued { opacity: 0.5; }
-        .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: 11px; color: var(--text2); }
-        .claude-term-line.system { color: #666; font-style: italic; font-size: 12px; }
-        .claude-term-line.error { color: #e74c3c; }
-        .claude-term-line.thinking { color: #9a978e; font-style: italic; }
+        .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: 9px; color: var(--text2); }
+        .claude-term-line.system { color: #666; font-style: italic; font-size: 9px; }
+        .claude-term-line.error { color: #e74c3c; font-size: 10px; }
+        .claude-term-line.thinking { color: #9a978e; font-style: italic; font-size: 10px; }
         .claude-term-line.thinking::before { content: ''; }
-        .claude-term-line.tool-use { color: #c8a840; font-size: 12px; }
-        .claude-term-line.tool-use::before { content: ''; }
-        .claude-term-line.result-text { color: #e8e6e0; }
+        .claude-term-line.tool-use { color: #aaa79e; font-size: 10px; padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid #444; }
+        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #c8a840; font-size: 10px; }
+        .claude-term-line.tool-use .tool-header svg { width: 11px; height: 11px; stroke: #c8a840; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: 9px; color: #888; margin-top: 2px; word-break: break-all; }
+        .claude-term-line.result-text { color: #e8e6e0; font-size: 10px; line-height: 1.5; margin-top: 6px; }
         .claude-term-line.result-text strong { color: #fff; }
         .claude-term-line.result-text em { color: #bbb; font-style: italic; }
-        .claude-term-line.result-text code { background: #2c2c30; padding: 1px 5px; border-radius: 3px; font-size: 12px; color: #6a9fd4; }
+        .claude-term-line.result-text code { background: #2c2c30; padding: 1px 5px; border-radius: 3px; font-size: 9px; color: #6a9fd4; }
         .claude-term-line.result-text a { color: #5a8bbe; text-decoration: underline; }
         .claude-term-code-block { background: #111; border: 1px solid #333; border-radius: 6px; padding: 12px 14px; margin: 8px 0; overflow-x: auto; font-size: 12px; line-height: 1.5; color: #ccc; }
         .claude-term-code-block .code-lang { color: #666; font-size: 10px; text-transform: uppercase; margin-bottom: 6px; display: block; }
         .claude-term-separator { border: none; border-top: 1px solid #2a2a2e; margin: 12px 0; }
-        .claude-term-input-bar { display: flex; gap: 8px; padding: 12px 16px; background: #222226; border-top: 1px solid #333; flex-shrink: 0; align-items: center; }
-        .claude-term-input-bar input { flex: 1; background: #1a1a1e; color: #e8e6e0; border: 1px solid #3e3e44; border-radius: 6px; padding: 10px 14px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; outline: none; }
+        .claude-term-input-bar { display: flex; gap: 5px; padding: 8px 10px; background: #222226; border-top: 1px solid #333; flex-shrink: 0; align-items: center; }
+        .claude-term-input-bar input { flex: 1; background: #1a1a1e; color: #e8e6e0; border: 1px solid #3e3e44; border-radius: 5px; padding: 6px 10px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 11px; outline: none; }
         .claude-term-input-bar input:focus { border-color: #5a8bbe; box-shadow: 0 0 0 2px rgba(90,139,190,0.2); }
         .claude-term-input-bar input::placeholder { color: #555; }
-        .claude-term-input-bar button { padding: 10px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; }
+        .claude-term-input-bar button { padding: 6px 11px; border-radius: 5px; font-size: 11px; font-weight: 600; }
         .claude-term-input-bar .claude-send { background: #5a8bbe; color: #fff; }
         .claude-term-input-bar .claude-send:hover { background: #6a9fd4; }
         .claude-term-input-bar .claude-send:disabled { opacity: 0.4; }
-        .claude-term-input-bar .claude-halt { background: #c0392b; color: #fff; padding: 10px 14px; }
+        .claude-term-input-bar .claude-halt { background: #c0392b; color: #fff; padding: 6px 11px; }
         .claude-term-input-bar .claude-halt:hover { background: #e74c3c; }
         .claude-term-input-bar .claude-reset { background: transparent; color: #666; border: 1px solid #3e3e44; padding: 10px 12px; }
         .claude-term-input-bar .claude-reset:hover { color: #e74c3c; border-color: #e74c3c; }
-        .claude-tools-toggle { width: 36px; height: 36px; flex-shrink: 0; background: #2a2a2e; color: #999; border: 1px solid #3e3e44; border-radius: 6px; font-size: 20px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 0; line-height: 1; }
+        .claude-tools-toggle { width: 26px; flex-shrink: 0; background: #2a2a2e; color: #999; border: 1px solid #3e3e44; border-radius: 5px; font-size: 14px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 6px 0; line-height: 1; box-sizing: border-box; }
         .claude-tools-toggle:hover { color: #fff; border-color: #5a8bbe; }
         .claude-tools-toggle.open { background: #5a8bbe; color: #fff; border-color: #5a8bbe; transform: rotate(45deg); }
         .claude-term-tools { display: flex; }
@@ -445,6 +516,16 @@
         .mobile-preview-toggle:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
         .mobile-preview-toggle:active { transform: scale(0.95); }
         .mobile-preview-toggle.preview-mode { background: var(--success); }
+
+        /* ── Medium-width: icons-only tabs, reveal on hover ── */
+        @media (max-width: 1200px) and (min-width: 769px) {
+            .tab .tab-label { display: none; max-width: 0; overflow: hidden; transition: max-width 0.2s ease, margin-left 0.2s ease; white-space: nowrap; }
+            .tab:hover .tab-label { display: inline; max-width: 100px; margin-left: 4px; }
+            .tab { padding: 5px 8px; gap: 0; transition: padding 0.15s ease; }
+            .tab:hover { padding: 5px 11px; }
+            .tab svg { margin: 0; }
+            .tab-bar .btn-sm .tab-label { display: none; }
+        }
 
         /* ── Mobile Responsive ── */
         @media (max-width: 768px) {
@@ -490,12 +571,13 @@
             .pane-resizer { display: none; }
 
             /* Adjust Claude terminal for mobile — ensure input stays visible */
-            .claude-terminal { font-size: 12px; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-            .claude-term-output { flex: 1; min-height: 0; overflow-y: auto; }
-            .claude-term-input-bar { padding: 10px; gap: 6px; flex-shrink: 0; background: #222226; border-top: 1px solid #333; }
-            .claude-term-input-bar input { font-size: 14px; padding: 10px 12px; }
-            .claude-term-input-bar button { padding: 10px 14px; font-size: 13px; }
-            .claude-tool-btn { font-size: 10px; padding: 6px 8px; }
+            .claude-terminal { font-size: 10px; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+            .claude-term-output { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .claude-term-input-bar { padding: 8px; gap: 5px; flex-shrink: 0; background: #222226; border-top: 1px solid #333; position: sticky; bottom: 0; }
+            .claude-term-input-bar input { font-size: 13px; padding: 8px 10px; }
+            .claude-term-input-bar button { padding: 6px 11px; font-size: 11px; }
+            .claude-tool-btn { font-size: 9px; padding: 5px 7px; }
+            .panel-claude .editor-pane { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
             /* Adjust editor split */
             .editor-split { flex-direction: column; }
@@ -544,7 +626,7 @@
                 <button type="submit" style="width:100%;padding:11px 16px;font-size:14px;">Sign In</button>
             </form>
             <div style="text-align:center;margin-top:20px;">
-                <button class="theme-toggle" onclick="toggleTheme()" style="font-size:13px;margin:0 auto;width:auto;padding:8px 14px;"><svg viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><circle cx="12" cy="12" r="5"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg><span>Dark Mode</span></button>
+                <button class="theme-toggle" onclick="toggleTheme()" style="font-size:11px;margin:0 auto;width:auto;padding:6px 11px;" id="loginThemeToggle"><span>Dark Mode</span></button>
             </div>
         </div>
     </div>
@@ -564,17 +646,18 @@
 
         <!-- Header -->
         <div class="header-bar">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:26px;width:auto;">
-                <h1 style="font-family:'Cardo',Georgia,serif;font-weight:700;font-style:normal;color:var(--text);font-size:26px;">Adze Studio</h1>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:21px;width:auto;">
+                <h1 style="font-family:'Cardo',Georgia,serif;font-weight:700;font-style:normal;color:var(--text);font-size:21px;">Adze Studio</h1>
                 <span class="welcome-dash" style="color:var(--text2);margin-left:6px;">–</span>
-                <span class="welcome-text" style="font-family:'Cardo',Georgia,serif;color:var(--text2);font-size:13px;margin-left:6px;">Welcome back, <span id="artistName" style="color:var(--text2);"></span></span>
+                <span class="welcome-text" style="font-family:'Cardo',Georgia,serif;color:var(--text2);font-size:11px;margin-left:5px;">Welcome back, <span id="artistName" style="color:var(--text2);"></span></span>
             </div>
             <div class="header-actions">
                 <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
+                <span id="lastSavedLabel" style="font-size:10px;color:var(--text2);opacity:0.7;"></span>
                 <button onclick="savePage()" id="saveBtn" disabled>Save</button>
                 <button class="btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
-                <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle dark mode"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg></button>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle dark mode"></button>
                 <button class="btn-ghost" onclick="logout()">Logout</button>
             </div>
         </div>
@@ -582,43 +665,74 @@
         <div class="main-layout">
             <!-- Sidebar -->
             <div class="sidebar">
-                <div class="sidebar-header">Pages</div>
-                <ul class="page-list" id="pageList"></ul>
-                <div class="sidebar-footer">
-                    <button onclick="showModal('createPageModal')">+ New Page</button>
+                <div class="sidebar-header" onclick="toggleSidebar()"><svg viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg><span id="sidebarHeaderLabel">Pages</span><button class="ssd-add" onclick="event.stopPropagation();showModal('createPageModal')" title="New page">+</button></div>
+                <!-- Pages section — shrinks to give widget section equal space -->
+                <div class="sidebar-pages-section">
+                    <ul class="page-list" id="pageList"></ul>
                 </div>
+                <!-- Widget section — shown only when widgets are loaded, takes equal share -->
+                <div id="widgetSidebarSection">
+                    <div class="sidebar-section-divider">
+                        <svg viewBox="0 0 24 24" style="width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        <span>Edit Widgets</span>
+                        <button class="ssd-add" onclick="showNewWidgetModal()" title="New widget">+</button>
+                    </div>
+                    <ul class="page-list" id="widgetList"></ul>
+                </div>
+                <div class="sidebar-chevron-track"><span class="sidebar-chevron">&#9666;</span></div>
             </div>
 
             <!-- Work Area -->
             <div class="work-area">
                 <!-- Tab bar -->
                 <div class="tab-bar" id="tabBar" style="display:none;">
-                    <button class="tab" data-tab="edit" onclick="switchTab('edit', this)">Manual Edit</button>
-                    <button class="tab active" data-tab="claude" onclick="switchTab('claude', this)">Vibe Coder</button>
-                    <button class="tab" data-tab="config" onclick="switchTab('config', this)">Settings</button>
-                    <button class="tab" data-tab="assets" onclick="switchTab('assets', this)">Assets</button>
-                    <button class="tab" data-tab="snapshots" onclick="switchTab('snapshots', this)">History</button>
-                    <button class="tab" data-tab="domain" onclick="switchTab('domain', this)">Domain</button>
-                    <button class="tab" data-tab="api" onclick="switchTab('api', this)">API</button>
-                    <button class="tab" data-tab="fonts" onclick="switchTab('fonts', this)">Fonts</button>
-                    <button class="tab" data-tab="stripe" onclick="switchTab('stripe', this)">Stripe</button>
-                    <button class="tab" data-tab="export" onclick="switchTab('export', this)">Export</button>
-                    <button class="tab" data-tab="about" onclick="switchTab('about', this)">About</button>
+                    <button class="tab" data-tab="edit" onclick="switchTab('edit', this)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="tab-label">Manual Edit</span></button>
+                    <button class="tab active" data-tab="claude" onclick="switchTab('claude', this)"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="tab-label">Vibe Coder</span></button>
+                    <button class="tab" data-tab="config" onclick="switchTab('config', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="tab-label">Settings</span></button>
+                    <button class="tab" data-tab="assets" onclick="switchTab('assets', this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="tab-label">Assets</span></button>
+                    <button class="tab" data-tab="snapshots" onclick="switchTab('snapshots', this)"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span class="tab-label">History</span></button>
+                    <button class="tab" data-tab="domain" onclick="switchTab('domain', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="tab-label">Domain</span></button>
+                    <button class="tab" data-tab="api" onclick="switchTab('api', this)"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="tab-label">API</span></button>
+                    <button class="tab" data-tab="fonts" onclick="switchTab('fonts', this)"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg><span class="tab-label">Fonts</span></button>
+                    <button class="tab" data-tab="export" onclick="switchTab('export', this)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="tab-label">Export</span></button>
+                    <button class="tab" data-tab="share" onclick="switchTab('share', this)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="tab-label">Presence</span></button>
+                    <button class="tab" data-tab="analytics" onclick="switchTab('analytics', this)"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span class="tab-label">Analytics</span></button>
+                    <button class="tab" data-tab="marketplace" onclick="switchTab('marketplace', this)"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg><span class="tab-label">Marketplace</span></button>
+                    <button class="tab" data-tab="about" onclick="switchTab('about', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="tab-label">About</span></button>
                     <span id="widgetTabsContainer"></span>
                     <span class="tab-spacer"></span>
-                    <button class="btn-sm btn-ghost" id="livePageLink" onclick="publishAndView()">Publish / View Live</button>
-                    <button class="btn-sm btn-danger" onclick="showModal('deletePageModal')">Delete Page</button>
+                    <button class="btn-sm" id="livePageLink" onclick="publishAndView()" style="margin-left:auto;">Publish</button>
+                    <button class="btn-sm btn-danger" onclick="showModal('deletePageModal')" style="margin-left:4px;">Delete Page</button>
                 </div>
 
                 <!-- Empty state -->
-                <div class="empty-state" id="emptyState">
-                    <div><h3>Select a page</h3><p>Choose a page from the sidebar or create a new one</p></div>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <div><h3>No pages yet</h3><p>Create a new page to get started</p></div>
                 </div>
 
                 <!-- Manual Edit Tab: split code + preview -->
                 <div class="tab-panel" id="panel-edit">
+                    <div class="widget-editor-banner" id="widgetEditorBanner">
+                        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:var(--text2);fill:none;stroke-width:2;flex-shrink:0;"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        <span class="we-name" id="widgetEditorName"></span>
+                        <span class="we-tier" id="widgetEditorTierBadge"></span>
+                        <div class="we-actions">
+                            <button class="btn-sm btn-ghost" id="widgetShareBtn" onclick="toggleWidgetShare()" title="Share to marketplace" style="display:none;">Share</button>
+                            <button class="btn-sm btn-ghost" onclick="exitWidgetEditorMode()" title="Exit widget editor">← Done</button>
+                        </div>
+                    </div>
                     <div class="split-pane">
                         <div class="editor-pane" id="editEditorPane">
+                            <!-- JS editor (widget mode) -->
+                            <div class="js-editor-block" id="jsEditorBlock">
+                                <div class="editor-block-header">
+                                    <span>Widget JS</span>
+                                    <span style="font-size:9px;color:var(--text2);margin-left:8px;opacity:0.7;" id="jsEditorAutoSaveLabel"></span>
+                                </div>
+                                <textarea id="jsEditor" spellcheck="false" placeholder="// Your widget code here..."></textarea>
+                            </div>
+                            <!-- Page editors (page mode) -->
+                            <div id="pageEditorsBlock">
                             <div class="editor-split">
                                 <div class="editor-block">
                                     <div class="editor-block-header"><span>Styles (CSS)</span></div>
@@ -639,6 +753,7 @@
                                     <textarea id="envEditor" spellcheck="false" style="font-family:monospace;font-size:12px;display:none;"></textarea>
                                 </div>
                             </div>
+                            </div><!-- /pageEditorsBlock -->
                         </div>
                         <div class="pane-resizer" data-target="editEditorPane"></div>
                         <div class="preview-pane">
@@ -662,10 +777,6 @@
                                 <div class="claude-term-output" id="claudeOutput">
                                     <div class="claude-term-welcome" id="vcWelcome">
                                         <h2>VIBE-CODER</h2>
-                                        <p class="vc-line1">Full-powered AI assistant with direct file access to your site.</p>
-                                        <p class="vc-line2">It uses Claude Opus 4.6 (or newer).</p>
-                                        <p class="vc-line3">I use it for work also so don't use it more than like 3h a day please :)</p>
-                                        <p class="vc-line4">If you wanna use it more you can just text me also I've probably got spare usage left.</p>
                                         <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
                                     </div>
                                 </div>
@@ -675,8 +786,8 @@
                                     <button class="claude-tool-btn" onclick="resetClaudeSession()" title="Clear memory and start fresh">Clear Memory</button>
                                 </div>
                                 <div class="claude-term-input-bar">
-                                    <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools">+</button>
                                     <input type="text" id="claudeInput" placeholder="Ask anything about your site..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClaudeMessage();}">
+                                    <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools">+</button>
                                     <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn">Send</button>
                                     <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder">Stop</button>
                                 </div>
@@ -687,9 +798,9 @@
                             <div class="pane-header">
                                 <span>Preview</span>
                                 <div class="pane-actions">
-                                    <button class="btn-sm btn-ghost" id="textEditBtn" onclick="toggleTextEdit()" title="Click text in the preview to edit it inline">✎ Text Edit</button>
-                                    <button class="btn-sm btn-ghost" onclick="refreshPreview()" title="Reload preview from server">↻ Refresh</button>
-                                    <button class="btn-sm btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
+                                    <button class="btn-sm btn-ghost" id="textEditBtn" onclick="toggleTextEdit()" title="Click text in the preview to edit it inline"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Text Edit</button>
+                                    <button class="btn-sm btn-ghost" onclick="refreshPreview()" title="Reload preview from server"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Refresh</button>
+                                    <button class="btn-sm btn-ghost" onclick="toggleFullscreen()"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Fullscreen</button>
                                 </div>
                             </div>
                             <div id="previewErrorBar" style="display:none;background:#2d1b1b;border-bottom:1px solid #5a2d2d;padding:6px 12px;font-size:12px;color:#e8a0a0;flex-shrink:0;align-items:center;gap:8px;">
@@ -785,6 +896,8 @@
                     <div class="split-pane">
                         <div class="editor-pane" id="snapshotsEditorPane" style="overflow-y:auto;">
                             <div class="snapshots-panel">
+                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">History</h3>
+                                <p style="font-size:10px;color:var(--text2);margin:0 0 16px;">Snapshots of your site. Restore anytime.</p>
                                 <div class="snapshot-actions">
                                     <button onclick="createServerSnapshot()">Save Snapshot</button>
                                 </div>
@@ -805,7 +918,8 @@
                     <div class="split-pane">
                         <div class="editor-pane" id="domainEditorPane" style="overflow-y:auto;">
                             <div class="domain-panel" id="domainPanel">
-                                <h3>Custom Domain</h3>
+                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Custom Domain</h3>
+                                <p style="font-size:10px;color:var(--text2);margin:0 0 16px;">Connect your own domain name</p>
                                 <div id="domainContent">
                                     <p style="color:var(--text2);font-size:13px;">Loading domain status...</p>
                                 </div>
@@ -822,23 +936,27 @@
                 <!-- API Tab -->
                 <div class="tab-panel" id="panel-api">
                     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
-                        <div style="padding:20px 24px 12px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
-                            <div>
-                                <h3 style="margin:0;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:20px;">API Endpoints</h3>
-                                <p style="margin:4px 0 0;font-size:12px;color:var(--text2);">Services and data connections powering your site</p>
+                        <div style="padding:24px;flex:1;overflow-y:auto;">
+                            <div style="max-width:800px;margin:0 auto;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                                    <div>
+                                        <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">API Endpoints</h3>
+                                        <p style="font-size:10px;color:var(--text2);margin:0;">Services and data connections powering your site</p>
+                                    </div>
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <span style="font-size:9px;color:var(--text2);">Simple</span>
+                                        <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+                                            <input type="checkbox" id="apiViewToggle" onchange="renderApiEndpoints()" style="opacity:0;width:0;height:0;">
+                                            <span style="position:absolute;inset:0;background:var(--bg3);border-radius:10px;transition:0.2s;"></span>
+                                            <span id="apiToggleKnob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:white;border-radius:50%;transition:0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                                        </label>
+                                        <span style="font-size:9px;color:var(--text2);">Developer</span>
+                                    </div>
+                                </div>
+                                <div id="apiContent">
+                                    <p style="color:var(--text2);font-size:10px;">Loading endpoints...</p>
+                                </div>
                             </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <span style="font-size:11px;color:var(--text2);">Simple</span>
-                                <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
-                                    <input type="checkbox" id="apiViewToggle" onchange="renderApiEndpoints()" style="opacity:0;width:0;height:0;">
-                                    <span style="position:absolute;inset:0;background:var(--bg3);border-radius:10px;transition:0.2s;"></span>
-                                    <span id="apiToggleKnob" style="position:absolute;top:2px;left:2px;width:16px;height:16px;background:white;border-radius:50%;transition:0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                </label>
-                                <span style="font-size:11px;color:var(--text2);">Developer</span>
-                            </div>
-                        </div>
-                        <div id="apiContent" style="flex:1;overflow-y:auto;padding:0 24px 24px;">
-                            <p style="color:var(--text2);font-size:13px;">Loading endpoints...</p>
                         </div>
                     </div>
                 </div>
@@ -848,8 +966,8 @@
                     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
                         <div style="padding:24px;flex:1;overflow-y:auto;">
                             <div style="max-width:800px;margin:0 auto;">
-                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:20px;">Fonts</h3>
-                                <p style="font-size:13px;color:var(--text2);margin:0 0 16px;">Browse Google Fonts and add them to your site with one click.</p>
+                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Fonts</h3>
+                                <p style="font-size:10px;color:var(--text2);margin:0 0 16px;">Browse Google Fonts and add them to your site with one click.</p>
 
                                 <!-- Installed Fonts -->
                                 <div id="installedFontsSection" style="margin-bottom:24px;">
@@ -880,119 +998,13 @@
                     </div>
                 </div>
 
-                <!-- Stripe Tab -->
-                <div class="tab-panel" id="panel-stripe">
-                    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
-                        <div style="padding:24px;flex:1;overflow-y:auto;max-width:720px;margin:0 auto;width:100%;">
-                            <div id="stripeSetup" style="display:none;">
-                                <h3 style="margin:0 0 8px;">Set up Stripe</h3>
-                                <p style="color:var(--text2);font-size:14px;margin:0 0 20px;">Accept payments on your site. You'll need a Stripe account.</p>
-                                <div style="display:flex;flex-direction:column;gap:16px;">
-                                    <div style="background:var(--surface2);border-radius:8px;padding:16px;">
-                                        <div style="font-weight:600;margin-bottom:8px;">Step 1: Create a Stripe account</div>
-                                        <p style="font-size:13px;color:var(--text2);margin:0 0 8px;">If you don't have one, sign up at stripe.com. It's free to create.</p>
-                                        <a href="https://dashboard.stripe.com/register" target="_blank" style="color:var(--accent);font-size:13px;">Go to Stripe &rarr;</a>
-                                    </div>
-                                    <div style="background:var(--surface2);border-radius:8px;padding:16px;">
-                                        <div style="font-weight:600;margin-bottom:8px;">Step 2: Get your API keys</div>
-                                        <p style="font-size:13px;color:var(--text2);margin:0 0 8px;">Go to Developers &rarr; API keys in Stripe. Copy your <b>Secret key</b> and <b>Publishable key</b>.</p>
-                                        <a href="https://dashboard.stripe.com/apikeys" target="_blank" style="color:var(--accent);font-size:13px;">Open API keys &rarr;</a>
-                                    </div>
-                                    <div style="background:var(--surface2);border-radius:8px;padding:16px;">
-                                        <div style="font-weight:600;margin-bottom:8px;">Step 3: Paste your keys</div>
-                                        <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
-                                            <div>
-                                                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Secret Key</label>
-                                                <div style="display:flex;align-items:center;gap:8px;">
-                                                    <input type="password" id="stripeSecretKey" placeholder="sk_live_..." oninput="validateStripeKey(this,'sk_')" style="flex:1;padding:8px;font-size:13px;font-family:monospace;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                                    <span id="stripeSecretKeyStatus" style="font-size:16px;width:20px;text-align:center;"></span>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Publishable Key</label>
-                                                <div style="display:flex;align-items:center;gap:8px;">
-                                                    <input type="password" id="stripePubKey" placeholder="pk_live_..." oninput="validateStripeKey(this,'pk_')" style="flex:1;padding:8px;font-size:13px;font-family:monospace;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                                    <span id="stripePubKeyStatus" style="font-size:16px;width:20px;text-align:center;"></span>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Webhook Secret (optional — for verifying payment notifications)</label>
-                                                <div style="display:flex;align-items:center;gap:8px;">
-                                                    <input type="password" id="stripeWebhookSecret" placeholder="whsec_..." oninput="validateStripeKey(this,'whsec_')" style="flex:1;padding:8px;font-size:13px;font-family:monospace;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                                    <span id="stripeWebhookSecretStatus" style="font-size:16px;width:20px;text-align:center;"></span>
-                                                </div>
-                                            </div>
-                                            <button class="btn-sm" onclick="saveStripeKeys()" style="align-self:flex-start;margin-top:4px;">Save &amp; Connect</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="stripeKeyStatus" style="margin-top:12px;font-size:12px;color:var(--text2);"></div>
-                            </div>
-                            <div id="stripeDashboard" style="display:none;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-                                    <div>
-                                        <h3 style="margin:0 0 4px;">Stripe Shop</h3>
-                                        <p style="color:var(--text2);font-size:13px;margin:0;" id="stripeAccountInfo"><span style="color:#4a8;">&#10003;</span> Connected</p>
-                                    </div>
-                                    <div style="display:flex;gap:8px;">
-                                        <button class="btn-sm" onclick="showAddProductForm()">+ Add Product</button>
-                                        <a href="https://dashboard.stripe.com" target="_blank" class="btn-sm btn-ghost">Open Stripe</a>
-                                    </div>
-                                </div>
-                                <div id="addProductForm" style="display:none;background:var(--surface2);border-radius:8px;padding:16px;margin-bottom:16px;">
-                                    <div style="font-weight:600;margin-bottom:12px;">New Product</div>
-                                    <div style="display:flex;flex-direction:column;gap:8px;">
-                                        <input type="text" id="newProductName" placeholder="Product name" style="padding:8px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                        <input type="text" id="newProductDesc" placeholder="Description (optional)" style="padding:8px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                        <div style="display:flex;gap:8px;">
-                                            <div style="flex:1;">
-                                                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Price</label>
-                                                <input type="number" id="newProductPrice" placeholder="25.00" step="0.01" min="0.01" style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                            </div>
-                                            <div style="width:100px;">
-                                                <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px;">Currency</label>
-                                                <select id="newProductCurrency" style="width:100%;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);">
-                                                    <option value="gbp">GBP</option>
-                                                    <option value="usd">USD</option>
-                                                    <option value="eur">EUR</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div style="display:flex;gap:8px;margin-top:4px;">
-                                            <button class="btn-sm" onclick="createProduct()">Create</button>
-                                            <button class="btn-sm btn-ghost" onclick="document.getElementById('addProductForm').style.display='none'">Cancel</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="stripeProductList" style="display:flex;flex-direction:column;gap:8px;">
-                                    <div style="color:var(--text2);font-size:13px;">Loading products...</div>
-                                </div>
-                                <div style="margin-top:24px;padding:16px;background:var(--surface2);border-radius:8px;">
-                                    <div style="font-weight:600;margin-bottom:8px;">Webhook URL</div>
-                                    <p style="font-size:13px;color:var(--text2);margin:0 0 8px;">Add this URL in your Stripe Dashboard under Developers &rarr; Webhooks to receive payment notifications.</p>
-                                    <code id="stripeWebhookUrl" style="font-size:12px;background:var(--bg);padding:6px 10px;border-radius:4px;display:block;word-break:break-all;color:var(--text);border:1px solid var(--border);"></code>
-                                    <button class="btn-sm btn-ghost" onclick="navigator.clipboard.writeText(document.getElementById('stripeWebhookUrl').textContent);toast('Copied!')" style="margin-top:8px;">Copy</button>
-                                </div>
-                                <div style="margin-top:16px;padding:16px;background:var(--surface2);border-radius:8px;">
-                                    <div style="font-weight:600;margin-bottom:8px;">Using in your site</div>
-                                    <p style="font-size:13px;color:var(--text2);margin:0 0 8px;">Ask the Vibe Coder to "add a buy button for [product name]" or paste this snippet into your page:</p>
-                                    <pre id="stripeBuySnippet" style="font-size:11px;background:var(--bg);padding:10px;border-radius:4px;overflow-x:auto;border:1px solid var(--border);color:var(--text);margin:0;white-space:pre-wrap;"></pre>
-                                </div>
-                                <div style="margin-top:16px;padding:16px;background:var(--surface2);border-radius:8px;">
-                                    <div style="font-weight:600;margin-bottom:4px;">Orders</div>
-                                    <div id="stripeOrdersList" style="font-size:13px;color:var(--text2);">Loading...</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Export Tab -->
                 <div class="tab-panel" id="panel-export">
                     <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
-                        <div style="padding:24px;flex:1;overflow-y:auto;max-width:640px;margin:0 auto;">
-                            <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:20px;">Export Your Site</h3>
-                            <p style="font-size:13px;color:var(--text2);margin:0 0 20px;">Download a complete copy of everything. You're never locked in.</p>
+                        <div style="padding:24px;flex:1;overflow-y:auto;max-width:800px;margin:0 auto;width:100%;">
+                            <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Export Your Site</h3>
+                            <p style="font-size:10px;color:var(--text2);margin:0 0 16px;">Download a complete copy of everything. You're never locked in.</p>
 
                             <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px;">
                                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
@@ -1034,9 +1046,87 @@
                     </div>
                 </div>
 
+                <!-- Share Tab -->
+                <div class="tab-panel" id="panel-share">
+                    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+                        <div style="padding:24px;flex:1;overflow-y:auto;">
+                            <div style="max-width:800px;margin:0 auto;">
+                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Presence</h3>
+                                <p style="font-size:10px;color:var(--text2);margin:0 0 20px;">How your site appears across the web — favicon, search results, and social sharing</p>
+
+                                <!-- Favicon -->
+                                <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+                                    <div style="font-size:12px;font-weight:600;margin-bottom:10px;">Favicon</div>
+                                    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+                                        <div id="faviconPreview" style="width:48px;height:48px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--text2)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                        </div>
+                                        <div style="flex:1;min-width:160px;">
+                                            <p style="font-size:10px;color:var(--text2);margin:0 0 8px;line-height:1.5;">Shown in browser tabs and bookmarks. Use a square PNG, SVG, or ICO — ideally 32×32 or 64×64px.</p>
+                                            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                                <button onclick="openFaviconPicker()" style="font-size:10px;padding:5px 12px;">Pick from Assets</button>
+                                                <button onclick="clearFavicon()" class="btn-ghost" style="font-size:10px;padding:5px 10px;">Clear</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="faviconPath" style="font-size:9px;color:var(--text2);margin-top:8px;font-family:var(--mono);display:none;"></div>
+                                </div>
+
+                                <!-- Page-specific sharing content -->
+                                <div id="shareContent"><p style="color:var(--text2);font-size:10px;">Select a page to see sharing options</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- About Tab -->
                 <div class="tab-panel" id="panel-about">
                     <div class="about-panel" id="aboutContent"></div>
+                </div>
+
+                <!-- Marketplace Tab -->
+                <div class="tab-panel" id="panel-marketplace">
+                    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+                        <div style="padding:20px 24px 12px;flex-shrink:0;border-bottom:1px solid var(--border);">
+                            <div style="max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+                                <div>
+                                    <h3 style="margin:0 0 3px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Widget Marketplace</h3>
+                                    <p style="color:var(--text2);font-size:10px;margin:0;">Browse, install and share widgets</p>
+                                </div>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <select id="mpFilter" onchange="renderMarketplace()" style="padding:5px 10px;font-size:11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);">
+                                        <option value="all">All</option>
+                                        <option value="platform">Adze  ·  T2</option>
+                                        <option value="community">Community  ·  T3</option>
+                                        <option value="installed">Installed</option>
+                                    </select>
+                                    <button class="btn-sm btn-ghost" onclick="loadMarketplaceTab()">↻ Refresh</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex:1;overflow-y:auto;">
+                            <div style="max-width:960px;margin:0 auto;padding:20px 24px;">
+                                <div id="marketplaceGrid">
+                                    <p style="color:var(--text2);font-size:11px;">Loading marketplace...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Tab -->
+                <div class="tab-panel" id="panel-analytics">
+                    <div style="display:flex;flex-direction:column;height:100%;overflow:hidden;">
+                        <div style="padding:24px;flex:1;overflow-y:auto;" id="analyticsScroll">
+                            <div style="max-width:960px;margin:0 auto;">
+                                <h3 style="margin:0 0 4px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">Analytics</h3>
+                                <p style="font-size:10px;color:var(--text2);margin:0 0 20px;">How your site is performing</p>
+                                <div id="analyticsContent">
+                                    <p style="color:var(--text2);font-size:11px;">Loading analytics...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Widget panels get injected here -->
@@ -1060,6 +1150,19 @@
             <div class="modal-actions">
                 <button class="btn-ghost" onclick="hideModal('createPageModal')">Cancel</button>
                 <button onclick="createPage()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Widget Modal -->
+    <div class="modal" id="createWidgetModal">
+        <div class="modal-content">
+            <h2>New Widget</h2>
+            <div class="form-group"><label>Widget Name</label><input type="text" id="newWidgetName" placeholder="e.g., My Gallery Tool"></div>
+            <div class="form-group"><label>Description <span style="color:var(--text2);font-weight:400;">(optional)</span></label><input type="text" id="newWidgetDesc" placeholder="What does this widget do?"></div>
+            <div class="modal-actions">
+                <button class="btn-ghost" onclick="hideModal('createWidgetModal')">Cancel</button>
+                <button onclick="createNewWidget()">Create</button>
             </div>
         </div>
     </div>
@@ -1109,6 +1212,7 @@
 // ── State ──
 let currentArtist = null, currentToken = null, currentPage = null, pages = [];
 let assetList = [];
+let artistConfig = null;
 let hasUnsavedChanges = false;
 let previewDebounce = null;
 let assetPickerTarget = null; // field ID to fill when asset is picked
@@ -1118,10 +1222,11 @@ function initTheme() {
     const saved = localStorage.getItem('dashboard-theme');
     if (saved === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
-        updateThemeIcon();
     }
+    updateThemeIcon();
 }
 function toggleTheme() {
+    document.body.classList.add('theme-transitioning');
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     if (isDark) {
         document.documentElement.removeAttribute('data-theme');
@@ -1131,16 +1236,18 @@ function toggleTheme() {
         localStorage.setItem('dashboard-theme', 'dark');
     }
     updateThemeIcon();
+    setTimeout(() => document.body.classList.remove('theme-transitioning'), 350);
 }
 function updateThemeIcon() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    // Block-colour sun (light) and moon (dark) icons
-    const sunSvg = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="5"/><rect x="11" y="1" width="2" height="4" rx="1"/><rect x="11" y="19" width="2" height="4" rx="1"/><rect x="19" y="11" width="4" height="2" rx="1"/><rect x="1" y="11" width="4" height="2" rx="1"/><rect x="17.2" y="3.4" width="2" height="4" rx="1" transform="rotate(45 18.2 5.4)"/><rect x="4.8" y="16.6" width="2" height="4" rx="1" transform="rotate(45 5.8 18.6)"/><rect x="17.2" y="16.6" width="2" height="4" rx="1" transform="rotate(-45 18.2 18.6)"/><rect x="4.8" y="3.4" width="2" height="4" rx="1" transform="rotate(-45 5.8 5.4)"/></svg>';
-    const moonSvg = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
-    const icon = isDark ? sunSvg : moonSvg;
+    // Phosphor Sun and Moon
+    const mkSvg = (inner, w) => `<svg viewBox="0 0 24 24" style="width:${w}px;height:${w}px;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    const sunInner = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+    const moonInner = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    const icon = isDark ? mkSvg(sunInner, 13) : mkSvg(moonInner, 13);
     const iconSmall = isDark
-        ? '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><circle cx="12" cy="12" r="5"/><rect x="11" y="1" width="2" height="4" rx="1"/><rect x="11" y="19" width="2" height="4" rx="1"/><rect x="19" y="11" width="4" height="2" rx="1"/><rect x="1" y="11" width="4" height="2" rx="1"/><rect x="17.2" y="3.4" width="2" height="4" rx="1" transform="rotate(45 18.2 5.4)"/><rect x="4.8" y="16.6" width="2" height="4" rx="1" transform="rotate(45 5.8 18.6)"/><rect x="17.2" y="16.6" width="2" height="4" rx="1" transform="rotate(-45 18.2 18.6)"/><rect x="4.8" y="3.4" width="2" height="4" rx="1" transform="rotate(-45 5.8 5.4)"/></svg>'
-        : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        ? '<span style="margin-right:5px;vertical-align:middle;display:inline-block;">' + mkSvg(sunInner, 11) + '</span>'
+        : '<span style="margin-right:5px;vertical-align:middle;display:inline-block;">' + mkSvg(moonInner, 11) + '</span>';
 
     document.querySelectorAll('.theme-toggle').forEach(btn => {
         if (btn.id === 'themeToggle') {
@@ -1152,8 +1259,81 @@ function updateThemeIcon() {
     });
 }
 initTheme();
+document.addEventListener('DOMContentLoaded', updateThemeIcon);
 
 // ── Mobile Controls ──
+let _sidebarAutoCloseTimer = null;
+let _sidebarAutoHide = localStorage.getItem('sidebar-autohide') !== 'false'; // default on
+
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('collapsed');
+    if (_sidebarAutoCloseTimer) { clearTimeout(_sidebarAutoCloseTimer); _sidebarAutoCloseTimer = null; }
+}
+
+function toggleAutoHide(on) {
+    _sidebarAutoHide = on;
+    localStorage.setItem('sidebar-autohide', on);
+    if (on) {
+        _scheduleSidebarClose(2000);
+    } else {
+        if (_sidebarAutoCloseTimer) { clearTimeout(_sidebarAutoCloseTimer); _sidebarAutoCloseTimer = null; }
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) sidebar.classList.remove('collapsed');
+    }
+}
+
+function _scheduleSidebarClose(ms) {
+    if (!_sidebarAutoHide) return;
+    if (_sidebarAutoCloseTimer) clearTimeout(_sidebarAutoCloseTimer);
+    _sidebarAutoCloseTimer = setTimeout(() => {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar && !sidebar.classList.contains('collapsed') && _sidebarAutoHide) {
+            sidebar.classList.add('collapsed');
+        }
+        _sidebarAutoCloseTimer = null;
+    }, ms);
+}
+
+// Sidebar hover behavior (desktop only)
+if (window.innerWidth > 768) {
+    let _mouseInSidebar = false;
+
+    document.addEventListener('mousemove', (e) => {
+        if (!_sidebarAutoHide) return;
+        const sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        const rect = sidebar.getBoundingClientRect();
+        const isOver = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        const nearEdge = e.clientX < 30;
+
+        if ((nearEdge || isOver) && sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+            if (_sidebarAutoCloseTimer) { clearTimeout(_sidebarAutoCloseTimer); _sidebarAutoCloseTimer = null; }
+        }
+
+        if (isOver && !_mouseInSidebar) {
+            _mouseInSidebar = true;
+            if (_sidebarAutoCloseTimer) { clearTimeout(_sidebarAutoCloseTimer); _sidebarAutoCloseTimer = null; }
+        } else if (!isOver && _mouseInSidebar) {
+            _mouseInSidebar = false;
+            if (!sidebar.classList.contains('collapsed')) {
+                _scheduleSidebarClose(300);
+            }
+        }
+    });
+
+    // Initial auto-collapse after 5s if auto-hide is on
+    if (_sidebarAutoHide) _scheduleSidebarClose(5000);
+}
+
+// Restore auto-hide checkbox state
+document.addEventListener('DOMContentLoaded', () => {
+    const cb = document.getElementById('sidebarAutoHide');
+    if (cb) cb.checked = _sidebarAutoHide;
+});
+
 function toggleMobileSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const hamburger = document.getElementById('mobileHamburger');
@@ -1195,9 +1375,6 @@ function handlePageClick() {
 }
 
 // ── Auth ──
-const stored = { a: localStorage.getItem('artistSlug'), t: localStorage.getItem('adminToken') };
-if (stored.a && stored.t) login(stored.a, stored.t);
-
 document.getElementById('loginForm').addEventListener('submit', e => {
     e.preventDefault();
     login(document.getElementById('artistSlug').value, document.getElementById('adminToken').value);
@@ -1205,21 +1382,52 @@ document.getElementById('loginForm').addEventListener('submit', e => {
 
 async function login(slug, token) {
     try {
-        const r = await apiFetch('/api/adze/artist-info', { slug, token });
+        const r = await fetch('/api/adze/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, token })
+        });
         if (r.ok) {
             const info = await r.json();
-            currentArtist = slug; currentToken = token;
-            localStorage.setItem('artistSlug', slug); localStorage.setItem('adminToken', token);
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('dashboard').classList.add('active');
-            document.getElementById('artistName').textContent = info.config?.display_name || info.name || info.domain || slug;
-            loadPages(true); loadAssets().then(() => loadWidgets());
+            currentArtist = info.slug; currentToken = token;
+            _initDashboard(info);
         } else { showLoginError('Invalid credentials'); }
     } catch(e) { showLoginError('Login failed: ' + e.message); }
 }
 
-function logout() { localStorage.removeItem('artistSlug'); localStorage.removeItem('adminToken'); location.reload(); }
+function _initDashboard(info) {
+    artistConfig = info.config || {};
+    const loginScreen = document.getElementById('loginScreen');
+    loginScreen.classList.add('fading-out');
+    setTimeout(() => { loginScreen.style.display = 'none'; }, 150);
+    const dash = document.getElementById('dashboard');
+    dash.classList.add('active');
+    document.getElementById('artistName').textContent = info.name || info.config?.display_name || currentArtist;
+    loadPages(true);
+    loadAssets().then(() => loadWidgets());
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        dash.classList.add('faded-in');
+    }));
+}
+
+async function logout() {
+    await fetch('/api/adze/logout', { method: 'POST' }).catch(() => {});
+    location.reload();
+}
+
 function showLoginError(msg) { const el = document.getElementById('loginError'); el.textContent = msg; el.classList.add('show'); }
+
+// Auto-login from session cookie — show body once we know which screen to show
+(async () => {
+    try {
+        const r = await fetch('/api/adze/whoami');
+        if (r.ok) {
+            const info = await r.json();
+            if (info.ok) { currentArtist = info.slug; currentToken = ''; _initDashboard(info); return; }
+        }
+    } catch(e) {}
+    // No session — login screen is already visible
+})();
 
 // ── API Helper ──
 function apiFetch(url, { method = 'GET', body, slug, token } = {}) {
@@ -1245,93 +1453,714 @@ function toast(msg, type = 'success') {
 function showModal(id) { document.getElementById(id).classList.add('show'); }
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// ── Widget System ──
+// ── Widget System ──────────────────────────────────────────────────────────
 let loadedWidgets = [];
+let loadedWidgetMeta = {};   // name → widget metadata object
+let currentWidget = null;    // currently editing in widget editor mode
+let sidebarMode = 'pages';   // kept for compat; sidebar now shows both sections always
+let _mpData = null;          // cached marketplace data
+let _widgetPreviewDebounce = null;
+// Vibe Coder addon registry — populated exclusively by widget closures via ctx.registerVibeAddon()
+// A vibe addon cannot exist without a widget; it is an arm of the widget that registers it.
+// When a widget is unloaded/replaced, its addon stays until the page reloads (acceptable).
+const vibeAddons = {};       // id → { id, label, pick() }
 
+// SVG icons for widget types (name → SVG path)
+const WIDGET_ICONS = {
+    store:     '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>',
+    settings:  '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>',
+    gallery:   '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+    bookings:  '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    analytics: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>',
+    film:      '<rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="2" y1="17" x2="7" y2="17"/>',
+    code:      '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+    mail:      '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>',
+    play:      '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>',
+    calendar:  '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    default:   '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>',
+};
+
+function _widgetIconSvg(iconName) {
+    const paths = WIDGET_ICONS[iconName] || WIDGET_ICONS.default;
+    return `<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;">${paths}</svg>`;
+}
+
+function _widgetDisplayName(name) {
+    return name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── Widget context object ──
+function _buildWidgetCtx(w, widgetContainer) {
+    return {
+        container: widgetContainer,
+        name: w.name,
+        tier: w.tier,
+        artistSlug: currentArtist,
+        token: currentToken,
+        apiFetch, toast, showModal, hideModal,
+        assetList, pages,
+        currentPage: () => currentPage,
+        loadAssets, parseContent, schedulePreview, setUnsaved, escHtml,
+        getCss:  () => document.getElementById('cssEditor').value,
+        getHtml: () => document.getElementById('htmlEditor').value,
+        setCss:  (v) => { document.getElementById('cssEditor').value = v; setUnsaved(true); schedulePreview(0); },
+        setHtml: (v) => { document.getElementById('htmlEditor').value = v; setUnsaved(true); schedulePreview(0); },
+        getPageContent: async (slug) => {
+            const r = await apiFetch(`/api/adze/get-page-content?page_slug=${slug}`);
+            return r.ok ? await r.json() : null;
+        },
+        savePage: async (slug, content, config) => {
+            const body = { page_slug: slug };
+            if (content !== undefined) body.content = content;
+            if (config !== undefined) body.config = config;
+            const r = await apiFetch('/api/adze/edit-page', { method: 'POST', body });
+            return r.ok;
+        },
+        reloadWidgets: () => loadWidgets(),
+        switchTab,
+        sendToVibeCoder: (text) => {
+            switchTab('claude');
+            const input = document.getElementById('claudeInput');
+            if (input) { input.value = text; input.focus(); }
+        },
+        registerVibeAddon: (config) => {
+            vibeAddons[config.id] = config;
+            _refreshVibeAddonBtns();
+        }
+    };
+}
+
+function _refreshVibeAddonBtns() {
+    const row = document.getElementById('claudeToolsRow');
+    if (!row) return;
+    row.querySelectorAll('.claude-addon-btn, .claude-addon-sep').forEach(el => el.remove());
+    const addons = Object.values(vibeAddons);
+    if (!addons.length) return;
+    const sep = document.createElement('span');
+    sep.className = 'claude-addon-sep';
+    sep.style.cssText = 'width:1px;background:#444;align-self:stretch;margin:0 2px;flex-shrink:0;';
+    row.appendChild(sep);
+    addons.forEach(addon => {
+        const btn = document.createElement('button');
+        btn.className = 'claude-tool-btn claude-addon-btn';
+        btn.textContent = '+ ' + addon.label;
+        btn.title = 'Insert ' + addon.label + ' reference into prompt';
+        btn.addEventListener('click', async () => {
+            const text = await addon.pick();
+            if (!text) return;
+            const input = document.getElementById('claudeInput');
+            input.value = input.value ? input.value + ' ' + text : text;
+            input.focus();
+            // Auto-open tools row if hidden so the insert is visible feedback
+            const isOpen = row.style.display === 'flex';
+            if (!isOpen) toggleClaudeTools();
+        });
+        row.appendChild(btn);
+    });
+}
+
+// ── Load a single widget into a tab + panel ──
+async function _loadWidget(w, tabContainer, panelContainer) {
+    const tierParam = w.tier === 'platform' ? '&tier=platform' : '&tier=artist';
+    const jsResp = await apiFetch(`/api/adze/get-widget?filename=${encodeURIComponent(w.filename)}${tierParam}`);
+    if (!jsResp.ok) return false;
+    const jsCode = await jsResp.text();
+
+    // Store metadata for sidebar / editor
+    loadedWidgetMeta[w.name] = { ...w, code: jsCode };
+
+    // Create panel
+    const panel = document.createElement('div');
+    panel.className = 'tab-panel';
+    panel.id = 'panel-widget-' + w.name;
+    const widgetContainer = document.createElement('div');
+    widgetContainer.className = 'widget-panel';
+    widgetContainer.id = 'widget-content-' + w.name;
+    panel.appendChild(widgetContainer);
+    panelContainer.appendChild(panel);
+
+    // Execute widget JS
+    try {
+        const fn = new Function('ctx', jsCode);
+        fn(_buildWidgetCtx(w, widgetContainer));
+    } catch(e) {
+        widgetContainer.innerHTML = `<div style="padding:20px;color:var(--danger);font-size:11px;font-family:var(--mono);">Widget error: ${escHtml(e.message)}</div>`;
+    }
+    return true;
+}
+
+// ── Build dropdown group in tab bar ──
+function _buildWidgetDropdown(groupLabel, widgets, tabContainer, panelContainer) {
+    if (widgets.length === 0) return;
+
+    const group = document.createElement('div');
+    group.className = 'widget-group';
+
+    const btn = document.createElement('button');
+    btn.className = 'widget-group-btn';
+    btn.innerHTML = `${groupLabel} <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>`;
+    btn.setAttribute('data-group', groupLabel);
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'widget-group-dropdown';
+
+    btn.onclick = (e) => {
+        e.stopPropagation();
+        const isOpen = dropdown.classList.contains('open');
+        // Close all dropdowns first
+        document.querySelectorAll('.widget-group-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.widget-group-btn.open').forEach(b => b.classList.remove('open'));
+        if (!isOpen) {
+            dropdown.classList.add('open');
+            btn.classList.add('open');
+        }
+    };
+
+    group.appendChild(btn);
+    group.appendChild(dropdown);
+    tabContainer.appendChild(group);
+
+    // Populate dropdown items and hidden tab panels
+    for (const w of widgets) {
+        // Hidden tab button (needed for switchTab to find by data-tab)
+        const hiddenBtn = document.createElement('button');
+        hiddenBtn.className = 'tab';
+        hiddenBtn.dataset.tab = 'widget-' + w.name;
+        hiddenBtn.style.display = 'none';
+        tabContainer.appendChild(hiddenBtn);
+
+        // Dropdown item
+        const item = document.createElement('div');
+        item.className = 'widget-group-item';
+        item.dataset.tab = 'widget-' + w.name;
+        item.innerHTML = `${_widgetIconSvg(w.icon || 'default')}<span>${_widgetDisplayName(w.name)}</span>`;
+        item.onclick = () => {
+            dropdown.classList.remove('open');
+            btn.classList.remove('open');
+            switchTab('widget-' + w.name, hiddenBtn);
+            // Mark group button as active
+            document.querySelectorAll('.widget-group-btn').forEach(b => b.classList.remove('has-active'));
+            btn.classList.add('has-active');
+        };
+        dropdown.appendChild(item);
+    }
+
+    return group;
+}
+
+// ── Close dropdowns when clicking outside ──
+document.addEventListener('click', () => {
+    document.querySelectorAll('.widget-group-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.widget-group-btn.open').forEach(b => b.classList.remove('open'));
+});
+
+// ── Main widget loader ──
 async function loadWidgets() {
     try {
         const r = await apiFetch('/api/adze/list-widgets');
         if (!r.ok) return;
         const data = await r.json();
-        if (!data.widgets || data.widgets.length === 0) return;
 
-        // Clear old widget tabs and panels
-        document.getElementById('widgetTabsContainer').innerHTML = '';
-        document.getElementById('widgetPanelsContainer').innerHTML = '';
+        const tabContainer  = document.getElementById('widgetTabsContainer');
+        const panelContainer = document.getElementById('widgetPanelsContainer');
+        tabContainer.innerHTML  = '';
+        panelContainer.innerHTML = '';
         loadedWidgets = [];
+        loadedWidgetMeta = {};
 
-        for (const w of data.widgets) {
+        const platformWidgets = (data.widgets || []).filter(w => w.tier === 'platform');
+        const artistWidgets   = (data.widgets || []).filter(w => w.tier === 'artist');
+
+        // Load panels for all widgets first
+        for (const w of [...platformWidgets, ...artistWidgets]) {
             try {
-                const jsResp = await apiFetch(`/api/adze/get-widget?filename=${w.filename}`);
-                if (!jsResp.ok) continue;
-                const jsCode = await jsResp.text();
+                if (await _loadWidget(w, tabContainer, panelContainer))
+                    loadedWidgets.push(w.name);
+            } catch(e) { console.error(`Widget ${w.name} failed:`, e); }
+        }
 
-                // Create a tab button
-                const tabBtn = document.createElement('button');
-                tabBtn.className = 'tab widget-tab';
-                tabBtn.dataset.tab = 'widget-' + w.name;
-                tabBtn.textContent = w.name.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                tabBtn.onclick = function() { switchTab('widget-' + w.name, this); };
-                document.getElementById('widgetTabsContainer').appendChild(tabBtn);
+        // Build single unified Widgets dropdown (Tier 2 + Tier 4) — exclude 'marketplace' (has its own core tab)
+        const allTabWidgets = [
+            ...platformWidgets.filter(w => w.name !== 'marketplace'),
+            ...artistWidgets
+        ];
+        _buildWidgetDropdown('Widgets', allTabWidgets, tabContainer, panelContainer);
 
-                // Create a panel
-                const panel = document.createElement('div');
-                panel.className = 'tab-panel';
-                panel.id = 'panel-widget-' + w.name;
-                const widgetContainer = document.createElement('div');
-                widgetContainer.className = 'widget-panel';
-                widgetContainer.id = 'widget-content-' + w.name;
-                panel.appendChild(widgetContainer);
-                document.getElementById('widgetPanelsContainer').appendChild(panel);
+        // Always refresh widget sidebar section
+        renderWidgetSidebar();
+    } catch(e) { console.error('Failed to load widgets', e); }
+}
 
-                // Execute the widget JS — it gets a context object with dashboard APIs
-                const widgetCtx = {
-                    container: widgetContainer,
-                    name: w.name,
-                    artistSlug: currentArtist,
-                    token: currentToken,
-                    // Expose dashboard helpers
-                    apiFetch,
-                    toast,
-                    showModal,
-                    hideModal,
-                    assetList,
-                    pages,
-                    currentPage: () => currentPage,
-                    loadAssets,
-                    parseContent,
-                    schedulePreview,
-                    setUnsaved,
-                    // Helper to get/set editor content
-                    getCss: () => document.getElementById('cssEditor').value,
-                    getHtml: () => document.getElementById('htmlEditor').value,
-                    setCss: (v) => { document.getElementById('cssEditor').value = v; setUnsaved(true); schedulePreview(0); },
-                    setHtml: (v) => { document.getElementById('htmlEditor').value = v; setUnsaved(true); schedulePreview(0); },
-                    // Helper to fetch a page's content
-                    getPageContent: async (slug) => {
-                        const r = await apiFetch(`/api/adze/get-page-content?page_slug=${slug}`);
-                        if (r.ok) return await r.json();
-                        return null;
-                    },
-                    // Helper to save a page
-                    savePage: async (slug, content, config) => {
-                        const body = { page_slug: slug };
-                        if (content !== undefined) body.content = content;
-                        if (config !== undefined) body.config = config;
-                        const r = await apiFetch('/api/adze/edit-page', { method: 'POST', body });
-                        return r.ok;
-                    }
-                };
+// ── Sidebar mode (both sections now always visible; kept for compat) ──
+function setSidebarMode(mode) {
+    sidebarMode = mode;
+    renderWidgetSidebar();
+}
 
-                // Run widget code with context
-                const fn = new Function('ctx', jsCode);
-                fn(widgetCtx);
-                loadedWidgets.push(w.name);
-            } catch(e) {
-                console.error(`Widget ${w.name} failed to load:`, e);
+function renderWidgetSidebar() {
+    const section = document.getElementById('widgetSidebarSection');
+    const list    = document.getElementById('widgetList');
+    list.innerHTML = '';
+
+    // Exclude the marketplace widget from sidebar (it has a dedicated core tab)
+    const platformWidgets = Object.values(loadedWidgetMeta).filter(w => w.tier === 'platform' && w.name !== 'marketplace');
+    const artistWidgets   = Object.values(loadedWidgetMeta).filter(w => w.tier === 'artist');
+    const total = platformWidgets.length + artistWidgets.length;
+
+    // Use a class so the collapsed sidebar CSS rule can properly override (inline style would win specificity)
+    section.classList.toggle('has-widgets', total > 0);
+    if (total === 0) return;
+
+    function addLabel(text) {
+        const li = document.createElement('li');
+        li.className = 'widget-tier-label';
+        li.textContent = text;
+        list.appendChild(li);
+    }
+
+    function addItem(w) {
+        const li = document.createElement('li');
+        li.className = 'widget-item' + (currentWidget && currentWidget.name === w.name ? ' active' : '');
+        li.innerHTML = `${_widgetIconSvg(w.icon || 'default')}<div><div class="widget-item-name">${_widgetDisplayName(w.name)}</div></div>`;
+        li.onclick = () => openWidgetEditor(w);
+        list.appendChild(li);
+    }
+
+    platformWidgets.forEach(addItem);
+    artistWidgets.forEach(addItem);
+}
+
+// ── Widget editor mode ──
+function openWidgetEditor(w) {
+    if (hasUnsavedChanges && currentWidget && !confirm('Unsaved widget changes. Continue?')) return;
+
+    currentWidget = w;
+
+    // Update sidebar active state
+    document.querySelectorAll('.widget-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.widget-item').forEach(el => {
+        if (el.querySelector('.widget-item-name')?.textContent === _widgetDisplayName(w.name))
+            el.classList.add('active');
+    });
+
+    // Show banner
+    const banner = document.getElementById('widgetEditorBanner');
+    banner.classList.add('show');
+    document.getElementById('widgetEditorName').textContent = _widgetDisplayName(w.name);
+    const tierBadge = document.getElementById('widgetEditorTierBadge');
+    const _tierLabel = { platform: 'Adze  ·  T2', community: 'Community  ·  T3', artist: 'Custom  ·  T4' };
+    const _tierColor = { platform: 'var(--accent)', community: 'var(--warn)', artist: 'var(--success)' };
+    tierBadge.textContent = _tierLabel[w.tier] || 'Custom';
+    tierBadge.style.background = _tierColor[w.tier] || 'var(--success)';
+
+    // Share button: only for artist (Tier 3) widgets
+    const shareBtn = document.getElementById('widgetShareBtn');
+    if (w.tier === 'artist') {
+        shareBtn.style.display = '';
+        shareBtn.textContent = w.marketplace ? '✓ Shared' : 'Share';
+    } else {
+        shareBtn.style.display = 'none';
+    }
+
+    // Switch editor pane: hide page editors, show JS editor
+    document.getElementById('pageEditorsBlock').style.display = 'none';
+    document.getElementById('jsEditorBlock').classList.add('show');
+
+    // Platform widgets: read-only with fork prompt
+    const jsEditor = document.getElementById('jsEditor');
+    if (w.tier === 'platform') {
+        jsEditor.value = w.code || '';
+        jsEditor.readOnly = true;
+        jsEditor.style.opacity = '0.7';
+        document.getElementById('jsEditorAutoSaveLabel').innerHTML =
+            `<a href="#" onclick="forkWidget('${escHtml(w.name)}');return false;" style="color:var(--accent);">Fork to customise →</a>`;
+    } else {
+        jsEditor.value = w.code || '';
+        jsEditor.readOnly = false;
+        jsEditor.style.opacity = '';
+        document.getElementById('jsEditorAutoSaveLabel').textContent = '';
+    }
+
+    // Switch to vibe coder tab and show widget preview
+    switchTab('claude');
+    setUnsaved(false);
+    scheduleWidgetPreview(0);
+}
+
+function exitWidgetEditorMode() {
+    currentWidget = null;
+    document.getElementById('widgetEditorBanner').classList.remove('show');
+    document.getElementById('pageEditorsBlock').style.display = '';
+    document.getElementById('jsEditorBlock').classList.remove('show');
+    document.getElementById('jsEditorAutoSaveLabel').textContent = '';
+    // Restore page preview if a page is selected
+    if (currentPage) schedulePreview(0);
+}
+
+// ── Widget preview (srcdoc iframe with mock ctx + postMessage proxy) ──
+function _buildWidgetPreviewSrcdoc(name, jsCode) {
+    // Extract current CSS variable values to inject into iframe
+    const style = getComputedStyle(document.documentElement);
+    const cssVars = ['--accent','--accent-hover','--accent-text','--bg','--bg2','--bg3',
+                     '--surface','--surface2','--border','--text','--text2','--success',
+                     '--warn','--danger','--radius','--body-font','--heading-font','--mono'];
+    const varBlock = ':root{' + cssVars.map(v => `${v}:${style.getPropertyValue(v).trim()}`).join(';') + '}';
+
+    const escaped = jsCode.replace(/<\/script>/g, '<\\/script>');
+
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+${varBlock}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--body-font,'Inter',sans-serif);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;}
+button{background:var(--accent);color:var(--accent-text);border:none;padding:6px 13px;border-radius:var(--radius);cursor:pointer;font-size:11px;font-weight:600;}
+button:hover{opacity:0.88;}
+input,select,textarea{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;font-size:11px;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+#__wc{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+</style></head>
+<body><div id="__wc"></div>
+<script>
+var _pending={};
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var ctx={
+  container:document.getElementById('__wc'),
+  name:${JSON.stringify(name)},
+  tier:'artist',
+  artistSlug:${JSON.stringify(currentArtist)},
+  token:${JSON.stringify(currentToken)},
+  pages:${JSON.stringify(pages)},
+  assetList:${JSON.stringify(assetList)},
+  escHtml:escHtml,
+  currentPage:function(){return null;},
+  loadAssets:function(){},
+  parseContent:function(){return{css:'',html:''}},
+  schedulePreview:function(){},
+  setUnsaved:function(){},
+  toast:function(m,t){window.parent.postMessage({type:'toast',msg:m,msgType:t||'success'},'*');},
+  showModal:function(){},
+  hideModal:function(){},
+  switchTab:function(t){window.parent.postMessage({type:'switchTab',tab:t},'*');},
+  reloadWidgets:function(){window.parent.postMessage({type:'reloadWidgets'},'*');},
+  getCss:function(){return'';},
+  getHtml:function(){return'';},
+  setCss:function(){},
+  setHtml:function(){},
+  apiFetch:function(url,opts){
+    return new Promise(function(res,rej){
+      var id=Math.random().toString(36).slice(2);
+      _pending[id]={res:res,rej:rej};
+      window.parent.postMessage({type:'apifetch',id:id,url:url,opts:opts||{}},'*');
+    });
+  },
+  getPageContent:function(slug){return ctx.apiFetch('/api/adze/get-page-content?page_slug='+slug).then(function(r){return r.ok?r.json():null;});},
+  savePage:function(slug,content,config){
+    var body={page_slug:slug};
+    if(content!==undefined)body.content=content;
+    if(config!==undefined)body.config=config;
+    return ctx.apiFetch('/api/adze/edit-page',{method:'POST',body:body}).then(function(r){return r.ok;});
+  },
+  sendToVibeCoder:function(text){window.parent.postMessage({type:'sendToVibeCoder',text:text},'*');},
+  // No-op in preview iframe — vibe addons only register in the live dashboard
+  registerVibeAddon:function(){}
+};
+window.addEventListener('message',function(e){
+  var d=e.data;
+  if(d.type==='apifetch-response'&&_pending[d.id]){
+    var p=_pending[d.id]; delete _pending[d.id];
+    p.res({ok:d.ok,status:d.status,
+      json:function(){return Promise.resolve(d.json);},
+      text:function(){return Promise.resolve(d.text);}
+    });
+  }
+});
+try{(function(ctx){${escaped}})(ctx);}
+catch(e){document.getElementById('__wc').innerHTML='<pre style="padding:16px;color:var(--danger);font-size:10px;white-space:pre-wrap;">'+escHtml(e.toString())+'</pre>';}
+<\/script></body></html>`;
+}
+
+function scheduleWidgetPreview(delay = 400) {
+    clearTimeout(_widgetPreviewDebounce);
+    _widgetPreviewDebounce = setTimeout(updateWidgetPreview, delay);
+}
+
+function updateWidgetPreview() {
+    if (!currentWidget) return;
+    const jsCode = document.getElementById('jsEditor').value;
+    const srcdoc = _buildWidgetPreviewSrcdoc(currentWidget.name, jsCode);
+    // Push to edit-tab preview AND vibe coder preview so both stay in sync
+    ['previewFrame', 'previewFrameClaude'].forEach(id => {
+        const f = document.getElementById(id);
+        if (f) f.srcdoc = srcdoc;
+    });
+}
+
+// postMessage proxy — relay iframe apiFetch calls through the real auth'd apiFetch
+window.addEventListener('message', function(e) {
+    const d = e.data;
+    if (!d || !d.type) return;
+    if (d.type === 'apifetch' && d.id) {
+        apiFetch(d.url, d.opts || {}).then(async r => {
+            let json = null, text = '';
+            try { text = await r.text(); } catch(err) {}
+            try { json = JSON.parse(text); } catch(err) {}
+            e.source.postMessage({ type: 'apifetch-response', id: d.id, ok: r.ok, status: r.status, json, text }, '*');
+        }).catch(err => {
+            e.source?.postMessage({ type: 'apifetch-response', id: d.id, ok: false, status: 0, json: null, text: err.message }, '*');
+        });
+    }
+    if (d.type === 'toast') toast(d.msg, d.msgType);
+    if (d.type === 'switchTab') switchTab(d.tab);
+    if (d.type === 'reloadWidgets') loadWidgets();
+    if (d.type === 'sendToVibeCoder' && d.text) {
+        switchTab('claude');
+        const input = document.getElementById('claudeInput');
+        if (input) { input.value = d.text; input.focus(); }
+    }
+});
+
+// JS editor live preview on input
+document.getElementById('jsEditor').addEventListener('input', () => {
+    if (currentWidget && currentWidget.tier !== 'platform') {
+        setUnsaved(true);
+        scheduleWidgetPreview();
+    }
+});
+
+// ── Widget CRUD ──
+function showNewWidgetModal() {
+    document.getElementById('newWidgetName').value = '';
+    document.getElementById('newWidgetDesc').value = '';
+    showModal('createWidgetModal');
+}
+
+async function createNewWidget() {
+    const name = document.getElementById('newWidgetName').value.trim();
+    const desc = document.getElementById('newWidgetDesc').value.trim();
+    if (!name) { toast('Enter a widget name', 'error'); return; }
+
+    try {
+        const r = await apiFetch('/api/adze/new-widget', { method: 'POST', body: { name, description: desc } });
+        const data = await r.json();
+        if (!r.ok) { toast(data.error || 'Failed to create widget', 'error'); return; }
+        hideModal('createWidgetModal');
+        toast(`Widget "${data.name}" created`, 'success');
+        await loadWidgets();
+        // Auto-open in editor
+        setSidebarMode('widgets');
+        const meta = loadedWidgetMeta[data.name];
+        if (meta) openWidgetEditor(meta);
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function saveCurrentWidget() {
+    if (!currentWidget || currentWidget.tier === 'platform') return;
+    const code = document.getElementById('jsEditor').value;
+    try {
+        const r = await apiFetch('/api/adze/save-widget', {
+            method: 'POST',
+            body: { name: currentWidget.name, code }
+        });
+        if (r.ok) {
+            loadedWidgetMeta[currentWidget.name].code = code;
+            currentWidget.code = code;
+            setUnsaved(false);
+            toast('Widget saved', 'success');
+            // Re-run the live working tab in the background
+            const container = document.getElementById('widget-content-' + currentWidget.name);
+            if (container) {
+                container.innerHTML = '';
+                try { new Function('ctx', code)(_buildWidgetCtx(currentWidget, container)); }
+                catch(e) { container.innerHTML = `<div style="padding:16px;color:var(--danger);font-size:11px;font-family:var(--mono);">${escHtml(e.message)}</div>`; }
+            }
+        } else {
+            const d = await r.json();
+            toast(d.error || 'Save failed', 'error');
+        }
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function forkWidget(name) {
+    try {
+        const r = await apiFetch('/api/adze/fork-widget', { method: 'POST', body: { name } });
+        const data = await r.json();
+        if (!r.ok) { toast(data.error || 'Fork failed', 'error'); return; }
+        toast(`Forked as "${data.name}" — now yours to edit`, 'success');
+        await loadWidgets();
+        setSidebarMode('widgets');
+        const meta = loadedWidgetMeta[data.name];
+        if (meta) openWidgetEditor(meta);
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+async function toggleWidgetShare() {
+    if (!currentWidget || currentWidget.tier !== 'artist') return;
+    const newShared = !currentWidget.marketplace;
+    try {
+        const r = await apiFetch('/api/adze/share-widget', {
+            method: 'POST',
+            body: { name: currentWidget.name, shared: newShared }
+        });
+        if (r.ok) {
+            currentWidget.marketplace = newShared;
+            loadedWidgetMeta[currentWidget.name].marketplace = newShared;
+            const btn = document.getElementById('widgetShareBtn');
+            btn.textContent = newShared ? '✓ Shared' : 'Share';
+            toast(newShared ? 'Widget shared to marketplace' : 'Widget removed from marketplace', 'success');
+        } else {
+            toast('Failed to update sharing', 'error');
+        }
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
+// ── Marketplace tab ──
+async function loadMarketplaceTab() {
+    _mpData = null;
+    const grid = document.getElementById('marketplaceGrid');
+    if (grid) grid.innerHTML = '<p style="color:var(--text2);font-size:11px;">Loading...</p>';
+    try {
+        const r = await apiFetch('/api/adze/list-marketplace');
+        if (!r.ok) { if (grid) grid.innerHTML = '<p style="color:var(--text2);font-size:11px;">Failed to load marketplace.</p>'; return; }
+        _mpData = await r.json();
+        renderMarketplace();
+    } catch(e) {
+        if (grid) grid.innerHTML = `<p style="color:var(--text2);font-size:11px;">Error: ${escHtml(e.message)}</p>`;
+    }
+}
+
+function renderMarketplace() {
+    const grid = document.getElementById('marketplaceGrid');
+    if (!grid || !_mpData) return;
+    const filter = document.getElementById('mpFilter')?.value || 'all';
+
+    let items = [];
+    (_mpData.platform || []).filter(w => w.name !== 'marketplace').forEach(w => items.push({ ...w, _type: 'platform' }));
+    (_mpData.community || []).forEach(w => items.push({ ...w, _type: 'community' }));
+
+    if (filter === 'platform')  items = items.filter(w => w._type === 'platform');
+    if (filter === 'community') items = items.filter(w => w._type === 'community');
+    if (filter === 'installed') items = items.filter(w => w.installed);
+
+    if (items.length === 0) {
+        grid.innerHTML = `<div style="text-align:center;padding:48px 0;"><p style="color:var(--text2);font-size:12px;margin:0;">
+            ${filter === 'community' ? 'No community widgets shared yet.<br><span style="font-size:10px;">Create a widget and hit Share to add it here.</span>' : 'Nothing to show.'}
+        </p></div>`;
+        return;
+    }
+
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;">';
+    for (const w of items) {
+        const dn = _widgetDisplayName(w.name);
+        const tierColor = w._type === 'platform' ? 'var(--accent)' : 'var(--warn)';
+        const tierLabel = w._type === 'platform' ? 'Adze  ·  T2' : 'Community  ·  T3';
+        const installedBadge = w.installed ? `<span style="font-size:8px;padding:1px 5px;border-radius:3px;background:var(--bg2);color:var(--text2);">Installed</span>` : '';
+        const authorLine = w._type === 'community' && w.source_artist ? `<div style="font-size:9px;color:var(--text2);margin-top:1px;">by ${escHtml(w.source_artist)}</div>` : (w.author ? `<div style="font-size:9px;color:var(--text2);margin-top:1px;">by ${escHtml(w.author)}</div>` : '');
+        const forkedFrom = w.forked_from ? `<div style="font-size:8px;color:var(--text2);margin-top:2px;">forked from ${escHtml(w.forked_from)}</div>` : '';
+
+        const updateBtn = `<button onclick="mpUpdate('${escHtml(w.name)}','${w._type === 'platform' ? 'platform' : 'artist'}',this)" style="padding:4px 10px;font-size:10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);cursor:pointer;">Update</button>`;
+
+        let actionBtn = '';
+        if (w._type === 'platform') {
+            if (w.installed) {
+                actionBtn = `<div style="display:flex;gap:4px;">${updateBtn}<button onclick="mpUninstall('${escHtml(w.name)}','platform','',this)" style="padding:4px 10px;font-size:10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);cursor:pointer;">Remove</button></div>`;
+            } else {
+                actionBtn = `<button onclick="mpInstall('${escHtml(w.name)}','platform','',this)" style="padding:4px 10px;font-size:10px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent);color:var(--accent-text);cursor:pointer;">Install</button>`;
+            }
+        } else {
+            const src = escHtml(w.source_artist || '');
+            if (w.installed) {
+                // Show Update for forked widgets that have a platform source
+                const canUpdate = w.forked_from ? updateBtn : '';
+                actionBtn = `<div style="display:flex;gap:4px;">${canUpdate}<button onclick="mpUninstall('${escHtml(w.name)}','community','${src}',this)" style="padding:4px 10px;font-size:10px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);cursor:pointer;">Remove</button></div>`;
+            } else {
+                actionBtn = `<button onclick="mpInstall('${escHtml(w.name)}','community','${src}',this)" style="padding:4px 10px;font-size:10px;border:1px solid var(--accent);border-radius:var(--radius);background:var(--accent);color:var(--accent-text);cursor:pointer;">Install</button>`;
             }
         }
-    } catch(e) { console.error('Failed to load widgets', e); }
+
+        html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:start;justify-content:space-between;gap:6px;">
+                <div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.3;">${escHtml(dn)}</div>
+                <div style="display:flex;gap:3px;flex-shrink:0;">
+                    <span style="font-size:8px;padding:1px 5px;border-radius:3px;background:${tierColor};color:white;text-transform:uppercase;letter-spacing:0.4px;">${tierLabel}</span>
+                    ${installedBadge}
+                </div>
+            </div>
+            <div style="font-size:10px;color:var(--text2);line-height:1.4;flex:1;">${escHtml(w.description || 'No description')}</div>
+            ${authorLine}${forkedFrom}
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+                <span style="font-size:8px;color:var(--text2);">v${escHtml(w.version||'1.0')}</span>
+                ${actionBtn}
+            </div>
+        </div>`;
+    }
+    html += '</div>';
+    grid.innerHTML = html;
+}
+
+async function mpInstall(name, tier, sourceArtist, btn) {
+    btn.disabled = true; btn.textContent = 'Installing...';
+    const body = { name, tier };
+    if (sourceArtist) body.source_artist = sourceArtist;
+    try {
+        const r = await apiFetch('/api/adze/install-widget', { method: 'POST', body });
+        if (r.ok) {
+            toast('Widget installed', 'success');
+            await loadWidgets();
+            await loadMarketplaceTab();
+        } else {
+            const d = await r.json();
+            toast(d.error || 'Install failed', 'error');
+            btn.disabled = false; btn.textContent = 'Install';
+        }
+    } catch(e) { toast('Error: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Install'; }
+}
+
+async function mpUninstall(name, tier, sourceArtist, btn) {
+    btn.disabled = true; btn.textContent = 'Removing...';
+    try {
+        const r = await apiFetch('/api/adze/uninstall-widget', { method: 'POST', body: { name, tier } });
+        if (r.ok) {
+            toast('Widget removed', 'success');
+            await loadWidgets();
+            await loadMarketplaceTab();
+        } else {
+            const d = await r.json();
+            toast(d.error || 'Remove failed', 'error');
+            btn.disabled = false; btn.textContent = 'Remove';
+        }
+    } catch(e) { toast('Error: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Remove'; }
+}
+
+async function mpUpdate(name, tier, btn) {
+    btn.disabled = true; btn.textContent = 'Updating…';
+    try {
+        // For non-forked platform widgets: uninstall + reinstall for a clean slate
+        // For forked artist widgets: the backend overwrites from platform source
+        const r = await apiFetch('/api/adze/update-widget', { method: 'POST', body: { name, tier } });
+        if (r.ok) {
+            toast('Widget updated', 'success');
+            await loadWidgets();
+            await loadMarketplaceTab();
+        } else {
+            // Response may be HTML (e.g. stale server) — don't assume JSON
+            let errMsg = 'Update failed';
+            try { const d = await r.json(); errMsg = d.error || errMsg; } catch(_) {}
+            // If update failed, try a clean uninstall + reinstall
+            toast(errMsg + ' — trying reinstall…', 'warn');
+            const r2 = await apiFetch('/api/adze/uninstall-widget', { method: 'POST', body: { name, tier } });
+            const r3 = await apiFetch('/api/adze/install-widget', { method: 'POST', body: { name, tier } });
+            if (r3.ok) {
+                toast('Widget reinstalled', 'success');
+                await loadWidgets();
+                await loadMarketplaceTab();
+            } else {
+                toast('Reinstall failed — try refreshing the page', 'error');
+                btn.disabled = false; btn.textContent = 'Update';
+            }
+        }
+    } catch(e) { toast('Update error: ' + e.message, 'error'); btn.disabled = false; btn.textContent = 'Update'; }
 }
 
 // ── Domain ──
@@ -1351,9 +2180,9 @@ async function activateDomain(domain) {
     const btn = document.getElementById('activateDomainBtn');
     const log = document.getElementById('activateDomainLog');
     btn.disabled = true;
-    btn.textContent = 'Activating...';
+    btn.textContent = 'Writing config...';
     log.style.display = 'block';
-    log.textContent = 'Starting domain activation...\n';
+    log.textContent = '';
 
     try {
         const r = await apiFetch('/api/adze/activate-domain', {
@@ -1362,29 +2191,23 @@ async function activateDomain(domain) {
         });
         const data = await r.json();
 
-        if (data.steps) {
-            data.steps.forEach(s => { log.textContent += '  ✓ ' + s + '\n'; });
+        if (data.error) {
+            log.textContent = '✗ Error: ' + data.error;
+            toast('Failed: ' + data.error, 'error');
+            btn.textContent = 'Retry';
+            btn.disabled = false;
+            return;
         }
 
         if (data.success) {
-            if (data.partial) {
-                log.textContent += '\n⚠ ' + (data.warning || 'Partial success') + '\n';
-                toast('Domain active on HTTP — SSL may need another attempt', 'info');
-            } else {
-                log.textContent += '\n✓ Domain is live at https://' + domain + '\n';
-                toast('Domain activated with SSL!', 'success');
-            }
-            btn.textContent = 'Done!';
-            setTimeout(() => checkDomain(), 2000);
-        } else {
-            log.textContent += '\n✗ Error: ' + (data.error || 'Unknown error') + '\n';
-            toast('Activation failed: ' + (data.error || 'Unknown error'), 'error');
-            btn.textContent = 'Retry';
-            btn.disabled = false;
+            log.textContent = '✓ nginx config written to server.\n\n' +
+                data.next_step + '\n\n' + data.commands;
+            btn.textContent = 'Config written';
+            toast('nginx config ready — run the commands below on the server', 'info');
         }
     } catch(e) {
-        log.textContent += '\n✗ Error: ' + e.message + '\n';
-        toast('Activation failed: ' + e.message, 'error');
+        log.textContent = '✗ Error: ' + e.message;
+        toast('Failed: ' + e.message, 'error');
         btn.textContent = 'Retry';
         btn.disabled = false;
     }
@@ -1506,9 +2329,9 @@ TTL: Auto</div>
         html += `
             <div class="domain-step">
                 <h5>Step 2: Activate Domain</h5>
-                <p>DNS is pointing to the server. Click below to automatically configure the web server and SSL certificate.</p>
+                <p>DNS is pointing to the server. Click to generate the nginx config, then run the commands shown on the server to enable it and get SSL.</p>
                 <button id="activateDomainBtn" onclick="activateDomain('${d.domain}')" style="margin-top:8px;padding:10px 24px;background:var(--accent);color:white;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:600;">
-                    Activate Domain
+                    Generate Config
                 </button>
                 <div id="activateDomainLog" style="display:none;margin-top:12px;padding:12px;background:var(--surface2);border-radius:var(--radius);font-family:monospace;font-size:12px;white-space:pre-wrap;color:var(--text2);max-height:200px;overflow-y:auto;"></div>
             </div>`;
@@ -1683,19 +2506,31 @@ async function apiTryGet(url, resultId) {
 
 // ── Tab Switching ──
 function switchTab(tab, btn) {
-    if (tab === 'domain') checkDomain();
-    if (tab === 'api') loadApiEndpoints();
-    if (tab === 'snapshots') loadSnapshots();
-    if (tab === 'about') renderAbout();
-    if (tab === 'fonts') loadFontsTab();
-    if (tab === 'stripe') loadStripeTab();
-    if (tab === 'config') loadSecrets();
+    // Activate the tab and panel first — so even if a loader throws, the UI updates
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     if (btn) btn.classList.add('active');
     else document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add('active');
     const panel = document.getElementById('panel-' + tab);
     if (panel) panel.classList.add('active');
+
+    // Then load dynamic content
+    try {
+        if (tab === 'domain') checkDomain();
+        if (tab === 'api') loadApiEndpoints();
+        if (tab === 'snapshots') loadSnapshots();
+        if (tab === 'about') renderAbout();
+        if (tab === 'fonts') loadFontsTab();
+        if (tab === 'config') loadSecrets();
+        if (tab === 'analytics') loadAnalyticsTab();
+        if (tab === 'share') loadShareTab();
+        if (tab === 'marketplace') loadMarketplaceTab();
+        // Keep widget editor state when switching to vibe coder (preview stays as widget)
+        // Exit widget editor for all other tabs
+        if (tab !== 'edit' && tab !== 'claude') exitWidgetEditorMode();
+    } catch(e) {
+        console.error('Tab load error:', e);
+    }
 
     // Show/hide mobile preview toggle based on whether tab has split-pane
     const toggleBtn = document.getElementById('mobilePreviewToggle');
@@ -1727,7 +2562,9 @@ async function loadPages(autoSelect = false) {
             pages = (await r.json()).pages;
             renderPageList();
             // Auto-select home page on first load
-            if (autoSelect && !currentPage && pages.length > 0) {
+            if (pages.length === 0) {
+                document.getElementById('emptyState').style.display = 'flex';
+            } else if (autoSelect && !currentPage) {
                 const home = pages.find(p => p.slug === 'home') || pages[0];
                 const listItems = document.querySelectorAll('.page-item');
                 const idx = pages.indexOf(home);
@@ -1949,7 +2786,10 @@ function updatePreview() {
     });
 }
 
-function syncAllPreviews() { updatePreview(); }
+function syncAllPreviews() {
+    if (currentWidget) updateWidgetPreview();
+    else updatePreview();
+}
 
 async function refreshPreview() {
     if (!currentPage) return;
@@ -1982,6 +2822,7 @@ function setUnsaved(val) {
 
 // ── Save ──
 async function savePage() {
+    if (currentWidget) { await saveCurrentWidget(); return; }
     if (!currentPage) return;
     try {
         const css = document.getElementById('cssEditor').value;
@@ -1999,7 +2840,15 @@ async function savePage() {
             body: { page_slug: currentPage.slug, content, config }
         });
         if (r.ok) {
-            toast('Saved!');
+            const data = await r.json().catch(() => ({}));
+            if (data.compile_ok === false) {
+                toast('Saved — compile failed: ' + (data.compile_error || 'unknown error'), 'warn');
+            } else {
+                toast('Saved!');
+            }
+            const now = new Date();
+            document.getElementById('lastSavedLabel').textContent =
+                'Saved ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setUnsaved(false);
             autoSnapshot();
             loadPages();
@@ -2461,61 +3310,541 @@ async function scanForLeakedSecrets() {
     }
 }
 
-// ── Stripe Integration ──
-async function loadStripeTab() {
-    const setup = document.getElementById('stripeSetup');
-    const dash = document.getElementById('stripeDashboard');
-    if (!setup || !dash) return;
+// ── Analytics Tab ──
+// ── Minimal QR code URL generator ──
+function generateQR(text, size) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&margin=0`;
+}
+
+// ── Favicon ──
+function renderFaviconPreview() {
+    const preview = document.getElementById('faviconPreview');
+    const pathEl = document.getElementById('faviconPath');
+    if (!preview) return;
+    const fav = artistConfig?.favicon;
+    if (fav) {
+        preview.innerHTML = `<img src="/artists/${currentArtist}/assets/${fav}" style="width:100%;height:100%;object-fit:contain;border-radius:6px;" onerror="this.parentElement.innerHTML='<svg viewBox=\'0 0 24 24\' width=\'20\' height=\'20\' stroke=\'var(--text2)\' fill=\'none\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\'/><path d=\'M3 9h18M9 21V9\'/></svg>'">`;
+        if (pathEl) { pathEl.textContent = fav; pathEl.style.display = 'block'; }
+    } else {
+        preview.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--text2)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`;
+        if (pathEl) pathEl.style.display = 'none';
+    }
+}
+
+function openFaviconPicker() {
+    // Reuse the asset picker but filter to images only, then set favicon
+    const imgExts = ['png','jpg','jpeg','svg','ico','gif','webp'];
+    const eligible = assetList.filter(a => imgExts.some(e => a.path.toLowerCase().endsWith('.' + e)));
+    if (!eligible.length) {
+        toast('No images in assets yet — upload one first', 'warn');
+        return;
+    }
+    // Build a quick inline picker modal
+    const existing = document.getElementById('faviconPickerModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'faviconPickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;width:480px;max-width:90vw;max-height:70vh;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:13px;font-weight:600;">Pick Favicon</div>
+                <button onclick="document.getElementById('faviconPickerModal').remove()" class="btn-ghost" style="padding:4px 8px;font-size:11px;">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;overflow-y:auto;flex:1;">
+                ${eligible.map(a => `
+                    <div onclick="setFavicon('${escHtml(a.path)}')" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <img src="/artists/${currentArtist}/assets/${escHtml(a.path)}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none'">
+                        <span style="font-size:8px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;">${escHtml(a.filename)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function setFavicon(path) {
+    const modal = document.getElementById('faviconPickerModal');
+    if (modal) modal.remove();
+    try {
+        const r = await apiFetch('/api/adze/update-site-config', { method: 'POST', body: { config: { favicon: path } } });
+        if (r.ok) {
+            if (artistConfig) artistConfig.favicon = path;
+            renderFaviconPreview();
+            toast('Favicon updated — republish to apply', 'success');
+        } else {
+            toast('Failed to save favicon', 'error');
+        }
+    } catch(e) {
+        toast('Error saving favicon: ' + e.message, 'error');
+    }
+}
+
+async function clearFavicon() {
+    try {
+        const r = await apiFetch('/api/adze/update-site-config', { method: 'POST', body: { config: { favicon: '' } } });
+        if (r.ok) {
+            if (artistConfig) artistConfig.favicon = '';
+            renderFaviconPreview();
+            toast('Favicon cleared — republish to apply', 'success');
+        }
+    } catch(e) {
+        toast('Error clearing favicon: ' + e.message, 'error');
+    }
+}
+
+function loadShareTab() {
+    renderFaviconPreview();
+    const container = document.getElementById('shareContent');
+    if (!container) return;
+    if (!currentPage) {
+        container.innerHTML = '<p style="color:var(--text2);font-size:10px;">Select a page to see sharing options</p>';
+        return;
+    }
+
+    const pageTitle = currentPage.config?.title || currentPage.slug || 'Untitled';
+    const pageDesc = currentPage.config?.description || '';
+    const ogImage = currentPage.config?.og_image || '';
+
+    // Build page URL
+    let pageUrl;
+    if (artistConfig?.domain) {
+        pageUrl = `https://${artistConfig.domain}/${currentPage.slug}/`;
+    } else {
+        pageUrl = `https://adze.studio/artists/${currentArtist}/${currentPage.slug}/`;
+    }
+
+    // Find first image asset for og:image fallback
+    const imageExts = ['jpg','jpeg','png','gif','webp','svg'];
+    let firstImage = ogImage;
+    if (!firstImage && typeof assetList !== 'undefined' && assetList.length) {
+        const imgAsset = assetList.find(a => imageExts.some(ext => a.path.toLowerCase().endsWith('.' + ext)));
+        if (imgAsset) {
+            firstImage = `${pageUrl.replace(/\/[^/]*\/$/, '')}/assets/${imgAsset.path}`;
+        }
+    }
+
+    const qrUrl = generateQR(pageUrl, 200);
+    const domain = artistConfig?.domain || `adze.studio/artists/${currentArtist}`;
+    const displayDomain = domain.replace(/^https?:\/\//, '');
+
+    container.innerHTML = `
+        <!-- Copy Link -->
+        <div style="margin-bottom:20px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" value="${escHtml(pageUrl)}" readonly style="flex:1;font-size:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);" id="shareUrlInput">
+                <button onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value);toast('URL copied!','success');" style="white-space:nowrap;padding:8px 14px;font-size:10px;">Copy Page URL</button>
+            </div>
+        </div>
+
+        <!-- QR Code -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:10px;">QR Code</div>
+            <div style="display:flex;align-items:flex-start;gap:16px;">
+                <div style="background:#fff;padding:8px;border-radius:6px;border:1px solid var(--border);flex-shrink:0;">
+                    <img src="${qrUrl}" width="120" height="120" alt="QR Code" style="display:block;" id="shareQrImg">
+                </div>
+                <div>
+                    <p style="font-size:10px;color:var(--text2);margin:0 0 10px;line-height:1.5;">Scan to open this page on a mobile device. Right-click to save, or use the button below.</p>
+                    <button onclick="downloadShareQR()" style="font-size:10px;padding:6px 12px;">Download QR</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Previews -->
+        <div style="font-size:12px;font-weight:600;margin-bottom:10px;">Social Previews</div>
+
+        <!-- iMessage / WhatsApp -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px;font-weight:600;">iMessage / WhatsApp</div>
+            <div style="max-width:320px;">
+                <div style="background:var(--bg2);border-radius:12px;overflow:hidden;border:1px solid var(--border);">
+                    ${firstImage ? `<div style="height:140px;background:url('${escHtml(firstImage)}') center/cover no-repeat;border-bottom:1px solid var(--border);"></div>` : ''}
+                    <div style="padding:10px 12px;">
+                        <div style="font-size:10px;font-weight:600;color:var(--text);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(pageTitle)}</div>
+                        ${pageDesc ? `<div style="font-size:9px;color:var(--text2);margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${escHtml(pageDesc)}</div>` : ''}
+                        <div style="font-size:9px;color:var(--text2);opacity:0.7;">${escHtml(displayDomain)}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Twitter/X Card -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px;font-weight:600;">Twitter / X</div>
+            <div style="max-width:420px;">
+                <div style="border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--bg2);">
+                    ${firstImage ? `<div style="height:180px;background:url('${escHtml(firstImage)}') center/cover no-repeat;border-bottom:1px solid var(--border);"></div>` : `<div style="height:180px;background:var(--bg3);display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--border);"><span style="font-size:10px;color:var(--text2);">No image set</span></div>`}
+                    <div style="padding:10px 14px;">
+                        <div style="font-size:10px;font-weight:600;color:var(--text);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(pageTitle)}</div>
+                        ${pageDesc ? `<div style="font-size:9px;color:var(--text2);margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;">${escHtml(pageDesc)}</div>` : ''}
+                        <div style="font-size:9px;color:var(--text2);opacity:0.7;">${escHtml(displayDomain)}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Search Result -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px;font-weight:600;">Google Search</div>
+            <div style="max-width:500px;background:#fff;padding:14px 16px;border-radius:8px;border:1px solid var(--border);">
+                <div style="font-size:12px;color:#1a0dab;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-weight:400;">${escHtml(pageTitle)}</div>
+                <div style="font-size:9px;color:#006621;margin-bottom:4px;">${escHtml(pageUrl)}</div>
+                <div style="font-size:10px;color:#545454;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${pageDesc ? escHtml(pageDesc) : '<span style="color:#999;">No description set. Add one in the Config tab to improve search results.</span>'}</div>
+            </div>
+        </div>
+
+        <!-- Meta Tags -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;">
+            <div style="font-size:12px;font-weight:600;margin-bottom:10px;">Meta Tags</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <label style="font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">og:title</label>
+                    </div>
+                    <div style="font-size:10px;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);color:var(--text);min-height:24px;">${pageTitle ? escHtml(pageTitle) : '<span style="color:var(--text2);font-style:italic;">Not set — defaults to page title</span>'}</div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <label style="font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">og:description</label>
+                    </div>
+                    <div style="font-size:10px;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);color:var(--text);min-height:24px;">${pageDesc ? escHtml(pageDesc) : '<span style="color:var(--text2);font-style:italic;">Not set — add a description in the Config tab for better social sharing</span>'}</div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <label style="font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">og:image</label>
+                    </div>
+                    <div style="font-size:10px;padding:6px 8px;background:var(--bg2);border-radius:var(--radius);color:var(--text);min-height:24px;">${firstImage ? escHtml(firstImage) : '<span style="color:var(--text2);font-style:italic;">Not set — upload an image in Assets and set og_image in Config</span>'}</div>
+                </div>
+            </div>
+            <p style="font-size:9px;color:var(--text2);margin-top:10px;line-height:1.5;">Edit these values in the Config tab. Changes to title, description, and og_image will update social previews.</p>
+        </div>
+    `;
+}
+
+function downloadShareQR() {
+    const img = document.getElementById('shareQrImg');
+    if (!img) return;
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = (currentPage?.slug || 'page') + '-qr.png';
+    // Fetch and create blob for cross-origin download
+    fetch(img.src)
+        .then(r => r.blob())
+        .then(blob => {
+            a.href = URL.createObjectURL(blob);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+            toast('QR code downloaded', 'success');
+        })
+        .catch(() => {
+            // Fallback: open in new tab
+            window.open(img.src, '_blank');
+        });
+}
+
+async function loadAnalyticsTab() {
+    const container = document.getElementById('analyticsContent');
+    container.innerHTML = '<p style="color:var(--text2);font-size:11px;">Loading analytics...</p>';
 
     try {
-        const r = await apiFetch('/api/adze/stripe-status');
+        const r = await apiFetch('/api/adze/analytics');
+        if (!r.ok) { container.innerHTML = '<p style="color:var(--text2);font-size:11px;">Failed to load analytics.</p>'; return; }
         const data = await r.json();
 
-        if (data.configured) {
-            setup.style.display = 'none';
-            dash.style.display = 'block';
-            if (data.account_name) {
-                document.getElementById('stripeAccountInfo').innerHTML = `<span style="color:#4a8;">&#10003;</span> Connected: ${escHtml(data.account_name)}`;
-            }
-            // Set webhook URL
-            const domain = artistConfig?.domain
-                ? `https://${artistConfig.domain}`
-                : `https://adze.studio/artists/${currentArtist}`;
-            document.getElementById('stripeWebhookUrl').textContent =
-                `${domain}/api/artists/${currentArtist}/stripe-webhook`;
-            // Buy button snippet
-            document.getElementById('stripeBuySnippet').textContent =
-`<button onclick="buyProduct('PRICE_ID')">Buy - $XX</button>
-<script>
-async function buyProduct(priceId) {
-  const r = await fetch('/api/artists/${currentArtist}/create-checkout', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({price_id: priceId})
-  });
-  const {url} = await r.json();
-  window.location.href = url;
-}
-<\/script>`;
-            loadStripeProducts();
-            loadStripeOrders();
-        } else {
-            setup.style.display = 'block';
-            dash.style.display = 'none';
-            await prefillStripeKeys();
+        const trendArrow = data.trend === 'up' ? '<span style="color:var(--success);">&#9650;</span>'
+                         : data.trend === 'down' ? '<span style="color:var(--danger);">&#9660;</span>'
+                         : '<span style="color:var(--text2);">&#8212;</span>';
+
+        const maxDaily = Math.max(1, ...data.daily.map(d => d.views));
+
+        // Format seconds into human readable
+        function fmtDur(s) {
+            if (s < 60) return s + 's';
+            const m = Math.floor(s / 60), sec = s % 60;
+            return m + 'm ' + (sec > 0 ? sec + 's' : '');
         }
-    } catch (e) {
-        setup.style.display = 'block';
-        dash.style.display = 'none';
-        await prefillStripeKeys();
+
+        let html = '';
+
+        // ── Stat cards row ──
+        const cards = [
+            { value: data.today, label: 'Today', icon: '&#9673;' },
+            { value: data.week, label: 'This Week', icon: '&#9670;' },
+            { value: data.month, label: 'This Month', extra: ' ' + trendArrow, icon: '&#9632;' },
+            { value: (data.bounce_rate || 0) + '%', label: 'Bounce Rate', icon: '&#8635;' },
+            { value: fmtDur(data.avg_duration || 0), label: 'Avg. Duration', icon: '&#9201;' },
+            { value: data.total_sessions || 0, label: 'Sessions (30d)', icon: '&#9829;' }
+        ];
+        html += `<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px;">`;
+        for (const c of cards) {
+            html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 10px;text-align:center;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:6px;right:8px;font-size:10px;color:var(--border);opacity:0.6;">${c.icon}</div>
+                <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--body-font);line-height:1.1;">${c.value}${c.extra||''}</div>
+                <div style="font-size:8px;color:var(--text2);text-transform:uppercase;letter-spacing:0.8px;margin-top:4px;">${c.label}</div>
+            </div>`;
+        }
+        html += `</div>`;
+
+        // ── Daily views sparkline chart ──
+        html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;">`;
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;">Daily Views</div>
+            <div style="font-size:9px;color:var(--text2);">Last 30 days</div>
+        </div>`;
+
+        // SVG area chart
+        const chartW = 900, chartH = 100;
+        const dayW = chartW / Math.max(1, data.daily.length - 1);
+        let pathD = '', areaD = '';
+        data.daily.forEach((d, i) => {
+            const x = i * dayW;
+            const y = chartH - (maxDaily > 0 ? (d.views / maxDaily) * (chartH - 10) : 0) - 5;
+            if (i === 0) { pathD += `M${x},${y}`; areaD += `M${x},${chartH} L${x},${y}`; }
+            else { pathD += ` L${x},${y}`; areaD += ` L${x},${y}`; }
+        });
+        areaD += ` L${(data.daily.length - 1) * dayW},${chartH} Z`;
+
+        html += `<svg viewBox="0 0 ${chartW} ${chartH + 20}" style="width:100%;height:120px;display:block;" preserveAspectRatio="none">
+            <defs>
+                <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.02"/>
+                </linearGradient>
+            </defs>
+            <path d="${areaD}" fill="url(#areaGrad)" />
+            <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+        // Dots for each day
+        data.daily.forEach((d, i) => {
+            const x = i * dayW;
+            const y = chartH - (maxDaily > 0 ? (d.views / maxDaily) * (chartH - 10) : 0) - 5;
+            html += `<circle cx="${x}" cy="${y}" r="3" fill="var(--accent)" opacity="0"><title>${d.date}: ${d.views} views</title>
+                <set attributeName="opacity" to="1" begin="mouseover" end="mouseout"/>
+            </circle>`;
+        });
+        html += `</svg>`;
+
+        // Date labels
+        html += `<div style="display:flex;justify-content:space-between;margin-top:2px;">`;
+        const labelEvery = Math.max(1, Math.floor(data.daily.length / 6));
+        data.daily.forEach((d, i) => {
+            if (i === 0 || i === data.daily.length - 1 || i % labelEvery === 0) {
+                html += `<span style="font-size:8px;color:var(--text2);">${d.date.slice(5)}</span>`;
+            }
+        });
+        html += `</div></div>`;
+
+        // ── Two-column: World Map + Hourly Activity ──
+        html += `<div style="display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:16px;">`;
+
+        // World map — container filled async after render
+        html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;">`;
+        html += `<div style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Visitor Map</div>`;
+        html += `<div id="analyticsWorldMap" style="min-height:180px;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:10px;color:var(--text2);">Loading map...</span>
+        </div>`;
+        // Country legend
+        html += `<div id="analyticsMapLegend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>`;
+        html += `</div>`;
+
+        // Hourly activity — SVG radial clock
+        html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;">`;
+        html += `<div style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Hourly Activity</div>`;
+        const hourly = data.hourly || new Array(24).fill(0);
+        const maxH = Math.max(1, ...hourly);
+        const totalViews = hourly.reduce((a, b) => a + b, 0);
+        // Peak hour
+        const peakHour = hourly.indexOf(Math.max(...hourly));
+
+        // Radial/clock chart using SVG
+        const cx = 100, cy = 100, outerR = 85, innerR = 35;
+        let clockSvg = `<svg viewBox="0 0 200 200" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto;">`;
+        // Background rings
+        clockSvg += `<circle cx="${cx}" cy="${cy}" r="${outerR}" fill="none" stroke="var(--border)" stroke-width="0.5" opacity="0.4"/>`;
+        clockSvg += `<circle cx="${cx}" cy="${cy}" r="${innerR}" fill="none" stroke="var(--border)" stroke-width="0.5" opacity="0.4"/>`;
+        clockSvg += `<circle cx="${cx}" cy="${cy}" r="${(outerR+innerR)/2}" fill="none" stroke="var(--border)" stroke-width="0.3" opacity="0.2" stroke-dasharray="2,4"/>`;
+
+        for (let h = 0; h < 24; h++) {
+            const intensity = hourly[h] / maxH;
+            const barR = innerR + (outerR - innerR) * intensity;
+            const angle1 = (h / 24) * Math.PI * 2 - Math.PI / 2;
+            const angle2 = ((h + 1) / 24) * Math.PI * 2 - Math.PI / 2;
+            const gap = 0.015; // small gap between segments
+            const a1 = angle1 + gap, a2 = angle2 - gap;
+
+            const x1i = cx + innerR * Math.cos(a1), y1i = cy + innerR * Math.sin(a1);
+            const x2i = cx + innerR * Math.cos(a2), y2i = cy + innerR * Math.sin(a2);
+            const x1o = cx + barR * Math.cos(a1), y1o = cy + barR * Math.sin(a1);
+            const x2o = cx + barR * Math.cos(a2), y2o = cy + barR * Math.sin(a2);
+
+            const opacity = (0.15 + intensity * 0.85).toFixed(2);
+            const largeArc = (a2 - a1) > Math.PI ? 1 : 0;
+
+            clockSvg += `<path d="M${x1i.toFixed(1)},${y1i.toFixed(1)} L${x1o.toFixed(1)},${y1o.toFixed(1)} A${barR.toFixed(1)},${barR.toFixed(1)} 0 ${largeArc},1 ${x2o.toFixed(1)},${y2o.toFixed(1)} L${x2i.toFixed(1)},${y2i.toFixed(1)} A${innerR},${innerR} 0 ${largeArc},0 ${x1i.toFixed(1)},${y1i.toFixed(1)} Z"
+                fill="var(--accent)" opacity="${opacity}" style="cursor:default;transition:opacity 0.2s;">
+                <title>${h}:00 — ${hourly[h]} views</title>
+            </path>`;
+        }
+
+        // Hour labels at 12, 3, 6, 9 positions
+        const hourLabels = [{h:0,label:'12am'},{h:6,label:'6am'},{h:12,label:'12pm'},{h:18,label:'6pm'}];
+        for (const hl of hourLabels) {
+            const angle = (hl.h / 24) * Math.PI * 2 - Math.PI / 2;
+            const lx = cx + (outerR + 10) * Math.cos(angle);
+            const ly = cy + (outerR + 10) * Math.sin(angle);
+            clockSvg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="central" fill="var(--text2)" font-size="7" font-family="var(--body-font)">${hl.label}</text>`;
+        }
+
+        // Center text
+        clockSvg += `<text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700" font-family="var(--body-font)">${peakHour}:00</text>`;
+        clockSvg += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" fill="var(--text2)" font-size="6" text-transform="uppercase" letter-spacing="0.5" font-family="var(--body-font)">peak hour</text>`;
+
+        clockSvg += `</svg>`;
+        html += clockSvg;
+        html += `</div>`;
+        html += `</div>`; // close two-col
+
+        // ── Three-column detail lists ──
+        html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">`;
+
+        // Helper for detail card
+        function detailCard(title, items, keyFn, valFn, emptyMsg) {
+            let h = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">`;
+            h += `<div style="font-size:10px;font-weight:600;color:var(--text);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">${title}</div>`;
+            if (!items || items.length === 0) {
+                h += `<div style="font-size:10px;color:var(--text2);">${emptyMsg}</div>`;
+            } else {
+                const maxV = Math.max(1, valFn(items[0]));
+                for (const item of items) {
+                    const v = valFn(item);
+                    const barW = Math.max(4, (v / maxV) * 100);
+                    h += `<div style="margin-bottom:8px;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;">
+                            <span style="color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72%;font-family:var(--mono);font-size:9px;">${escHtml(keyFn(item))}</span>
+                            <span style="color:var(--text2);flex-shrink:0;margin-left:6px;font-size:9px;font-weight:600;">${v}</span>
+                        </div>
+                        <div style="height:3px;background:var(--bg2);border-radius:2px;overflow:hidden;">
+                            <div style="height:100%;width:${barW}%;background:var(--accent);border-radius:2px;transition:width 0.4s;"></div>
+                        </div>
+                    </div>`;
+                }
+            }
+            h += `</div>`;
+            return h;
+        }
+
+        html += detailCard('Top Pages', data.top_pages, p => p.path, p => p.views, 'No data yet');
+        html += detailCard('Traffic Sources', data.sources, s => s.source, s => s.views, 'No referrer data yet');
+        html += detailCard('Countries', data.countries, c => c.country, c => c.views, 'No data yet');
+
+        html += `</div>`; // close grid
+
+        container.innerHTML = html;
+
+        // Load the world map asynchronously after the DOM is populated
+        loadWorldMap(data.countries || []);
+
+    } catch (err) {
+        container.innerHTML = `<p style="color:var(--text2);font-size:11px;">Error loading analytics: ${err.message}</p>`;
+    }
+}
+
+// ── World map: fetch real SVG, colorize by country traffic ──
+async function loadWorldMap(countries) {
+    const container = document.getElementById('analyticsWorldMap');
+    const legend = document.getElementById('analyticsMapLegend');
+    if (!container) return;
+
+    // Build lookup
+    const countryViews = {};
+    let maxViews = 0;
+    for (const c of countries) {
+        countryViews[c.country.toLowerCase()] = c.views;
+        if (c.views > maxViews) maxViews = c.views;
     }
 
-    // Clear any stale status when re-entering the tab
-    const statusEl = document.getElementById('stripeKeyStatus');
-    if (statusEl && setup.style.display === 'none') {
-        statusEl.textContent = '';
+    try {
+        const resp = await fetch('/api/adze/world-map.svg');
+        if (!resp.ok) throw new Error('Map not found');
+        const svgText = await resp.text();
+
+        // Parse SVG — use text/html as the mime type so DOMParser doesn't
+        // trip on the SVG namespace and returns a live document we can import
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+
+        // Detect parse errors (DOMParser puts a <parsererror> in the doc on failure)
+        if (doc.querySelector('parsererror')) throw new Error('SVG parse error');
+
+        const svgEl = doc.documentElement;
+        if (!svgEl || svgEl.tagName.toLowerCase() !== 'svg') throw new Error('Invalid SVG root');
+
+        // Import into the live document so CSS vars resolve correctly
+        const svg = document.importNode(svgEl, true);
+
+        svg.style.cssText = 'width:100%;height:auto;display:block;';
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+
+        // Colorize — querySelectorAll works fine on the imported node
+        const elements = svg.querySelectorAll('[id]');
+        for (const el of elements) {
+            const code = el.id.toLowerCase();
+            if (code.startsWith('_')) continue; // skip non-country markers
+            const views = countryViews[code] || 0;
+
+            // Paths inside a <g id="xx"> are island groups (e.g. CA, AU archipelagos)
+            const paths = el.tagName.toLowerCase() === 'g'
+                ? Array.from(el.querySelectorAll('path'))
+                : el.tagName.toLowerCase() === 'path' ? [el] : [];
+
+            for (const p of paths) {
+                p.style.transition = 'opacity 0.3s';
+                p.style.cursor = 'default';
+                if (views > 0 && maxViews > 0) {
+                    const intensity = 0.3 + (views / maxViews) * 0.7;
+                    p.style.fill = 'var(--accent)';
+                    p.style.opacity = intensity.toFixed(2);
+                    p.style.stroke = 'var(--surface)';
+                    p.style.strokeWidth = '0.3';
+                } else {
+                    p.style.fill = 'var(--text2)';
+                    p.style.opacity = '0.12';
+                    p.style.stroke = 'var(--surface)';
+                    p.style.strokeWidth = '0.2';
+                }
+                const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                title.textContent = views > 0
+                    ? `${code.toUpperCase()}: ${views} views`
+                    : code.toUpperCase();
+                p.appendChild(title);
+            }
+        }
+
+        container.innerHTML = '';
+        container.appendChild(svg);
+
+        // Build legend
+        if (legend && countries.length > 0) {
+            let legendHtml = '';
+            for (const c of countries.slice(0, 10)) {
+                const intensity = maxViews > 0 ? (0.3 + (c.views / maxViews) * 0.7) : 0.3;
+                legendHtml += `<div style="display:flex;align-items:center;gap:3px;font-size:8px;color:var(--text2);">
+                    <div style="width:8px;height:8px;border-radius:2px;background:var(--accent);opacity:${intensity.toFixed(2)};flex-shrink:0;"></div>
+                    ${escHtml(c.country)} (${c.views})
+                </div>`;
+            }
+            legend.innerHTML = legendHtml;
+        }
+
+    } catch (err) {
+        container.innerHTML = `<div style="font-size:9px;color:var(--text2);text-align:center;padding:20px;">Map unavailable</div>`;
     }
 }
+
 
 // ── Env Editor (Manual Edit tab) ──
 function toggleEnvEditor() {
@@ -2559,289 +3888,6 @@ async function saveEnvEditor() {
     }
 }
 
-function validateStripeKey(input, prefix) {
-    const statusEl = document.getElementById(input.id + 'Status');
-    if (!statusEl) return;
-    const val = input.value.trim();
-    if (!val) {
-        // Check if saved
-        if (input.dataset.saved === 'true') {
-            statusEl.innerHTML = '<span style="color:#4a8;">&#10003;</span>';
-        } else {
-            statusEl.textContent = '';
-        }
-        input.style.borderColor = 'var(--border)';
-        return;
-    }
-    // Stripe key format: prefix + "test_" or "live_" + alphanumeric (24+ chars)
-    const valid = val.startsWith(prefix) && val.length >= 20;
-    if (valid) {
-        statusEl.innerHTML = '<span style="color:#4a8;">&#10003;</span>';
-        input.style.borderColor = '#4a8';
-    } else {
-        statusEl.innerHTML = '<span style="color:#e44;">&#10007;</span>';
-        input.style.borderColor = '#e44';
-    }
-}
-
-async function prefillStripeKeys() {
-    const statusEl = document.getElementById('stripeKeyStatus');
-    try {
-        const r = await apiFetch('/api/adze/list-env');
-        if (!r.ok) return;
-        const data = await r.json();
-        const vars = data.vars || data.secrets || [];
-        const hasKeys = {};
-        for (const s of vars) {
-            hasKeys[s.key] = s.value_preview || s.masked || '***';
-        }
-        const skInput = document.getElementById('stripeSecretKey');
-        const pkInput = document.getElementById('stripePubKey');
-        const whInput = document.getElementById('stripeWebhookSecret');
-
-        if (hasKeys['STRIPE_SECRET_KEY']) {
-            skInput.placeholder = hasKeys['STRIPE_SECRET_KEY'];
-            skInput.dataset.saved = 'true';
-            const s = document.getElementById('stripeSecretKeyStatus');
-            if (s) s.innerHTML = '<span style="color:#e8a73d;">&#9679;</span>';
-        }
-        if (hasKeys['STRIPE_PUBLISHABLE_KEY']) {
-            pkInput.placeholder = hasKeys['STRIPE_PUBLISHABLE_KEY'];
-            pkInput.dataset.saved = 'true';
-            const s = document.getElementById('stripePubKeyStatus');
-            if (s) s.innerHTML = '<span style="color:#e8a73d;">&#9679;</span>';
-        }
-        if (hasKeys['STRIPE_ENDPOINT_SECRET']) {
-            whInput.placeholder = hasKeys['STRIPE_ENDPOINT_SECRET'];
-            whInput.dataset.saved = 'true';
-            const s = document.getElementById('stripeWebhookSecretStatus');
-            if (s) s.innerHTML = '<span style="color:#e8a73d;">&#9679;</span>';
-        }
-
-        // If keys are saved, verify them with Stripe
-        if (hasKeys['STRIPE_SECRET_KEY']) {
-            if (statusEl) statusEl.textContent = 'Verifying with Stripe...';
-            try {
-                const vr = await apiFetch('/api/adze/stripe-status');
-                const vd = await vr.json();
-                if (vd.configured) {
-                    const sks = document.getElementById('stripeSecretKeyStatus');
-                    const pks = document.getElementById('stripePubKeyStatus');
-                    if (sks) sks.innerHTML = '<span style="color:#4a8;">&#10003;</span>';
-                    if (pks) pks.innerHTML = '<span style="color:#4a8;">&#10003;</span>';
-                    if (statusEl) statusEl.innerHTML = `<span style="color:#4a8;">&#10003;</span> Verified with Stripe. <button class="btn-sm btn-ghost" onclick="document.getElementById('stripeSetup').style.display='none';document.getElementById('stripeDashboard').style.display='block';loadStripeTab();" style="margin-left:8px;">Go to Shop</button>`;
-                } else {
-                    if (statusEl) statusEl.innerHTML = '<span style="color:#e8a73d;">&#9679;</span> Keys saved but could not connect. <button class="btn-sm btn-ghost" onclick="prefillStripeKeys()" style="margin-left:8px;">Re-test</button>';
-                }
-            } catch(e) {
-                if (statusEl) statusEl.innerHTML = '<span style="color:#e8a73d;">&#9679;</span> Could not reach server to verify. <button class="btn-sm btn-ghost" onclick="prefillStripeKeys()" style="margin-left:8px;">Re-test</button>';
-            }
-        } else {
-            if (statusEl) statusEl.textContent = 'No keys saved yet.';
-        }
-    } catch(e) {
-        if (statusEl) statusEl.textContent = 'Could not check saved keys.';
-    }
-}
-
-async function saveStripeKeys() {
-    const sk = document.getElementById('stripeSecretKey').value.trim();
-    const pk = document.getElementById('stripePubKey').value.trim();
-    const wh = document.getElementById('stripeWebhookSecret').value.trim();
-
-    const skSaved = document.getElementById('stripeSecretKey').dataset.saved === 'true';
-    const pkSaved = document.getElementById('stripePubKey').dataset.saved === 'true';
-
-    // Require new values if not already saved
-    if (!sk && !skSaved || !pk && !pkSaved) {
-        toast('Both Secret Key and Publishable Key are required', 'error');
-        return;
-    }
-
-    // Validate format before saving
-    if (sk && (!sk.startsWith('sk_') || sk.length < 20)) {
-        toast('Secret Key must start with sk_ (e.g. sk_test_ or sk_live_)', 'error');
-        return;
-    }
-    if (pk && (!pk.startsWith('pk_') || pk.length < 20)) {
-        toast('Publishable Key must start with pk_ (e.g. pk_test_ or pk_live_)', 'error');
-        return;
-    }
-    if (wh && (!wh.startsWith('whsec_') || wh.length < 15)) {
-        toast('Webhook Secret must start with whsec_', 'error');
-        return;
-    }
-
-    const statusEl = document.getElementById('stripeKeyStatus');
-    if (statusEl) statusEl.textContent = 'Saving keys...';
-
-    try {
-        // Save keys to .env (only save keys that have new values)
-        const keys = [];
-        if (sk) keys.push({ key: 'STRIPE_SECRET_KEY', value: sk });
-        if (pk) keys.push({ key: 'STRIPE_PUBLISHABLE_KEY', value: pk });
-        if (wh) keys.push({ key: 'STRIPE_ENDPOINT_SECRET', value: wh });
-
-        for (const { key, value } of keys) {
-            await apiFetch('/api/adze/update-env', { method: 'POST', body: { key, value } });
-        }
-
-        // Verify the secret key actually works with Stripe
-        if (statusEl) statusEl.textContent = 'Verifying with Stripe...';
-        const verifyR = await apiFetch('/api/adze/stripe-status');
-        const verifyData = await verifyR.json();
-
-        if (!verifyData.configured) {
-            const errMsg = verifyData.error || 'Could not connect to Stripe';
-            if (statusEl) statusEl.innerHTML = `<span style="color:#e44;">&#10007;</span> ${escHtml(errMsg)}`;
-            toast('Keys saved but Stripe rejected them. Check your Secret Key.', 'error');
-            return;
-        }
-
-        // Keys verified — scaffold routes
-        if (statusEl) statusEl.textContent = 'Setting up checkout routes...';
-        const scaffoldR = await apiFetch('/api/adze/stripe-scaffold', { method: 'POST' });
-        const scaffoldData = await scaffoldR.json();
-
-        if (scaffoldData.success) {
-            if (statusEl) statusEl.innerHTML = `<span style="color:#4a8;">&#10003;</span> Connected to ${escHtml(verifyData.account_name || 'Stripe')}`;
-            toast('Stripe connected! Server is restarting to activate checkout routes.');
-            // Wait for server restart before reloading the tab
-            await new Promise(r => setTimeout(r, 4000));
-            loadStripeTab();
-        } else {
-            toast(scaffoldData.error || 'Scaffold failed', 'error');
-        }
-    } catch (e) {
-        toast('Failed to save Stripe keys', 'error');
-    }
-}
-
-async function loadStripeProducts() {
-    const list = document.getElementById('stripeProductList');
-    if (!list) return;
-
-    try {
-        const r = await apiFetch('/api/adze/stripe-products');
-        const data = await r.json();
-
-        if (data.error) {
-            list.innerHTML = `<div style="color:var(--text2);font-size:13px;">${escHtml(data.error)}</div>`;
-            return;
-        }
-
-        if (!data.products || data.products.length === 0) {
-            list.innerHTML = '<div style="color:var(--text2);font-size:13px;">No products yet. Click "+ Add Product" to create one.</div>';
-            return;
-        }
-
-        list.innerHTML = data.products.map(p => {
-            const price = p.default_price;
-            const priceStr = price ? `${(price.amount / 100).toFixed(2)} ${price.currency.toUpperCase()}` : 'No price';
-            const priceId = price ? price.id : '';
-            return `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:8px;">
-                ${p.images?.length ? `<img src="${escHtml(p.images[0])}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : '<div style="width:48px;height:48px;background:var(--border);border-radius:6px;"></div>'}
-                <div style="flex:1;min-width:0;">
-                    <div style="font-weight:600;font-size:14px;">${escHtml(p.name)}</div>
-                    ${p.description ? `<div style="font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(p.description)}</div>` : ''}
-                </div>
-                <div style="font-weight:600;font-size:14px;white-space:nowrap;">${priceStr}</div>
-                <div style="display:flex;gap:4px;">
-                    ${priceId ? `<button class="btn-sm btn-ghost" onclick="navigator.clipboard.writeText('${priceId}');toast('Price ID copied!');" title="Copy Price ID">Copy ID</button>` : ''}
-                    <button class="btn-sm btn-ghost" onclick="archiveProduct('${p.id}')" title="Archive product" style="color:var(--text2);">Archive</button>
-                </div>
-            </div>`;
-        }).join('');
-    } catch (e) {
-        list.innerHTML = '<div style="color:var(--text2);font-size:13px;">Failed to load products</div>';
-    }
-}
-
-function showAddProductForm() {
-    document.getElementById('addProductForm').style.display = 'block';
-    document.getElementById('newProductName').focus();
-}
-
-async function createProduct() {
-    const name = document.getElementById('newProductName').value.trim();
-    const desc = document.getElementById('newProductDesc').value.trim();
-    const price = parseFloat(document.getElementById('newProductPrice').value);
-    const currency = document.getElementById('newProductCurrency').value;
-
-    if (!name || !price || price <= 0) {
-        toast('Name and price are required', 'error');
-        return;
-    }
-
-    try {
-        const r = await apiFetch('/api/adze/stripe-create-product', {
-            method: 'POST',
-            body: {
-                name,
-                description: desc,
-                price_cents: Math.round(price * 100),
-                currency
-            }
-        });
-        const data = await r.json();
-        if (data.success) {
-            toast('Product created!');
-            document.getElementById('addProductForm').style.display = 'none';
-            document.getElementById('newProductName').value = '';
-            document.getElementById('newProductDesc').value = '';
-            document.getElementById('newProductPrice').value = '';
-            loadStripeProducts();
-        } else {
-            toast(data.error || 'Failed', 'error');
-        }
-    } catch (e) {
-        toast('Failed to create product', 'error');
-    }
-}
-
-async function archiveProduct(productId) {
-    if (!confirm('Archive this product? It will no longer appear in your shop.')) return;
-    try {
-        const r = await apiFetch('/api/adze/stripe-delete-product', {
-            method: 'POST', body: { product_id: productId }
-        });
-        const data = await r.json();
-        if (data.success) {
-            toast('Product archived');
-            loadStripeProducts();
-        } else {
-            toast(data.error || 'Failed', 'error');
-        }
-    } catch (e) {
-        toast('Failed to archive product', 'error');
-    }
-}
-
-async function loadStripeOrders() {
-    const el = document.getElementById('stripeOrdersList');
-    if (!el) return;
-    try {
-        const r = await apiFetch(`/api/artists/${currentArtist}/orders`);
-        if (!r.ok) { el.textContent = 'No orders yet'; return; }
-        const data = await r.json();
-        if (!data.orders || data.orders.length === 0) {
-            el.textContent = 'No orders yet';
-            return;
-        }
-        el.innerHTML = data.orders.slice().reverse().slice(0, 20).map(o => {
-            const amount = o.amount_total ? `${(o.amount_total / 100).toFixed(2)} ${(o.currency || '').toUpperCase()}` : '?';
-            const date = o.created ? new Date(o.created * 1000).toLocaleDateString() : '';
-            return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;">
-                <span>${escHtml(o.customer_email || 'Unknown')}</span>
-                <span>${amount}</span>
-                <span style="color:var(--text2);">${date}</span>
-                <span style="color:${o.status === 'paid' ? '#4a8' : 'var(--text2)'};">${o.status || '?'}</span>
-            </div>`;
-        }).join('');
-    } catch (e) {
-        el.textContent = 'Could not load orders';
-    }
-}
 
 // ── Snapshots (server-side tarballs) ──
 let _snapshots = [];
@@ -4291,6 +5337,23 @@ let claudeIsStreaming = false;
 let claudeFirstMessage = true;
 let claudeMessageQueue = [];
 
+function _toolIcon(name) {
+    const L = (inner) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
+    const icons = {
+        Read: L('<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        Write: L('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
+        Edit: L('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
+        Bash: L('<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>'),
+        Glob: L('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
+        Grep: L('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+        WebFetch: L('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
+        WebSearch: L('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+        TodoWrite: L('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'),
+    };
+    const svg = icons[name] || icons.Bash;
+    return svg;
+}
+
 function claudeAppendLine(text, className = '') {
     const output = document.getElementById('claudeOutput');
     const line = document.createElement('div');
@@ -4461,8 +5524,18 @@ async function sendClaudeMessage() {
                         const toolBlocks = data.message?.content?.filter(b => b.type === 'tool_use') || [];
                         for (const tb of toolBlocks) {
                             const toolName = tb.name || 'unknown';
-                            const inputStr = tb.input ? (typeof tb.input === 'string' ? tb.input : JSON.stringify(tb.input).slice(0, 100)) : '';
-                            claudeAppendLine(`Using tool: ${escHtml(toolName)} ${inputStr ? '— ' + escHtml(inputStr) : ''}`, 'tool-use');
+                            const icon = _toolIcon(toolName);
+                            let argsHtml = '';
+                            if (tb.input && typeof tb.input === 'object') {
+                                const keys = Object.keys(tb.input);
+                                const parts = keys.slice(0, 3).map(k => {
+                                    let v = String(tb.input[k]);
+                                    if (v.length > 60) v = v.slice(0, 57) + '...';
+                                    return `<span style="color:#666;">${escHtml(k)}:</span> ${escHtml(v)}`;
+                                });
+                                argsHtml = `<div class="tool-args">${parts.join(' &nbsp;·&nbsp; ')}</div>`;
+                            }
+                            claudeAppendLine(`<div class="tool-header">${icon} ${escHtml(toolName)}</div>${argsHtml}`, 'tool-use');
                         }
                     }
 
@@ -4535,12 +5608,7 @@ async function haltClaude() {
         claudeIsStreaming = false;
         document.getElementById('claudeHaltBtn').style.display = 'none';
         // Add a halted indicator in the chat
-        const output = document.getElementById('claudeOutput');
-        const div = document.createElement('div');
-        div.className = 'ai-msg system';
-        div.innerHTML = '<em>Stopped.</em>';
-        output.appendChild(div);
-        output.scrollTop = output.scrollHeight;
+        claudeAppendLine('<em>Stopped.</em>', 'system');
         toast('Vibe Coder stopped', 'info');
     } catch (e) {
         toast('Failed to stop: ' + e.message, 'error');

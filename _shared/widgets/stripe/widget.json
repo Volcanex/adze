@@ -1,0 +1,9 @@
+{
+    "name": "stripe",
+    "description": "Manage Stripe payments — connect your account, create products, and track orders",
+    "icon": "store",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": false,
+    "category": "commerce"
+}

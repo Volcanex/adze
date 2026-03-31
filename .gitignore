@@ -12,6 +12,7 @@ artists/*/.snapshots/
 # Runtime data
 data/
 logs/
+artists/*/analytics.json
 *.pid
 
 # Secrets

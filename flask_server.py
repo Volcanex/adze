@@ -18,6 +18,9 @@ import subprocess
 from datetime import datetime
 import socket
 import threading
+
+sys.path.insert(0, str(Path(__file__).parent / '_shared'))
+from db import insert_pageview
 import json
 import re
 import shutil
@@ -39,6 +42,12 @@ class BlogFlaskServer:
         # Lock to prevent concurrent compile.py executions
         self.compile_lock = threading.Lock()
 
+        # GeoIP cache for analytics
+        self._geoip_cache = {}
+
+        # Setup analytics logging
+        self._setup_analytics_logging()
+
         # Setup basic routes
         self._setup_basic_routes()
 
@@ -50,6 +59,152 @@ class BlogFlaskServer:
 
         # Auto-register page API endpoints and WebSocket handlers
         self._register_page_apis()
+
+    # ── Analytics Logging ─────────────────────────────────────────────────
+
+    BOT_STRINGS = ['bot', 'crawl', 'spider', 'slurp', 'wget', 'curl', 'fetch',
+                   'scrape', 'headless', 'phantom', 'lighthouse', 'pingdom',
+                   'uptimerobot', 'semrush', 'ahref', 'mj12', 'dotbot']
+
+    SKIP_EXTENSIONS = {'.css', '.js', '.png', '.jpg', '.jpeg', '.gif', '.webp',
+                       '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot', '.map',
+                       '.mp4', '.mp3', '.pdf', '.zip'}
+
+    # Minimal inline script to track session duration and page count for bounce rate.
+    # Uses sessionStorage (no cookies, no PII), beacons duration on page unload.
+    _TRACKING_SCRIPT = '''<script>(function(){
+var sid=sessionStorage.getItem('_azs');
+if(!sid){sid=Math.random().toString(36).slice(2);sessionStorage.setItem('_azs',sid)}
+var pc=parseInt(sessionStorage.getItem('_azp')||'0',10)+1;
+sessionStorage.setItem('_azp',String(pc));
+var t0=Date.now();
+function send(){
+var d=Math.round((Date.now()-t0)/1000);
+if(d<1)return;
+var slug=location.pathname.split('/')[2]||'';
+navigator.sendBeacon('/api/adze/beacon','sid='+sid+'&slug='+slug+'&dur='+d+'&pc='+pc)}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')send()});
+window.addEventListener('pagehide',send);
+})();</script>'''
+
+    def _setup_analytics_logging(self):
+        """Register an after_request hook to log page views and inject tracking for artist pages."""
+
+        @self.app.after_request
+        def log_analytics(response):
+            try:
+                self._log_page_view(response)
+            except Exception:
+                pass  # Never break the response for analytics
+            try:
+                self._inject_tracking_script(response)
+            except Exception:
+                pass
+            return response
+
+    def _inject_tracking_script(self, response):
+        """Inject a tiny session tracking script into artist HTML pages."""
+        if response.status_code != 200:
+            return
+        content_type = response.content_type or ''
+        if 'text/html' not in content_type:
+            return
+        path = request.path
+        if not path.startswith('/artists/'):
+            return
+        if '/api/' in path or '/dashboard' in path:
+            return
+
+        data = response.get_data(as_text=True)
+        if '</body>' in data:
+            data = data.replace('</body>', self._TRACKING_SCRIPT + '</body>', 1)
+            response.set_data(data)
+            response.headers['Content-Length'] = len(response.get_data())
+
+    def _log_page_view(self, response):
+        """Log a page view if it matches an artist page request."""
+        path = request.path
+
+        # Only log artist pages: /artists/{slug}/...
+        if not path.startswith('/artists/'):
+            return
+        parts = path.strip('/').split('/')
+        if len(parts) < 2:
+            return
+        artist_slug = parts[1]
+
+        # Skip API calls, dashboard requests, asset files
+        if '/api/' in path or '/dashboard' in path:
+            return
+        if any(path.lower().endswith(ext) for ext in self.SKIP_EXTENSIONS):
+            return
+        if path.startswith('/assets/'):
+            return
+
+        # Only log successful HTML responses
+        content_type = response.content_type or ''
+        if response.status_code != 200:
+            return
+        if 'text/html' not in content_type:
+            return
+
+        # Skip bots
+        ua = (request.headers.get('User-Agent') or '').lower()
+        if any(b in ua for b in self.BOT_STRINGS):
+            return
+
+        # Extract referrer domain
+        ref = ''
+        raw_ref = request.headers.get('Referer') or ''
+        if raw_ref:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(raw_ref)
+                ref = parsed.netloc or ''
+                # Strip www. prefix
+                if ref.startswith('www.'):
+                    ref = ref[4:]
+            except Exception:
+                ref = ''
+
+        # Get country from IP
+        ip = request.headers.get('X-Real-IP') or request.headers.get('X-Forwarded-For', '').split(',')[0].strip() or request.remote_addr or ''
+        country = self._geoip_lookup(ip)
+
+        # Build the page path relative to the artist (e.g. /home/, /gallery/)
+        page_path = '/' + '/'.join(parts[2:]) + '/' if len(parts) > 2 else '/'
+
+        import time
+        entry = {
+            'path': page_path,
+            'ts': int(time.time()),
+            'ref': ref,
+            'country': country
+        }
+
+        # Write to per-artist SQLite database
+        insert_pageview(artist_slug, page_path, entry['ts'], ref, country)
+
+    def _geoip_lookup(self, ip):
+        """Look up country from IP using ip-api.com with in-memory caching."""
+        if not ip or ip in ('127.0.0.1', '::1', 'localhost'):
+            return 'Local'
+
+        if ip in self._geoip_cache:
+            return self._geoip_cache[ip]
+
+        try:
+            import urllib.request
+            url = f'http://ip-api.com/json/{ip}?fields=countryCode'
+            req = urllib.request.Request(url, headers={'User-Agent': 'AdzeStudio/1.0'})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                data = json.loads(resp.read().decode())
+                country = data.get('countryCode', 'Unknown')
+        except Exception:
+            country = 'Unknown'
+
+        self._geoip_cache[ip] = country
+        return country
 
     def _check_port_open(self, port, host='localhost', timeout=1):
         """Check if a port is open on the local machine"""

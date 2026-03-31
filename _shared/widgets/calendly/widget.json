@@ -1,0 +1,9 @@
+{
+    "name": "calendly",
+    "description": "See your upcoming meetings and manage your scheduling link",
+    "icon": "calendar",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "integrations"
+}

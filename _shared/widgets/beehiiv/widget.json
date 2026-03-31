@@ -1,0 +1,9 @@
+{
+    "name": "beehiiv",
+    "description": "Track your Beehiiv newsletter stats and recent posts",
+    "icon": "mail",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "integrations"
+}

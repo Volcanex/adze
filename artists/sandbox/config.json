@@ -6,5 +6,9 @@
     "admin_token": "sandbox",
     "description": "Sandbox site for testing and experimentation.",
     "contact_email": "",
-    "features": []
+    "features": [],
+    "platform_widgets": [
+        "beehiiv",
+        "inbox"
+    ]
 }

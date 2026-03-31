@@ -1,0 +1,9 @@
+{
+    "name": "youtube",
+    "description": "Track your YouTube channel stats and latest videos",
+    "icon": "play",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "integrations"
+}

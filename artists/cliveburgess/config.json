@@ -5,5 +5,8 @@
     "domain": "erlabrunn.org.uk",
     "admin_token": "clive123",
     "description": "Independent publishing house and creative studio.",
-    "contact_email": "contact@erlabrunn.org.uk"
+    "contact_email": "contact@erlabrunn.org.uk",
+    "platform_widgets": [
+        "beehiiv"
+    ]
 }

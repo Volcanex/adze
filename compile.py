@@ -60,7 +60,7 @@ class AdzeCompiler:
     def copy_artist_assets(self, artist_slug):
         """Copy artist assets/ to output/{slug}/assets/."""
         src = self.artists_dir / artist_slug / 'assets'
-        dst = self.output_dir / artist_slug / 'assets'
+        dst = self.output_dir / 'artists' / artist_slug / 'assets'
 
         if not src.exists():
             return 0
@@ -112,8 +112,8 @@ class AdzeCompiler:
 </body>
 </html>"""
 
-        # Write to output/{slug}/{page}/index.html
-        out_dir = self.output_dir / artist_slug / page_name
+        # Write to output/artists/{slug}/{page}/index.html (matches URL structure)
+        out_dir = self.output_dir / 'artists' / artist_slug / page_name
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / 'index.html').write_text(full_html, encoding='utf-8')
 
@@ -144,7 +144,7 @@ class AdzeCompiler:
                 print(f"  Error compiling {page_dir.name}: {e}")
 
         # Generate root index redirect to home/
-        artist_output = self.output_dir / artist_slug
+        artist_output = self.output_dir / 'artists' / artist_slug
         artist_output.mkdir(parents=True, exist_ok=True)
         home_index = artist_output / 'home' / 'index.html'
         if home_index.exists():

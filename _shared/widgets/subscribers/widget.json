@@ -1,0 +1,9 @@
+{
+    "name": "subscribers",
+    "description": "Build your mailing list — collect emails from your site and export them",
+    "icon": "mail",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "communication"
+}

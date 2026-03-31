@@ -1,0 +1,9 @@
+{
+    "name": "vimeo",
+    "description": "Showcase your Vimeo portfolio and track video performance",
+    "icon": "play",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "integrations"
+}

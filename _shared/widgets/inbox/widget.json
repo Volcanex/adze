@@ -1,0 +1,9 @@
+{
+    "name": "inbox",
+    "description": "View contact form submissions sent from your site",
+    "icon": "mail",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": true,
+    "category": "communication"
+}

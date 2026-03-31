@@ -1,0 +1,203 @@
+# Adze Widget Development Guide
+
+Widgets are self-contained JavaScript panels that run inside the artist dashboard. Each widget is a folder under `_shared/widgets/` (Tier 2 — Adze) or `artists/{slug}/widgets/` (Tier 4 — Custom/Forked).
+
+## File structure
+
+```
+widgets/
+  my-widget/
+    widget.js       ← required: the widget code
+    widget.json     ← required: metadata
+```
+
+### widget.json
+
+```json
+{
+  "name": "my-widget",
+  "description": "One-line description shown in the marketplace",
+  "icon": "star",
+  "category": "integrations",
+  "marketplace": true
+}
+```
+
+Available icons: `star`, `play`, `mail`, `users`, `calendar`, `bar-chart`, `credit-card`, `video`, `rss`, `settings`, `zap`, `globe`
+
+## widget.js structure
+
+Every widget is an IIFE that receives a `ctx` object:
+
+```javascript
+// Widget: My Widget
+// Short description.
+
+(function(ctx) {
+    const c = ctx.container;
+    c.style.cssText = 'display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;';
+
+    c.innerHTML = `
+    <div style="flex:1;overflow-y:auto;">
+        <div style="max-width:800px;margin:0 auto;padding:24px;">
+
+            <!-- Title row — ALWAYS this structure -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div>
+                    <h3 style="margin:0 0 3px;font-family:var(--heading-font);font-weight:400;font-style:italic;font-size:16px;">My Widget</h3>
+                    <p style="color:var(--text2);font-size:10px;margin:0;" id="mw-subtitle">Loading...</p>
+                </div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <button data-action="refresh" style="padding:4px 8px;font-size:11px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);cursor:pointer;">↻</button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div id="mw-body" style="margin-top:16px;"></div>
+
+        </div>
+    </div>`;
+
+    c.addEventListener('click', async function(e) {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        if (btn.dataset.action === 'refresh') await load();
+    });
+
+    async function load() {
+        const body = c.querySelector('#mw-body');
+        body.innerHTML = '<div style="padding:20px 0;color:var(--text2);font-size:11px;">Loading...</div>';
+        try {
+            const r = await ctx.apiFetch('/api/adze/my-endpoint');
+            if (!r.ok) throw new Error('Failed');
+            const data = await r.json();
+            body.innerHTML = ctx.escHtml(JSON.stringify(data));
+        } catch(e) {
+            body.innerHTML = '<div style="color:var(--danger);font-size:11px;">Failed to load</div>';
+        }
+    }
+
+    load();
+})(ctx);
+```
+
+---
+
+## Layout rules
+
+**All content lives inside a single `max-width:800px` centered column.** There is no full-width sticky header bar.
+
+```
+┌─ flex:1;overflow-y:auto ─────────────────────────────────────────┐
+│  ┌─ max-width:800px; margin:0 auto; padding:24px ──────────────┐  │
+│  │  Title row (flex, space-between)                            │  │
+│  │  Body content                                               │  │
+│  └─────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Button style (ALL action buttons must use this exactly)
+
+```html
+style="padding:4px 10px;font-size:11px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);cursor:pointer;"
+```
+
+Refresh button uses `padding:4px 8px` (slightly narrower). Destructive actions use `border-color:var(--danger);color:var(--danger)`.
+
+### ID prefix
+
+Use a unique 2–3 letter prefix for all element IDs to avoid collisions (e.g. `yt-` for YouTube, `mw-` for My Widget).
+
+---
+
+## ctx API reference
+
+| Property / Method | Type | Description |
+|---|---|---|
+| `ctx.container` | `HTMLElement` | The widget's root DOM node — write your HTML here |
+| `ctx.name` | `string` | Widget slug (e.g. `"youtube"`) |
+| `ctx.tier` | `string` | `"platform"` (T2), `"community"` (T3), or `"artist"` (T4) |
+| `ctx.artistSlug` | `string` | The logged-in artist's slug |
+| `ctx.token` | `string` | The artist's admin token (in-memory session only) |
+| `ctx.pages` | `array` | List of artist's pages `[{slug, title, ...}]` |
+| `ctx.assetList` | `array` | List of artist's uploaded assets |
+| `ctx.apiFetch(url, opts)` | `Promise<Response>` | Authenticated fetch — injects auth headers automatically. `opts.body` can be a plain object (will be JSON-stringified). |
+| `ctx.toast(msg, type?)` | `void` | Show a toast. `type`: `'success'` (default), `'error'`, `'warn'`, `'info'` |
+| `ctx.escHtml(str)` | `string` | HTML-escape a string — **always use this when inserting user data into innerHTML** |
+| `ctx.savePage(slug, content?, config?)` | `Promise<bool>` | Write to any page. Returns `true` on success. |
+| `ctx.getPageContent(slug)` | `Promise<object\|null>` | Read a page's `{content, config}` |
+| `ctx.getCss()` | `string` | Get current CSS editor value |
+| `ctx.getHtml()` | `string` | Get current HTML editor value |
+| `ctx.setCss(value)` | `void` | Set CSS editor value (marks page unsaved, schedules preview) |
+| `ctx.setHtml(value)` | `void` | Set HTML editor value (marks page unsaved, schedules preview) |
+| `ctx.currentPage()` | `object\|null` | The page currently open in the editor |
+| `ctx.setUnsaved(bool)` | `void` | Mark page as having unsaved changes |
+| `ctx.schedulePreview(delay?)` | `void` | Trigger a preview refresh (debounced) |
+| `ctx.loadAssets()` | `Promise` | Refresh the asset list |
+| `ctx.switchTab(name)` | `void` | Navigate to a dashboard tab by name |
+| `ctx.sendToVibeCoder(text)` | `void` | Pre-fill the Vibe Coder prompt and switch to that tab |
+| `ctx.reloadWidgets()` | `void` | Reload all widgets |
+| `ctx.showModal(id)` | `void` | Show a dashboard modal by ID |
+| `ctx.hideModal(id)` | `void` | Hide a dashboard modal |
+| `ctx.registerVibeAddon(config)` | `void` | Register a Vibe Coder context button (see below) |
+
+---
+
+## ctx.apiFetch examples
+
+```javascript
+// GET request
+const r = await ctx.apiFetch('/api/adze/list-subscribers');
+const data = await r.json();
+
+// POST with JSON body
+await ctx.apiFetch('/api/adze/delete-subscriber', {
+    method: 'POST',
+    body: { email: 'user@example.com' }
+});
+
+// Upload (FormData)
+const fd = new FormData();
+fd.append('file', fileInput.files[0]);
+await ctx.apiFetch('/api/adze/upload-file', { method: 'POST', body: fd });
+```
+
+---
+
+## Registering a Vibe Coder addon
+
+Addons add a context button to the Vibe Coder toolbar. When clicked, they insert a text snippet into the AI prompt.
+
+```javascript
+ctx.registerVibeAddon({
+    id: 'my-widget-context',         // unique string
+    label: 'My Data',                // button label (shown as "+ My Data")
+    pick: async () => {              // called when button clicked; return string or null
+        const r = await ctx.apiFetch('/api/adze/my-endpoint');
+        if (!r.ok) return null;
+        const data = await r.json();
+        return `[My Widget: ${JSON.stringify(data)}]`;
+    }
+});
+```
+
+---
+
+## Security rules
+
+1. **Always escape user-controlled data** with `ctx.escHtml()` before inserting into innerHTML.
+2. **Never put secrets in widget.js.** Widget code runs in the browser. Use API endpoints to proxy external service calls.
+3. **Tier 2 widgets** run with full dashboard privileges — they can read/write any page. Don't abuse this.
+4. **External requests from the browser** (direct calls to third-party APIs) are fine for read-only public APIs. For anything requiring API keys, proxy via a backend endpoint.
+
+---
+
+## Widget tiers recap
+
+| Tier | Code value | Location | Editable? | Marketplace |
+|------|-----------|----------|-----------|-------------|
+| T2 — Adze | `platform` | `_shared/widgets/` | No (fork to edit) | Yes (Adze tab) |
+| T3 — Community | `community` | `_shared/widgets/` | No (fork to edit) | Yes (Community tab) |
+| T4 — Custom | `artist` | `artists/{slug}/widgets/` | Yes | No (private) |
+
+Publish a T4 widget to T3 via the Share action in the widget editor.
