@@ -7,16 +7,21 @@ services:
     ports:
       - "127.0.0.1:5001:5001"          # host nginx proxies adze.studio to this
     volumes:
-      - ./artists:/app/artists          # artist data (pages, configs, assets)
-      - ./output:/app/output            # compiled static HTML
-      - ./static:/app/static            # platform static assets
-      - ./logs:/app/logs                # server logs
-      - ./nginx/sites-available:/app/nginx/sites-available  # activate-domain writes configs here
-      - claude_auth:/root/.claude       # claude login persists across restarts
+      # Source code — mounted so changes take effect on restart, no rebuild needed
+      - ./_shared:/app/_shared
+      - ./flask_server.py:/app/flask_server.py
+      - ./compile.py:/app/compile.py
+      # Data — persisted on host
+      - ./artists:/app/artists
+      - ./output:/app/output
+      - ./static:/app/static
+      - ./logs:/app/logs
+      - ./nginx/sites-available:/app/nginx/sites-available
+      - claude_auth:/root/.claude
     environment:
       - DEV_ADMIN_TOKEN=${DEV_ADMIN_TOKEN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
 
 volumes:
   claude_auth:    # claude login session — survives container rebuilds

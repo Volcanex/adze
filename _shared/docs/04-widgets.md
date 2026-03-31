@@ -7,14 +7,15 @@ Widgets are self-contained JavaScript panels that run inside the artist dashboar
 | Tier | Code value | Location | Editable? | Marketplace |
 |------|-----------|----------|-----------|-------------|
 | T1 — Core | — | Hardcoded in dashboard | No | No — always present |
-| T2 — Adze | `platform` | `_shared/widgets/` | No (fork to edit) | Yes (Adze tab) |
-| T3 — Community | `community` | `_shared/widgets/` | No (fork to edit) | Yes (Community tab) |
+| T2 — Adze | `platform` | `_shared/widgets/` | No — read only | Yes (Adze tab) |
+| T3 — Community | `community` | `artists/{source_slug}/widgets/` | No (fork to edit) | Yes (Community tab) |
 | T4 — Custom | `artist` | `artists/{slug}/widgets/` | Yes | No (private) |
 
 **Flow:**
-- T2/T3 install → appears in artist's dashboard as reference
-- Fork T2/T3 → creates T4 editable copy in `artists/{slug}/widgets/`
-- Share T4 → publishes to T3 community marketplace (`shared: true` in manifest)
+- T2 install → appears in artist's dashboard as read-only reference (no forking — T2 widgets use internal Adze endpoints and are platform-maintained)
+- T3 install → copies widget to `artists/{slug}/widgets/` with `forked_from: community`
+- Fork T3 → creates editable T4 copy in `artists/{slug}/widgets/`
+- Share T4 → publishes to T3 community marketplace (`marketplace: true` in widget.json)
 - New widget → starts as T4
 
 ## File structure
@@ -24,6 +25,7 @@ widgets/
   my-widget/
     widget.js       ← required: widget code
     widget.json     ← required: metadata
+    README.md       ← required for T2: documents endpoints called and setup steps
 ```
 
 ### widget.json
@@ -37,6 +39,27 @@ widgets/
   "marketplace": true
 }
 ```
+
+### README.md (required for T2 platform widgets)
+
+Each T2 widget must have a `README.md` that documents what it does, which endpoints it calls (built-in vs custom), and any API keys or setup required. This file is injected into the Vibe Coder's context when the widget is installed — Claude reads it on demand before working with that widget.
+
+```markdown
+# my-widget widget (T2 platform)
+
+One paragraph describing what the widget does.
+
+## Built-in endpoints it calls (no setup needed)
+- `GET /api/adze/my-endpoint` — description
+
+## Custom endpoints it expects in artist api.py
+- `POST /api/artists/{slug}/my-custom` — description
+
+## Setup
+What credentials or configuration the artist needs to provide.
+```
+
+T4 custom widgets should also include a README.md — the Vibe Coder will create one automatically when building new widgets.
 
 Available icons: `star`, `play`, `mail`, `users`, `calendar`, `bar-chart`, `credit-card`, `video`, `rss`, `settings`, `zap`, `globe`
 
@@ -215,9 +238,11 @@ case 'add-to-site':
 
 ## Rules
 
+- The widget file MUST be a self-executing IIFE `(function(ctx){ ... })(ctx)` — never `export`, `module.exports`, or `async function render(ctx)` patterns. The dashboard evaluates the file directly; there is no loader.
 - Always use event delegation (`data-action` + `closest()`), never global onclick handlers
 - NEVER use `</script>` literally inside template literals — use `<\/script>`
-- All API calls go through `ctx.apiFetch`, never raw `fetch()`
+- All API calls go through `ctx.apiFetch`, never raw `fetch()` — this is how the Backend tab detects which endpoints a widget uses
 - Backend endpoints go in `_shared/admin_api.py` under the existing Flask blueprint
 - Always escape user-controlled data with `ctx.escHtml()` before inserting into innerHTML
 - Never put secrets in widget.js — proxy external service calls through a backend endpoint
+- T2 widgets must have a README.md — create or update it whenever you add or change endpoints

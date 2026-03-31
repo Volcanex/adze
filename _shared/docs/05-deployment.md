@@ -13,10 +13,19 @@ Internet → host nginx (ports 80/443) → Docker Flask (127.0.0.1:5001)
 ```bash
 cd /home/gabriel/adze
 
-docker compose up -d           # start
-docker compose restart flask   # restart after code changes
-docker compose logs -f flask   # logs
-docker compose build flask && docker compose up -d flask   # deploy update
+docker compose up -d            # start
+docker compose restart flask    # pick up code changes (~2s)
+docker compose logs -f flask    # logs
+```
+
+Source code (`_shared/`, `flask_server.py`, `compile.py`) is mounted as a volume — changes are live after a restart, no rebuild needed.
+
+**Rebuild only when:**
+- `requirements.txt` changes (new Python package)
+- `Dockerfile` changes
+
+```bash
+docker compose build flask && docker compose up -d flask
 ```
 
 ## Environment variables
@@ -56,7 +65,13 @@ CERTBOT_EMAIL=gabrielpenman@gmail.com
    sudo certbot --nginx -d adze.studio -d www.adze.studio --non-interactive --agree-tos -m gabrielpenman@gmail.com --redirect
    ```
 
-6. Log in to Claude (one-time):
+6. Add SSE timeouts for the Vibe Coder (streams can run 5+ minutes, nginx default is 60s):
+   ```bash
+   sudo sed -i '/client_max_body_size 50M;/a\\n        # Vibe Coder streams can run 5+ minutes\n        proxy_read_timeout 600s;\n        proxy_send_timeout 600s;\n        proxy_connect_timeout 60s;\n\n        # Disable buffering for SSE streams\n        proxy_buffering off;' /etc/nginx/sites-available/adze.studio
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+7. Log in to Claude (one-time):
    ```bash
    docker exec -it adze-flask claude login
    ```

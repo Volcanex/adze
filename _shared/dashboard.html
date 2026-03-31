@@ -363,20 +363,58 @@
 
         /* ── Assets Panel ── */
         .assets-panel { padding: 16px; overflow-y: auto; flex: 1; }
+        .assets-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .assets-toolbar .select-toggle { font-size: 11px; padding: 4px 10px; }
         .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px; cursor: pointer; transition: border-color 0.2s; }
         .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); }
         .upload-zone p { color: var(--text2); font-size: 13px; margin-bottom: 8px; }
         .upload-zone input { display: none; }
         .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-        .asset-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; cursor: pointer; border: 2px solid var(--border); transition: all 0.15s; box-shadow: var(--shadow-sm); }
+        .asset-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; cursor: pointer; border: 2px solid var(--border); transition: all 0.15s; box-shadow: var(--shadow-sm); position: relative; }
         .asset-card:hover { border-color: var(--accent); }
+        .asset-card.selected { border-color: var(--accent); background: rgba(90,139,190,0.08); }
         .asset-card img { width: 100%; height: 80px; object-fit: cover; display: block; background: var(--bg); }
         .asset-card .file-icon { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--bg); }
-        .asset-card-info { padding: 6px 8px; }
+        .asset-card-info { padding: 6px 8px 2px; }
         .asset-card-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .asset-card-size { font-size: 10px; color: var(--text2); }
-        .asset-card-actions { display: flex; gap: 4px; padding: 4px 8px 6px; }
-        .asset-card-actions button { flex: 1; padding: 3px 6px; font-size: 10px; }
+        .asset-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 4px; }
+        .asset-card-footer .copy-path-btn { font-size: 9px; padding: 2px 6px; opacity: 0.7; }
+        .asset-card-footer .copy-path-btn:hover { opacity: 1; }
+        .asset-three-dot { background: none; border: none; cursor: pointer; padding: 2px 5px; border-radius: 4px; color: var(--text2); font-size: 14px; line-height: 1; }
+        .asset-three-dot:hover { background: var(--border); color: var(--text); }
+        .asset-select-check { position: absolute; top: 5px; left: 5px; width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border); background: var(--surface); display: none; align-items: center; justify-content: center; pointer-events: none; }
+        .asset-select-check.show { display: flex; }
+        .asset-select-check.checked { background: var(--accent); border-color: var(--accent); color: white; font-size: 11px; }
+        /* Selection bar */
+        .asset-selection-bar { position: sticky; bottom: 0; background: var(--accent); color: white; display: none; align-items: center; justify-content: space-between; padding: 10px 16px; border-radius: 8px; margin-top: 12px; font-size: 13px; font-weight: 500; }
+        .asset-selection-bar.show { display: flex; }
+        .asset-selection-bar button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 500; }
+        .asset-selection-bar button:hover { background: rgba(255,255,255,0.35); }
+        .asset-selection-bar button.danger { background: rgba(192,57,43,0.7); }
+        .asset-selection-bar button.danger:hover { background: rgba(192,57,43,0.9); }
+        /* Asset lightbox */
+        .asset-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9000; display: none; align-items: center; justify-content: center; }
+        .asset-lightbox.open { display: flex; }
+        .asset-lightbox-inner { background: var(--surface); border-radius: 12px; max-width: 90vw; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; min-width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .asset-lightbox-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); gap: 12px; }
+        .asset-lightbox-header h3 { font-size: 14px; font-weight: 600; margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .asset-lightbox-header .lbx-close { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 0 4px; line-height: 1; }
+        .asset-lightbox-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 20px; min-height: 200px; }
+        .asset-lightbox-body img { max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 6px; }
+        .asset-lightbox-body video { max-width: 100%; max-height: 70vh; border-radius: 6px; }
+        .asset-lightbox-body iframe { width: 700px; max-width: 80vw; height: 500px; border: none; border-radius: 6px; }
+        .asset-lightbox-body .font-tester { text-align: center; width: 100%; padding: 20px; }
+        .asset-lightbox-body .font-tester input { width: 100%; border: 1px solid var(--border); background: var(--bg); color: var(--text); padding: 10px; border-radius: 6px; font-size: 32px; text-align: center; margin-bottom: 12px; }
+        .asset-lightbox-body .file-detail { text-align: center; color: var(--text2); font-size: 13px; }
+        .asset-lightbox-body .file-detail .big-icon { font-size: 56px; margin-bottom: 12px; }
+        .asset-lightbox-footer { display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+        /* Context menu */
+        .asset-ctx-menu { position: fixed; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow-md); z-index: 9100; padding: 4px; min-width: 160px; }
+        .asset-ctx-menu button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 7px 12px; font-size: 12px; cursor: pointer; border-radius: 5px; color: var(--text); }
+        .asset-ctx-menu button:hover { background: var(--surface2); }
+        .asset-ctx-menu button.danger { color: var(--danger); }
+        .asset-ctx-menu hr { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
         .font-pill { padding: 5px 14px; font-size: 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: var(--body-font); }
         .font-pill:hover { border-color: var(--accent); color: var(--text); }
         .font-pill.active { background: var(--accent); color: white; border-color: var(--accent); }
@@ -692,7 +730,7 @@
                     <button class="tab" data-tab="assets" onclick="switchTab('assets', this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="tab-label">Assets</span></button>
                     <button class="tab" data-tab="snapshots" onclick="switchTab('snapshots', this)"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span class="tab-label">History</span></button>
                     <button class="tab" data-tab="domain" onclick="switchTab('domain', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="tab-label">Domain</span></button>
-                    <button class="tab" data-tab="api" onclick="switchTab('api', this)"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="tab-label">API</span></button>
+                    <button class="tab" data-tab="api" onclick="switchTab('api', this)"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="tab-label">Backend</span></button>
                     <button class="tab" data-tab="fonts" onclick="switchTab('fonts', this)"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg><span class="tab-label">Fonts</span></button>
                     <button class="tab" data-tab="export" onclick="switchTab('export', this)"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span class="tab-label">Export</span></button>
                     <button class="tab" data-tab="share" onclick="switchTab('share', this)"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg><span class="tab-label">Presence</span></button>
@@ -875,12 +913,22 @@
                     <div class="split-pane">
                         <div class="editor-pane" id="assetsEditorPane" style="overflow-y:auto;">
                             <div class="assets-panel">
+                                <div class="assets-toolbar">
+                                    <button class="btn-sm btn-ghost select-toggle" id="assetSelectToggle" onclick="toggleAssetSelectMode()">Select</button>
+                                </div>
                                 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('assetFileInput').click()">
                                     <p>Drop files here or click to upload</p>
                                     <button class="btn-sm">Choose Files</button>
                                     <input type="file" id="assetFileInput" multiple>
                                 </div>
                                 <div class="asset-grid" id="assetGrid"></div>
+                                <div class="asset-selection-bar" id="assetSelectionBar">
+                                    <span id="assetSelectionCount">0 selected</span>
+                                    <div style="display:flex;gap:8px;">
+                                        <button onclick="sendSelectedToVibeCoder()">Send to Vibe Coder</button>
+                                        <button class="danger" onclick="deleteSelectedAssets()">Delete</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="pane-resizer" data-target="assetsEditorPane"></div>
@@ -890,6 +938,21 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Asset Lightbox -->
+                <div class="asset-lightbox" id="assetLightbox" onclick="closeAssetLightbox(event)">
+                    <div class="asset-lightbox-inner" id="assetLightboxInner">
+                        <div class="asset-lightbox-header">
+                            <h3 id="assetLightboxTitle"></h3>
+                            <span id="assetLightboxSize" style="font-size:11px;color:var(--text2);flex-shrink:0;"></span>
+                            <button class="lbx-close" onclick="closeAssetLightbox()">×</button>
+                        </div>
+                        <div class="asset-lightbox-body" id="assetLightboxBody"></div>
+                        <div class="asset-lightbox-footer" id="assetLightboxFooter"></div>
+                    </div>
+                </div>
+                <!-- Asset context menu -->
+                <div class="asset-ctx-menu" id="assetCtxMenu" style="display:none;"></div>
 
                 <!-- Snapshots Tab -->
                 <div class="tab-panel" id="panel-snapshots">
@@ -1773,7 +1836,7 @@ function openWidgetEditor(w) {
         jsEditor.readOnly = true;
         jsEditor.style.opacity = '0.7';
         document.getElementById('jsEditorAutoSaveLabel').innerHTML =
-            `<a href="#" onclick="forkWidget('${escHtml(w.name)}');return false;" style="color:var(--accent);">Fork to customise →</a>`;
+            `<span style="color:var(--text2);font-size:11px;">Platform widget · read only</span>`;
     } else {
         jsEditor.value = w.code || '';
         jsEditor.readOnly = false;
@@ -2422,9 +2485,14 @@ function renderApiEndpoints() {
         </div>`;
     }
 
-    // Shared endpoints section
-    html += `<div class="api-section-label">Built-in Dashboard</div>`;
+    // Shared endpoints section — collapsed by default
+    html += `<div class="api-section-label" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleBuiltinEndpoints(this)">
+        <span>Built-in Dashboard</span>
+        <span id="builtinToggleIcon" style="font-size:11px;color:var(--text2);">Show ▾</span>
+    </div>`;
+    html += `<div id="builtinEndpoints" style="display:none;">`;
     shared.forEach(ep => { html += renderApiCard(ep, dev); });
+    html += `</div>`;
 
     el.innerHTML = html;
 }
@@ -2485,8 +2553,25 @@ function renderApiCard(ep, dev) {
         }
     }
 
+    if (ep.used_by && ep.used_by.length) {
+        const badges = ep.used_by.map(w =>
+            `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);">${escHtml(w)}</span>`
+        ).join(' ');
+        card += `<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="font-size:10px;color:var(--text2);">Used by:</span>${badges}
+        </div>`;
+    }
+
     card += '</div>';
     return card;
+}
+
+function toggleBuiltinEndpoints(header) {
+    const section = document.getElementById('builtinEndpoints');
+    const icon = document.getElementById('builtinToggleIcon');
+    const hidden = section.style.display === 'none';
+    section.style.display = hidden ? 'block' : 'none';
+    icon.textContent = hidden ? 'Hide ▴' : 'Show ▾';
 }
 
 async function apiTryGet(url, resultId) {
@@ -3033,17 +3118,20 @@ async function loadAssets() {
     } catch(e) { console.error('Failed to load assets', e); }
 }
 
+let assetSelectMode = false;
+let assetSelected = new Set();
+
 function renderAssetGrid() {
     const grid = document.getElementById('assetGrid');
     grid.innerHTML = '';
     assetList.forEach(a => {
         const card = document.createElement('div');
-        card.className = 'asset-card';
+        card.className = 'asset-card' + (assetSelected.has(a.path) ? ' selected' : '');
         const ext = a.filename.split('.').pop().toLowerCase();
         const fontExts = ['ttf', 'otf', 'woff', 'woff2'];
         let preview;
         if (a.is_image) {
-            preview = `<img src="/artists/${currentArtist}/assets/${a.path}" loading="lazy">`;
+            preview = `<img src="/artists/${currentArtist}/assets/${escHtml(a.path)}" loading="lazy">`;
         } else if (fontExts.includes(ext)) {
             const fontFamily = 'assetprev-' + a.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '-');
             const fontUrl = `/artists/${currentArtist}/assets/${a.path}`;
@@ -3055,7 +3143,19 @@ function renderAssetGrid() {
             preview = `<div class="file-icon">${getFileIcon(a.filename)}</div>`;
         }
         const size = a.size > 1024*1024 ? (a.size/1024/1024).toFixed(1) + 'MB' : (a.size/1024).toFixed(0) + 'KB';
-        card.innerHTML = `${preview}<div class="asset-card-info"><div class="asset-card-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</div><div class="asset-card-size">${size}</div></div><div class="asset-card-actions"><button class="btn-sm btn-ghost" onclick="copyAssetUrl('${escHtml(a.path)}')">Copy URL</button></div>`;
+        const checkState = assetSelected.has(a.path) ? 'show checked' : (assetSelectMode ? 'show' : '');
+        card.innerHTML = `
+            <div class="asset-select-check ${checkState}">✓</div>
+            ${preview}
+            <div class="asset-card-info">
+                <div class="asset-card-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</div>
+                <div class="asset-card-size">${size}</div>
+            </div>
+            <div class="asset-card-footer">
+                <button class="btn-sm btn-ghost copy-path-btn" onclick="event.stopPropagation();copyAssetPath('${escHtml(a.path)}')">Copy Path</button>
+                <button class="asset-three-dot" onclick="event.stopPropagation();showAssetMenu(event,'${escHtml(a.path)}','${escHtml(a.filename)}')">⋯</button>
+            </div>`;
+        card.addEventListener('click', () => onAssetCardClick(a));
         grid.appendChild(card);
     });
 }
@@ -3066,10 +3166,167 @@ function getFileIcon(filename) {
     return icons[ext] || '📁';
 }
 
-function copyAssetUrl(path) {
+function copyAssetPath(path) {
     navigator.clipboard.writeText(`../assets/${path}`);
-    toast('Copied: ../assets/' + path, 'info');
+    toast('Copied path', 'info');
 }
+
+function onAssetCardClick(a) {
+    if (assetSelectMode) {
+        if (assetSelected.has(a.path)) assetSelected.delete(a.path);
+        else assetSelected.add(a.path);
+        updateAssetSelectionBar();
+        renderAssetGrid();
+    } else {
+        openAssetLightbox(a);
+    }
+}
+
+// ── Select mode ──────────────────────────────────────────────────────────
+
+function toggleAssetSelectMode() {
+    assetSelectMode = !assetSelectMode;
+    if (!assetSelectMode) { assetSelected.clear(); updateAssetSelectionBar(); }
+    document.getElementById('assetSelectToggle').textContent = assetSelectMode ? 'Cancel' : 'Select';
+    renderAssetGrid();
+}
+
+function updateAssetSelectionBar() {
+    const bar = document.getElementById('assetSelectionBar');
+    const n = assetSelected.size;
+    bar.classList.toggle('show', n > 0);
+    document.getElementById('assetSelectionCount').textContent = n + ' selected';
+}
+
+async function deleteSelectedAssets() {
+    const paths = [...assetSelected];
+    if (!paths.length) return;
+    if (!confirm(`Delete ${paths.length} asset${paths.length > 1 ? 's' : ''}?`)) return;
+    const r = await apiFetch('/api/adze/delete-assets', { method: 'POST', body: { paths } });
+    const d = await r.json();
+    if (d.deleted?.length) {
+        toast(`Deleted ${d.deleted.length} file${d.deleted.length > 1 ? 's' : ''}`, 'success');
+        assetSelected.clear();
+        assetSelectMode = false;
+        document.getElementById('assetSelectToggle').textContent = 'Select';
+        updateAssetSelectionBar();
+        await loadAssets();
+    }
+    if (d.errors?.length) toast(d.errors.join(', '), 'error');
+}
+
+function sendSelectedToVibeCoder() {
+    const paths = [...assetSelected].map(p => `../assets/${p}`).join('\n');
+    switchTab('vibe');
+    const input = document.getElementById('claudeInput');
+    if (input) { input.value = paths; input.focus(); }
+    assetSelected.clear();
+    assetSelectMode = false;
+    document.getElementById('assetSelectToggle').textContent = 'Select';
+    updateAssetSelectionBar();
+    renderAssetGrid();
+}
+
+// ── Three-dot context menu ───────────────────────────────────────────────
+
+function showAssetMenu(e, path, filename) {
+    closeAssetMenu();
+    const menu = document.getElementById('assetCtxMenu');
+    menu.innerHTML = `
+        <button onclick="copyAssetPath('${escHtml(path)}');closeAssetMenu()">Copy Path</button>
+        <button onclick="copyAssetUrl('${escHtml(path)}');closeAssetMenu()">Copy URL</button>
+        <button onclick="sendAssetToVibeCoder('${escHtml(path)}');closeAssetMenu()">Send to Vibe Coder</button>
+        <hr>
+        <button class="danger" onclick="deleteSingleAsset('${escHtml(path)}');closeAssetMenu()">Delete</button>`;
+    menu.style.display = 'block';
+    const x = Math.min(e.clientX, window.innerWidth - 180);
+    const y = Math.min(e.clientY, window.innerHeight - 160);
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    setTimeout(() => document.addEventListener('click', closeAssetMenu, { once: true }), 0);
+}
+
+function closeAssetMenu() {
+    document.getElementById('assetCtxMenu').style.display = 'none';
+}
+
+function copyAssetUrl(path) {
+    const url = `${location.origin}/artists/${currentArtist}/assets/${path}`;
+    navigator.clipboard.writeText(url);
+    toast('Copied URL', 'info');
+}
+
+function sendAssetToVibeCoder(path) {
+    switchTab('vibe');
+    const input = document.getElementById('claudeInput');
+    if (input) { input.value = `../assets/${path}`; input.focus(); }
+}
+
+async function deleteSingleAsset(path) {
+    if (!confirm(`Delete ${path}?`)) return;
+    const r = await apiFetch('/api/adze/delete-assets', { method: 'POST', body: { paths: [path] } });
+    const d = await r.json();
+    if (d.deleted?.length) { toast('Deleted', 'success'); await loadAssets(); }
+    else toast(d.errors?.[0] || 'Delete failed', 'error');
+}
+
+// ── Lightbox ─────────────────────────────────────────────────────────────
+
+function openAssetLightbox(a) {
+    const ext = a.filename.split('.').pop().toLowerCase();
+    const url = `/artists/${currentArtist}/assets/${a.path}`;
+    const size = a.size > 1024*1024 ? (a.size/1024/1024).toFixed(1) + 'MB' : (a.size/1024).toFixed(0) + 'KB';
+    const fontExts = ['ttf','otf','woff','woff2'];
+    const videoExts = ['mp4','mov','webm','ogg'];
+
+    document.getElementById('assetLightboxTitle').textContent = a.filename;
+    document.getElementById('assetLightboxSize').textContent = size;
+
+    const body = document.getElementById('assetLightboxBody');
+    if (a.is_image) {
+        body.innerHTML = `<img src="${escHtml(url)}" alt="${escHtml(a.filename)}">`;
+    } else if (videoExts.includes(ext)) {
+        body.innerHTML = `<video src="${escHtml(url)}" controls></video>`;
+    } else if (ext === 'pdf') {
+        body.innerHTML = `<iframe src="${escHtml(url)}"></iframe>`;
+    } else if (fontExts.includes(ext)) {
+        const ff = 'lbxfont-' + a.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '-');
+        const s = document.createElement('style');
+        s.textContent = `@font-face { font-family: '${ff}'; src: url('${url}'); }`;
+        document.head.appendChild(s);
+        body.innerHTML = `<div class="font-tester">
+            <input id="fontTesterInput" style="font-family:'${ff}',sans-serif;" value="The quick brown fox" oninput="this.style.fontFamily=this.style.fontFamily">
+            <div style="font-family:'${ff}',sans-serif;font-size:48px;margin:12px 0;">Aa Bb Cc</div>
+            <div style="font-family:'${ff}',sans-serif;font-size:18px;color:var(--text2);">0 1 2 3 4 5 6 7 8 9</div>
+        </div>`;
+    } else {
+        body.innerHTML = `<div class="file-detail"><div class="big-icon">${getFileIcon(a.filename)}</div><div>${escHtml(a.filename)}</div></div>`;
+    }
+
+    const footer = document.getElementById('assetLightboxFooter');
+    footer.innerHTML = `
+        <button class="btn-sm btn-ghost" onclick="copyAssetPath('${escHtml(a.path)}')">Copy Path</button>
+        <button class="btn-sm btn-ghost" onclick="copyAssetUrl('${escHtml(a.path)}')">Copy URL</button>
+        <button class="btn-sm btn-ghost" onclick="sendAssetToVibeCoder('${escHtml(a.path)}');closeAssetLightbox()">Send to Vibe Coder</button>
+        <button class="btn-sm btn-ghost" onclick="downloadAsset('${escHtml(url)}','${escHtml(a.filename)}')">Download</button>
+        <button class="btn-sm" style="background:var(--danger);color:white;border:none;margin-left:auto;" onclick="deleteSingleAsset('${escHtml(a.path)}');closeAssetLightbox()">Delete</button>`;
+
+    document.getElementById('assetLightbox').classList.add('open');
+}
+
+function downloadAsset(url, filename) {
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.click();
+}
+
+function closeAssetLightbox(e) {
+    if (e && e.target !== document.getElementById('assetLightbox')) return;
+    document.getElementById('assetLightbox').classList.remove('open');
+    document.getElementById('assetLightboxBody').innerHTML = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAssetLightbox(); });
 
 // Upload
 document.getElementById('assetFileInput').addEventListener('change', async function() {
@@ -5444,7 +5701,11 @@ async function sendClaudeMessage() {
 
         if (!response.ok) {
             thinkingEl.remove();
-            claudeAppendLine('Error: ' + response.statusText, 'error');
+            if (response.status === 409) {
+                claudeAppendLine('Vibe Coder is currently in use by another session. Try again when it\'s free.', 'error');
+            } else {
+                claudeAppendLine('Error: ' + response.statusText, 'error');
+            }
             claudeIsStreaming = false;
             document.getElementById('claudeHaltBtn').style.display = 'none';
             return;
@@ -5478,6 +5739,11 @@ async function sendClaudeMessage() {
                     if (data.type === 'error') {
                         thinkingEl.remove();
                         claudeAppendLine('Error: ' + (data.error || 'Unknown error'), 'error');
+                        continue;
+                    }
+
+                    if (data.type === 'system_message') {
+                        claudeAppendLine(data.text || '', 'system');
                         continue;
                     }
 
@@ -5574,6 +5840,26 @@ async function sendClaudeMessage() {
         // Re-fetch content and auto-refresh preview to pick up any changes Claude made
         if (currentPage) {
             await refreshPreview();
+        }
+
+        // Re-fetch widget code and refresh preview if a widget is open in the editor
+        if (currentWidget && currentWidget.tier !== 'platform') {
+            const wr = await apiFetch('/api/adze/get-widget?name=' + encodeURIComponent(currentWidget.name));
+            if (wr.ok) {
+                const wdata = await wr.json();
+                if (wdata.code !== undefined) {
+                    currentWidget.code = wdata.code;
+                    if (loadedWidgetMeta[currentWidget.name]) {
+                        loadedWidgetMeta[currentWidget.name].code = wdata.code;
+                    }
+                    const editor = document.getElementById('jsEditor');
+                    if (editor && !hasUnsavedChanges) {
+                        editor.value = wdata.code;
+                        setUnsaved(false);
+                        updateWidgetPreview();
+                    }
+                }
+            }
         }
 
     } catch (err) {

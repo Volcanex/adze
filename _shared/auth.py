@@ -8,8 +8,8 @@ from pathlib import Path
 from flask import request, abort
 import json
 
-# Fallback admin token from environment
-DEFAULT_ADMIN_TOKEN = os.environ.get('DEV_ADMIN_TOKEN', 'Lasshamster5!01022366')
+# Admin token from environment — no hardcoded fallback
+DEFAULT_ADMIN_TOKEN = os.environ.get('DEV_ADMIN_TOKEN', '')
 
 def get_artist_config(artist_slug):
     """
@@ -90,7 +90,7 @@ def verify_artist_token(artist_slug, token):
         return True
 
     # Fallback to default admin token (for super admin)
-    if token == DEFAULT_ADMIN_TOKEN:
+    if DEFAULT_ADMIN_TOKEN and token == DEFAULT_ADMIN_TOKEN:
         return True
 
     return False

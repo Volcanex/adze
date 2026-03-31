@@ -583,7 +583,6 @@
     </div>
 
 <script>
-const ADMIN_PASSWORD = 'Lasshamster5!01022366';
 let allPosts = [];
 let currentFilter = 'all';
 let adminToken = '';
@@ -613,30 +612,51 @@ function toggleTheme() {
     }
 })();
 
-// ── Auth ──
-function portalLogin() {
+// ── Auth (validates against server) ──
+async function verifyAdminToken(token) {
+    const resp = await fetch('/api/adze/verify-admin', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({token})
+    });
+    return resp.ok;
+}
+
+async function portalLogin() {
     const pw = document.getElementById('loginPassword').value;
-    if (pw === ADMIN_PASSWORD) {
-        adminToken = pw;
-        localStorage.setItem('portal-token', pw);
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('portalMain').style.display = 'block';
-        refreshAll();
-    } else {
+    try {
+        if (await verifyAdminToken(pw)) {
+            adminToken = pw;
+            localStorage.setItem('portal-token', pw);
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('portalMain').style.display = 'block';
+            refreshAll();
+        } else {
+            const err = document.getElementById('loginError');
+            err.textContent = 'Incorrect password';
+            err.style.display = 'block';
+        }
+    } catch(e) {
         const err = document.getElementById('loginError');
-        err.textContent = 'Incorrect password';
+        err.textContent = 'Connection error';
         err.style.display = 'block';
     }
 }
 
-// Auto-login
-(function() {
+// Auto-login — verify saved token is still valid
+(async function() {
     const saved = localStorage.getItem('portal-token');
-    if (saved === ADMIN_PASSWORD) {
-        adminToken = saved;
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('portalMain').style.display = 'block';
-        setTimeout(refreshAll, 100);
+    if (saved) {
+        try {
+            if (await verifyAdminToken(saved)) {
+                adminToken = saved;
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('portalMain').style.display = 'block';
+                setTimeout(refreshAll, 100);
+            } else {
+                localStorage.removeItem('portal-token');
+            }
+        } catch(e) { /* ignore */ }
     }
 })();
 

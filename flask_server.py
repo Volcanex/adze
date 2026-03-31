@@ -33,14 +33,32 @@ class BlogFlaskServer:
         self.app = Flask(__name__)
         self.app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB upload limit
 
-        # Enable CORS for API endpoints
-        CORS(self.app)
+        # CORS: allow adze.studio + all artist custom domains
+        def _allowed_origins():
+            origins = ['https://adze.studio', 'https://www.adze.studio']
+            artists_dir = Path('artists')
+            if artists_dir.exists():
+                for item in artists_dir.iterdir():
+                    cfg = item / 'config.json'
+                    if item.is_dir() and cfg.exists():
+                        try:
+                            domain = json.load(open(cfg)).get('domain', '')
+                            if domain:
+                                origins.append(f'https://{domain}')
+                                origins.append(f'https://www.{domain}')
+                        except Exception:
+                            pass
+            return origins
 
-        # Initialize SocketIO with CORS support
-        self.socketio = SocketIO(self.app, cors_allowed_origins="*")
+        self._cors_origins = _allowed_origins()
+        CORS(self.app, origins=self._cors_origins)
 
-        # Lock to prevent concurrent compile.py executions
-        self.compile_lock = threading.Lock()
+        # Initialize SocketIO with same CORS origins
+        self.socketio = SocketIO(self.app, cors_allowed_origins=self._cors_origins)
+
+        # Per-artist locks to prevent concurrent compile.py executions
+        self._compile_locks = {}
+        self._compile_locks_guard = threading.Lock()
 
         # GeoIP cache for analytics
         self._geoip_cache = {}
@@ -237,20 +255,29 @@ window.addEventListener('pagehide',send);
             pass
         return None
 
-    def _trigger_compile(self):
+    def _get_compile_lock(self, key='__global__'):
+        """Get or create a per-artist (or global) compile lock."""
+        with self._compile_locks_guard:
+            if key not in self._compile_locks:
+                self._compile_locks[key] = threading.Lock()
+            return self._compile_locks[key]
+
+    def _trigger_compile(self, artist_slug=None):
         """
         Trigger compile.py to regenerate static files.
-        Uses a lock to prevent concurrent executions.
+        If artist_slug is provided, only that artist is compiled (per-artist lock).
+        Otherwise compiles all artists (global lock).
         Returns dict with success status and details.
         """
-        # Try to acquire lock without blocking
-        acquired = self.compile_lock.acquire(blocking=False)
+        lock_key = artist_slug or '__global__'
+        lock = self._get_compile_lock(lock_key)
 
+        acquired = lock.acquire(blocking=False)
         if not acquired:
             return {
                 'success': False,
                 'error': 'Compile already in progress',
-                'message': 'Another compile.py execution is currently running'
+                'message': f'Compile already running for {artist_slug or "all artists"}'
             }
 
         try:
@@ -263,9 +290,12 @@ window.addEventListener('pagehide',send);
                     'path': str(compile_script)
                 }
 
-            # Run compile.py with timeout
+            cmd = [sys.executable, str(compile_script)]
+            if artist_slug:
+                cmd += ['--artist', artist_slug]
+
             result = subprocess.run(
-                [sys.executable, str(compile_script)],
+                cmd,
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -275,7 +305,7 @@ window.addEventListener('pagehide',send);
             if result.returncode == 0:
                 return {
                     'success': True,
-                    'message': 'Compile completed successfully',
+                    'message': f'Compile completed for {artist_slug or "all artists"}',
                     'stdout': result.stdout,
                     'timestamp': datetime.now().isoformat()
                 }
@@ -301,8 +331,7 @@ window.addEventListener('pagehide',send);
                 'details': str(e)
             }
         finally:
-            # Always release the lock
-            self.compile_lock.release()
+            lock.release()
 
     def _get_artist_by_domain(self, domain):
         """
@@ -843,8 +872,19 @@ window.addEventListener('pagehide',send);
 
         @self.app.route('/api/posts/compile', methods=['POST'])
         def trigger_compile():
-            """Manually trigger compile.py to regenerate static files"""
-            result = self._trigger_compile()
+            """Manually trigger compile.py to regenerate static files.
+            Requires auth. Pass {artist_slug} to compile one artist, or omit for all."""
+            from auth import get_authenticated_artist, verify_artist_token
+            # Require authentication
+            artist = get_authenticated_artist()
+            if not artist:
+                token = request.headers.get('X-Admin-Token', '')
+                if not token or token != os.environ.get('DEV_ADMIN_TOKEN', ''):
+                    return jsonify({'error': 'Authentication required'}), 401
+
+            data = request.get_json(silent=True) or {}
+            artist_slug = data.get('artist_slug') or artist
+            result = self._trigger_compile(artist_slug=artist_slug)
 
             if result['success']:
                 return jsonify(result)

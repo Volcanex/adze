@@ -4,14 +4,73 @@ These endpoints handle common functionality like file uploads, page editing, etc
 """
 
 import os
+import re
 import json
 import shutil
 import socket
 import subprocess
+import time as _time
+import threading as _threading
+import logging
 from pathlib import Path
 from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context, make_response
 from werkzeug.utils import secure_filename
 import sys
+
+
+# ── Logging ──────────────────────────────────────────────────────────────────────
+
+_LOGS_DIR = Path(__file__).parent.parent / 'logs'
+_LOGS_DIR.mkdir(exist_ok=True)
+
+def _setup_logger(name, filename, fmt='%(asctime)s %(message)s', max_bytes=10*1024*1024, backup_count=5):
+    """Create a logger with rotating file handler (10MB per file, 5 backups = 60MB max)."""
+    from logging.handlers import RotatingFileHandler
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = RotatingFileHandler(
+            _LOGS_DIR / filename, maxBytes=max_bytes,
+            backupCount=backup_count, encoding='utf-8'
+        )
+        handler.setFormatter(logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S'))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+    return logger
+
+_api_log = _setup_logger('adze.api', 'api.log')
+_vibe_log = _setup_logger('adze.vibe', 'vibe.log')
+
+
+# ── Simple in-memory rate limiter ─────────────────────────────────────────────
+class _RateLimiter:
+    """Per-IP sliding window rate limiter. No external dependencies."""
+    def __init__(self):
+        self._buckets = {}       # key -> list of timestamps
+        self._lock = _threading.Lock()
+
+    def check(self, key, max_requests, window_seconds):
+        """Return True if request is allowed, False if rate-limited."""
+        now = _time.time()
+        cutoff = now - window_seconds
+        with self._lock:
+            hits = self._buckets.get(key, [])
+            hits = [t for t in hits if t > cutoff]
+            if len(hits) >= max_requests:
+                self._buckets[key] = hits
+                return False
+            hits.append(now)
+            self._buckets[key] = hits
+            return True
+
+_limiter = _RateLimiter()
+
+
+def _rate_limit(scope, max_requests, window_seconds):
+    """Check rate limit for current request IP + scope. Aborts 429 if exceeded."""
+    ip = request.headers.get('X-Real-IP') or request.remote_addr or 'unknown'
+    key = f'{scope}:{ip}'
+    if not _limiter.check(key, max_requests, window_seconds):
+        abort(429, description='Too many requests. Please try again later.')
 
 # Add parent directory to path to import auth
 sys.path.insert(0, str(Path(__file__).parent))
@@ -20,11 +79,40 @@ from db import insert_pageview, query_analytics, upsert_session, query_sessions,
 
 bp = Blueprint('artist_admin', __name__, url_prefix='/api/adze')
 
+
+@bp.after_request
+def _log_api_request(response):
+    """Log every API request to api.log."""
+    try:
+        artist = request.headers.get('X-Artist-Slug', '')
+        if not artist:
+            cookie = request.cookies.get('adze_session', '')
+            if cookie and ':' in cookie:
+                artist = cookie.partition(':')[0]
+        method = request.method
+        path = request.path
+        status = response.status_code
+        # Skip noisy polling endpoints
+        if path.endswith(('/list-snapshots', '/whoami')) and status == 200:
+            return response
+        _api_log.info(f'[{artist or "-"}] {method} {path} → {status}')
+    except Exception:
+        pass
+    return response
+
+
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 
 # Only block files that could be dangerous on a server
 BLOCKED_EXTENSIONS = {'exe', 'bat', 'cmd', 'sh', 'php', 'py', 'rb', 'pl', 'cgi', 'jsp', 'asp', 'aspx', 'htaccess'}
+
+_SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9-]*$')
+
+
+def _valid_slug(slug):
+    """Return True if slug is a safe directory name (lowercase alphanum + hyphens)."""
+    return bool(slug) and bool(_SLUG_RE.match(slug))
 
 
 def allowed_file(filename, allowed_extensions=None):
@@ -36,12 +124,16 @@ def allowed_file(filename, allowed_extensions=None):
 
 
 def get_artist_path(artist_slug):
-    """Get the path to an artist's directory"""
+    """Get the path to an artist's directory. Validates slug format."""
+    if not _valid_slug(artist_slug):
+        abort(400, description='Invalid artist slug')
     return Path(f'artists/{artist_slug}')
 
 
 def get_page_path(artist_slug, page_slug):
-    """Get the path to a specific page within an artist's directory"""
+    """Get the path to a specific page within an artist's directory. Validates both slugs."""
+    if not _valid_slug(page_slug):
+        abort(400, description='Invalid page slug')
     return get_artist_path(artist_slug) / page_slug
 
 
@@ -67,6 +159,53 @@ def scan_for_leaked_secrets(artist_slug, content):
     except IOError:
         pass
     return leaked
+
+
+def _scaffold_new_artist(slug):
+    """If an artist directory has no pages yet, copy starter pages from _template."""
+    artist_dir = Path(f'artists/{slug}')
+    template_dir = Path('artists/_template')
+    if not artist_dir.exists() or not template_dir.exists():
+        return
+    # Check if artist already has at least one page (dir with content.md)
+    has_pages = any(
+        (d / 'content.md').exists()
+        for d in artist_dir.iterdir()
+        if d.is_dir() and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')
+    )
+    if has_pages:
+        return
+    # Load artist config for name substitution
+    config = {}
+    cfg_file = artist_dir / 'config.json'
+    if cfg_file.exists():
+        try:
+            config = json.loads(cfg_file.read_text())
+        except Exception:
+            pass
+    display_name = config.get('display_name') or config.get('name') or slug.title()
+    # Copy each template directory, replacing placeholders
+    for item in template_dir.iterdir():
+        if not item.is_dir() or item.name in ('assets', 'widgets'):
+            continue
+        dest = artist_dir / item.name
+        if dest.exists():
+            continue
+        shutil.copytree(item, dest)
+        # Replace placeholders in copied files
+        for f in dest.rglob('*'):
+            if f.is_file() and f.suffix in ('.json', '.md', '.html'):
+                text = f.read_text(encoding='utf-8')
+                text = text.replace('{{ARTIST_NAME}}', display_name)
+                text = text.replace('{{SLUG}}', slug)
+                text = text.replace('{{DOMAIN}}', config.get('domain', ''))
+                text = text.replace('{{TOKEN}}', '')
+                f.write_text(text, encoding='utf-8')
+    # Copy template assets if artist has none
+    template_assets = template_dir / 'assets'
+    artist_assets = artist_dir / 'assets'
+    if template_assets.exists() and not artist_assets.exists():
+        shutil.copytree(template_assets, artist_assets)
 
 
 # ── Analytics ─────────────────────────────────────────────────────────────
@@ -142,12 +281,11 @@ def beacon():
         if not sid or not slug or dur < 1:
             return '', 204
 
-        # Sanitise slug to prevent path traversal
-        slug = slug.replace('/', '').replace('..', '').replace('\\', '')
-        if not slug:
+        # Validate slug format
+        if not _valid_slug(slug):
             return '', 204
 
-        artist_path = get_artist_path(slug)
+        artist_path = Path(f'artists/{slug}')
         if not artist_path.exists():
             return '', 204
 
@@ -171,16 +309,107 @@ def dashboard():
 
     html = dashboard_path.read_text(encoding='utf-8')
 
-    # Inject secrets that must not live in the repo
-    gemini_key = os.environ.get('GEMINI_API_KEY', '')
-    injection = f'<script>window.__GEMINI_KEY__={json.dumps(gemini_key)};</script>'
-    html = html.replace('</head>', injection + '\n</head>', 1)
-
     response = Response(html, mimetype='text/html')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
+
+
+@bp.route('/verify-admin', methods=['POST'])
+def verify_admin():
+    """Verify the super-admin token (for portal auth). No session created."""
+    _rate_limit('login', 10, 60)
+    data = request.get_json() or {}
+    token = data.get('token', '').strip()
+    from auth import DEFAULT_ADMIN_TOKEN
+    if not token or not DEFAULT_ADMIN_TOKEN or token != DEFAULT_ADMIN_TOKEN:
+        return jsonify({'error': 'Invalid token'}), 401
+    return jsonify({'ok': True})
+
+
+@bp.route('/create-artist', methods=['POST'])
+def create_artist():
+    """
+    Create a new artist site. Super-admin only.
+    JSON body: {admin_token, name, slug?, description?}
+    Returns: {ok, slug, token, dashboard_url}
+    """
+    _rate_limit('login', 10, 60)
+    data = request.get_json() or {}
+
+    # Super-admin auth
+    from auth import DEFAULT_ADMIN_TOKEN
+    admin_token = data.get('admin_token', '').strip()
+    if not admin_token or not DEFAULT_ADMIN_TOKEN or admin_token != DEFAULT_ADMIN_TOKEN:
+        return jsonify({'error': 'Invalid admin token'}), 401
+
+    name = data.get('name', '').strip()
+    if not name:
+        return jsonify({'error': 'name is required'}), 400
+
+    # Generate slug from name if not provided
+    slug = data.get('slug', '').strip()
+    if not slug:
+        slug = re.sub(r'[^a-z0-9]+', '', name.lower())
+    slug = slug.lower()
+
+    if not slug or not re.match(r'^[a-z][a-z0-9]*$', slug):
+        return jsonify({'error': 'Invalid slug — lowercase letters and numbers only, must start with a letter'}), 400
+
+    artist_dir = Path(f'artists/{slug}')
+    if artist_dir.exists():
+        return jsonify({'error': f'Artist "{slug}" already exists'}), 409
+
+    # Generate a random token
+    import secrets
+    artist_token = secrets.token_urlsafe(16)
+
+    # Create directory structure
+    artist_dir.mkdir(parents=True)
+    (artist_dir / 'assets' / 'fonts').mkdir(parents=True)
+    (artist_dir / 'assets' / 'images').mkdir(parents=True)
+
+    # Write config.json
+    config = {
+        'name': name,
+        'slug': slug,
+        'domain': '',
+        'admin_token': artist_token,
+        'description': data.get('description', ''),
+        'contact_email': data.get('contact_email', ''),
+    }
+    (artist_dir / 'config.json').write_text(
+        json.dumps(config, indent=4) + '\n', encoding='utf-8'
+    )
+
+    # Copy default fonts from template
+    template_fonts = Path('artists/_template/assets/fonts')
+    if template_fonts.exists():
+        for font_file in template_fonts.iterdir():
+            if font_file.is_file():
+                shutil.copy2(font_file, artist_dir / 'assets' / 'fonts' / font_file.name)
+
+    # Scaffold pages from template
+    _scaffold_new_artist(slug)
+
+    # Compile the new artist
+    try:
+        subprocess.run(
+            ['python3', 'compile.py', '--artist', slug],
+            capture_output=True, timeout=30
+        )
+    except Exception:
+        pass  # Non-fatal — user can click Save later
+
+    return jsonify({
+        'ok': True,
+        'slug': slug,
+        'name': name,
+        'token': artist_token,
+        'dashboard_url': f'/api/adze/dashboard?slug={slug}',
+        'site_url': f'/artists/{slug}/home/',
+    })
 
 
 @bp.route('/login', methods=['POST'])
@@ -190,6 +419,7 @@ def login():
     JSON body: {slug, token}
     Returns: {ok, slug, name} and sets adze_session httpOnly cookie.
     """
+    _rate_limit('login', 10, 60)  # 10 attempts per minute per IP
     data = request.get_json() or {}
     slug = data.get('slug', '').strip()
     token = data.get('token', '').strip()
@@ -198,6 +428,8 @@ def login():
     from auth import verify_artist_token, get_artist_config
     if not verify_artist_token(slug, token):
         return jsonify({'error': 'Invalid credentials'}), 401
+    # Scaffold from template if artist has no pages yet
+    _scaffold_new_artist(slug)
     config = get_artist_config(slug) or {}
     resp = make_response(jsonify({
         'ok': True,
@@ -207,9 +439,10 @@ def login():
     }))
     # httpOnly — not accessible via JS (XSS protection)
     # SameSite=Lax — safe for normal navigation, blocks CSRF from cross-site POSTs
-    # secure=False — Flask runs behind nginx which handles TLS; cookie travels localhost only
+    # secure — True when behind TLS (nginx sets X-Forwarded-Proto)
+    is_https = request.headers.get('X-Forwarded-Proto') == 'https'
     resp.set_cookie('adze_session', f'{slug}:{token}',
-                    httponly=True, samesite='Lax', secure=False,
+                    httponly=True, samesite='Lax', secure=is_https,
                     max_age=30 * 24 * 3600, path='/')
     return resp
 
@@ -774,6 +1007,42 @@ def list_assets():
     return jsonify({'artist': artist_slug, 'assets': assets})
 
 
+@bp.route('/delete-assets', methods=['POST'])
+def delete_assets():
+    """
+    Delete one or more assets.
+    Body: { "paths": ["image.jpg", "subdir/file.pdf"] }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json()
+    paths = data.get('paths', [])
+    if not paths:
+        return jsonify({'error': 'No paths provided'}), 400
+
+    artist_path = get_artist_path(artist_slug)
+    assets_dir = artist_path / 'assets'
+    deleted, errors = [], []
+
+    for p in paths:
+        # Prevent path traversal
+        try:
+            target = (assets_dir / p).resolve()
+            target.relative_to(assets_dir.resolve())
+        except (ValueError, Exception):
+            errors.append(f'{p}: invalid path')
+            continue
+        if target.exists() and target.is_file():
+            target.unlink()
+            deleted.append(p)
+        else:
+            errors.append(f'{p}: not found')
+
+    return jsonify({'deleted': deleted, 'errors': errors})
+
+
 # ── Inbox (contact form submissions) ──────────────────────────────────────
 
 @bp.route('/contact', methods=['POST'])
@@ -782,6 +1051,7 @@ def public_contact():
     Public endpoint — no auth. Accept a contact form submission and store it.
     Body: { artist_slug, name, email, subject?, message }
     """
+    _rate_limit('contact', 20, 60)  # 20 submissions per minute per IP
     import time, uuid
     data = request.get_json(silent=True) or {}
     slug    = data.get('artist_slug', '').strip()
@@ -881,6 +1151,7 @@ def public_subscribe():
     Public endpoint — no auth. Add an email to the artist's subscriber list.
     Body: { artist_slug, email, name? }
     """
+    _rate_limit('subscribe', 20, 60)  # 20 signups per minute per IP
     import time
     data  = request.get_json(silent=True) or {}
     slug  = data.get('artist_slug', '').strip()
@@ -3545,6 +3816,8 @@ _claude_sessions = _load_claude_sessions()
 
 # Track active Claude CLI processes per artist for halt functionality
 _claude_processes = {}  # artist_slug -> subprocess.Popen
+# Per-artist streaming lock: prevents two users from running Claude simultaneously
+_claude_streaming = {}  # artist_slug -> { 'since': timestamp, 'prompt': str }
 
 
 def _load_docs() -> str:
@@ -3591,6 +3864,67 @@ def _get_artist_system_prompt(artist_slug):
 
     has_api = (artist_path / 'api.py').exists()
 
+    # Build installed widget manifest — inline README content so Claude can access it
+    # regardless of sandbox restrictions (acceptEdits mode limits file reads to artist dir)
+    platform_widgets_dir = Path(__file__).parent / 'widgets'
+    enabled_platform = artist_config.get('platform_widgets', [])
+    widget_blocks = []
+
+    def _read_readme(path):
+        try:
+            return path.read_text(encoding='utf-8').strip()
+        except Exception:
+            return None
+
+    # T2: platform widgets the artist has enabled
+    for name in enabled_platform:
+        readme_content = _read_readme(platform_widgets_dir / name / 'README.md')
+        if readme_content:
+            widget_blocks.append(readme_content)
+        else:
+            meta_path = platform_widgets_dir / name / 'widget.json'
+            desc = ''
+            try:
+                desc = json.loads(meta_path.read_text()).get('description', '')
+            except Exception:
+                pass
+            widget_blocks.append(f'### {name} (T2 platform)\n{desc}')
+
+    # T3/T4: artist's own widgets directory
+    artist_widgets_dir = artist_path / 'widgets'
+    if artist_widgets_dir.exists():
+        for item in sorted(artist_widgets_dir.iterdir()):
+            if item.is_file() and item.suffix == '.js':
+                wname = item.stem
+                readme_path = artist_widgets_dir / f'{wname}' / 'README.md'
+                meta_path = artist_widgets_dir / f'{wname}.json'
+            elif item.is_dir() and (item / 'widget.js').exists():
+                wname = item.name
+                readme_path = item / 'README.md'
+                meta_path = item / 'widget.json'
+            else:
+                continue
+            readme_content = _read_readme(readme_path)
+            if readme_content:
+                widget_blocks.append(readme_content)
+            else:
+                desc = ''
+                tier = 'T4 custom'
+                try:
+                    m = json.loads(meta_path.read_text())
+                    desc = m.get('description', '')
+                    if m.get('forked_from'):
+                        tier = 'T3 community'
+                except Exception:
+                    pass
+                widget_blocks.append(f'### {wname} ({tier})\n{desc}')
+
+    widgets_section = ''
+    if widget_blocks:
+        widgets_section = '\n\n## Installed widgets\n\n' + '\n\n---\n\n'.join(widget_blocks)
+    else:
+        widgets_section = '\n\n## Installed widgets\n\nNone installed yet.'
+
     runtime_context = f"""---
 
 ## Runtime context (this session)
@@ -3602,6 +3936,7 @@ def _get_artist_system_prompt(artist_slug):
 - Current pages: {pages_str}
 - Custom api.py: {'yes — read it before making backend changes' if has_api else 'no — create one if needed'}
 - Active features: {', '.join(features) if features else 'none'}
+{widgets_section}
 
 You are STRICTLY sandboxed to {abs_artist_path}. All file operations must be within it.
 Page slugs must always start with "artists/{artist_slug}/" — never bare slugs."""
@@ -3620,6 +3955,25 @@ def claude_stream():
     prompt = data.get('prompt', '').strip()
     if not prompt:
         return jsonify({'error': 'Prompt required'}), 400
+
+    _vibe_log.info(f'[{artist_slug}] ── PROMPT ── {prompt}')
+
+    # Per-artist mutex — only one Claude stream at a time
+    active = _claude_streaming.get(artist_slug)
+    if active:
+        # Check if the process is actually still running
+        proc = _claude_processes.get(artist_slug)
+        if proc and proc.poll() is None:
+            return jsonify({
+                'error': 'Vibe Coder is busy',
+                'busy': True,
+                'since': active['since'],
+            }), 409
+        else:
+            # Process finished but wasn't cleaned up
+            _claude_streaming.pop(artist_slug, None)
+
+    _claude_streaming[artist_slug] = {'since': time.time(), 'prompt': prompt[:100]}
 
     artist_path = get_artist_path(artist_slug)
     abs_artist_path = str(Path.cwd() / artist_path)
@@ -3726,54 +4080,117 @@ def claude_stream():
     ]
     args.extend(['--allowedTools'] + allowed_tools)
 
-    def generate():
+    def _stream_proc(run_args):
+        """Run claude CLI and yield SSE lines. Returns stderr string on exit."""
         env = os.environ.copy()
-        # Remove CLAUDECODE to avoid nested session detection
         env.pop('CLAUDECODE', None)
+        _vibe_log.info(f'[{artist_slug}] ── START (session={session_id}) ──')
+        proc = subprocess.Popen(
+            run_args,
+            cwd=abs_artist_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            bufsize=1,
+        )
+        _claude_processes[artist_slug] = proc
+        buffer = ''
+        for chunk in iter(lambda: proc.stdout.read(4096), b''):
+            buffer += chunk.decode('utf-8', errors='replace')
+            lines = buffer.split('\n')
+            buffer = lines[-1]
+            for line in lines[:-1]:
+                line = line.strip()
+                if line:
+                    # Log meaningful events (text, tool use, errors) but skip raw deltas
+                    try:
+                        evt = json.loads(line)
+                        etype = evt.get('type', '')
+                        if etype == 'assistant' and evt.get('message', {}).get('content'):
+                            for block in evt['message']['content']:
+                                btype = block.get('type', '')
+                                if btype == 'text':
+                                    _vibe_log.info(f'[{artist_slug}] TEXT: {block["text"][:500]}')
+                                elif btype == 'tool_use':
+                                    inp = json.dumps(block.get('input', ''))
+                                    if len(inp) > 300:
+                                        inp = inp[:300] + '…'
+                                    _vibe_log.info(f'[{artist_slug}] TOOL: {block.get("name")} → {inp}')
+                        elif etype == 'result' and evt.get('result'):
+                            _vibe_log.info(f'[{artist_slug}] RESULT: cost=${evt.get("cost_usd", "?")} duration={evt.get("duration_ms", "?")}ms')
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                    yield ('data', line)
+        if buffer.strip():
+            yield ('data', buffer.strip())
+        proc.wait()
+        stderr_out = proc.stderr.read().decode('utf-8', errors='replace').strip()
+        rc = proc.returncode
+        if rc == 0:
+            _vibe_log.info(f'[{artist_slug}] ── END (ok) ──')
+        else:
+            _vibe_log.info(f'[{artist_slug}] ── END (exit={rc}) ── {stderr_out[:500]}')
+        yield ('done', str(rc) + '|' + stderr_out)
 
+    def generate():
         try:
-            proc = subprocess.Popen(
-                args,
-                cwd=abs_artist_path,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                bufsize=1,
-            )
-            _claude_processes[artist_slug] = proc
+            had_session_reset = False
+            current_args = args[:]
 
-            buffer = ''
-            for chunk in iter(lambda: proc.stdout.read(4096), b''):
-                buffer += chunk.decode('utf-8', errors='replace')
-                lines = buffer.split('\n')
-                buffer = lines[-1]  # Keep incomplete line
+            for event_type, payload in _stream_proc(current_args):
+                if event_type == 'data':
+                    yield f"data: {payload}\n\n"
+                elif event_type == 'done':
+                    returncode, stderr_out = payload.split('|', 1)
+                    returncode = int(returncode)
 
-                for line in lines[:-1]:
-                    line = line.strip()
-                    if line:
-                        yield f"data: {line}\n\n"
+                    if returncode != 0:
+                        is_session_error = (
+                            'no conversation found' in stderr_out.lower() or
+                            ('session' in stderr_out.lower() and 'not found' in stderr_out.lower()) or
+                            'invalid session' in stderr_out.lower()
+                        )
 
-            # Flush remaining buffer
-            if buffer.strip():
-                yield f"data: {buffer.strip()}\n\n"
+                        if is_session_error and not had_session_reset:
+                            # Clear stale session and retry with a fresh one
+                            _claude_sessions.pop(artist_slug, None)
+                            _save_claude_sessions(_claude_sessions)
 
-            proc.wait()
+                            new_session_id = str(uuid.uuid4())
+                            _claude_sessions[artist_slug] = new_session_id
+                            _save_claude_sessions(_claude_sessions)
 
-            # If process failed, report but only reset session on fatal errors
-            if proc.returncode != 0:
-                stderr_out = proc.stderr.read().decode('utf-8', errors='replace')
-                error_msg = stderr_out.strip() if stderr_out.strip() else f'Process exited with code {proc.returncode}'
-                error_data = json.dumps({
-                    'type': 'error',
-                    'error': error_msg,
-                    'exit_code': proc.returncode
-                })
-                yield f"data: {error_data}\n\n"
+                            notice = json.dumps({'type': 'system_message', 'text': 'Starting new session...'})
+                            yield f"data: {notice}\n\n"
 
-                # Only reset session if it's a session-related error (invalid/corrupt session)
-                if 'invalid session' in error_msg.lower() or 'session' in error_msg.lower() and 'not found' in error_msg.lower():
-                    _claude_sessions.pop(artist_slug, None)
-                    _save_claude_sessions(_claude_sessions)
+                            # Rebuild args without --resume, with new session ID + system prompt
+                            retry_args = [a for a in current_args if a not in ['--resume']]
+                            # Remove old session id value (the UUID after --resume or --session-id)
+                            clean_args = []
+                            skip_next = False
+                            for a in retry_args:
+                                if skip_next:
+                                    skip_next = False
+                                    continue
+                                if a in ('--resume', '--session-id'):
+                                    skip_next = True
+                                    continue
+                                clean_args.append(a)
+
+                            clean_args.extend(['--session-id', new_session_id])
+                            clean_args.extend(['--system-prompt', _get_artist_system_prompt(artist_slug)])
+                            had_session_reset = True
+
+                            for event_type2, payload2 in _stream_proc(clean_args):
+                                if event_type2 == 'data':
+                                    yield f"data: {payload2}\n\n"
+                                elif event_type2 == 'done':
+                                    rc2, err2 = payload2.split('|', 1)
+                                    if int(rc2) != 0 and err2:
+                                        yield f"data: {json.dumps({'type': 'error', 'error': err2, 'exit_code': int(rc2)})}\n\n"
+                        else:
+                            if stderr_out:
+                                yield f"data: {json.dumps({'type': 'error', 'error': stderr_out, 'exit_code': returncode})}\n\n"
 
             yield "data: {\"type\": \"stream_end\"}\n\n"
 
@@ -3789,6 +4206,8 @@ def claude_stream():
                 'error': str(e)
             })
             yield f"data: {error_data}\n\n"
+        finally:
+            _claude_streaming.pop(artist_slug, None)
 
     return Response(
         stream_with_context(generate()),
@@ -3906,6 +4325,38 @@ def list_endpoints():
     artist_path = get_artist_path(artist_slug)
     has_custom_api = (artist_path / 'api.py').exists()
 
+    # Scan widgets for endpoint usage
+    widget_files = {}  # name -> content
+    shared_widgets_dir = Path(__file__).parent / 'widgets'
+    for wf in shared_widgets_dir.glob('*/widget.js'):
+        widget_files[wf.parent.name] = wf.read_text(encoding='utf-8', errors='ignore')
+    artist_widgets_dir = artist_path / 'widgets'
+    if artist_widgets_dir.exists():
+        for wf in artist_widgets_dir.glob('*.js'):
+            widget_files[wf.stem] = wf.read_text(encoding='utf-8', errors='ignore')
+
+    # Extract URLs actually passed to fetch()/apiFetch() calls — avoids false positives from comments/strings
+    _CALL_RE = re.compile(r"""(?:apiFetch|fetch)\s*\(\s*[`'"]((?:[^`'"\\]|\\.)+)[`'"]""")
+    widget_called_urls = {
+        name: set(_CALL_RE.findall(content))
+        for name, content in widget_files.items()
+    }
+
+    for ep in endpoints:
+        ep_url = ep['url']
+        # Extract the trailing path segment for matching template-literal URLs
+        # e.g. /api/artists/${ctx.artistSlug}/orders → match on 'orders'
+        ep_tail = ep_url.rstrip('/').split('/')[-1]
+        ep['used_by'] = [
+            name for name, called in widget_called_urls.items()
+            if any(
+                ep_url in u                        # exact URL match
+                or u in ep_url                     # URL is suffix of endpoint
+                or (ep_tail and ep_tail in u.split('/')[-1])  # tail segment matches (handles ${slug} templates)
+                for u in called
+            )
+        ]
+
     return jsonify({
         'endpoints': endpoints,
         'has_custom_api': has_custom_api,
@@ -3941,7 +4392,9 @@ def claude_halt():
         except subprocess.TimeoutExpired:
             proc.kill()
         _claude_processes.pop(artist_slug, None)
+        _claude_streaming.pop(artist_slug, None)
         return jsonify({'ok': True, 'message': 'Vibe Coder stopped.'})
     else:
         _claude_processes.pop(artist_slug, None)
+        _claude_streaming.pop(artist_slug, None)
         return jsonify({'ok': False, 'message': 'No active process to stop.'})

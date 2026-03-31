@@ -40,4 +40,12 @@ When editing `content.md`, always preserve the format:
 </html>
 ```
 
-Use the artist's existing design patterns (fonts, colours, layout) when creating new content. When creating pages, copy the full CSS from an existing page so styling is consistent.
+**The compiler wraps your content** in a full HTML5 document (`<!DOCTYPE html>`, `<head>`, `<body>`). So `content.md` must NEVER contain `<!DOCTYPE>`, `<head>`, `<body>`, `<link>`, or `<script src="...">` tags — only inline `<style>` and `<html>` blocks. Never load external stylesheets or CDNs (e.g. Font Awesome). All CSS must be inline in the `<style>` block.
+
+## Design consistency
+
+When creating or editing pages, **always read the artist's existing pages first** and copy their full CSS so styling is consistent (fonts, colours, layout, nav, mobile responsive).
+
+Every new artist starts with a home and about page already styled with the default Adze design. Build on top of what's already there — customise the colours, fonts, layout etc. based on the artist's requests, but keep the correct `<style>…</style><html>…</html>` format.
+
+Do NOT invent a design from scratch, pull generic templates from training data, or add external dependencies. Work with the existing pages.

@@ -2,7 +2,7 @@
 
 ## Page structure
 
-Each page is a directory inside `artists/{slug}/`:
+Each page is a directory inside `artists/{slug}/`. **Directory names must be lowercase** (e.g. `home/`, `about/`, `gallery/`). Never use uppercase or mixed-case directory names — the server routes to lowercase paths.
 
 ```
 artists/myartist/
@@ -22,7 +22,7 @@ artists/myartist/
 <meta property="og:image" content="../assets/images/og.jpg">
 
 <style>
-  /* Page-specific CSS */
+  /* Page-specific CSS — ALL styling must be inline here */
   body {
     background: #f5f2ed;
     font-family: 'Inter', sans-serif;
@@ -36,7 +36,14 @@ artists/myartist/
 </html>
 ```
 
-The compiler extracts `<style>`, `<html>`, and `<meta>` blocks and wraps them in the output HTML template.
+The compiler extracts `<style>`, `<html>`, and `<meta>` blocks and wraps them in a full HTML5 document (`<!DOCTYPE html>`, `<head>`, `<body>`).
+
+**NEVER include** in content.md:
+- `<!DOCTYPE>`, `<head>`, `<body>`, or `<title>` tags — the compiler adds these
+- `<link rel="stylesheet">` or external CDN links (e.g. Font Awesome, Google Fonts CDN)
+- `<script src="...">` tags loading external libraries
+
+All CSS must be in the `<style>` block. Fonts are loaded via `@font-face` pointing to `../assets/fonts/`. Inline `<script>` at the end of the `<html>` block is fine for page interactivity.
 
 ## Page config.json
 
@@ -77,12 +84,12 @@ From `content.md`, assets are referenced with relative paths:
 
 ## Creating a new page
 
-1. `mkdir artists/{slug}/pagename`
+1. `mkdir artists/{slug}/pagename` — **lowercase only**
 2. Create `config.json`:
    ```json
    { "title": "Page Title", "slug": "artists/{slug}/pagename", "description": "...", "categories": [] }
    ```
-3. Create `content.md`: copy the `<style>…</style>\n<html>…</html>` pattern from an existing page
+3. Create `content.md`: copy the full `<style>…</style>\n<html>…</html>` from an existing page so fonts, colours, nav, and responsive layout are consistent.
 4. Update the nav in other pages: `<a href="../pagename/">Page Title</a>`
 5. Click **Save** in the dashboard to compile and publish
 

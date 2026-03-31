@@ -125,3 +125,61 @@ def list_orders():
         return jsonify({'orders': orders})
     except:
         return jsonify({'orders': []})
+
+
+# ── Booking System ───────────────────────────────────────────────────────
+
+@bp.route('/book', methods=['POST'])
+def create_booking():
+    """Create a new booking and save to bookings.json."""
+    data = request.get_json()
+
+    # Validate required fields
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip()
+    date = data.get('date', '').strip()
+    time = data.get('time', '').strip()
+    notes = data.get('notes', '').strip()
+
+    if not all([name, email, date, time]):
+        return jsonify({'error': 'Name, email, date, and time are required'}), 400
+
+    # Load existing bookings
+    bookings_file = Path(__file__).parent / 'bookings.json'
+    bookings = []
+    if bookings_file.exists():
+        try:
+            bookings = json.loads(bookings_file.read_text())
+        except:
+            pass
+
+    # Create new booking
+    import time as time_module
+    booking = {
+        'id': len(bookings) + 1,
+        'name': name,
+        'email': email,
+        'date': date,
+        'time': time,
+        'notes': notes,
+        'created_at': int(time_module.time()),
+        'status': 'pending'
+    }
+
+    bookings.append(booking)
+    bookings_file.write_text(json.dumps(bookings, indent=2))
+
+    return jsonify({'success': True, 'booking': booking}), 201
+
+
+@bp.route('/bookings', methods=['GET'])
+def list_bookings():
+    """List all bookings (for dashboard widget)."""
+    bookings_file = Path(__file__).parent / 'bookings.json'
+    if not bookings_file.exists():
+        return jsonify({'bookings': []})
+    try:
+        bookings = json.loads(bookings_file.read_text())
+        return jsonify({'bookings': bookings})
+    except:
+        return jsonify({'bookings': []})

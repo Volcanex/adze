@@ -4,6 +4,6 @@
     "icon": "store",
     "author": "Adze Studio",
     "version": "1.0",
-    "marketplace": false,
+    "marketplace": true,
     "category": "commerce"
 }
