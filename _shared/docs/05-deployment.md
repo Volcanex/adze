@@ -102,6 +102,28 @@ sudo certbot --nginx -d {domain} -d www.{domain} --non-interactive --agree-tos -
 
 These are one-time per domain — copy, paste, done.
 
+## Super-admin dashboard
+
+The `/admin` route is a super-admin-only dashboard. Auth uses `DEV_ADMIN_TOKEN`.
+
+Features: view all artists (metadata, storage, last login, traffic), create new artists, view aggregate traffic, tail API and Vibe Coder logs, view per-artist resource usage.
+
+After deploying, add the nginx route:
+
+```bash
+# Add to /etc/nginx/sites-available/adze.studio, inside the server block:
+# location = /admin {
+#     proxy_pass http://127.0.0.1:5001/api/adze/admin;
+#     proxy_set_header Host $host;
+#     proxy_set_header X-Real-IP $remote_addr;
+#     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#     proxy_set_header X-Forwarded-Proto $scheme;
+# }
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+The `/docs` route is now auth-gated — requires a logged-in artist session or super-admin session. Unauthenticated visitors see a login form.
+
 ## nginx config reference
 
 The adze.studio nginx config lives in `nginx/adze.studio.conf` in the repo. It proxies to `127.0.0.1:5001` where Docker Flask is listening. Artist domain configs go in `nginx/sites-available/` (written by the activate-domain endpoint).

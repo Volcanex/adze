@@ -101,6 +101,41 @@ def _log_api_request(response):
     return response
 
 
+def _require_super_admin():
+    """Abort 401 unless the request carries a valid super-admin token (cookie or header)."""
+    from auth import DEFAULT_ADMIN_TOKEN
+    token = request.headers.get('X-Admin-Token', '')
+    if token and DEFAULT_ADMIN_TOKEN and token == DEFAULT_ADMIN_TOKEN:
+        return
+    cookie = request.cookies.get('adze_admin_session', '')
+    if cookie and DEFAULT_ADMIN_TOKEN and cookie == DEFAULT_ADMIN_TOKEN:
+        return
+    abort(401, description='Super-admin auth required')
+
+
+# ── Storage cache (avoid hammering du for every request) ──────────────────────
+_storage_cache = {}  # {slug: (timestamp, size_str)}
+_STORAGE_CACHE_TTL = 60  # seconds
+
+
+def _get_artist_storage(slug):
+    """Get storage size string for an artist, cached for 60s."""
+    now = _time.time()
+    cached = _storage_cache.get(slug)
+    if cached and (now - cached[0]) < _STORAGE_CACHE_TTL:
+        return cached[1]
+    try:
+        result = subprocess.run(
+            ['du', '-sh', f'artists/{slug}/'],
+            capture_output=True, timeout=5, text=True
+        )
+        size = result.stdout.split('\t')[0].strip() if result.returncode == 0 else '?'
+    except Exception:
+        size = '?'
+    _storage_cache[slug] = (now, size)
+    return size
+
+
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
 MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024  # 2GB
 
@@ -430,6 +465,15 @@ def login():
         return jsonify({'error': 'Invalid credentials'}), 401
     # Scaffold from template if artist has no pages yet
     _scaffold_new_artist(slug)
+    # Track last login
+    try:
+        cfg_path = Path(f'artists/{slug}/config.json')
+        cfg = json.loads(cfg_path.read_text())
+        cfg['last_login'] = int(_time.time())
+        cfg['last_login_ip'] = request.headers.get('X-Real-IP') or request.remote_addr or ''
+        cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+    except Exception:
+        pass
     config = get_artist_config(slug) or {}
     resp = make_response(jsonify({
         'ok': True,
@@ -474,13 +518,251 @@ def whoami():
     })
 
 
+# ── Super-Admin Dashboard ─────────────────────────────────────────────────────
+
+@bp.route('/admin')
+def serve_admin():
+    """Serve the super-admin dashboard HTML."""
+    admin_path = Path(__file__).parent / 'admin.html'
+    if not admin_path.exists():
+        return 'Admin dashboard not found', 404
+    return admin_path.read_text(encoding='utf-8'), 200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+    }
+
+
+@bp.route('/admin/login', methods=['POST'])
+def admin_login():
+    """Validate super-admin token and set persistent cookie."""
+    _rate_limit('login', 10, 60)
+    data = request.get_json() or {}
+    token = data.get('token', '').strip()
+    from auth import DEFAULT_ADMIN_TOKEN
+    if not token or not DEFAULT_ADMIN_TOKEN or token != DEFAULT_ADMIN_TOKEN:
+        return jsonify({'error': 'Invalid token'}), 401
+    is_https = request.headers.get('X-Forwarded-Proto') == 'https'
+    resp = make_response(jsonify({'ok': True}))
+    resp.set_cookie('adze_admin_session', token,
+                    httponly=True, samesite='Lax', secure=is_https,
+                    max_age=7 * 24 * 3600, path='/')
+    return resp
+
+
+@bp.route('/admin/artists')
+def admin_artists():
+    """List all artists with metadata."""
+    _require_super_admin()
+    artists_dir = Path('artists')
+    result = []
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_') or item.name == 'example-artist':
+            continue
+        cfg_path = item / 'config.json'
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            cfg = {}
+        # Count pages
+        pages = [d.name for d in item.iterdir()
+                 if d.is_dir() and (d / 'content.md').exists()
+                 and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')]
+        # 30d pageviews
+        views_30d = 0
+        try:
+            db_path = item / 'data.db'
+            if db_path.exists():
+                import sqlite3
+                conn = sqlite3.connect(str(db_path), timeout=2)
+                cutoff = int(_time.time()) - 30 * 86400
+                row = conn.execute('SELECT COUNT(*) FROM pageviews WHERE ts > ?', (cutoff,)).fetchone()
+                views_30d = row[0] if row else 0
+                conn.close()
+        except Exception:
+            pass
+        # Storage
+        storage = _get_artist_storage(item.name)
+        result.append({
+            'slug': item.name,
+            'name': cfg.get('name', item.name),
+            'domain': cfg.get('domain', ''),
+            'contact_email': cfg.get('contact_email', ''),
+            'pages': pages,
+            'page_count': len(pages),
+            'storage': storage,
+            'views_30d': views_30d,
+            'last_login': cfg.get('last_login'),
+            'last_login_ip': cfg.get('last_login_ip', ''),
+        })
+    return jsonify({'artists': result})
+
+
+@bp.route('/admin/traffic')
+def admin_traffic():
+    """Aggregate traffic across all artists."""
+    _require_super_admin()
+    import sqlite3
+    artists_dir = Path('artists')
+    now = int(_time.time())
+    today_start = now - (now % 86400)
+    week_start = now - 7 * 86400
+    month_start = now - 30 * 86400
+
+    total_today = 0
+    total_week = 0
+    total_month = 0
+    per_artist = []
+    daily_agg = {}  # date_str -> count
+
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_'):
+            continue
+        db_path = item / 'data.db'
+        if not db_path.exists():
+            continue
+        try:
+            conn = sqlite3.connect(str(db_path), timeout=2)
+            today = conn.execute('SELECT COUNT(*) FROM pageviews WHERE ts >= ?', (today_start,)).fetchone()[0]
+            week = conn.execute('SELECT COUNT(*) FROM pageviews WHERE ts >= ?', (week_start,)).fetchone()[0]
+            month = conn.execute('SELECT COUNT(*) FROM pageviews WHERE ts >= ?', (month_start,)).fetchone()[0]
+            total_today += today
+            total_week += week
+            total_month += month
+            per_artist.append({'slug': item.name, 'today': today, 'week': week, 'month': month})
+            # Daily breakdown for chart
+            rows = conn.execute(
+                "SELECT date(ts, 'unixepoch') as d, COUNT(*) FROM pageviews WHERE ts >= ? GROUP BY d ORDER BY d",
+                (month_start,)
+            ).fetchall()
+            for date_str, count in rows:
+                daily_agg[date_str] = daily_agg.get(date_str, 0) + count
+            conn.close()
+        except Exception:
+            continue
+
+    daily = [{'date': d, 'views': v} for d, v in sorted(daily_agg.items())]
+    per_artist.sort(key=lambda x: x['month'], reverse=True)
+    return jsonify({
+        'total_today': total_today,
+        'total_week': total_week,
+        'total_month': total_month,
+        'daily': daily,
+        'per_artist': per_artist,
+    })
+
+
+@bp.route('/admin/logs')
+def admin_logs():
+    """Tail a log file. Query params: file=api|vibe, lines=200, filter=text."""
+    _require_super_admin()
+    from collections import deque
+    log_file = request.args.get('file', 'api')
+    if log_file not in ('api', 'vibe'):
+        return jsonify({'error': 'file must be api or vibe'}), 400
+    max_lines = min(int(request.args.get('lines', 200)), 1000)
+    text_filter = request.args.get('filter', '').strip().lower()
+
+    log_path = _LOGS_DIR / f'{log_file}.log'
+    if not log_path.exists():
+        return jsonify({'lines': [], 'total_lines': 0})
+    try:
+        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+            all_lines = deque(f, maxlen=max_lines * 3 if text_filter else max_lines)
+        lines = [l.rstrip('\n') for l in all_lines]
+        if text_filter:
+            lines = [l for l in lines if text_filter in l.lower()][-max_lines:]
+        return jsonify({'lines': lines, 'total_lines': len(lines)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/admin/usage')
+def admin_usage():
+    """Per-artist resource usage: storage, vibe sessions, duration."""
+    _require_super_admin()
+    artists_dir = Path('artists')
+    vibe_log = _LOGS_DIR / 'vibe.log'
+
+    # Parse vibe log for per-artist stats
+    vibe_stats = {}  # slug -> {sessions: int, total_duration_ms: int}
+    if vibe_log.exists():
+        try:
+            with open(vibe_log, 'r', encoding='utf-8', errors='replace') as f:
+                for line in f:
+                    m = re.search(r'\[(\w+)\] ── PROMPT ──', line)
+                    if m:
+                        slug = m.group(1)
+                        if slug not in vibe_stats:
+                            vibe_stats[slug] = {'sessions': 0, 'total_duration_ms': 0}
+                        vibe_stats[slug]['sessions'] += 1
+                    m = re.search(r'\[(\w+)\] RESULT: cost=\S+ duration=(\d+)ms', line)
+                    if m:
+                        slug = m.group(1)
+                        dur = int(m.group(2))
+                        if slug not in vibe_stats:
+                            vibe_stats[slug] = {'sessions': 0, 'total_duration_ms': 0}
+                        vibe_stats[slug]['total_duration_ms'] += dur
+        except Exception:
+            pass
+
+    result = []
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_'):
+            continue
+        if not (item / 'config.json').exists():
+            continue
+        slug = item.name
+        storage = _get_artist_storage(slug)
+        vs = vibe_stats.get(slug, {'sessions': 0, 'total_duration_ms': 0})
+        try:
+            has_active = slug in _claude_sessions
+        except NameError:
+            has_active = False
+        result.append({
+            'slug': slug,
+            'storage': storage,
+            'vibe_sessions': vs['sessions'],
+            'vibe_duration_ms': vs['total_duration_ms'],
+            'has_active_session': has_active,
+        })
+    result.sort(key=lambda x: x['vibe_sessions'], reverse=True)
+    return jsonify({'artists': result})
+
+
+# ── Docs ──────────────────────────────────────────────────────────────────────
+
 @bp.route('/docs')
 @bp.route('/docs/<path:doc_path>')
 def serve_docs(doc_path=None):
     """
     Render the _shared/docs/ markdown files as a simple HTML page.
-    No login required — shareable with designers and widget authors.
+    Requires login (artist or super-admin).
     """
+    # Auth gate: require either super-admin or artist session
+    from auth import DEFAULT_ADMIN_TOKEN, verify_artist_token
+    admin_cookie = request.cookies.get('adze_admin_session', '')
+    artist_cookie = request.cookies.get('adze_session', '')
+    has_admin = admin_cookie and DEFAULT_ADMIN_TOKEN and admin_cookie == DEFAULT_ADMIN_TOKEN
+    has_artist = False
+    if artist_cookie and ':' in artist_cookie:
+        s, _, t = artist_cookie.partition(':')
+        has_artist = verify_artist_token(s, t)
+    if not has_admin and not has_artist:
+        return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Adze Docs — Login</title>
+<style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f2ed;margin:0}
+.box{background:#fff;padding:2rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;max-width:320px;width:100%}
+h2{margin:0 0 1rem;font-size:1.2rem;color:#2a2a28}input{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px;box-sizing:border-box}
+button{margin-top:12px;padding:10px 24px;background:#2a2a28;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+button:hover{background:#444}.err{color:#c33;font-size:13px;margin-top:8px;display:none}</style></head>
+<body><div class="box"><h2>Adze Docs</h2><p style="color:#666;font-size:13px;margin:0 0 1rem">Login required</p>
+<input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')go()">
+<button onclick="go()">Login</button><div class="err" id="err">Invalid password</div>
+<script>async function go(){const r=await fetch('/api/adze/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){location.reload()}else{document.getElementById('err').style.display='block'}}</script>
+</div></body></html>''', 200, {'Content-Type': 'text/html'}
     import re as _re
     docs_dir = Path(__file__).parent / 'docs'
     doc_files = sorted(docs_dir.glob('[0-9]*.md'))
