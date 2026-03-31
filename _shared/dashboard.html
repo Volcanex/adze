@@ -4055,7 +4055,7 @@ document.querySelectorAll('.pane-resizer').forEach(resizer => {
 });
 
 // ── AI Chat (Gemini 2.5 Flash – Agentic with Function Calling) ──
-const GEMINI_KEY = 'AIzaSyCqCQw483ETNnsYq7jsUGsL9cUmcC8gpgI';
+const GEMINI_KEY = window.__GEMINI_KEY__ || '';
 const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
 

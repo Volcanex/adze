@@ -16,6 +16,7 @@ services:
     environment:
       - DEV_ADMIN_TOKEN=${DEV_ADMIN_TOKEN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
 
 volumes:
   claude_auth:    # claude login session — survives container rebuilds

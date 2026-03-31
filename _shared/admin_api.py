@@ -163,13 +163,20 @@ def beacon():
 
 @bp.route('/dashboard')
 def dashboard():
-    """Serve the admin dashboard HTML"""
+    """Serve the admin dashboard HTML, injecting server-side secrets."""
     dashboard_path = Path(__file__).parent / 'dashboard.html'
 
     if not dashboard_path.exists():
         return jsonify({'error': 'Dashboard template not found'}), 404
 
-    response = send_file(dashboard_path)
+    html = dashboard_path.read_text(encoding='utf-8')
+
+    # Inject secrets that must not live in the repo
+    gemini_key = os.environ.get('GEMINI_API_KEY', '')
+    injection = f'<script>window.__GEMINI_KEY__={json.dumps(gemini_key)};</script>'
+    html = html.replace('</head>', injection + '\n</head>', 1)
+
+    response = Response(html, mimetype='text/html')
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
