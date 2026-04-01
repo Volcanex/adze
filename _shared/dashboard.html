@@ -2414,10 +2414,7 @@ async function loadStylesTab() {
             const step = v.name.includes('weight') ? '100' : (unit === 'px' ? '1' : '0.1');
             g += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
                 <label>${_friendlyVarName(v.name)}</label>
-                <div style="display:flex;align-items:center;gap:4px;">
-                    <input type="number" value="${num}" step="${step}" onchange="updateStyleVar(${idx}, this.value + '${unit}')" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);">
-                    ${unit ? `<span style="font-size:11px;color:var(--text2)">${unit}</span>` : ''}
-                </div>
+                <input type="number" value="${num}" step="${step}" onchange="updateStyleVar(${idx}, this.value + '${unit}')" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);text-align:right;">
             </div>`;
         });
         g += '</div>';
