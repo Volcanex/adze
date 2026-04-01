@@ -919,6 +919,19 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
 {body_html}
 </div>
 </div>
+<script>
+// Handle nav clicks — scroll the target into view manually
+document.querySelectorAll('.docs-nav a[href^="#"]').forEach(a => {{
+    a.addEventListener('click', e => {{
+        e.preventDefault();
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {{
+            target.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+            history.replaceState(null, '', a.getAttribute('href'));
+        }}
+    }});
+}});
+</script>
 </body>
 </html>"""
     return page, 200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache'}

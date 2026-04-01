@@ -15,18 +15,17 @@ LOG_PREFIX="[$(date '+%Y-%m-%d %H:%M:%S')]"
 
 echo "${LOG_PREFIX} Starting Adze backup..."
 
-# Create archive (exclude regenerable output, snapshots, pycache)
+# Create archive — include everything EXCEPT regenerable/large dirs
 cd "${ADZE_DIR}"
 tar czf "${ARCHIVE}" \
     --exclude='__pycache__' \
     --exclude='.snapshots' \
     --exclude='output' \
     --exclude='*.pyc' \
-    artists/ \
-    logs/ \
-    .env \
-    nginx/ \
-    _claude_sessions.json \
+    --exclude='.git' \
+    --exclude='node_modules' \
+    --exclude='*.tar.gz' \
+    . \
     2>/dev/null || true
 
 SIZE=$(du -sh "${ARCHIVE}" | cut -f1)
