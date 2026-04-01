@@ -2320,12 +2320,47 @@ async function loadStylesTab() {
     }
 
     if (fonts.length) {
-        html += '<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;">Fonts</div>';
+        // Build font options from assets/fonts/
+        const fontFiles = (assetList || []).filter(a => /\.(woff2?|ttf|otf)$/i.test(a.filename || a));
+        const fontFamilies = [...new Set(fontFiles.map(f => {
+            // Extract family name from filename: "Inter-Variable.woff2" → "Inter"
+            const name = f.filename || f;
+            const base = name.replace(/\.(woff2?|ttf|otf)$/i, '');
+            return base.replace(/-(Regular|Bold|Italic|Variable|Light|Medium|SemiBold|ExtraBold|Thin|Black|\d+).*$/i, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+        }))].sort();
+        const systemFonts = ['serif', 'sans-serif', 'monospace', 'cursive', 'system-ui'];
+
+        html += '<div style="margin-bottom:20px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);">Fonts</span><a href="#" onclick="switchTab(\'fonts\');return false;" style="font-size:11px;color:var(--accent);text-decoration:none;">Find new fonts &rarr;</a></div>';
         fonts.forEach(v => {
             const idx = _stylesVars.indexOf(v);
+            // Parse current primary font from value like "'Inter', sans-serif"
+            const currentPrimary = v.value.split(',')[0].trim().replace(/^'|'$/g, '');
+            const currentFallback = v.value.split(',').slice(1).map(s => s.trim()).join(', ') || 'sans-serif';
+            let selectHtml = `<select onchange="updateFontVar(${idx}, this.value, '${currentFallback.replace(/'/g, "\\'")}')" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);max-width:180px;">`;
+            // Asset fonts
+            if (fontFamilies.length) {
+                selectHtml += '<optgroup label="Your Fonts">';
+                fontFamilies.forEach(f => {
+                    const sel = f === currentPrimary ? ' selected' : '';
+                    selectHtml += `<option value="${f}"${sel}>${f}</option>`;
+                });
+                selectHtml += '</optgroup>';
+            }
+            // System fonts
+            selectHtml += '<optgroup label="System">';
+            systemFonts.forEach(f => {
+                const sel = f === currentPrimary ? ' selected' : '';
+                selectHtml += `<option value="${f}"${sel}>${f}</option>`;
+            });
+            selectHtml += '</optgroup>';
+            selectHtml += '</select>';
+
             html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
                 <label>${v.name.replace('--','')}</label>
-                <input type="text" value="${v.value}" onchange="updateStyleVar(${idx}, this.value)" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    ${selectHtml}
+                    <span style="font-size:10px;color:var(--text2);white-space:nowrap;">+ ${currentFallback}</span>
+                </div>
             </div>`;
         });
         html += '</div>';
@@ -2377,6 +2412,14 @@ function _toHex(color) {
         return '#' + [m[1],m[2],m[3]].map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
     }
     return '#000000';
+}
+
+function updateFontVar(idx, fontFamily, fallback) {
+    // Rebuild the full font value: 'FontName', fallback
+    const needsQuotes = fontFamily.includes(' ') || /^[A-Z]/.test(fontFamily);
+    const primary = needsQuotes ? `'${fontFamily}'` : fontFamily;
+    const fullValue = fallback ? `${primary}, ${fallback}` : primary;
+    updateStyleVar(idx, fullValue);
 }
 
 function updateStyleVar(idx, value) {
