@@ -6,13 +6,33 @@ Each page is a directory inside `artists/{slug}/`. **Directory names must be low
 
 ```
 artists/myartist/
+  default-styles.css   ← site-wide CSS variables (colours, fonts, sizes)
+  config.json          ← site metadata
   home/
-    content.md     ← page source
-    config.json    ← page metadata
+    content.md         ← page source
+    config.json        ← page metadata
   about/
     content.md
     config.json
 ```
+
+## default-styles.css
+
+Site-wide CSS custom properties live in `default-styles.css` in the artist's root directory. The compiler auto-injects this into every page's `<style>` block before the page's own CSS.
+
+```css
+:root {
+    --primary: #2a2a28;
+    --accent: #7a8a6e;
+    --bg: #f5f2ed;
+    --text-font: 'Inter', sans-serif;
+    --heading-font: 'Cardo', serif;
+}
+```
+
+Page CSS can reference these variables with `var(--primary)` etc. Pages can override individual vars if needed, but the defaults apply everywhere.
+
+Artists can edit these visually in the Default Styles tab of the dashboard.
 
 ## content.md format
 

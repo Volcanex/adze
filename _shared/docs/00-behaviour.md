@@ -49,3 +49,22 @@ When creating or editing pages, **always read the artist's existing pages first*
 Every new artist starts with a home and about page already styled with the default Adze design. Build on top of what's already there — customise the colours, fonts, layout etc. based on the artist's requests, but keep the correct `<style>…</style><html>…</html>` format.
 
 Do NOT invent a design from scratch, pull generic templates from training data, or add external dependencies. Work with the existing pages.
+
+## default-styles.css
+
+Site-wide CSS custom properties (colours, fonts, sizes) go in `default-styles.css` in the artist's root directory — NOT in page `<style>` blocks. The compiler auto-injects this file into every page.
+
+When creating a new site, always create or update `default-styles.css` with the `:root {}` block:
+```
+:root {
+    --primary: #2a2a28;
+    --accent: #7a8a6e;
+    --bg: #f5f2ed;
+    --text-font: 'Inter', sans-serif;
+    --heading-font: 'Cardo', serif;
+}
+```
+
+Page `<style>` blocks should reference these variables (e.g. `color: var(--primary)`) but not redefine them. When the artist asks to change site-wide colours or fonts, edit `default-styles.css`.
+
+The artist can also edit these values visually via the Default Styles tab in the dashboard.

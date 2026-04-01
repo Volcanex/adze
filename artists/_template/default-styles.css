@@ -1,0 +1,11 @@
+:root {
+    --primary: #2a2a28;
+    --accent: #7a8a6e;
+    --accent-hover: #5d7050;
+    --bg: #f5f2ed;
+    --border: #e5e0d8;
+    --text-muted: #6b6860;
+    --text-light: #9a958c;
+    --text-font: 'Inter', sans-serif;
+    --heading-font: 'Cardo', serif;
+}

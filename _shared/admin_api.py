@@ -241,6 +241,11 @@ def _scaffold_new_artist(slug):
     artist_assets = artist_dir / 'assets'
     if template_assets.exists() and not artist_assets.exists():
         shutil.copytree(template_assets, artist_assets)
+    # Copy default-styles.css if template has one and artist doesn't
+    template_styles = template_dir / 'default-styles.css'
+    artist_styles = artist_dir / 'default-styles.css'
+    if template_styles.exists() and not artist_styles.exists():
+        shutil.copy2(template_styles, artist_styles)
 
 
 # ── Analytics ─────────────────────────────────────────────────────────────
@@ -516,6 +521,52 @@ def whoami():
         'name': config.get('display_name') or config.get('name') or slug,
         'config': {k: v for k, v in config.items() if k != 'admin_token'}
     })
+
+
+# ── Default Styles ────────────────────────────────────────────────────────────
+
+@bp.route('/default-styles')
+def get_default_styles():
+    """Read the artist's default-styles.css. Falls back to extracting :root from home page."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    artist_path = get_artist_path(artist_slug)
+    styles_file = artist_path / 'default-styles.css'
+
+    if styles_file.exists():
+        return jsonify({'css': styles_file.read_text(encoding='utf-8'), 'exists': True})
+
+    # Fallback: extract :root {} from home page
+    home_content = artist_path / 'home' / 'content.md'
+    if home_content.exists():
+        import re as _re
+        raw = home_content.read_text(encoding='utf-8')
+        style_match = _re.search(r'<style>(.*?)</style>', raw, _re.DOTALL)
+        if style_match:
+            css_text = style_match.group(1)
+            root_match = _re.search(r':root\s*\{[^}]+\}', css_text)
+            if root_match:
+                return jsonify({'css': root_match.group(0) + '\n', 'exists': False})
+
+    return jsonify({'css': '', 'exists': False})
+
+
+@bp.route('/default-styles', methods=['POST'])
+def save_default_styles():
+    """Save the artist's default-styles.css."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    data = request.get_json() or {}
+    css = data.get('css', '').strip()
+    if not css:
+        return jsonify({'error': 'css is required'}), 400
+
+    artist_path = get_artist_path(artist_slug)
+    styles_file = artist_path / 'default-styles.css'
+    styles_file.write_text(css + '\n', encoding='utf-8')
+    return jsonify({'ok': True})
 
 
 # ── Super-Admin Dashboard ─────────────────────────────────────────────────────

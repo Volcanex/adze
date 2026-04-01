@@ -45,7 +45,16 @@ class AdzeCompiler:
 
         # Extract CSS
         css_match = re.search(r'<style>(.*?)</style>', raw, re.DOTALL)
-        css = f"<style>{css_match.group(1)}</style>" if css_match else ""
+        page_css = css_match.group(1) if css_match else ""
+
+        # Prepend default-styles.css if it exists (site-wide CSS vars)
+        artist_dir = page_dir.parent
+        default_styles_file = artist_dir / 'default-styles.css'
+        if default_styles_file.exists():
+            default_css = default_styles_file.read_text(encoding='utf-8')
+            page_css = default_css + '\n' + page_css
+
+        css = f"<style>{page_css}</style>" if page_css else ""
 
         # Extract HTML
         html_match = re.search(r'<html>(.*?)</html>', raw, re.DOTALL)
