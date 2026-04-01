@@ -2276,6 +2276,29 @@ function _parseRootVars(css) {
     return vars;
 }
 
+function _friendlyVarName(name) {
+    // "--text-font" → "Body Font", "--heading-font" → "Heading Font", "--accent-hover" → "Accent Hover"
+    const friendly = {
+        '--text-font': 'Body Font',
+        '--heading-font': 'Heading Font',
+        '--body-font': 'Body Font',
+        '--primary': 'Primary',
+        '--accent': 'Accent',
+        '--accent-hover': 'Accent Hover',
+        '--bg': 'Background',
+        '--border': 'Border',
+        '--text-muted': 'Muted Text',
+        '--text-light': 'Light Text',
+        '--text': 'Text',
+        '--surface': 'Surface',
+        '--danger': 'Danger',
+        '--success': 'Success',
+    };
+    if (friendly[name]) return friendly[name];
+    // Fallback: "--my-var-name" → "My Var Name"
+    return name.replace('--', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function _buildRootCss(vars) {
     const lines = vars.map(v => `    ${v.name}: ${v.value};`);
     return ':root {\n' + lines.join('\n') + '\n}\n';
@@ -2309,7 +2332,7 @@ async function loadStylesTab() {
         colors.forEach((v, i) => {
             const idx = _stylesVars.indexOf(v);
             html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
-                <label>${v.name.replace('--','')}</label>
+                <label>${_friendlyVarName(v.name)}</label>
                 <div style="display:flex;align-items:center;gap:8px;">
                     <input type="color" value="${_toHex(v.value)}" onchange="updateStyleVar(${idx}, this.value)" style="width:32px;height:28px;border:1px solid var(--border);border-radius:4px;padding:1px;cursor:pointer;background:none;">
                     <input type="text" value="${v.value}" onchange="updateStyleVar(${idx}, this.value)" style="width:100px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);">
@@ -2355,12 +2378,12 @@ async function loadStylesTab() {
             selectHtml += '</optgroup>';
             selectHtml += '</select>';
 
+            // Friendly label: "--text-font" → "Body Font", "--heading-font" → "Heading Font"
+            const friendlyName = _friendlyVarName(v.name);
+
             html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
-                <label>${v.name.replace('--','')}</label>
-                <div style="display:flex;align-items:center;gap:6px;">
-                    ${selectHtml}
-                    <span style="font-size:10px;color:var(--text2);white-space:nowrap;">+ ${currentFallback}</span>
-                </div>
+                <label>${friendlyName}</label>
+                ${selectHtml}
             </div>`;
         });
         html += '</div>';
@@ -2374,7 +2397,7 @@ async function loadStylesTab() {
             const num = numMatch ? numMatch[1] : v.value;
             const unit = numMatch ? numMatch[2] : '';
             html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
-                <label>${v.name.replace('--','')}</label>
+                <label>${_friendlyVarName(v.name)}</label>
                 <div style="display:flex;align-items:center;gap:4px;">
                     <input type="number" value="${num}" step="0.1" onchange="updateStyleVar(${idx}, this.value + '${unit}')" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);">
                     <span style="font-size:11px;color:var(--text2)">${unit}</span>
@@ -2389,7 +2412,7 @@ async function loadStylesTab() {
         other.forEach(v => {
             const idx = _stylesVars.indexOf(v);
             html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
-                <label>${v.name.replace('--','')}</label>
+                <label>${_friendlyVarName(v.name)}</label>
                 <input type="text" value="${v.value}" onchange="updateStyleVar(${idx}, this.value)" style="flex:1;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);">
             </div>`;
         });
