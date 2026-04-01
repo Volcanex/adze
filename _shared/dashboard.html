@@ -2259,6 +2259,7 @@ function _detectVarType(value) {
     if (/^#[0-9a-fA-F]{3,8}$/.test(value)) return 'color';
     if (/^(rgb|hsl)a?\(/.test(value)) return 'color';
     if (/^\d+(\.\d+)?(px|rem|em|%|vw|vh)$/.test(value)) return 'size';
+    if (/^\d+(\.\d+)?$/.test(value)) return 'number';
     if (/^'[^']+'/.test(value) || /serif|sans-serif|monospace|cursive/i.test(value)) return 'font';
     return 'text';
 }
@@ -2277,25 +2278,31 @@ function _parseRootVars(css) {
 }
 
 function _friendlyVarName(name) {
-    // "--text-font" → "Body Font", "--heading-font" → "Heading Font", "--accent-hover" → "Accent Hover"
     const friendly = {
-        '--text-font': 'Body Font',
-        '--heading-font': 'Heading Font',
-        '--body-font': 'Body Font',
-        '--primary': 'Primary',
-        '--accent': 'Accent',
-        '--accent-hover': 'Accent Hover',
-        '--bg': 'Background',
-        '--border': 'Border',
-        '--text-muted': 'Muted Text',
-        '--text-light': 'Light Text',
-        '--text': 'Text',
-        '--surface': 'Surface',
-        '--danger': 'Danger',
-        '--success': 'Success',
+        // Colours
+        '--primary': 'Primary', '--accent': 'Accent', '--accent-hover': 'Accent Hover',
+        '--bg': 'Background', '--border': 'Border',
+        '--text-muted': 'Muted Text', '--text-light': 'Light Text',
+        '--text': 'Text', '--surface': 'Surface',
+        '--danger': 'Danger', '--success': 'Success',
+        // Fonts
+        '--text-font': 'Body Font', '--heading-font': 'Heading Font', '--body-font': 'Body Font',
+        // Body text
+        '--body-size': 'Body Size', '--body-weight': 'Body Weight', '--body-line-height': 'Body Line Height',
+        // Headings
+        '--h1-size': 'H1 Size', '--h1-weight': 'H1 Weight',
+        '--h2-size': 'H2 Size', '--h2-weight': 'H2 Weight',
+        '--h3-size': 'H3 Size', '--h3-weight': 'H3 Weight',
+        '--heading-line-height': 'Heading Line Height',
+        // Layout
+        '--content-max-width': 'Content Width', '--sidebar-width': 'Sidebar Width',
+        '--page-padding': 'Page Padding', '--section-gap': 'Section Gap',
+        '--border-radius': 'Border Radius',
+        // Nav
+        '--nav-size': 'Nav Font Size', '--nav-weight': 'Nav Font Weight',
+        '--site-name-size': 'Site Name Size', '--site-name-weight': 'Site Name Weight',
     };
     if (friendly[name]) return friendly[name];
-    // Fallback: "--my-var-name" → "My Var Name"
     return name.replace('--', '').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
@@ -2322,8 +2329,15 @@ async function loadStylesTab() {
     // Group by type
     const colors = _stylesVars.filter(v => v.type === 'color');
     const fonts = _stylesVars.filter(v => v.type === 'font');
-    const sizes = _stylesVars.filter(v => v.type === 'size');
+    const sizes = _stylesVars.filter(v => v.type === 'size' || v.type === 'number');
     const other = _stylesVars.filter(v => v.type === 'text');
+
+    // Sub-group sizes into typography vs layout
+    const typoVars = ['--body-size','--body-weight','--body-line-height','--h1-size','--h1-weight','--h2-size','--h2-weight','--h3-size','--h3-weight','--heading-line-height','--nav-size','--nav-weight','--site-name-size','--site-name-weight'];
+    const layoutVars = ['--content-max-width','--sidebar-width','--page-padding','--section-gap','--border-radius'];
+    const typography = sizes.filter(v => typoVars.includes(v.name));
+    const layout = sizes.filter(v => layoutVars.includes(v.name));
+    const otherSizes = sizes.filter(v => !typoVars.includes(v.name) && !layoutVars.includes(v.name));
 
     let html = '';
 
@@ -2389,23 +2403,30 @@ async function loadStylesTab() {
         html += '</div>';
     }
 
-    if (sizes.length) {
-        html += '<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;">Sizes</div>';
-        sizes.forEach(v => {
+    function _renderSizeGroup(label, vars) {
+        if (!vars.length) return '';
+        let g = `<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;">${label}</div>`;
+        vars.forEach(v => {
             const idx = _stylesVars.indexOf(v);
             const numMatch = v.value.match(/([\d.]+)(.*)/);
             const num = numMatch ? numMatch[1] : v.value;
-            const unit = numMatch ? numMatch[2] : '';
-            html += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
+            const unit = numMatch ? numMatch[2].trim() : '';
+            const step = v.name.includes('weight') ? '100' : (unit === 'px' ? '1' : '0.1');
+            g += `<div class="style-row" data-var="${v.name}" onmouseenter="highlightVar('${v.name}')" onmouseleave="clearHighlight()">
                 <label>${_friendlyVarName(v.name)}</label>
                 <div style="display:flex;align-items:center;gap:4px;">
-                    <input type="number" value="${num}" step="0.1" onchange="updateStyleVar(${idx}, this.value + '${unit}')" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);">
-                    <span style="font-size:11px;color:var(--text2)">${unit}</span>
+                    <input type="number" value="${num}" step="${step}" onchange="updateStyleVar(${idx}, this.value + '${unit}')" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:var(--mono);background:var(--bg);color:var(--text);">
+                    ${unit ? `<span style="font-size:11px;color:var(--text2)">${unit}</span>` : ''}
                 </div>
             </div>`;
         });
-        html += '</div>';
+        g += '</div>';
+        return g;
     }
+
+    html += _renderSizeGroup('Typography', typography);
+    html += _renderSizeGroup('Layout', layout);
+    html += _renderSizeGroup('Sizes', otherSizes);
 
     if (other.length) {
         html += '<div style="margin-bottom:20px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:8px;">Other</div>';

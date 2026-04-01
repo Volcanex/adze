@@ -28,27 +28,15 @@
     src: url('../assets/fonts/Cardo-Bold.woff2') format('woff2');
 }
 
-:root {
-    --primary: #2a2a28;
-    --accent: #7a8a6e;
-    --accent-hover: #5d7050;
-    --bg: #f5f2ed;
-    --border: #e5e0d8;
-    --text-muted: #6b6860;
-    --text-light: #9a958c;
-    --text-font: 'Inter', sans-serif;
-    --heading-font: 'Cardo', serif;
-}
-
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: var(--text-font);
     color: var(--primary);
     background: var(--bg);
-    line-height: 1.7;
-    font-size: 1.05rem;
-    font-weight: 400;
+    line-height: var(--body-line-height);
+    font-size: var(--body-size);
+    font-weight: var(--body-weight);
     min-height: 100vh;
     display: flex;
     opacity: 0;
@@ -70,20 +58,23 @@ body::before {
 @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideRight { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
-h1, h2, h3 { font-family: var(--heading-font); color: var(--primary); line-height: 1.4; }
+h1, h2, h3 { font-family: var(--heading-font); color: var(--primary); line-height: var(--heading-line-height); }
+h1 { font-size: var(--h1-size); font-weight: var(--h1-weight); }
+h2 { font-size: var(--h2-size); font-weight: var(--h2-weight); }
+h3 { font-size: var(--h3-size); font-weight: var(--h3-weight); }
 a { color: var(--primary); text-decoration: none; transition: color 0.4s ease; }
 a:hover { color: var(--accent); }
 
 .sidebar {
-    width: 260px; min-width: 260px; min-height: 100vh;
-    padding: 48px 36px; display: flex; flex-direction: column; gap: 28px;
+    width: var(--sidebar-width); min-width: var(--sidebar-width); min-height: 100vh;
+    padding: var(--page-padding) 36px; display: flex; flex-direction: column; gap: var(--section-gap);
     animation: slideRight 0.8s ease-out 0.1s both;
 }
-.site-name { font-family: var(--text-font); font-weight: 600; font-size: 18px; display: block; letter-spacing: 0.2px; transition: color 0.4s ease; }
+.site-name { font-family: var(--text-font); font-weight: var(--site-name-weight); font-size: var(--site-name-size); display: block; letter-spacing: 0.2px; transition: color 0.4s ease; }
 .site-name:hover { color: var(--accent); }
 
 .nav-links { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.nav-links a { font-size: 14px; font-weight: 400; display: block; transition: color 0.3s ease, padding-left 0.3s ease; }
+.nav-links a { font-size: var(--nav-size); font-weight: var(--nav-weight); display: block; transition: color 0.3s ease, padding-left 0.3s ease; }
 .nav-links a:hover { color: var(--accent); padding-left: 6px; }
 
 .social-links { display: flex; gap: 16px; margin-top: auto; }
@@ -113,10 +104,10 @@ a:hover { color: var(--accent); }
 }
 
 .main-content {
-    flex: 1; padding: 80px 60px; max-width: 640px;
+    flex: 1; padding: var(--page-padding) 60px; max-width: var(--content-max-width);
     animation: pageIn 1s ease-out 0.3s both;
 }
-.main-content h1 { font-style: italic; font-weight: 400; font-size: 2rem; margin-bottom: 24px; }
+.main-content h1 { font-style: italic; font-weight: var(--h1-weight); font-size: var(--h1-size); margin-bottom: 24px; }
 .main-content p { color: var(--text-muted); margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
 .main-content a { color: var(--accent); }
 
