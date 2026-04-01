@@ -119,21 +119,21 @@ _STORAGE_CACHE_TTL = 60  # seconds
 
 
 def _get_artist_storage(slug):
-    """Get storage size string for an artist, cached for 60s."""
+    """Get storage size in bytes for an artist, cached for 60s."""
     now = _time.time()
     cached = _storage_cache.get(slug)
     if cached and (now - cached[0]) < _STORAGE_CACHE_TTL:
         return cached[1]
     try:
         result = subprocess.run(
-            ['du', '-sh', f'artists/{slug}/'],
+            ['du', '-sb', f'artists/{slug}/'],
             capture_output=True, timeout=5, text=True
         )
-        size = result.stdout.split('\t')[0].strip() if result.returncode == 0 else '?'
+        size_bytes = int(result.stdout.split('\t')[0]) if result.returncode == 0 else 0
     except Exception:
-        size = '?'
-    _storage_cache[slug] = (now, size)
-    return size
+        size_bytes = 0
+    _storage_cache[slug] = (now, size_bytes)
+    return size_bytes
 
 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'}
@@ -591,7 +591,7 @@ def admin_artists():
             'contact_email': cfg.get('contact_email', ''),
             'pages': pages,
             'page_count': len(pages),
-            'storage': storage,
+            'storage_bytes': storage,
             'views_30d': views_30d,
             'last_login': cfg.get('last_login'),
             'last_login_ip': cfg.get('last_login_ip', ''),
@@ -722,7 +722,7 @@ def admin_usage():
             has_active = False
         result.append({
             'slug': slug,
-            'storage': storage,
+            'storage_bytes': storage,
             'vibe_sessions': vs['sessions'],
             'vibe_duration_ms': vs['total_duration_ms'],
             'has_active_session': has_active,
@@ -752,12 +752,16 @@ def serve_docs(doc_path=None):
     if not has_admin and not has_artist:
         return '''<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Adze Docs — Login</title>
-<style>body{font-family:system-ui;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f2ed;margin:0}
-.box{background:#fff;padding:2rem;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);text-align:center;max-width:320px;width:100%}
-h2{margin:0 0 1rem;font-size:1.2rem;color:#2a2a28}input{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;font-size:14px;box-sizing:border-box}
-button{margin-top:12px;padding:10px 24px;background:#2a2a28;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
-button:hover{background:#444}.err{color:#c33;font-size:13px;margin-top:8px;display:none}</style></head>
-<body><div class="box"><h2>Adze Docs</h2><p style="color:#666;font-size:13px;margin:0 0 1rem">Login required</p>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>body{font-family:'Inter',-apple-system,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f5f2ed;margin:0}
+.box{background:#fff;padding:2.5rem;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.08);text-align:center;max-width:340px;width:100%}
+h2{margin:0 0 0.5rem;font-family:'Cardo',Georgia,serif;font-weight:400;font-style:italic;font-size:1.3rem;color:#2a2a28}
+p{color:#6b6860;font-size:13px;margin:0 0 1.5rem}
+input{width:100%;padding:10px 12px;border:1px solid #ddd8cf;border-radius:4px;font-size:14px;box-sizing:border-box;background:#f5f2ed}
+button{margin-top:12px;padding:10px 28px;background:#6b8cae;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+button:hover{background:#547a9e}.err{color:#c0392b;font-size:13px;margin-top:8px;display:none}</style></head>
+<body><div class="box"><img src="/api/adze/logo.png" alt="" style="height:32px;margin-bottom:12px;opacity:0.85">
+<h2>Adze Studio</h2><p>Login to view docs</p>
 <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')go()">
 <button onclick="go()">Login</button><div class="err" id="err">Invalid password</div>
 <script>async function go(){const r=await fetch('/api/adze/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -830,19 +834,30 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Adze Studio — Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-  :root {{ --bg:#f5f2ed; --surface:#fff; --border:#ddd8cf; --text:#2a2a28; --text2:#5a5750; --accent:#5a8bbe; --radius:6px; --mono:'Monaco','Menlo','Courier New',monospace; }}
-  @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --border:#3e3e44; --text:#e8e6e0; --text2:#aaa79e; }} }}
+  :root {{ --bg:#f5f2ed; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf; --text:#2a2a28; --text2:#6b6860; --accent:#6b8cae; --accent-hover:#547a9e; --radius:8px; --mono:'Monaco','Menlo','Courier New',monospace; --heading-font:'Cardo',Georgia,serif; --body-font:'Inter',-apple-system,sans-serif; --shadow-sm:0 1px 3px rgba(0,0,0,0.06); }}
+  @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44; --text:#e8e6e0; --text2:#9a978e; --accent:#7ea3c4; --shadow-sm:0 1px 3px rgba(0,0,0,0.2); }} }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  body {{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.7; }}
+  body {{ font-family:var(--body-font); background:var(--bg); color:var(--text); font-size:14px; line-height:1.7; }}
   a {{ color:var(--accent); text-decoration:none; }}
   a:hover {{ text-decoration:underline; }}
-  nav {{ position:fixed; top:0; left:0; width:220px; height:100vh; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; overflow-y:auto; }}
-  nav h2 {{ font-size:13px; font-weight:700; letter-spacing:.5px; color:var(--text2); text-transform:uppercase; margin-bottom:16px; }}
-  nav a {{ display:block; padding:5px 8px; border-radius:var(--radius); font-size:12px; color:var(--text2); margin-bottom:2px; }}
-  nav a:hover {{ background:var(--bg); color:var(--text); text-decoration:none; }}
-  main {{ margin-left:220px; padding:48px; max-width:860px; }}
-  h1 {{ font-size:28px; font-weight:700; margin:0 0 8px; }}
+  .docs-header {{ background:var(--surface); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm); }}
+  .docs-header-left {{ display:flex; align-items:center; gap:16px; }}
+  .docs-header-left h1 {{ font-family:var(--heading-font); font-weight:400; font-style:italic; font-size:20px; }}
+  .docs-header-left h1 span {{ font-style:normal; font-weight:300; color:var(--text2); font-size:14px; font-family:var(--body-font); margin-left:4px; }}
+  .docs-header-right {{ display:flex; gap:8px; }}
+  .docs-header-right a {{ background:none; border:1px solid var(--border); padding:6px 14px; border-radius:4px; font-size:12px; color:var(--text2); text-decoration:none; }}
+  .docs-header-right a:hover {{ background:var(--surface2); text-decoration:none; }}
+  .docs-wrap {{ display:flex; margin-top:0; }}
+  .docs-nav {{ width:220px; min-width:220px; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto; }}
+  .docs-nav h2 {{ font-size:11px; font-weight:600; letter-spacing:.5px; color:var(--text2); text-transform:uppercase; margin-bottom:12px; }}
+  .docs-nav a {{ display:block; padding:5px 8px; border-radius:var(--radius); font-size:12px; color:var(--text2); margin-bottom:2px; }}
+  .docs-nav a:hover {{ background:var(--bg); color:var(--text); text-decoration:none; }}
+  .docs-main {{ flex:1; padding:48px; max-width:860px; }}
+  h1 {{ font-family:var(--heading-font); font-size:24px; font-weight:400; margin:0 0 8px; }}
   h2 {{ font-size:18px; font-weight:600; margin:32px 0 10px; padding-top:8px; border-top:1px solid var(--border); }}
   h3 {{ font-size:14px; font-weight:600; margin:24px 0 8px; }}
   h4 {{ font-size:13px; font-weight:600; margin:16px 0 6px; color:var(--text2); }}
@@ -851,25 +866,35 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
   li {{ margin-bottom:4px; }}
   pre {{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; overflow-x:auto; margin:0 0 16px; }}
   code {{ font-family:var(--mono); font-size:12px; }}
-  p code, li code, td code {{ background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-size:11px; }}
+  p code, li code, td code {{ background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:1px 5px; font-size:11px; }}
   table {{ border-collapse:collapse; width:100%; margin:0 0 16px; font-size:12px; }}
   th,td {{ border:1px solid var(--border); padding:7px 10px; text-align:left; }}
-  th {{ background:var(--surface); font-weight:600; }}
+  th {{ background:var(--surface2); font-weight:600; }}
   hr {{ border:none; border-top:1px solid var(--border); margin:40px 0; }}
   section {{ margin-bottom:8px; }}
-  @media(max-width:700px) {{ nav {{ display:none; }} main {{ margin-left:0; padding:24px; }} }}
+  @media(max-width:700px) {{ .docs-nav {{ display:none; }} .docs-main {{ padding:24px; }} }}
 </style>
 </head>
 <body>
-<nav>
-  <h2>Adze Docs</h2>
+<div class="docs-header">
+  <div class="docs-header-left">
+    <img src="/api/adze/logo.png" alt="" style="height:26px;opacity:0.85">
+    <h1>Adze Studio <span>Docs</span></h1>
+  </div>
+  <div class="docs-header-right">
+    <a href="/admin">Admin</a>
+    <a href="/dashboard">Dashboard</a>
+  </div>
+</div>
+<div class="docs-wrap">
+<div class="docs-nav">
+  <h2>Contents</h2>
   {nav_html}
-  <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
-  <a href="/dashboard" style="font-size:11px;">← Dashboard</a>
-</nav>
-<main>
+</div>
+<div class="docs-main">
 {body_html}
-</main>
+</div>
+</div>
 </body>
 </html>"""
     return page, 200, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache'}
