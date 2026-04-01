@@ -167,6 +167,8 @@
                     <h3>Traffic — Last 30 Days</h3>
                     <canvas id="overviewChart" height="180"></canvas>
                 </div>
+                <div class="cards" id="systemCards" style="margin-bottom:24px"></div>
+
                 <div class="section-header"><h2>Recent Vibe Coder Activity</h2></div>
                 <div class="table-wrap"><table><thead><tr><th>Time</th><th>Artist</th><th>Event</th></tr></thead><tbody id="recentVibe"></tbody></table></div>
             </div>
@@ -325,10 +327,11 @@ function switchTab(name) {
 
 // ── Overview ──
 async function loadOverview() {
-    const [artists, traffic, logs] = await Promise.all([
+    const [artists, traffic, logs, status] = await Promise.all([
         api('/api/adze/admin/artists'),
         api('/api/adze/admin/traffic'),
         api('/api/adze/admin/logs?file=vibe&lines=30'),
+        api('/api/adze/admin/status'),
     ]);
     if (!artists || !traffic) return;
 
@@ -343,6 +346,37 @@ async function loadOverview() {
     `;
 
     drawChart('overviewChart', traffic.daily);
+
+    // System status
+    if (status) {
+        const d = status.docker || {};
+        const dk = status.disk || {};
+        const b = status.backup || {};
+        const dockerOk = d.status === 'running';
+        const backupSize = b.last_size ? formatGB(b.last_size) : '—';
+        document.getElementById('systemCards').innerHTML = `
+            <div class="card">
+                <div class="card-label">Docker</div>
+                <div class="card-value" style="font-size:18px">${dockerOk ? '<span style="color:var(--success)">Running</span>' : '<span style="color:var(--danger)">' + esc(d.status || '?') + '</span>'}</div>
+                <div class="card-sub">${d.cpu || '?'} CPU · ${d.memory || '?'}</div>
+                <div class="card-sub">Restarts: ${d.restarts ?? '?'} · Up since ${d.started ? d.started.slice(5) : '?'}</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Disk</div>
+                <div class="card-value" style="font-size:18px">${dk.percent || '?'}</div>
+                <div class="card-sub">${dk.used || '?'} / ${dk.total || '?'} (${dk.available || '?'} free)</div>
+            </div>
+            <div class="card">
+                <div class="card-label">GCS Backup</div>
+                <div class="card-value" style="font-size:18px">${b.last_date || 'None'}</div>
+                <div class="card-sub">${backupSize} · ${b.count || 0} backups stored</div>
+            </div>
+            <div class="card">
+                <div class="card-label">Vibe Coder</div>
+                <div class="card-value" style="font-size:18px">${status.claude?.active_sessions || 0} <span style="font-size:14px;color:var(--text2)">sessions</span></div>
+            </div>
+        `;
+    }
 
     // Recent vibe activity
     const tbody = document.getElementById('recentVibe');

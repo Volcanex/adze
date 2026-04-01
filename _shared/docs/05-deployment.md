@@ -124,6 +124,34 @@ sudo nginx -t && sudo systemctl reload nginx
 
 The `/docs` route is now auth-gated — requires a logged-in artist session or super-admin session. Unauthenticated visitors see a login form.
 
+## GCS backups
+
+Daily rolling backup to `gs://adze-backups/adze/daily/`. Keeps 7 days. Backs up artists/, logs/, .env, nginx configs (skips output/ since it's regenerable).
+
+```bash
+# Manual run
+/home/gabriel/adze/backup-gcs.sh
+
+# Cron (3am daily, already set up)
+0 3 * * * /home/gabriel/adze/backup-gcs.sh >> /home/gabriel/adze/logs/backup-gcs.log 2>&1
+```
+
+Restore:
+```bash
+gsutil cp gs://adze-backups/adze/daily/2026-04-01.tar.gz /tmp/
+cd /home/gabriel/adze && tar xzf /tmp/2026-04-01.tar.gz
+docker compose restart flask
+```
+
+## System status
+
+`status-update.sh` writes Docker, disk, and backup status to `logs/status.json` every 5 minutes. The admin dashboard reads this file.
+
+```bash
+# Cron (every 5 min, already set up)
+*/5 * * * * /home/gabriel/adze/status-update.sh
+```
+
 ## nginx config reference
 
 The adze.studio nginx config lives in `nginx/adze.studio.conf` in the repo. It proxies to `127.0.0.1:5001` where Docker Flask is listening. Artist domain configs go in `nginx/sites-available/` (written by the activate-domain endpoint).

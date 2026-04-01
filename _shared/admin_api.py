@@ -731,6 +731,29 @@ def admin_usage():
     return jsonify({'artists': result})
 
 
+@bp.route('/admin/status')
+def admin_status():
+    """System status: Docker, backups, disk. Read from status.json (updated by host cron)."""
+    _require_super_admin()
+
+    # Read status.json written by status-update.sh on the host
+    status_path = Path(__file__).parent.parent / 'logs' / 'status.json'
+    status = {}
+    try:
+        if status_path.exists():
+            status = json.loads(status_path.read_text())
+    except Exception:
+        pass
+
+    # Add live data from inside the container
+    try:
+        status['claude'] = {'active_sessions': len(_claude_sessions)}
+    except Exception:
+        status['claude'] = {'active_sessions': 0}
+
+    return jsonify(status)
+
+
 # ── Docs ──────────────────────────────────────────────────────────────────────
 
 @bp.route('/docs')
