@@ -807,15 +807,25 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
             title = m.group(1)
         anchor = f.stem
         nav_items.append(f'<a href="#doc-{anchor}">{title}</a>')
-        # Minimal markdown → HTML: headers, code blocks, inline code, bold, tables
+        # Minimal markdown → HTML
         html = text
+        # 1. Extract code blocks FIRST (before any other processing)
+        _code_blocks = []
+        def _stash_code(m2):
+            escaped = m2.group(2).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            _code_blocks.append(f'<pre><code class="lang-{m2.group(1)}">{escaped}</code></pre>')
+            return f'\x00CODEBLOCK{len(_code_blocks)-1}\x00'
+        html = _re.sub(r'```(\w*)\n(.*?)```', _stash_code, html, flags=_re.S)
+        # 2. Now process headers, inline code, bold (safe — code blocks are stashed)
         html = _re.sub(r'^#### (.+)$', r'<h4>\1</h4>', html, flags=_re.M)
         html = _re.sub(r'^### (.+)$', r'<h3>\1</h3>', html, flags=_re.M)
         html = _re.sub(r'^## (.+)$', r'<h2>\1</h2>', html, flags=_re.M)
         html = _re.sub(r'^# (.+)$', r'<h1>\1</h1>', html, flags=_re.M)
-        html = _re.sub(r'```(\w*)\n(.*?)```', lambda m2: f'<pre><code class="lang-{m2.group(1)}">{m2.group(2).replace("<","&lt;").replace(">","&gt;")}</code></pre>', html, flags=_re.S)
-        html = _re.sub(r'`([^`]+)`', r'<code>\1</code>', html)
+        html = _re.sub(r'`([^`]+)`', lambda m3: f'<code>{m3.group(1).replace("<","&lt;").replace(">","&gt;")}</code>', html)
         html = _re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', html)
+        # 3. Restore code blocks
+        for i, block in enumerate(_code_blocks):
+            html = html.replace(f'\x00CODEBLOCK{i}\x00', block)
         # Tables
         def render_table(m2):
             rows = [r.strip() for r in m2.group(0).strip().split('\n') if r.strip() and not _re.match(r'^[\|\s\-:]+$', r)]
