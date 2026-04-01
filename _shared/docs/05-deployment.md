@@ -124,33 +124,79 @@ sudo nginx -t && sudo systemctl reload nginx
 
 The `/docs` route is now auth-gated — requires a logged-in artist session or super-admin session. Unauthenticated visitors see a login form.
 
-## GCS backups
+## Docker architecture
 
-Daily rolling backup to `gs://adze-backups/adze/daily/`. Keeps 7 days. Backs up artists/, logs/, .env, nginx configs (skips output/ since it's regenerable).
+Flask runs inside a Docker container (`adze-flask`). All artist data lives on the **host** filesystem and is mounted into the container as bind volumes:
 
-```bash
-# Manual run
-/home/gabriel/adze/backup-gcs.sh
-
-# Cron (3am daily, already set up)
-0 3 * * * /home/gabriel/adze/backup-gcs.sh >> /home/gabriel/adze/logs/backup-gcs.log 2>&1
+```
+Host                              → Container
+artists/                          → /app/artists/      (artist configs, content, assets, DBs)
+output/                           → /app/output/       (compiled static sites)
+_shared/                          → /app/_shared/      (platform code)
+logs/                             → /app/logs/         (application logs)
+flask_server.py, compile.py       → /app/              (live-mounted, restart to pick up changes)
+claude_auth (Docker volume)       → /root/.claude      (Claude CLI auth, persists across rebuilds)
 ```
 
-Restore:
+The container itself is stateless — all persistent data is on the host. Rebuilding the container (`docker compose build`) doesn't lose any data.
+
+## Cron jobs
+
+Two cron jobs run on the **host** (not inside Docker):
+
+```bash
+# Daily GCS backup at 3am
+0 3 * * * /home/gabriel/adze/backup-gcs.sh >> /home/gabriel/adze/logs/backup-gcs.log 2>&1
+
+# System status update every 5 minutes (feeds the admin dashboard)
+*/5 * * * * /home/gabriel/adze/status-update.sh
+```
+
+To set up on a new server:
+```bash
+crontab -e
+# paste the two lines above
+```
+
+## GCS backups
+
+Daily rolling backup of the **host data** (not the Docker image) to `gs://adze-backups/adze/daily/`. 7-day retention.
+
+**What's backed up:**
+- `artists/` — all artist configs, content, assets, SQLite analytics databases (~170MB)
+- `logs/` — API and Vibe Coder logs
+- `.env` — secrets
+- `nginx/` — custom domain configs
+- `_claude_sessions.json` — active vibe coder sessions
+
+**What's NOT backed up (regenerable):**
+- `output/` — compiled static sites (regenerate with `python3 compile.py`)
+- Docker image — rebuild with `docker compose build`
+- `claude_auth` volume — re-login with `docker exec -it adze-flask claude login`
+
+**Cost:** ~$0.07/month (170MB x 7 days at $0.02/GB/month)
+
+```bash
+# Manual backup
+/home/gabriel/adze/backup-gcs.sh
+
+# Check backups
+gsutil ls -l gs://adze-backups/adze/daily/
+```
+
+**Restore:**
 ```bash
 gsutil cp gs://adze-backups/adze/daily/2026-04-01.tar.gz /tmp/
 cd /home/gabriel/adze && tar xzf /tmp/2026-04-01.tar.gz
 docker compose restart flask
+python3 compile.py   # regenerate output/
 ```
 
 ## System status
 
-`status-update.sh` writes Docker, disk, and backup status to `logs/status.json` every 5 minutes. The admin dashboard reads this file.
+`status-update.sh` runs on the host every 5 minutes and writes Docker stats, disk usage, and backup info to `logs/status.json`. The admin dashboard (`/admin`) reads this file to display system health.
 
-```bash
-# Cron (every 5 min, already set up)
-*/5 * * * * /home/gabriel/adze/status-update.sh
-```
+Includes: container status, CPU/memory, disk usage, last backup date/size, backup count.
 
 ## nginx config reference
 

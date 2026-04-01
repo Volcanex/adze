@@ -864,6 +864,7 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
   :root {{ --bg:#f5f2ed; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf; --text:#2a2a28; --text2:#6b6860; --accent:#6b8cae; --accent-hover:#547a9e; --radius:8px; --mono:'Monaco','Menlo','Courier New',monospace; --heading-font:'Cardo',Georgia,serif; --body-font:'Inter',-apple-system,sans-serif; --shadow-sm:0 1px 3px rgba(0,0,0,0.06); }}
   @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44; --text:#e8e6e0; --text2:#9a978e; --accent:#7ea3c4; --shadow-sm:0 1px 3px rgba(0,0,0,0.2); }} }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
+  html {{ scroll-behavior:smooth; scroll-padding-top:72px; }}
   body {{ font-family:var(--body-font); background:var(--bg); color:var(--text); font-size:14px; line-height:1.7; }}
   a {{ color:var(--accent); text-decoration:none; }}
   a:hover {{ text-decoration:underline; }}
@@ -874,12 +875,12 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
   .docs-header-right {{ display:flex; gap:8px; }}
   .docs-header-right a {{ background:none; border:1px solid var(--border); padding:6px 14px; border-radius:4px; font-size:12px; color:var(--text2); text-decoration:none; }}
   .docs-header-right a:hover {{ background:var(--surface2); text-decoration:none; }}
-  .docs-wrap {{ display:flex; margin-top:0; }}
-  .docs-nav {{ width:220px; min-width:220px; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; position:sticky; top:56px; height:calc(100vh - 56px); overflow-y:auto; }}
+  .docs-wrap {{ display:flex; }}
+  .docs-nav {{ width:220px; min-width:220px; background:var(--surface); border-right:1px solid var(--border); padding:24px 16px; position:fixed; top:56px; bottom:0; overflow-y:auto; }}
   .docs-nav h2 {{ font-size:11px; font-weight:600; letter-spacing:.5px; color:var(--text2); text-transform:uppercase; margin-bottom:12px; }}
   .docs-nav a {{ display:block; padding:5px 8px; border-radius:var(--radius); font-size:12px; color:var(--text2); margin-bottom:2px; }}
   .docs-nav a:hover {{ background:var(--bg); color:var(--text); text-decoration:none; }}
-  .docs-main {{ flex:1; padding:48px; max-width:860px; }}
+  .docs-main {{ flex:1; padding:48px; max-width:860px; margin-left:220px; }}
   h1 {{ font-family:var(--heading-font); font-size:24px; font-weight:400; margin:0 0 8px; }}
   h2 {{ font-size:18px; font-weight:600; margin:32px 0 10px; padding-top:8px; border-top:1px solid var(--border); }}
   h3 {{ font-size:14px; font-weight:600; margin:24px 0 8px; }}
