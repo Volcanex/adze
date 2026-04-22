@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
-            --accent: #6b8cae; --accent-hover: #547a9e; --accent-text: #fff;
+            --accent: #1C4F82; --accent-hover: #163f68; --accent-text: #fff;
             --danger: #c0392b; --bg: #f5f2ed; --bg2: #ebe7e0;
             --surface: #ffffff; --surface2: #f0ede7; --border: #ddd8cf;
             --text: #2a2a28; --text2: #6b6860; --success: #4a9a6a; --warn: #c8a840;
@@ -20,7 +20,7 @@
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
         }
         [data-theme="dark"] {
-            --accent: #7ea3c4; --accent-hover: #96b8d6; --accent-text: #1a1a1e;
+            --accent: #99cdff; --accent-hover: #b8ddff; --accent-text: #1a1a1e;
             --danger: #e74c3c; --bg: #1a1a1e; --bg2: #222226;
             --surface: #2c2c30; --surface2: #343438; --border: #3e3e44;
             --text: #e8e6e0; --text2: #9a978e; --success: #6dca8a; --warn: #e0c060;
@@ -121,6 +121,12 @@
         .empty { text-align: center; padding: 40px; color: var(--text2); font-size: 14px; }
         .mb { margin-bottom: 16px; }
         [data-theme="dark"] .badge-green { background: #1b3a20; color: #6dca8a; }
+        .badge-amber { background: #fbeccb; color: #8a6a1b; }
+        [data-theme="dark"] .badge-amber { background: #3a2f1b; color: #e0c060; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { filter: brightness(0.92); }
+        .link-danger { color: var(--danger); cursor: pointer; }
+        .link-danger:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -182,7 +188,7 @@
                 <div class="table-wrap">
                     <table>
                         <thead><tr>
-                            <th>Name</th><th>Slug</th><th>Domain</th><th>Pages</th><th>Storage</th><th>30d Views</th><th>Last Login</th><th></th>
+                            <th>Name</th><th>Slug</th><th>Domain</th><th>Pages</th><th>Storage</th><th>30d Views</th><th>Last Login</th><th>Token</th><th></th>
                         </tr></thead>
                         <tbody id="artistsTable"></tbody>
                     </table>
@@ -243,6 +249,44 @@
             </div>
         </div>
     </div>
+
+    <!-- Dashboard Config Modal -->
+    <div id="dashCfgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto">
+        <div style="background:var(--surface);border-radius:8px;width:100%;max-width:520px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.2)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h2 id="dashCfgTitle" style="margin:0;font-size:16px">Dashboard config</h2>
+                <button onclick="closeDashboardConfig()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2)">&times;</button>
+            </div>
+            <div id="dashCfgBody"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                <button class="btn btn-sm" onclick="closeDashboardConfig()" style="background:var(--bg2);color:var(--text)">Cancel</button>
+                <button class="btn btn-sm btn-primary" onclick="saveDashboardConfig()">Save</button>
+            </div>
+        </div>
+    </div>
+    <style>#dashCfgModal.show { display:flex !important; }</style>
+
+    <!-- Delete Artist Confirmation Modal -->
+    <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1001;align-items:center;justify-content:center;padding:20px">
+        <div style="background:var(--surface);border-radius:8px;width:100%;max-width:460px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.25)">
+            <h2 style="margin:0 0 12px;font-size:16px;color:var(--danger)">Delete artist site</h2>
+            <p style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:12px">
+                This permanently deletes <strong id="delArtistName"></strong>'s source files, compiled output,
+                and data. This cannot be undone.
+            </p>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+                Type the slug <code style="font-family:var(--mono);background:var(--bg2);padding:1px 5px;border-radius:3px"><span id="delArtistSlug"></span></code> to confirm:
+            </p>
+            <input type="text" id="delConfirmInput" oninput="updateDeleteBtn()" autocomplete="off"
+                   style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:14px;background:var(--bg);color:var(--text);font-family:var(--mono)">
+            <div id="delErr" style="color:var(--danger);font-size:12px;margin-top:8px;display:none"></div>
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                <button class="btn btn-sm" onclick="closeDeleteArtist()" style="background:var(--bg2);color:var(--text)">Cancel</button>
+                <button id="delConfirmBtn" class="btn btn-sm btn-danger" onclick="confirmDeleteArtist()" disabled style="opacity:0.5;cursor:not-allowed">Delete permanently</button>
+            </div>
+        </div>
+    </div>
+    <style>#deleteModal.show { display:flex !important; }</style>
 
 <script>
 let adminToken = localStorage.getItem('admin-token') || '';
@@ -401,17 +445,152 @@ async function loadArtists() {
     const data = await api('/api/adze/admin/artists');
     if (!data) return;
     const tbody = document.getElementById('artistsTable');
-    if (!data.artists.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No artists yet</td></tr>'; return; }
-    tbody.innerHTML = data.artists.map(a => `<tr>
+    if (!data.artists.length) { tbody.innerHTML = '<tr><td colspan="9" class="empty">No artists yet</td></tr>'; return; }
+    tbody.innerHTML = data.artists.map(a => {
+        let domainCell;
+        if (a.domain) {
+            const badge = a.domain_live
+                ? '<span class="badge badge-green" title="nginx + SSL configured — serving at hosted domain">Live</span>'
+                : '<span class="badge badge-amber" title="Domain set but nginx/SSL not ready — preview only">Preview</span>';
+            domainCell = `<a href="https://${a.domain}" target="_blank">${esc(a.domain)}</a> ${badge}`;
+        } else {
+            domainCell = `<span style="color:var(--text2)">— </span><span class="badge badge-gray" title="No custom domain — preview only">Preview</span>`;
+        }
+        return `<tr>
         <td><strong>${esc(a.name)}</strong></td>
         <td style="font-family:var(--mono);font-size:12px">${a.slug}</td>
-        <td>${a.domain ? `<a href="https://${a.domain}" target="_blank">${a.domain}</a>` : '<span style="color:var(--text2)">—</span>'}</td>
+        <td>${domainCell}</td>
         <td>${a.page_count}</td>
         <td>${formatGB(a.storage_bytes)}</td>
         <td>${a.views_30d.toLocaleString()}</td>
         <td style="font-size:12px">${a.last_login ? timeAgo(a.last_login) : '<span style="color:var(--text2)">never</span>'}</td>
-        <td><a href="/dashboard?slug=${a.slug}" target="_blank">Dashboard</a></td>
-    </tr>`).join('');
+        <td style="font-family:var(--mono);font-size:11px"><span style="cursor:pointer" title="Click to copy" onclick="copyToken(this, '${esc(a.admin_token)}')">${a.admin_token ? esc(a.admin_token) : '<span style="color:var(--text2)">—</span>'}</span></td>
+        <td><a href="/dashboard?slug=${a.slug}" target="_blank">Dashboard</a> &middot; <a href="#" onclick="openDashboardConfig('${a.slug}');return false;">Config</a> &middot; <a class="link-danger" onclick="openDeleteArtist('${a.slug}', '${esc(a.name)}');return false;">Delete</a></td>
+    </tr>`;
+    }).join('');
+}
+
+function copyToken(el, token) {
+    if (!token) return;
+    navigator.clipboard.writeText(token).then(() => {
+        const orig = el.textContent;
+        el.textContent = 'copied';
+        setTimeout(() => { el.textContent = orig; }, 900);
+    });
+}
+
+// ── Dashboard Config Modal ──
+let _dashCfgSlug = null;
+
+async function openDashboardConfig(slug) {
+    _dashCfgSlug = slug;
+    document.getElementById('dashCfgTitle').textContent = `Dashboard config — ${slug}`;
+    document.getElementById('dashCfgBody').innerHTML = '<p style="color:var(--text2)">Loading…</p>';
+    document.getElementById('dashCfgModal').classList.add('show');
+    const [current, widgets, themes] = await Promise.all([
+        api(`/api/adze/admin/artists/${slug}/dashboard-config`),
+        api(`/api/adze/admin/artists/${slug}/widgets`),
+        api('/api/adze/admin/dashboard-themes'),
+    ]);
+    if (!current || !widgets || !themes) return;
+    const hidden = new Set(current.hidden_widgets || []);
+    const tierLabels = { core: 'Core (T1)', platform: 'Adze (T2)', community: 'Community (T3)' };
+    const grouped = { core: [], platform: [], community: [] };
+    for (const w of widgets.widgets) (grouped[w.tier] || grouped.core).push(w);
+    const widgetHtml = Object.entries(grouped).map(([tier, ws]) => {
+        if (!ws.length) return '';
+        return `<div style="margin-bottom:16px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:6px">${tierLabels[tier]}</div>
+            ${ws.map(w => `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px">
+                <input type="checkbox" data-widget="${esc(w.name)}" ${hidden.has(w.name) ? 'checked' : ''}>
+                <span>${esc(w.name)}</span>
+            </label>`).join('')}
+        </div>`;
+    }).join('');
+    const themeOptions = ['<option value="">— none —</option>']
+        .concat((themes.themes || []).map(t =>
+            `<option value="${esc(t.name)}" ${current.theme_override === t.name ? 'selected' : ''}>${esc(t.name)}</option>`))
+        .join('');
+    document.getElementById('dashCfgBody').innerHTML = `
+        <div style="margin-bottom:20px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px">Theme override</div>
+            <select id="dashCfgTheme" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-size:13px">${themeOptions}</select>
+            <p style="font-size:11px;color:var(--text2);margin-top:6px">Applied on top of the default dashboard styles. Artist cannot override.</p>
+        </div>
+        <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px">Hide widgets</div>
+            <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Check to hide from the artist's dashboard. Custom (T4) widgets they built themselves are always on.</p>
+            ${widgetHtml || '<p style="color:var(--text2);font-size:12px">No widgets available.</p>'}
+        </div>`;
+}
+
+function closeDashboardConfig() {
+    document.getElementById('dashCfgModal').classList.remove('show');
+    _dashCfgSlug = null;
+}
+
+async function saveDashboardConfig() {
+    if (!_dashCfgSlug) return;
+    const hidden = Array.from(document.querySelectorAll('#dashCfgBody input[data-widget]:checked'))
+        .map(el => el.getAttribute('data-widget'));
+    const theme = document.getElementById('dashCfgTheme').value || null;
+    const r = await fetch(`/api/adze/admin/artists/${_dashCfgSlug}/dashboard-config`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Admin-Token': adminToken},
+        body: JSON.stringify({ hidden_widgets: hidden, theme_override: theme }),
+    });
+    if (r.ok) { closeDashboardConfig(); }
+    else { alert('Save failed: ' + r.status); }
+}
+
+// ── Delete Artist ──
+let _delSlug = null;
+
+function openDeleteArtist(slug, name) {
+    _delSlug = slug;
+    document.getElementById('delArtistName').textContent = name;
+    document.getElementById('delArtistSlug').textContent = slug;
+    document.getElementById('delConfirmInput').value = '';
+    document.getElementById('delErr').style.display = 'none';
+    updateDeleteBtn();
+    document.getElementById('deleteModal').classList.add('show');
+    setTimeout(() => document.getElementById('delConfirmInput').focus(), 50);
+}
+
+function closeDeleteArtist() {
+    document.getElementById('deleteModal').classList.remove('show');
+    _delSlug = null;
+}
+
+function updateDeleteBtn() {
+    const btn = document.getElementById('delConfirmBtn');
+    const match = document.getElementById('delConfirmInput').value.trim() === _delSlug;
+    btn.disabled = !match;
+    btn.style.opacity = match ? '1' : '0.5';
+    btn.style.cursor = match ? 'pointer' : 'not-allowed';
+}
+
+async function confirmDeleteArtist() {
+    if (!_delSlug) return;
+    const btn = document.getElementById('delConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Deleting…';
+    const r = await fetch(`/api/adze/admin/artists/${_delSlug}`, {
+        method: 'DELETE',
+        headers: {'X-Admin-Token': adminToken},
+    });
+    if (r.ok) {
+        closeDeleteArtist();
+        loadArtists();
+    } else {
+        let msg = 'Delete failed';
+        try { const d = await r.json(); if (d.error) msg = d.error; } catch (e) {}
+        const err = document.getElementById('delErr');
+        err.textContent = msg;
+        err.style.display = 'block';
+        btn.textContent = 'Delete permanently';
+        updateDeleteBtn();
+    }
 }
 
 // ── Traffic ──

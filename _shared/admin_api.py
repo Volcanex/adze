@@ -401,9 +401,27 @@ def create_artist():
     if artist_dir.exists():
         return jsonify({'error': f'Artist "{slug}" already exists'}), 409
 
-    # Generate a random token
-    import secrets
-    artist_token = secrets.token_urlsafe(16)
+    # Generate a human-friendly two-word token
+    import random
+    _nouns = [
+        'hat', 'egg', 'car', 'fox', 'owl', 'bee', 'cat', 'dog', 'bat', 'pig',
+        'cup', 'sun', 'moon', 'star', 'fish', 'frog', 'bear', 'wolf', 'lamp',
+        'boat', 'cake', 'tree', 'door', 'bell', 'drum', 'coin', 'kite', 'ring',
+        'sock', 'toad', 'crab', 'dove', 'leaf', 'plum', 'pear', 'lime', 'rose',
+        'seed', 'vine', 'rock', 'fern', 'moth', 'wren', 'crow', 'snail', 'elk',
+        'yak', 'ram', 'eel', 'ant', 'jay', 'gem', 'orb', 'arch', 'bolt', 'cape',
+        'dune', 'fort', 'glen', 'hive', 'isle', 'knot', 'loft', 'nest', 'pond',
+    ]
+    _adjs = [
+        'red', 'big', 'old', 'hot', 'icy', 'dry', 'wet', 'dim', 'tan', 'odd',
+        'calm', 'bold', 'cold', 'dark', 'deep', 'fair', 'fast', 'flat', 'glad',
+        'gold', 'gray', 'keen', 'kind', 'last', 'lean', 'long', 'loud', 'mild',
+        'neat', 'pale', 'pink', 'pure', 'rare', 'rich', 'safe', 'slim', 'slow',
+        'soft', 'tall', 'thin', 'tiny', 'warm', 'wide', 'wild', 'wise', 'cool',
+        'blue', 'green', 'swift', 'brave', 'crisp', 'fresh', 'grand', 'lucky',
+        'proud', 'quiet', 'sharp', 'vivid', 'amber', 'coral', 'dusty', 'foggy',
+    ]
+    artist_token = random.choice(_adjs) + random.choice(_nouns)
 
     # Create directory structure
     artist_dir.mkdir(parents=True)
@@ -569,6 +587,29 @@ def save_default_styles():
     return jsonify({'ok': True})
 
 
+# ── Dashboard Theme Override ──────────────────────────────────────────────────
+
+@bp.route('/dashboard-theme')
+def get_dashboard_theme():
+    """
+    Return the admin-selected dashboard theme CSS for the authenticated artist.
+    Themes live in _shared/dashboard-themes/{name}/theme.css.
+    Returns 204 if no theme is configured or the theme file is missing.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    from auth import get_artist_config
+    cfg = get_artist_config(artist_slug) or {}
+    theme_name = (cfg.get('dashboard') or {}).get('theme_override')
+    if not theme_name:
+        return ('', 204)
+    theme_file = Path(__file__).parent / 'dashboard-themes' / theme_name / 'theme.css'
+    if not theme_file.exists():
+        return ('', 204)
+    return jsonify({'name': theme_name, 'css': theme_file.read_text(encoding='utf-8')})
+
+
 # ── Super-Admin Dashboard ─────────────────────────────────────────────────────
 
 @bp.route('/admin')
@@ -635,10 +676,18 @@ def admin_artists():
             pass
         # Storage
         storage = _get_artist_storage(item.name)
+        # Hosted-domain liveness: a per-domain nginx config exists in the
+        # repo's nginx/sites-available/ (bind-mounted into the container).
+        # Not checking SSL cert path — SAN/wildcard certs may live under a
+        # different domain's letsencrypt dir (e.g. ninasere.com uses the
+        # adze.studio cert), and /etc/nginx isn't visible inside the container.
+        domain = cfg.get('domain', '')
+        domain_live = bool(domain) and Path(f'nginx/sites-available/{domain}').exists()
         result.append({
             'slug': item.name,
             'name': cfg.get('name', item.name),
-            'domain': cfg.get('domain', ''),
+            'domain': domain,
+            'domain_live': domain_live,
             'contact_email': cfg.get('contact_email', ''),
             'pages': pages,
             'page_count': len(pages),
@@ -646,8 +695,122 @@ def admin_artists():
             'views_30d': views_30d,
             'last_login': cfg.get('last_login'),
             'last_login_ip': cfg.get('last_login_ip', ''),
+            'admin_token': cfg.get('admin_token', ''),
         })
     return jsonify({'artists': result})
+
+
+@bp.route('/admin/dashboard-themes')
+def admin_dashboard_themes():
+    """List available dashboard themes from _shared/dashboard-themes/."""
+    _require_super_admin()
+    themes_dir = Path(__file__).parent / 'dashboard-themes'
+    themes = []
+    if themes_dir.exists():
+        for item in sorted(themes_dir.iterdir()):
+            if not item.is_dir() or item.name.startswith('_'):
+                continue
+            if (item / 'theme.css').exists():
+                themes.append({'name': item.name})
+    return jsonify({'themes': themes})
+
+
+@bp.route('/admin/artists/<slug>/widgets')
+def admin_artist_widgets(slug):
+    """
+    List every widget visible to the artist (across tiers) plus the hardcoded T1
+    dashboard tab IDs, so the super-admin UI can offer them as hide targets.
+    T4 artist-custom widgets are excluded — those are always on.
+    """
+    _require_super_admin()
+    artist_path = Path('artists') / slug
+    if not artist_path.exists():
+        abort(404)
+
+    # T2 platform widgets (all, regardless of whether artist has opted in)
+    platform_dir = Path(__file__).parent / 'widgets'
+    platform = [{'name': w['name'], 'tier': 'platform'}
+                for w in _scan_widgets(platform_dir, 'platform')]
+
+    # T3 community-installed widgets (live in artist's widgets dir with forked_from=community)
+    artist_widgets_dir = artist_path / 'widgets'
+    community = [{'name': w['name'], 'tier': 'community'}
+                 for w in _scan_widgets(artist_widgets_dir, 'artist')
+                 if w.get('forked_from') == 'community']
+
+    # T1 hardcoded dashboard tabs — IDs match data-tab in dashboard.html
+    core = [{'name': n, 'tier': 'core'} for n in [
+        'edit', 'claude', 'styles', 'assets', 'snapshots', 'domain', 'api',
+        'fonts', 'export', 'share', 'analytics', 'marketplace', 'about',
+    ]]
+
+    return jsonify({'widgets': core + platform + community})
+
+
+@bp.route('/admin/artists/<slug>/dashboard-config', methods=['GET'])
+def admin_get_dashboard_config(slug):
+    """Return the artist's dashboard section from config.json."""
+    _require_super_admin()
+    cfg_path = Path('artists') / slug / 'config.json'
+    if not cfg_path.exists():
+        abort(404)
+    try:
+        cfg = json.loads(cfg_path.read_text())
+    except Exception:
+        cfg = {}
+    dashboard = cfg.get('dashboard') or {}
+    return jsonify({
+        'hidden_widgets': dashboard.get('hidden_widgets', []),
+        'theme_override': dashboard.get('theme_override'),
+    })
+
+
+@bp.route('/admin/artists/<slug>/dashboard-config', methods=['POST'])
+def admin_set_dashboard_config(slug):
+    """Update the artist's dashboard.{hidden_widgets,theme_override} config."""
+    _require_super_admin()
+    cfg_path = Path('artists') / slug / 'config.json'
+    if not cfg_path.exists():
+        abort(404)
+    data = request.get_json() or {}
+    hidden = data.get('hidden_widgets', [])
+    theme = data.get('theme_override')
+    if not isinstance(hidden, list) or not all(isinstance(x, str) for x in hidden):
+        return jsonify({'error': 'hidden_widgets must be an array of strings'}), 400
+    if theme is not None and not isinstance(theme, str):
+        return jsonify({'error': 'theme_override must be a string or null'}), 400
+    try:
+        cfg = json.loads(cfg_path.read_text())
+    except Exception:
+        cfg = {}
+    cfg.setdefault('dashboard', {})
+    cfg['dashboard']['hidden_widgets'] = hidden
+    cfg['dashboard']['theme_override'] = theme or None
+    cfg_path.write_text(json.dumps(cfg, indent=4) + '\n', encoding='utf-8')
+    return jsonify({'ok': True})
+
+
+@bp.route('/admin/artists/<slug>', methods=['DELETE'])
+def admin_delete_artist(slug):
+    """
+    Permanently delete an artist's site (source + compiled output).
+    Super-admin only. Confirmation is enforced in the UI.
+    """
+    _require_super_admin()
+    if not _valid_slug(slug):
+        return jsonify({'error': 'Invalid slug'}), 400
+    artist_path = Path('artists') / slug
+    output_path = Path('output/artists') / slug
+    if not artist_path.exists() and not output_path.exists():
+        return jsonify({'error': 'Artist not found'}), 404
+    try:
+        if artist_path.exists():
+            shutil.rmtree(str(artist_path))
+        if output_path.exists():
+            shutil.rmtree(str(output_path))
+        return jsonify({'ok': True, 'slug': slug})
+    except Exception as e:
+        return jsonify({'error': f'Delete failed: {str(e)}'}), 500
 
 
 @bp.route('/admin/traffic')
@@ -832,8 +995,8 @@ def serve_docs(doc_path=None):
 h2{margin:0 0 0.5rem;font-family:'Cardo',Georgia,serif;font-weight:400;font-style:italic;font-size:1.3rem;color:#2a2a28}
 p{color:#6b6860;font-size:13px;margin:0 0 1.5rem}
 input{width:100%;padding:10px 12px;border:1px solid #ddd8cf;border-radius:4px;font-size:14px;box-sizing:border-box;background:#f5f2ed}
-button{margin-top:12px;padding:10px 28px;background:#6b8cae;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
-button:hover{background:#547a9e}.err{color:#c0392b;font-size:13px;margin-top:8px;display:none}</style></head>
+button{margin-top:12px;padding:10px 28px;background:#1C4F82;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px}
+button:hover{background:#163f68}.err{color:#c0392b;font-size:13px;margin-top:8px;display:none}</style></head>
 <body><div class="box"><img src="/api/adze/logo.png" alt="" style="height:32px;margin-bottom:12px;opacity:0.85">
 <h2>Adze Studio</h2><p>Login to view docs</p>
 <input type="password" id="pw" placeholder="Password" onkeydown="if(event.key==='Enter')go()">
@@ -922,8 +1085,8 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-  :root {{ --bg:#f5f2ed; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf; --text:#2a2a28; --text2:#6b6860; --accent:#6b8cae; --accent-hover:#547a9e; --radius:8px; --mono:'Monaco','Menlo','Courier New',monospace; --heading-font:'Cardo',Georgia,serif; --body-font:'Inter',-apple-system,sans-serif; --shadow-sm:0 1px 3px rgba(0,0,0,0.06); }}
-  @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44; --text:#e8e6e0; --text2:#9a978e; --accent:#7ea3c4; --shadow-sm:0 1px 3px rgba(0,0,0,0.2); }} }}
+  :root {{ --bg:#f5f2ed; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf; --text:#2a2a28; --text2:#6b6860; --accent:#1C4F82; --accent-hover:#163f68; --radius:8px; --mono:'Monaco','Menlo','Courier New',monospace; --heading-font:'Cardo',Georgia,serif; --body-font:'Inter',-apple-system,sans-serif; --shadow-sm:0 1px 3px rgba(0,0,0,0.06); }}
+  @media(prefers-color-scheme:dark) {{ :root {{ --bg:#1a1a1e; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44; --text:#e8e6e0; --text2:#9a978e; --accent:#99cdff; --shadow-sm:0 1px 3px rgba(0,0,0,0.2); }} }}
   * {{ margin:0; padding:0; box-sizing:border-box; }}
   html {{ scroll-behavior:smooth; scroll-padding-top:72px; }}
   body {{ font-family:var(--body-font); background:var(--bg); color:var(--text); font-size:14px; line-height:1.7; }}
@@ -2277,22 +2440,27 @@ def list_widgets():
     # Read artist config for platform_widgets opt-in
     config_file = get_artist_path(artist_slug) / 'config.json'
     enabled_platform = []
+    hidden_widgets = []
     if config_file.exists():
         try:
             with open(config_file, 'r') as f:
                 config = json.load(f)
             enabled_platform = config.get('platform_widgets', [])
+            hidden_widgets = (config.get('dashboard') or {}).get('hidden_widgets', [])
         except (json.JSONDecodeError, IOError):
             pass
 
-    # Tier 2: Adze official widgets (opt-in per artist)
+    # Tier 2: Adze official widgets (opt-in per artist, admin-hideable)
     platform_dir = Path(__file__).parent / 'widgets'
     all_platform = _scan_widgets(platform_dir, 'platform')
-    platform_widgets = [w for w in all_platform if w['name'] in enabled_platform]
+    platform_widgets = [w for w in all_platform
+                        if w['name'] in enabled_platform and w['name'] not in hidden_widgets]
 
-    # Tier 4: artist custom/forked widgets (all loaded); T3 community installs also land here
+    # Tier 4: artist custom/forked widgets (all loaded); T3 community installs also land here.
+    # Admin can hide T3 community installs via hidden_widgets; T4 customs are always on.
     artist_dir = get_artist_path(artist_slug) / 'widgets'
-    artist_widgets = _scan_widgets(artist_dir, 'artist')
+    artist_widgets = [w for w in _scan_widgets(artist_dir, 'artist')
+                      if not (w.get('forked_from') == 'community' and w['name'] in hidden_widgets)]
 
     # Also return available (not yet enabled) platform widgets for marketplace
     available_platform = [w for w in all_platform if w['name'] not in enabled_platform]
