@@ -39,6 +39,56 @@ _log = logging.getLogger('adze.aider')
 
 DEFAULT_MODEL = 'openrouter/anthropic/claude-sonnet-4.5'
 
+# Where the platform's vibe-coder docs live (the same set fed to the old
+# hand-rolled agent loop's system prompt).
+_DOCS_DIR = Path(__file__).parent / 'docs'
+
+
+def _build_context_file(artist_root: Path) -> Path:
+    """Write a per-session context summary that aider pre-reads as
+    read-only context. Gives it Adze's conventions, the artist's config,
+    and the page list — so the user doesn't have to type "what files do I
+    have?" on every fresh session.
+
+    File lives at <artist_root>/.adze-context.md (gitignored). Recreated on
+    every session start so docs / config edits are picked up.
+    """
+    parts: list[str] = ['# Adze Vibe Coder — context\n']
+
+    # Platform docs (00-behaviour.md, 01-architecture.md, 02-site-format.md, 04-widgets.md)
+    if _DOCS_DIR.exists():
+        for f in sorted(_DOCS_DIR.glob('[0-9]*.md')):
+            try:
+                parts.append(f.read_text(encoding='utf-8'))
+            except OSError:
+                pass
+
+    # This artist's config
+    cfg_path = artist_root / 'config.json'
+    if cfg_path.exists():
+        try:
+            parts.append('## This artist (config.json)\n\n```json\n' + cfg_path.read_text(encoding='utf-8') + '\n```')
+        except OSError:
+            pass
+
+    # Page tree
+    pages = []
+    excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
+    for p in sorted(artist_root.iterdir()):
+        if p.is_dir() and p.name not in excluded:
+            if (p / 'content.md').exists():
+                pages.append(p.name)
+    if pages:
+        page_list = '\n'.join(f'- `{pg}/content.md` + `{pg}/config.json`' for pg in pages)
+        parts.append(
+            '## Pages in this site\n\n' + page_list +
+            '\n\nUse `/add <path>` (aider native command) to bring any of these into the chat before editing.'
+        )
+
+    out = artist_root / '.adze-context.md'
+    out.write_text('\n\n---\n\n'.join(parts), encoding='utf-8')
+    return out
+
 
 class AiderSession:
     def __init__(self, artist_slug: str, artist_root: Path, sid: str):
@@ -76,6 +126,12 @@ class AiderSession:
         # streaming). Result was garbled spinner frames stacking up. Without
         # streaming, aider prints the full reply when it's done. Keep --pretty
         # so search-replace blocks and markdown still render with colour.
+        try:
+            ctx_file = _build_context_file(self.artist_root)
+            ctx_arg = ['--read', str(ctx_file.relative_to(self.artist_root))]
+        except Exception:
+            ctx_arg = []  # don't fail to spawn if context build trips on something
+
         cmd = [
             'aider',
             '--no-git',
@@ -84,6 +140,7 @@ class AiderSession:
             '--no-stream',
             '--yes-always',
             '--no-show-model-warnings',
+            *ctx_arg,
             '--model', model,
         ]
 

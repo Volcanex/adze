@@ -19,6 +19,10 @@ artists/*/data.db-shm
 artists/*/data.db-wal
 _claude_sessions.json
 _vibe_sessions/
+# aider session files (per-artist, regenerated on each session)
+artists/*/.aider.chat.history.md
+artists/*/.aider.input.history
+artists/*/.adze-context.md
 *.pid
 
 # Secrets
