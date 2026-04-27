@@ -1,16 +1,21 @@
 """
-Aider over WebSocket — pty bridge.
+Claude Code over WebSocket — pty bridge.
 
-Each connected dashboard tab gets its own `aider` subprocess running inside a
-pty, streamed bidirectionally via Socket.IO. The frontend renders the stream
-via xterm.js; UI buttons (Asset / Pointer / +) just inject text into the pty.
+Each connected dashboard tab gets its own `claude` (Claude Code CLI)
+subprocess running inside a pty, streamed bidirectionally via Socket.IO.
+The frontend renders the stream via xterm.js; UI buttons (Asset / Pointer
+/ +) inject text into the pty.
 
-Why pty instead of wrapping aider's Python API:
-  Aider was designed for the terminal — slash commands, prompt-toolkit
-  prompts, ANSI rendering, search-replace blocks, /diff /commit /add /drop.
-  Wrapping its CLI output in our SSE turn-card format fights the tool. A
-  raw pty preserves every aider feature for free, and the dashboard's job
-  is reduced to "be a terminal" — which xterm.js does in 50 lines.
+Why Claude Code, not aider:
+  Aider's UX is built around explicit /add. Artists can't be doing that.
+  Claude Code's Read tool reads files autonomously when needed — same
+  experience the user already has in the terminal locally. The only
+  difference here is it's running in the dashboard pane instead of a
+  terminal window, scoped to the artist's directory.
+
+The module name is still `aider_bridge` for git history continuity; rename
+to `claude_terminal.py` is a follow-up that's not worth the import churn
+right now.
 """
 
 from __future__ import annotations
@@ -28,73 +33,76 @@ from pathlib import Path
 from flask import request
 
 
-# Lazy import so aider_bridge.py is importable even before auth.py is set up
 def _verify(artist_slug: str, token: str) -> bool:
     from auth import verify_artist_token
     return verify_artist_token(artist_slug, token)
 
 
-_log = logging.getLogger('adze.aider')
+_log = logging.getLogger('adze.claude')
 
 
-DEFAULT_MODEL = 'openrouter/anthropic/claude-sonnet-4.5'
-
-# Where the platform's vibe-coder docs live (the same set fed to the old
-# hand-rolled agent loop's system prompt).
+# Where the platform's vibe-coder docs live — fed to Claude as the
+# system prompt so it understands Adze conventions.
 _DOCS_DIR = Path(__file__).parent / 'docs'
 
 
-def _collect_initial_files(artist_root: Path) -> list[Path]:
-    """Small, always-relevant files preloaded at boot — site config and
-    default styles are tiny and touched in nearly every session, plus
-    home/content.md as the highest-traffic page. Per-page content.md
-    files for *other* pages stay out and get /added on first mention.
+# Allow-list copied from the legacy claude-stream subprocess code at
+# admin_api.py — sandboxes Claude's Bash to safe operations only. No
+# sudo, systemctl, ssh, mount, kill, etc. Combined with
+# --permission-mode acceptEdits, file edits inside cwd auto-confirm
+# but operations escaping cwd are blocked.
+ALLOWED_TOOLS = [
+    'Read', 'Write', 'Edit', 'Glob', 'Grep',
+    # File ops
+    'Bash(ls:*)', 'Bash(mkdir:*)', 'Bash(cp:*)', 'Bash(mv:*)', 'Bash(rm:*)',
+    'Bash(touch:*)', 'Bash(chmod:*)', 'Bash(chown:*)', 'Bash(ln:*)',
+    'Bash(basename:*)', 'Bash(dirname:*)', 'Bash(realpath:*)', 'Bash(readlink:*)',
+    'Bash(find:*)', 'Bash(tree:*)', 'Bash(pwd:*)', 'Bash(cd:*)',
+    'Bash(stat:*)', 'Bash(file:*)', 'Bash(du:*)', 'Bash(df:*)',
+    # Text processing
+    'Bash(cat:*)', 'Bash(head:*)', 'Bash(tail:*)', 'Bash(wc:*)',
+    'Bash(sort:*)', 'Bash(uniq:*)', 'Bash(diff:*)', 'Bash(comm:*)',
+    'Bash(sed:*)', 'Bash(awk:*)', 'Bash(tr:*)', 'Bash(cut:*)', 'Bash(paste:*)',
+    'Bash(grep:*)', 'Bash(egrep:*)', 'Bash(fgrep:*)', 'Bash(rg:*)',
+    'Bash(xargs:*)', 'Bash(tee:*)', 'Bash(rev:*)', 'Bash(fold:*)',
+    # Output
+    'Bash(echo:*)', 'Bash(printf:*)', 'Bash(yes:*)',
+    # Languages
+    'Bash(python3:*)', 'Bash(python:*)', 'Bash(node:*)', 'Bash(npx:*)',
+    'Bash(ruby:*)', 'Bash(perl:*)', 'Bash(php:*)', 'Bash(bash:*)', 'Bash(sh:*)',
+    # Package managers
+    'Bash(pip:*)', 'Bash(pip3:*)', 'Bash(npm:*)', 'Bash(yarn:*)', 'Bash(pnpm:*)',
+    # Network / HTTP
+    'Bash(curl:*)', 'Bash(wget:*)', 'Bash(http:*)',
+    # Archives
+    'Bash(tar:*)', 'Bash(gzip:*)', 'Bash(gunzip:*)', 'Bash(bzip2:*)',
+    'Bash(zip:*)', 'Bash(unzip:*)', 'Bash(7z:*)', 'Bash(xz:*)',
+    # Image / audio / video
+    'Bash(convert:*)', 'Bash(identify:*)', 'Bash(mogrify:*)', 'Bash(composite:*)',
+    'Bash(ffmpeg:*)', 'Bash(ffprobe:*)', 'Bash(sox:*)', 'Bash(soxi:*)',
+    'Bash(aplay:*)', 'Bash(arecord:*)', 'Bash(lame:*)', 'Bash(oggenc:*)',
+    'Bash(magick:*)', 'Bash(gifsicle:*)', 'Bash(optipng:*)', 'Bash(pngquant:*)',
+    # Data / encoding
+    'Bash(jq:*)', 'Bash(base64:*)', 'Bash(md5sum:*)', 'Bash(sha256sum:*)',
+    'Bash(openssl:*)', 'Bash(xxd:*)', 'Bash(od:*)',
+    # System info (read-only)
+    'Bash(date:*)', 'Bash(env:*)', 'Bash(which:*)', 'Bash(whoami:*)',
+    'Bash(hostname:*)', 'Bash(uname:*)', 'Bash(id:*)', 'Bash(test:*)',
+    'Bash(true:*)', 'Bash(false:*)', 'Bash(sleep:*)',
+    # Git
+    'Bash(git:*)',
+    # Web tools
+    'WebFetch', 'WebSearch',
+]
+
+
+def _build_system_prompt(artist_root: Path) -> str:
+    """Build the platform context that gets appended to Claude Code's
+    default system prompt — same docs the legacy claude-stream code fed
+    in, plus this artist's config and page tree.
     """
-    files: list[Path] = []
-    for rel in ('config.json', 'default-styles.css', 'home/content.md'):
-        p = artist_root / rel
-        if p.exists() and p.is_file():
-            files.append(p)
-    return files
+    parts: list[str] = []
 
-
-def _scan_page_slugs(artist_root: Path) -> set[str]:
-    """Page slugs (subdir names with a content.md) the user might mention."""
-    excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
-    pages: set[str] = set()
-    for d in artist_root.iterdir():
-        if not d.is_dir() or d.name in excluded or d.name.startswith('.'):
-            continue
-        if (d / 'content.md').exists():
-            pages.add(d.name)
-    return pages
-
-
-# Synonyms mapped to canonical page slugs the user can drop into a sentence
-# without typing the slug itself ("homepage" / "front page" → home).
-_PAGE_SYNONYMS = {
-    'homepage': 'home',
-    'home page': 'home',
-    'front page': 'home',
-    'landing page': 'home',
-    'index': 'home',
-    'about page': 'about',
-    'contact page': 'contact',
-}
-
-
-def _build_context_file(artist_root: Path) -> Path:
-    """Write a per-session context summary that aider pre-reads as
-    read-only context. Gives it Adze's conventions, the artist's config,
-    and the page list — so the user doesn't have to type "what files do I
-    have?" on every fresh session.
-
-    File lives at <artist_root>/.adze-context.md (gitignored). Recreated on
-    every session start so docs / config edits are picked up.
-    """
-    parts: list[str] = ['# Adze Vibe Coder — context\n']
-
-    # Platform docs (00-behaviour.md, 01-architecture.md, 02-site-format.md, 04-widgets.md)
     if _DOCS_DIR.exists():
         for f in sorted(_DOCS_DIR.glob('[0-9]*.md')):
             try:
@@ -102,34 +110,35 @@ def _build_context_file(artist_root: Path) -> Path:
             except OSError:
                 pass
 
-    # This artist's config
-    cfg_path = artist_root / 'config.json'
-    if cfg_path.exists():
+    cfg = artist_root / 'config.json'
+    if cfg.exists():
         try:
-            parts.append('## This artist (config.json)\n\n```json\n' + cfg_path.read_text(encoding='utf-8') + '\n```')
+            parts.append(
+                '## This artist (config.json)\n\n```json\n'
+                + cfg.read_text(encoding='utf-8') + '\n```'
+            )
         except OSError:
             pass
 
-    # Page tree
-    pages = []
     excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
-    for p in sorted(artist_root.iterdir()):
-        if p.is_dir() and p.name not in excluded:
-            if (p / 'content.md').exists():
-                pages.append(p.name)
+    pages: list[str] = []
+    for d in sorted(artist_root.iterdir()):
+        if d.is_dir() and d.name not in excluded and not d.name.startswith('.'):
+            if (d / 'content.md').exists():
+                pages.append(d.name)
     if pages:
-        page_list = '\n'.join(f'- `{pg}/content.md` + `{pg}/config.json`' for pg in pages)
+        page_list = '\n'.join(f'- `{p}/content.md` and `{p}/config.json`' for p in pages)
         parts.append(
             '## Pages in this site\n\n' + page_list +
-            '\n\nUse `/add <path>` (aider native command) to bring any of these into the chat before editing.'
+            '\n\nUse the Read tool to view any file before editing. After'
+            ' edits, tell the user to click **Save** in the dashboard to'
+            ' compile and publish.'
         )
 
-    out = artist_root / '.adze-context.md'
-    out.write_text('\n\n---\n\n'.join(parts), encoding='utf-8')
-    return out
+    return '\n\n---\n\n'.join(parts)
 
 
-class AiderSession:
+class ClaudeSession:
     def __init__(self, artist_slug: str, artist_root: Path, sid: str):
         self.artist_slug = artist_slug
         self.artist_root = artist_root
@@ -137,15 +146,8 @@ class AiderSession:
         self.proc: subprocess.Popen | None = None
         self.master_fd: int | None = None
         self._lock = threading.Lock()
-        # Page-mention auto-/add state
-        self._pages: set[str] = _scan_page_slugs(artist_root)
-        self._added_files: set[str] = set()  # files we've already /added
-        self._input_line_buf: str = ''
-        # Pre-loaded files don't need re-/add
-        for f in _collect_initial_files(artist_root):
-            self._added_files.add(str(f.relative_to(artist_root)))
 
-    def start(self, socketio, model: str = DEFAULT_MODEL) -> None:
+    def start(self, socketio) -> None:
         master, slave = pty.openpty()
         self.master_fd = master
 
@@ -153,53 +155,28 @@ class AiderSession:
         env['TERM'] = 'xterm-256color'
         env['COLUMNS'] = '120'
         env['LINES'] = '40'
-        # OPENROUTER_API_KEY must already be in the container env (forwarded
-        # by docker-compose).
+        # Don't inherit a stale "I'm running inside Claude Code" marker —
+        # would confuse the spawned instance about its parent context.
+        env.pop('CLAUDECODE', None)
 
-        # Force GitPython to give up looking for a parent .git. Without this,
-        # aider walks up from /app/artists/<slug>/ and finds /app/.git (the
-        # platform repo), then reports "Git working dir: /app" and resolves
-        # in-chat filenames from there. GIT_CEILING_DIRECTORIES is *not*
-        # honoured by GitPython's search_parent_directories logic; pointing
-        # GIT_DIR/GIT_WORK_TREE at /dev/null is the trick that actually works.
-        env['GIT_DIR'] = '/dev/null'
-        env['GIT_WORK_TREE'] = '/dev/null'
-
-        # `--no-stream` because aider's --stream uses rich's Live region with
-        # cursor-up redraws, which fight xterm.js whenever the pty size and
-        # the actual terminal viewport diverge for even one frame (very common
-        # over WS — resize event arrives after aider has already started
-        # streaming). Result was garbled spinner frames stacking up. Without
-        # streaming, aider prints the full reply when it's done. Keep --pretty
-        # so search-replace blocks and markdown still render with colour.
         try:
-            ctx_file = _build_context_file(self.artist_root)
-            ctx_arg = ['--read', str(ctx_file.relative_to(self.artist_root))]
+            sys_prompt = _build_system_prompt(self.artist_root)
         except Exception:
-            ctx_arg = []  # don't fail to spawn if context build trips on something
+            sys_prompt = ''
 
-        # Pre-load the always-relevant small files (config, default-styles,
-        # home/content.md). Other pages auto-/add when the user mentions them
-        # — see the input interceptor in self.write().
-        file_args: list[str] = []
-        try:
-            for f in _collect_initial_files(self.artist_root):
-                file_args.extend(['--file', str(f.relative_to(self.artist_root))])
-        except Exception:
-            file_args = []
-
+        # --permission-mode acceptEdits: auto-accept file edits inside the
+        # cwd (the artist directory). bypassPermissions mode is gated under
+        # the same root-refusal as --dangerously-skip-permissions, so we
+        # use the next-best mode and let the bridge auto-dismiss the
+        # workspace-trust dialog by sending "\r" right after spawn (default
+        # button is "Yes, proceed"). Safety: ALLOWED_TOOLS curates Bash.
         cmd = [
-            'aider',
-            '--no-git',
-            '--no-auto-commits',
-            '--no-auto-lint',
-            '--no-stream',
-            '--yes-always',
-            '--no-show-model-warnings',
-            *ctx_arg,
-            *file_args,
-            '--model', model,
+            'claude',
+            '--permission-mode', 'acceptEdits',
         ]
+        if sys_prompt:
+            cmd.extend(['--append-system-prompt', sys_prompt])
+        cmd.extend(['--allowedTools', *ALLOWED_TOOLS])
 
         try:
             self.proc = subprocess.Popen(
@@ -208,12 +185,11 @@ class AiderSession:
                 cwd=str(self.artist_root),
                 env=env,
                 close_fds=True,
-                preexec_fn=os.setsid,  # new session group → clean killpg
+                preexec_fn=os.setsid,
             )
         except FileNotFoundError:
-            # aider not installed
             try:
-                os.write(master, b"\r\n[adze] aider binary not found. Add aider-chat to requirements.txt and rebuild.\r\n")
+                os.write(master, b"\r\n[adze] claude binary not found at /usr/local/bin/claude.\r\n")
             except OSError:
                 pass
             os.close(slave)
@@ -224,7 +200,25 @@ class AiderSession:
             except OSError:
                 pass
 
-        _log.info(f'[{self.artist_slug}] aider session start sid={self.sid} pid={self.proc.pid}')
+        _log.info(f'[{self.artist_slug}] claude session start sid={self.sid} pid={self.proc.pid}')
+
+        # Auto-dismiss the workspace-trust dialog ("Do you trust the files
+        # in this folder? 1) Yes, proceed"). Default selection is option 1
+        # so bare \r accepts. We send a few times across the first ~3s
+        # since the exact moment the dialog is ready to read input depends
+        # on claude's startup speed. Harmless if the dialog didn't fire —
+        # claude's main prompt swallows empty Enter as a no-op.
+        import time as _t
+        def _dismiss_trust():
+            for delay in (0.8, 1.5, 2.5):
+                _t.sleep(delay if delay == 0.8 else (delay - (delay - 0.7)))
+                if self.master_fd is None:
+                    return
+                try:
+                    os.write(self.master_fd, b'\r')
+                except OSError:
+                    return
+        threading.Thread(target=_dismiss_trust, daemon=True).start()
 
         def reader():
             try:
@@ -242,82 +236,18 @@ class AiderSession:
                         namespace='/aider',
                     )
             finally:
-                _log.info(f'[{self.artist_slug}] aider reader exit sid={self.sid}')
+                _log.info(f'[{self.artist_slug}] claude reader exit sid={self.sid}')
                 socketio.emit('aider:exit', {}, to=self.sid, namespace='/aider')
 
         socketio.start_background_task(reader)
 
-    def _detect_pages(self, line: str) -> list[str]:
-        """Return page slugs the user mentioned that aren't already added."""
-        text = line.lower()
-        hits: list[str] = []
-        # Direct slug mentions
-        for slug in self._pages:
-            if slug in text:
-                hits.append(slug)
-        # Synonym mentions ("homepage" → "home")
-        for syn, slug in _PAGE_SYNONYMS.items():
-            if syn in text and slug in self._pages and slug not in hits:
-                hits.append(slug)
-        # Filter out already-added files
-        out = []
-        for slug in hits:
-            rel = f'{slug}/content.md'
-            if rel not in self._added_files:
-                out.append(slug)
-                self._added_files.add(rel)
-        return out
-
-    def _raw_write(self, data: str) -> None:
-        if self.master_fd is None:
-            return
-        try:
-            os.write(self.master_fd, data.encode('utf-8'))
-        except OSError:
-            pass
-
     def write(self, data: str) -> None:
-        """Write user input to the pty.
-
-        Buffers per-line so we can intercept complete user messages and
-        auto-prepend `/add <slug>/content.md` for any page the user
-        mentions but hasn't loaded yet. Slash commands and partial
-        keystrokes pass through unchanged.
-        """
-        if not data:
-            return
         with self._lock:
-            self._input_line_buf += data
-            while True:
-                # Find first \r or \n
-                cr = self._input_line_buf.find('\r')
-                lf = self._input_line_buf.find('\n')
-                if cr == -1 and lf == -1:
-                    # No newline yet — flush buffer as keystrokes (so xterm
-                    # echo / aider prompt-toolkit can react in real time).
-                    self._raw_write(self._input_line_buf)
-                    self._input_line_buf = ''
-                    return
-                idx = cr if (cr != -1 and (lf == -1 or cr < lf)) else lf
-                line = self._input_line_buf[:idx]
-                term = self._input_line_buf[idx:idx + 1]
-                self._input_line_buf = self._input_line_buf[idx + 1:]
-
-                stripped = line.strip()
-                # Slash command or empty line: passthrough
-                if not stripped or stripped.startswith('/'):
-                    self._raw_write(line + term)
-                    continue
-
-                # Auto-/add any pages this message mentions. Combine into a
-                # single `/add a b c` command so aider only re-renders its
-                # prompt once instead of N times (each redraw is what looks
-                # like flicker in the terminal).
-                slugs = self._detect_pages(stripped)
-                if slugs:
-                    files = ' '.join(f'{s}/content.md' for s in slugs)
-                    self._raw_write(f'/add {files}\r')
-                self._raw_write(line + term)
+            if self.master_fd is not None:
+                try:
+                    os.write(self.master_fd, data.encode('utf-8'))
+                except OSError:
+                    pass
 
     def resize(self, cols: int, rows: int) -> None:
         with self._lock:
@@ -351,23 +281,26 @@ class AiderSession:
                 except OSError:
                     pass
                 self.master_fd = None
-            _log.info(f'[{self.artist_slug}] aider session stop sid={self.sid}')
+            _log.info(f'[{self.artist_slug}] claude session stop sid={self.sid}')
 
 
-# Per-Socket.IO-session-id registry. One aider process per browser tab.
-_sessions: dict[str, AiderSession] = {}
+# Per-Socket.IO-session-id registry. One claude process per browser tab.
+_sessions: dict[str, ClaudeSession] = {}
 _sessions_lock = threading.Lock()
 
 
 def register(socketio) -> None:
-    """Register Socket.IO event handlers on the /aider namespace."""
+    """Register Socket.IO event handlers on the /aider namespace.
+
+    The namespace name is kept as `/aider` (rather than renamed to
+    /claude or /vibe) so the dashboard's existing client code keeps
+    working without changes. The handler internals are Claude.
+    """
 
     @socketio.on('connect', namespace='/aider')
     def on_connect(auth):
         # Auth strategy: try the auth payload first (X-Admin-Token-style direct
-        # login). Fall back to the adze_session cookie (the common case after
-        # first login — currentToken is '' on the client). At least one must
-        # succeed.
+        # login). Fall back to the adze_session cookie.
         auth = auth if isinstance(auth, dict) else {}
         artist_slug = auth.get('artist_slug') or ''
         token = auth.get('token') or ''
@@ -384,16 +317,16 @@ def register(socketio) -> None:
                     ok = True
 
         if not ok or not artist_slug:
-            _log.warning(f'aider connect: auth failed (slug={artist_slug!r}, has_token={bool(token)})')
+            _log.warning(f'claude connect: auth failed (slug={artist_slug!r}, has_token={bool(token)})')
             return False
 
         artist_root = (Path.cwd() / 'artists' / artist_slug).resolve()
         if not artist_root.exists():
-            _log.warning(f'aider connect: artist root missing {artist_root}')
+            _log.warning(f'claude connect: artist root missing {artist_root}')
             return False
 
         sid = request.sid
-        sess = AiderSession(artist_slug, artist_root, sid)
+        sess = ClaudeSession(artist_slug, artist_root, sid)
         with _sessions_lock:
             _sessions[sid] = sess
         sess.start(socketio)
