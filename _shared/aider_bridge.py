@@ -179,13 +179,27 @@ def register(socketio) -> None:
 
     @socketio.on('connect', namespace='/aider')
     def on_connect(auth):
-        if not auth or not isinstance(auth, dict):
-            _log.warning('aider connect: missing auth payload')
-            return False
-        artist_slug = auth.get('artist_slug')
-        token = auth.get('token')
-        if not artist_slug or not _verify(artist_slug, token):
-            _log.warning(f'aider connect: auth failed for slug={artist_slug}')
+        # Auth strategy: try the auth payload first (X-Admin-Token-style direct
+        # login). Fall back to the adze_session cookie (the common case after
+        # first login — currentToken is '' on the client). At least one must
+        # succeed.
+        auth = auth if isinstance(auth, dict) else {}
+        artist_slug = auth.get('artist_slug') or ''
+        token = auth.get('token') or ''
+
+        ok = False
+        if artist_slug and token and _verify(artist_slug, token):
+            ok = True
+        else:
+            session_cookie = request.cookies.get('adze_session', '')
+            if session_cookie and ':' in session_cookie:
+                cslug, _, ctok = session_cookie.partition(':')
+                if cslug and _verify(cslug, ctok):
+                    artist_slug = cslug
+                    ok = True
+
+        if not ok or not artist_slug:
+            _log.warning(f'aider connect: auth failed (slug={artist_slug!r}, has_token={bool(token)})')
             return False
 
         artist_root = (Path.cwd() / 'artists' / artist_slug).resolve()

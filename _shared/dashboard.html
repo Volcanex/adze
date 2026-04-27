@@ -6934,8 +6934,9 @@ function vcInitAiderTerminal() {
     }
     const host = document.getElementById('vcXtermHost');
     if (!host) return;
-    if (!currentArtist || !currentToken) {
-        // Login not complete yet — try again when it is
+    if (!currentArtist) {
+        // Login not complete yet — try again when it is. currentToken can
+        // legitimately be '' for cookie-session users; only artist matters.
         if (_vcXtermInitTries++ < 50) {
             setTimeout(vcInitAiderTerminal, 200);
         }
@@ -6982,8 +6983,9 @@ function vcInitAiderTerminal() {
     _vcXterm.write('\x1b[2m[adze] connecting to aider…\x1b[0m\r\n');
 
     _vcXtermSocket = io('/aider', {
-        auth: { artist_slug: currentArtist, token: currentToken },
+        auth: { artist_slug: currentArtist, token: currentToken || '' },
         transports: ['websocket', 'polling'],
+        withCredentials: true,  // send adze_session cookie for cookie-auth fallback
     });
 
     _vcXtermSocket.on('connect', () => {
