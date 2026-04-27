@@ -50,15 +50,24 @@ except ImportError as e:
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
-DEFAULT_MODEL = "openrouter/google/gemini-2.5-pro"
+DEFAULT_MODEL = "openrouter/anthropic/claude-sonnet-4.5"
+SONNET_MODEL = DEFAULT_MODEL
+HAIKU_MODEL = "openrouter/anthropic/claude-haiku-4.5"
+PRO_MODEL = "openrouter/google/gemini-2.5-pro"
 FLASH_MODEL = "openrouter/google/gemini-2.5-flash"
 LITE_MODEL = "openrouter/google/gemini-2.5-flash-lite"
 
-# Per-call model override via prompt prefix. Default is Pro — slow turns are
-# preferable to dumb turns. `@flash <prompt>` drops one turn to Flash for
-# trivial cases; `@lite` for cheapest.
+# Per-call model override via prompt prefix.
+# Default = Claude Sonnet 4.5 (best tool-call reliability at long context).
+# Cheap escape hatches stay available:
+#   @haiku  — Claude Haiku 4.5 (fast + reliable, ~3× cheaper than Sonnet)
+#   @pro    — Gemini 2.5 Pro (cheaper still, weaker on tools)
+#   @flash  — Gemini 2.5 Flash (cheapest, weakest on tools)
+#   @lite   — Gemini 2.5 Flash Lite (extreme cheap)
 MODEL_PREFIXES = {
-    "@pro ": DEFAULT_MODEL,
+    "@sonnet ": SONNET_MODEL,
+    "@haiku ": HAIKU_MODEL,
+    "@pro ": PRO_MODEL,
     "@flash ": FLASH_MODEL,
     "@lite ": LITE_MODEL,
 }
@@ -416,6 +425,53 @@ def clear_session(sessions_dir: Path, session_id: str) -> bool:
     return False
 
 
+# ── Hallucination guard ───────────────────────────────────────────────────────
+# Catches the model claiming "I've edited X" without actually calling Edit.
+# Triggers a corrective re-iteration in the same turn so the user just sees
+# the work happen, not the model's apology.
+
+_HALLUCINATION_PHRASES = (
+    "i've edited", "i edited",
+    "i've changed", "i changed",
+    "i've updated", "i updated",
+    "i've added", "i added",
+    "i've removed", "i removed",
+    "i've replaced", "i replaced",
+    "i've fixed", "i fixed",
+    "i've corrected", "i corrected",
+    "i've modified", "i modified",
+    "i've made the change", "i've made the changes",
+    "i've now applied", "i've applied",
+    "i've performed",
+    "the file now", "the change has been", "changes have been applied",
+    "the new version reads", "the new code reads",
+    "the file has been", "the page has been",
+)
+
+_USER_CHANGE_INDICATORS = (
+    "change", "edit", "add ", "remove", "fix", "update", "replace",
+    "rebuild", "rewrite", "merge", "delete", "swap", "modify",
+    "alter", "refactor", "adjust", "tweak",
+    "make ", "make it ", "make the ",
+    "set the ", "create ", "write ", "build ",
+    "convert ", "move ", "rename ",
+)
+
+
+def _detect_hallucinated_edit(text: str) -> bool:
+    if not text:
+        return False
+    lower = text.lower()
+    return any(phrase in lower for phrase in _HALLUCINATION_PHRASES)
+
+
+def _looks_like_change_request(prompt: str) -> bool:
+    if not prompt:
+        return False
+    lower = prompt.lower()
+    return any(ind in lower for ind in _USER_CHANGE_INDICATORS)
+
+
 # ── The agent loop ────────────────────────────────────────────────────────────
 
 MAX_ITERATIONS = 25  # safety bound on tool-call loop per turn
@@ -580,8 +636,36 @@ def run_turn(
                 ] if tool_calls_acc else None,
             })
 
-            # No tool calls → done
+            # No tool calls → maybe done. Hallucination guard fires if the
+            # model claimed an edit in chat but didn't actually call a tool.
             if not tool_calls_acc:
+                hallucinated = (
+                    _looks_like_change_request(prompt)
+                    and _detect_hallucinated_edit(text)
+                    and iteration < MAX_ITERATIONS
+                )
+                if hallucinated:
+                    log.warning(
+                        f"{slug_tag}HALLUCINATION GUARD fired iteration={iteration}: "
+                        f"text claims edit but no tool calls. Pushing back."
+                    )
+                    yield {
+                        "type": "system_message",
+                        "text": "Detected claimed edit with no tool call — pushing back.",
+                    }
+                    history.append({
+                        "role": "user",
+                        "content": (
+                            "Stop. You said you made a change but called no tools "
+                            "this turn. The file has not changed. Use the Edit "
+                            "(or Write/Bash) tool now to actually make the change "
+                            "the user asked for. Do NOT paste the new code in chat "
+                            "as proof — execute the tool. After the tool call "
+                            "succeeds, briefly confirm what you did."
+                        ),
+                    })
+                    continue  # next iteration retries with the corrective nudge
+
                 if text:
                     log.info(f"{slug_tag}TEXT: {text[:500]}")
                 duration_ms = int((time.time() - started) * 1000)
