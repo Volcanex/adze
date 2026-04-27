@@ -620,6 +620,172 @@
         @keyframes vcFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         .vc-suggestion { display: inline-block; animation: vcFadeIn 0.3s ease; }
         .claude-thinking-indicator { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-style: italic; font-size: 13px; padding: 4px 0; }
+        /* ── Turn cards (rebuilt v3 — design-language editorial chat) ──────
+           One vc-turn per user/assistant turn. Italic Cardo author label,
+           mono meta, Inter body. Tool calls become compact inline tiles
+           inside the assistant turn's body; diff cards live alongside.
+           Calm 240ms fade-in. Streaming text appends per-chunk spans that
+           opacity-fade so the prose grows softly instead of snapping. */
+        .claude-term-output { scroll-behavior: smooth; }
+        .vc-turn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            margin: 0 0 12px;
+            animation: vcTurnIn 240ms cubic-bezier(.2,.7,.2,1);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        @keyframes vcTurnIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .vc-turn-head {
+            display: flex; align-items: baseline; gap: 8px;
+            font-family: var(--mono); font-size: 10px;
+            color: var(--text2); letter-spacing: 0.04em;
+        }
+        .vc-turn-head .vc-who {
+            font-family: var(--heading-font);
+            font-style: italic; font-weight: 400;
+            font-size: 16px;
+            letter-spacing: 0;
+            color: var(--text);
+            line-height: 1;
+        }
+        .vc-turn.user .vc-turn-head .vc-who { color: var(--accent); }
+        .vc-turn.assistant .vc-turn-head .vc-who { color: var(--accent-soft); }
+        .vc-turn-head .vc-meta { opacity: 0.7; }
+        .vc-turn-head .vc-meta::before { content: '·'; margin-right: 6px; opacity: 0.5; }
+        .vc-turn-body {
+            font-family: var(--body-font);
+            font-size: calc(13px * var(--vc-scale));
+            line-height: 1.6;
+            color: var(--text);
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .vc-prose { white-space: pre-wrap; word-wrap: break-word; }
+        .vc-prose .vc-chunk { animation: vcChunkFade 320ms ease-out backwards; }
+        @keyframes vcChunkFade { from { opacity: 0; } to { opacity: 1; } }
+        .vc-prose strong { color: #fff; font-weight: 600; }
+        .vc-prose em { color: var(--text2); font-style: italic; }
+        .vc-prose code {
+            font-family: var(--mono); font-size: calc(11px * var(--vc-scale));
+            background: var(--bg2); padding: 1px 5px; border-radius: 3px;
+            color: var(--accent-soft);
+        }
+        .vc-prose a { color: var(--accent); text-decoration: underline; }
+        .vc-prose pre {
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 10px 12px;
+            margin: 6px 0; overflow-x: auto;
+            font-family: var(--mono); font-size: 11px; line-height: 1.5;
+        }
+        .vc-prose p { margin: 0 0 8px; }
+        .vc-prose p:last-child { margin-bottom: 0; }
+
+        /* Thinking dot — single pulsing dot before any text/tool arrives */
+        .vc-thinking { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 11px; font-style: italic; padding: 2px 0; }
+        .vc-thinking .vc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: vcDotPulse 1.4s ease-in-out infinite; }
+        @keyframes vcDotPulse { 0%,100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
+
+        /* Tool tile — compact inline state-aware row */
+        .vc-tool {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text2);
+            animation: vcToolIn 180ms ease-out;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        @keyframes vcToolIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+        .vc-tool .vc-tool-state {
+            width: 14px; height: 14px;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .vc-tool .vc-tool-state .vc-spin {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            border-top-color: transparent;
+            animation: vcSpin 0.7s linear infinite;
+        }
+        @keyframes vcSpin { to { transform: rotate(360deg); } }
+        .vc-tool .vc-tool-state i { font-size: 13px; }
+        .vc-tool[data-state="done"] .vc-tool-state i  { color: var(--success); }
+        .vc-tool[data-state="error"] .vc-tool-state i { color: var(--danger); }
+        .vc-tool .vc-tool-name { color: var(--text); font-weight: 600; }
+        .vc-tool .vc-tool-args { color: var(--text2); opacity: 0.7; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .vc-tool[data-state="done"]  { border-color: rgba(109,202,138,0.25); }
+        .vc-tool[data-state="error"] { border-color: rgba(231,76,60,0.4); background: rgba(231,76,60,0.06); }
+
+        /* Diff card — sits inside assistant turn body, slightly inset from tool tile */
+        .vc-diff {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg2);
+            overflow: hidden;
+            font-size: 11px;
+            animation: vcToolIn 200ms ease-out;
+        }
+        .vc-diff .diff-head {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            font-family: var(--mono); color: var(--text2);
+            cursor: pointer; user-select: none;
+            transition: background 0.15s;
+        }
+        .vc-diff .diff-head:hover { background: var(--surface2); }
+        .vc-diff .diff-head i { font-size: 12px; color: var(--accent); }
+        .vc-diff .diff-head .diff-path { color: var(--text); font-weight: 600; }
+        .vc-diff .diff-head .diff-tool { font-size: 9px; opacity: 0.7; }
+        .vc-diff .diff-head .diff-stat { margin-left: auto; font-size: 9px; }
+        .vc-diff .diff-head .diff-stat .add { color: var(--success); }
+        .vc-diff .diff-head .diff-stat .rem { color: var(--danger); }
+        .vc-diff .diff-head .diff-chev { font-size: 10px; color: var(--text2); transition: transform 0.2s; }
+        .vc-diff.expanded .diff-head .diff-chev { transform: rotate(90deg); }
+        .vc-diff .diff-body {
+            display: none; padding: 8px 10px;
+            max-height: 260px; overflow-y: auto;
+            font-family: var(--mono); white-space: pre; line-height: 1.45;
+        }
+        .vc-diff.expanded .diff-body { display: block; }
+        .vc-diff .diff-body .ln-add { color: var(--success); display: block; }
+        .vc-diff .diff-body .ln-rem { color: var(--danger); display: block; opacity: 0.85; }
+        .vc-diff .diff-body .ln-ctx { color: var(--text2); display: block; opacity: 0.55; }
+
+        /* Per-turn footer with cost / tokens / duration */
+        .vc-turn-foot {
+            display: flex; gap: 12px;
+            font-family: var(--mono); font-size: 10px;
+            color: var(--text2); opacity: 0.6;
+            border-top: 1px solid var(--border);
+            padding-top: 8px;
+            margin-top: 2px;
+            animation: vcFadeIn 250ms ease-out;
+        }
+        .vc-turn-foot .vc-cost { color: var(--accent-soft); }
+
+        /* Inline error inside a turn */
+        .vc-error {
+            color: var(--danger); font-size: 11px;
+            padding: 6px 10px; border-radius: 4px;
+            background: rgba(231,76,60,0.08);
+            border: 1px solid rgba(231,76,60,0.25);
+        }
+
+        /* System note — inline between turns, not a card */
+        .vc-system {
+            font-family: var(--mono); font-size: 10px;
+            color: var(--text2); font-style: italic;
+            text-align: center; padding: 4px 0;
+            animation: vcFadeIn 200ms ease-out;
+            opacity: 0.7;
+        }
         .claude-thinking-indicator .dots span { animation: dotPulse 1.4s infinite; opacity: 0.3; }
         .claude-thinking-indicator .dots span:nth-child(2) { animation-delay: 0.2s; }
         .claude-thinking-indicator .dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -6481,15 +6647,10 @@ async function sendClaudeMessage() {
         claudeFirstMessage = false;
     }
 
-    // Show user input
-    claudeAppendLine(escHtml(msg), 'user-input');
-
-    // Show thinking indicator
-    const thinkingEl = document.createElement('div');
-    thinkingEl.className = 'claude-thinking-indicator';
-    thinkingEl.innerHTML = 'Vibe Coder is thinking <span class="dots"><span>.</span><span>.</span><span>.</span></span>';
-    document.getElementById('claudeOutput').appendChild(thinkingEl);
-    document.getElementById('claudeOutput').scrollTop = document.getElementById('claudeOutput').scrollHeight;
+    // Render user turn + start assistant turn (turn cards instead of log lines)
+    vcUserTurn(msg);
+    let currentTurn = vcAssistantTurn();
+    let resultData = null;
 
     try {
         const response = await fetch('/api/adze/claude-stream', {
@@ -6503,12 +6664,10 @@ async function sendClaudeMessage() {
         });
 
         if (!response.ok) {
-            thinkingEl.remove();
-            if (response.status === 409) {
-                claudeAppendLine('Vibe Coder is currently in use by another session. Try again when it\'s free.', 'error');
-            } else {
-                claudeAppendLine('Error: ' + response.statusText, 'error');
-            }
+            const errMsg = (response.status === 409)
+                ? "Vibe Coder is currently in use by another session. Try again when it's free."
+                : 'Error: ' + response.statusText;
+            vcRenderError(currentTurn, errMsg);
             claudeIsStreaming = false;
             document.getElementById('claudeHaltBtn').style.display = 'none';
             return;
@@ -6517,11 +6676,6 @@ async function sendClaudeMessage() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let currentAssistantText = '';
-        let currentTextEl = null;
-        let thinkingRemoved = false;
-        let isThinking = false;
-        let thinkingTextEl = null;
 
         while (true) {
             const { done, value } = await reader.read();
@@ -6540,92 +6694,53 @@ async function sendClaudeMessage() {
                     const data = JSON.parse(dataStr);
 
                     if (data.type === 'error') {
-                        thinkingEl.remove();
-                        claudeAppendLine('Error: ' + (data.error || 'Unknown error'), 'error');
+                        vcRenderError(currentTurn, data.error || 'Unknown error');
                         continue;
                     }
-
                     if (data.type === 'system_message') {
-                        claudeAppendLine(data.text || '', 'system');
+                        vcRenderSystem(data.text || '');
                         continue;
                     }
-
                     if (data.type === 'stream_end') continue;
 
-                    // Handle stream events from Claude CLI
-                    // Assistant text content
-                    if (data.type === 'assistant') {
-                        if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
-                        if (data.message?.content) {
-                            for (const block of data.message.content) {
-                                if (block.type === 'text' && block.text) {
-                                    currentAssistantText = block.text;
-                                    if (currentTextEl) currentTextEl.remove();
-                                    currentTextEl = claudeAppendLine(claudeRenderMarkdown(currentAssistantText), 'result-text');
-                                }
-                                if (block.type === 'thinking' && block.thinking) {
-                                    if (thinkingTextEl) thinkingTextEl.remove();
-                                    const preview = block.thinking.length > 120 ? block.thinking.slice(-120) + '...' : block.thinking;
-                                    thinkingTextEl = claudeAppendLine(escHtml(preview), 'thinking');
-                                }
-                            }
-                        }
-                    }
-
-                    // Content block deltas (streaming text)
+                    // Streaming text — append a chunk span to the prose; no re-render
                     if (data.type === 'content_block_delta' || (data.type === 'stream_event' && data.event?.type === 'content_block_delta')) {
-                        if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
                         const delta = data.event?.delta || data.delta;
                         if (delta?.type === 'text_delta' && delta.text) {
-                            currentAssistantText += delta.text;
-                            if (currentTextEl) currentTextEl.remove();
-                            currentTextEl = claudeAppendLine(claudeRenderMarkdown(currentAssistantText), 'result-text');
-                        }
-                        if (delta?.type === 'thinking_delta' && delta.thinking) {
-                            isThinking = true;
-                            if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
+                            vcAppendDelta(currentTurn, delta.text);
                         }
                     }
 
-                    // Tool use events
-                    if (data.type === 'tool_use' || (data.message?.content?.some?.(b => b.type === 'tool_use'))) {
-                        if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
-                        const toolBlocks = data.message?.content?.filter(b => b.type === 'tool_use') || [];
-                        for (const tb of toolBlocks) {
-                            const toolName = tb.name || 'unknown';
-                            const icon = _toolIcon(toolName);
-                            let argsHtml = '';
-                            if (tb.input && typeof tb.input === 'object') {
-                                const keys = Object.keys(tb.input);
-                                const parts = keys.slice(0, 3).map(k => {
-                                    let v = String(tb.input[k]);
-                                    if (v.length > 60) v = v.slice(0, 57) + '...';
-                                    return `<span style="color:#666;">${escHtml(k)}:</span> ${escHtml(v)}`;
-                                });
-                                argsHtml = `<div class="tool-args">${parts.join(' &nbsp;·&nbsp; ')}</div>`;
+                    // Assistant message — render any tool_use blocks (text was already streamed)
+                    if (data.type === 'assistant' && data.message?.content) {
+                        for (const block of data.message.content) {
+                            if (block.type === 'tool_use') {
+                                vcRenderTool(currentTurn, block);
                             }
-                            claudeAppendLine(`<div class="tool-header">${icon} ${escHtml(toolName)}</div>${argsHtml}`, 'tool-use');
+                            if (block.type === 'text' && block.text && !currentTurn.streamedText) {
+                                // Non-streaming providers send full text here — synthesize a delta
+                                vcAppendDelta(currentTurn, block.text);
+                            }
                         }
                     }
 
-                    // Tool result — render diff card if the tool emitted one (Edit/Write)
+                    // Tool result — flip tile to done/error and render any diff
                     if (data.type === 'tool_result') {
+                        vcMarkToolDone(currentTurn, data.tool_use_id, !!data.is_error);
                         if (data.meta && data.meta.diff) {
-                            claudeRenderDiffCard(data.meta);
+                            vcRenderDiff(currentTurn, data.meta);
                         }
                     }
 
-                    // Result event (final): update cost meter, finalize text
+                    // Result — finalize text (markdown render), update cost pill, footer
                     if (data.type === 'result') {
-                        if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
-                        if (thinkingTextEl) { thinkingTextEl.remove(); thinkingTextEl = null; }
+                        resultData = data;
+                        if (data.result) {
+                            vcFinalizeText(currentTurn, data.result);
+                        }
                         if (typeof data.cost_usd === 'number') claudeCost += data.cost_usd;
                         if (typeof data.tokens === 'number' && data.tokens > 0) claudeTokens = data.tokens;
                         claudeUpdateCostPill();
-                        if (data.result && data.result !== currentAssistantText) {
-                            if (currentTextEl) currentTextEl.remove();
-                            claudeAppendLine(claudeRenderMarkdown(data.result), 'result-text');
-                        }
                     }
 
                 } catch (parseErr) {
@@ -6634,12 +6749,8 @@ async function sendClaudeMessage() {
             }
         }
 
-        // Remove thinking indicator if still present
-        if (!thinkingRemoved && thinkingEl.parentNode) thinkingEl.remove();
-        if (thinkingTextEl) { thinkingTextEl.remove(); }
-
-        // Add separator
-        claudeAppendRaw('<hr class="claude-term-separator">');
+        vcDropThinking(currentTurn);
+        if (resultData) vcAddTurnFooter(currentTurn, resultData);
 
         // Reload pages/assets in case Claude changed things
         loadPages();
@@ -6671,8 +6782,7 @@ async function sendClaudeMessage() {
         }
 
     } catch (err) {
-        if (thinkingEl.parentNode) thinkingEl.remove();
-        claudeAppendLine('Connection error: ' + err.message, 'error');
+        vcRenderError(currentTurn, 'Connection error: ' + err.message);
     }
 
     claudeIsStreaming = false;
@@ -6947,13 +7057,151 @@ function slashHelp() {
     claudeAppendLine(html, 'system');
 }
 
-function claudeRenderDiffCard(meta) {
+// Turn rendering — design-language editorial cards.
+// Each call to sendClaudeMessage creates one user vc-turn (the prompt) and
+// one assistant vc-turn (the reply, including any tool calls + diff cards).
+function vcChatScroll() {
+    const out = document.getElementById('claudeOutput');
+    if (out) out.scrollTop = out.scrollHeight;
+}
+function vcTimeStamp() {
+    return new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+function vcStartTurn(role, who) {
+    const out = document.getElementById('claudeOutput');
+    // First message: drop the welcome screen
+    const welcome = document.getElementById('vcWelcome');
+    if (welcome) welcome.remove();
+    const el = document.createElement('div');
+    el.className = 'vc-turn ' + role;
+    el.innerHTML = `
+        <div class="vc-turn-head">
+            <span class="vc-who">${escHtml(who)}</span>
+            <span class="vc-meta">${escHtml(vcTimeStamp())}</span>
+        </div>
+        <div class="vc-turn-body"></div>
+    `;
+    out.appendChild(el);
+    vcChatScroll();
+    return {
+        el,
+        body: el.querySelector('.vc-turn-body'),
+        textEl: null,
+        thinkingEl: null,
+        tools: new Map(),  // tool_use_id -> tile element
+        streamedText: '',
+    };
+}
+function vcUserTurn(text) {
+    const turn = vcStartTurn('user', 'You');
+    const p = document.createElement('div');
+    p.className = 'vc-prose';
+    p.textContent = text;
+    turn.body.appendChild(p);
+    return turn;
+}
+function vcAssistantTurn() {
+    const turn = vcStartTurn('assistant', 'Vibe Coder');
+    // Show a single pulsing thinking dot until first content arrives
+    const dot = document.createElement('div');
+    dot.className = 'vc-thinking';
+    dot.innerHTML = '<span class="vc-dot"></span><span>thinking</span>';
+    turn.body.appendChild(dot);
+    turn.thinkingEl = dot;
+    return turn;
+}
+function vcDropThinking(turn) {
+    if (turn && turn.thinkingEl) {
+        turn.thinkingEl.remove();
+        turn.thinkingEl = null;
+    }
+}
+function vcAppendDelta(turn, deltaText) {
+    if (!turn) return;
+    vcDropThinking(turn);
+    if (!turn.textEl) {
+        turn.textEl = document.createElement('div');
+        turn.textEl.className = 'vc-prose';
+        turn.body.appendChild(turn.textEl);
+    }
+    const span = document.createElement('span');
+    span.className = 'vc-chunk';
+    span.textContent = deltaText;
+    turn.textEl.appendChild(span);
+    turn.streamedText += deltaText;
+    vcChatScroll();
+}
+function vcFinalizeText(turn, fullText) {
+    if (!turn || !fullText) return;
+    vcDropThinking(turn);
+    if (!turn.textEl) {
+        turn.textEl = document.createElement('div');
+        turn.textEl.className = 'vc-prose';
+        turn.body.appendChild(turn.textEl);
+    }
+    // Replace plain-text chunks with markdown-rendered HTML once at end.
+    turn.textEl.innerHTML = claudeRenderMarkdown(fullText);
+}
+function vcToolIconFor(name) {
+    return ({
+        Read: 'ph-eye',
+        Write: 'ph-pencil-simple-line',
+        Edit: 'ph-pencil',
+        Glob: 'ph-magnifying-glass',
+        Grep: 'ph-magnifying-glass-plus',
+        Bash: 'ph-terminal-window',
+        WebFetch: 'ph-globe',
+    })[name] || 'ph-wrench';
+}
+function vcToolArgSummary(name, input) {
+    if (!input || typeof input !== 'object') return '';
+    const fp = input.file_path || input.path || input.pattern || input.url || input.command || '';
+    if (fp) return String(fp);
+    const keys = Object.keys(input);
+    if (keys.length === 0) return '';
+    const v = String(input[keys[0]] || '');
+    return keys[0] + ': ' + (v.length > 80 ? v.slice(0, 77) + '…' : v);
+}
+function vcRenderTool(turn, toolBlock) {
+    if (!turn) return;
+    vcDropThinking(turn);
+    const name = toolBlock.name || 'tool';
+    const summary = vcToolArgSummary(name, toolBlock.input);
+    const tile = document.createElement('div');
+    tile.className = 'vc-tool';
+    tile.dataset.state = 'running';
+    tile.dataset.toolId = toolBlock.id || '';
+    tile.innerHTML = `
+        <span class="vc-tool-state"><span class="vc-spin"></span></span>
+        <span class="vc-tool-name">${escHtml(name)}</span>
+        <span class="vc-tool-args">${escHtml(summary)}</span>
+    `;
+    turn.body.appendChild(tile);
+    turn.tools.set(toolBlock.id, tile);
+    vcChatScroll();
+    return tile;
+}
+function vcMarkToolDone(turn, toolUseId, isError) {
+    if (!turn) return;
+    const tile = turn.tools.get(toolUseId);
+    if (!tile) return;
+    tile.dataset.state = isError ? 'error' : 'done';
+    const state = tile.querySelector('.vc-tool-state');
+    if (state) {
+        const icon = vcToolIconFor(tile.querySelector('.vc-tool-name')?.textContent || '');
+        state.innerHTML = isError
+            ? '<i class="ph ph-x-circle"></i>'
+            : '<i class="ph ph-check"></i>';
+    }
+}
+function vcRenderDiff(turn, meta) {
+    if (!turn) return;
     const path = meta.path || '(file)';
     const tool = (meta.tool || 'Edit').toLowerCase();
     const added = meta.added || 0;
     const removed = meta.removed || 0;
     const diffText = meta.diff || '';
-    const lines = diffText.split('\n').map(ln => {
+    const linesHtml = diffText.split('\n').map(ln => {
         if (ln.startsWith('+++') || ln.startsWith('---') || ln.startsWith('@@')) {
             return `<span class="ln-ctx">${escHtml(ln)}</span>`;
         }
@@ -6963,20 +7211,64 @@ function claudeRenderDiffCard(meta) {
     }).join('');
     const stat = (added > 0 ? `<span class="add">+${added}</span>` : '')
                + (removed > 0 ? ` <span class="rem">−${removed}</span>` : '');
-    const div = document.createElement('div');
-    div.className = 'claude-term-line diff-card';
-    div.innerHTML = `
+    const card = document.createElement('div');
+    card.className = 'vc-diff';
+    card.innerHTML = `
         <div class="diff-head" onclick="this.parentElement.classList.toggle('expanded')">
             <i class="ph ph-git-diff"></i>
             <span class="diff-path">${escHtml(path)}</span>
-            <span style="color:var(--text2);font-size:9px;">${tool}</span>
+            <span class="diff-tool">${escHtml(tool)}</span>
             <span class="diff-stat">${stat}</span>
+            <i class="ph ph-caret-right diff-chev"></i>
         </div>
-        <div class="diff-body">${lines}</div>
+        <div class="diff-body">${linesHtml}</div>
     `;
+    turn.body.appendChild(card);
+    vcChatScroll();
+}
+function vcRenderError(turn, msg) {
+    if (!turn) {
+        // No turn yet — drop a freestanding error card
+        const out = document.getElementById('claudeOutput');
+        const div = document.createElement('div');
+        div.className = 'vc-turn assistant';
+        div.innerHTML = `
+            <div class="vc-turn-head"><span class="vc-who">Vibe Coder</span><span class="vc-meta">${escHtml(vcTimeStamp())}</span></div>
+            <div class="vc-turn-body"><div class="vc-error">${escHtml(msg)}</div></div>
+        `;
+        out.appendChild(div);
+        vcChatScroll();
+        return;
+    }
+    vcDropThinking(turn);
+    const div = document.createElement('div');
+    div.className = 'vc-error';
+    div.textContent = msg;
+    turn.body.appendChild(div);
+    vcChatScroll();
+}
+function vcRenderSystem(text) {
     const out = document.getElementById('claudeOutput');
+    const div = document.createElement('div');
+    div.className = 'vc-system';
+    div.textContent = text;
     out.appendChild(div);
-    out.scrollTop = out.scrollHeight;
+    vcChatScroll();
+}
+function vcAddTurnFooter(turn, data) {
+    if (!turn) return;
+    const cost = typeof data.cost_usd === 'number' ? data.cost_usd : null;
+    const toks = typeof data.tokens === 'number' ? data.tokens : null;
+    const dur  = typeof data.duration_ms === 'number' ? data.duration_ms : null;
+    const parts = [];
+    if (cost !== null) parts.push(`<span class="vc-cost">$${cost.toFixed(4)}</span>`);
+    if (toks !== null) parts.push(`<span>${toks >= 1000 ? (toks/1000).toFixed(1) + 'K' : toks} tok</span>`);
+    if (dur !== null)  parts.push(`<span>${(dur/1000).toFixed(1)}s</span>`);
+    if (parts.length === 0) return;
+    const foot = document.createElement('div');
+    foot.className = 'vc-turn-foot';
+    foot.innerHTML = parts.join('');
+    turn.el.appendChild(foot);
 }
 // ── /Vibe Coder v2 ────────────────────────────────────────────────────────────
 
