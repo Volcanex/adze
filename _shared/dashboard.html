@@ -1130,15 +1130,15 @@
                                     <span class="vc-fs-label" id="vcFsLabel">100%</span>
                                     <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
                                 </div>
-                                <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;">
+                                <div class="claude-term-output" id="claudeOutput" style="padding:12px;overflow:hidden;background:#1a1a1e;">
                                     <div id="vcXtermHost" style="width:100%;height:100%;background:#1a1a1e;position:relative;">
                                         <div id="vcXtermBoot" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9a978e;font-family:Menlo,Monaco,monospace;font-size:11px;letter-spacing:0.05em;text-transform:uppercase;opacity:0.6;">loading aider…</div>
                                     </div>
                                 </div>
-                                <div class="claude-term-tools" id="claudeToolsRow" style="display:none;padding:6px 10px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
-                                    <button class="claude-tool-btn" onclick="openClaudeAssetModal()" title="Insert asset reference"><i class="ph ph-image"></i> Asset</button>
+                                <div class="claude-term-tools" id="claudeToolsRow" style="display:flex;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
+                                    <button class="claude-tool-btn" onclick="vcInsertAssetIntoAider()" title="Pick an asset to inject its path"><i class="ph ph-image"></i> Asset</button>
                                     <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview"><i class="ph ph-cursor"></i> Pointer</button>
-                                    <button class="claude-tool-btn" onclick="resetClaudeSession()" title="Clear memory and start fresh"><i class="ph ph-broom"></i> Clear Memory</button>
+                                    <button class="claude-tool-btn" onclick="vcAiderClear()" title="Clear aider's chat history (/clear)"><i class="ph ph-broom"></i> Clear</button>
                                 </div>
                                 <div class="vibe-presence-badge" id="vibePresenceBadge" role="status">
                                     <span class="vp-dot"></span>
@@ -6912,6 +6912,22 @@ function _vcBootMsg(msg, isError) {
     }
 }
 
+// Send a /clear to the running aider session (its native command).
+function vcAiderClear() {
+    if (!_vcXtermSocket || !_vcXtermSocket.connected) return;
+    _vcXtermSocket.emit('aider:input', { data: '/clear\n' });
+    if (_vcXterm) _vcXterm.focus();
+}
+
+// Asset-picker shortcut — opens the existing modal in "claude mode" so the
+// existing claudeInsertSelectedAssets path picks the chosen URLs and routes
+// through insertIntoClaudeInput (which we've redirected to the terminal).
+function vcInsertAssetIntoAider() {
+    if (typeof openClaudeAssetModal === 'function') {
+        openClaudeAssetModal();
+    }
+}
+
 function vcInitAiderTerminal() {
     if (_vcXterm) {
         // Already running — just refit on tab return
@@ -7904,15 +7920,31 @@ insertAssetToken = function(url) {
 };
 
 function insertIntoClaudeInput(token) {
+    // Route to the live aider terminal if it's connected. Tokens arrive
+    // here from the Pointer ("[Point: ...]") and Asset ("[Asset: ...]")
+    // helpers; aider doesn't understand the bracket wrapping, so strip
+    // it and just inject the inner path/selector.
+    const stripped = token
+        .replace(/\[Point:\s*([^\]]+?)(?:\s+at\s+\([^)]+\))?\]/g, (_, sel) => sel.trim())
+        .replace(/\[Asset:\s*([^\]]+)\]/g, (_, p) => p.trim());
+
+    if (_vcXterm && _vcXtermSocket && _vcXtermSocket.connected) {
+        _vcXtermSocket.emit('aider:input', { data: stripped + ' ' });
+        _vcXterm.focus();
+        return;
+    }
+
+    // Legacy fallback: write into the (hidden) input field
     const input = document.getElementById('claudeInput');
+    if (!input) return;
     const pos = input.selectionStart || input.value.length;
     const before = input.value.slice(0, pos);
     const after = input.value.slice(pos);
     const needSpaceBefore = before.length > 0 && !before.endsWith(' ');
     const needSpaceAfter = after.length > 0 && !after.startsWith(' ');
-    input.value = before + (needSpaceBefore ? ' ' : '') + token + (needSpaceAfter ? ' ' : '') + after;
+    input.value = before + (needSpaceBefore ? ' ' : '') + stripped + (needSpaceAfter ? ' ' : '') + after;
     input.focus();
-    const newPos = pos + (needSpaceBefore ? 1 : 0) + token.length + (needSpaceAfter ? 1 : 0);
+    const newPos = pos + (needSpaceBefore ? 1 : 0) + stripped.length + (needSpaceAfter ? 1 : 0);
     input.setSelectionRange(newPos, newPos);
 }
 
