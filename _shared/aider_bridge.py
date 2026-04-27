@@ -60,11 +60,14 @@ class AiderSession:
         # OPENROUTER_API_KEY must already be in the container env (forwarded
         # by docker-compose).
 
-        # Block GitPython from walking up past the artist's parent dir. Without
-        # this, aider finds /app/.git (the platform repo) and treats /app as
-        # the "git working dir", making in-chat filenames resolve from the
-        # wrong root. With this, --no-git is fully effective.
-        env['GIT_CEILING_DIRECTORIES'] = str(self.artist_root.parent)
+        # Force GitPython to give up looking for a parent .git. Without this,
+        # aider walks up from /app/artists/<slug>/ and finds /app/.git (the
+        # platform repo), then reports "Git working dir: /app" and resolves
+        # in-chat filenames from there. GIT_CEILING_DIRECTORIES is *not*
+        # honoured by GitPython's search_parent_directories logic; pointing
+        # GIT_DIR/GIT_WORK_TREE at /dev/null is the trick that actually works.
+        env['GIT_DIR'] = '/dev/null'
+        env['GIT_WORK_TREE'] = '/dev/null'
 
         cmd = [
             'aider',
