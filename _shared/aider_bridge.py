@@ -160,14 +160,10 @@ class AiderSession:
         except Exception:
             ctx_arg = []  # don't fail to spawn if context build trips on something
 
-        # Auto-load the editable surface so artists don't have to know /add.
-        file_args: list[str] = []
-        try:
-            for f in _collect_initial_files(self.artist_root):
-                file_args.extend(['--file', str(f.relative_to(self.artist_root))])
-        except Exception:
-            file_args = []
-
+        # Lazy load (not eager). The conventions doc lists every page that
+        # exists; aider's --yes-always auto-confirms file additions when
+        # the model proposes an edit. So the artist never types /add, and
+        # we don't pay for 30K tokens of pages the user isn't editing.
         cmd = [
             'aider',
             '--no-git',
@@ -177,7 +173,6 @@ class AiderSession:
             '--yes-always',
             '--no-show-model-warnings',
             *ctx_arg,
-            *file_args,
             '--model', model,
         ]
 
