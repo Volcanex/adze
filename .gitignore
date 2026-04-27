@@ -18,6 +18,7 @@ artists/*/data.db
 artists/*/data.db-shm
 artists/*/data.db-wal
 _claude_sessions.json
+_vibe_sessions/
 *.pid
 
 # Secrets

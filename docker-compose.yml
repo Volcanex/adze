@@ -16,11 +16,13 @@ services:
       - ./output:/app/output
       - ./static:/app/static
       - ./logs:/app/logs
+      - ./_vibe_sessions:/app/_vibe_sessions  # vibe_agent conversation history
       - ./nginx/sites-available:/app/nginx/sites-available
       - claude_auth:/root/.claude
     environment:
       - DEV_ADMIN_TOKEN=${DEV_ADMIN_TOKEN}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
 
 
 volumes:

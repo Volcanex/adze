@@ -76,6 +76,7 @@ def _rate_limit(scope, max_requests, window_seconds):
 sys.path.insert(0, str(Path(__file__).parent))
 from auth import require_artist_auth, get_authenticated_artist, get_all_artists
 from db import insert_pageview, query_analytics, upsert_session, query_sessions, migrate_json_to_sqlite
+import vibe_agent
 
 bp = Blueprint('artist_admin', __name__, url_prefix='/api/adze')
 
@@ -4370,6 +4371,7 @@ import uuid
 import time
 
 _CLAUDE_SESSIONS_FILE = Path(__file__).parent.parent / '_claude_sessions.json'
+_VIBE_SESSIONS_DIR = Path(__file__).parent.parent / '_vibe_sessions'
 
 def _load_claude_sessions():
     try:
@@ -4603,7 +4605,139 @@ Page slugs must always start with "artists/{artist_slug}/" — never bare slugs.
 
 @bp.route('/claude-stream', methods=['POST'])
 def claude_stream():
-    """Stream Claude CLI output via SSE. Requires auth."""
+    """Stream Vibe Coder events via SSE. Requires auth.
+
+    Implementation: in-process agent loop in vibe_agent.run_turn() routing
+    OpenRouter -> Gemini Flash. The legacy `claude` CLI subprocess
+    implementation is preserved at /claude-stream-legacy for one-deploy
+    rollback safety; remove after the new path has been validated in prod.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data = request.get_json() or {}
+    prompt = (data.get('prompt') or '').strip()
+    if not prompt:
+        return jsonify({'error': 'Prompt required'}), 400
+
+    if not os.getenv('OPENROUTER_API_KEY'):
+        return jsonify({
+            'error': 'OPENROUTER_API_KEY is not set on the server. '
+                     'Add it to .env and restart adze-flask.'
+        }), 500
+
+    _vibe_log.info(f'[{artist_slug}] ── PROMPT ── {prompt}')
+
+    # Per-artist mutex (shared with the legacy path — they edit the same files,
+    # so only one can run at a time per artist).
+    active = _claude_streaming.get(artist_slug)
+    if active and time.time() - active.get('since', 0) < 600:
+        return jsonify({
+            'error': 'Vibe Coder is busy',
+            'busy': True,
+            'since': active['since'],
+        }), 409
+    _claude_streaming[artist_slug] = {'since': time.time(), 'prompt': prompt[:100]}
+
+    artist_path = get_artist_path(artist_slug)
+    artist_root = (Path.cwd() / artist_path).resolve()
+
+    # Auto-snapshot before the FIRST turn of a new session
+    session_file = _VIBE_SESSIONS_DIR / f'{artist_slug}.json'
+    is_new_session = not session_file.exists()
+    if is_new_session:
+        try:
+            import tarfile
+            snap_dir = artist_path / '.snapshots'
+            snap_dir.mkdir(exist_ok=True)
+            ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
+            snap_path = snap_dir / f'{ts}_auto-before-vibe-coder.tar.gz'
+            _excl = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.env'}
+            with tarfile.open(str(snap_path), 'w:gz') as tar:
+                for item in sorted(artist_path.iterdir()):
+                    if item.name not in _excl:
+                        tar.add(str(item), arcname=item.name)
+            for old in sorted(snap_dir.glob('*.tar.gz'), reverse=True)[30:]:
+                old.unlink()
+        except Exception:
+            pass  # Don't block the turn if snapshotting fails
+
+    system_prompt = _get_artist_system_prompt(artist_slug)
+    _vibe_log.info(f'[{artist_slug}] ── START (vibe_agent, model={vibe_agent.DEFAULT_MODEL}) ──')
+
+    def generate():
+        try:
+            for event in vibe_agent.run_turn(
+                artist_root=artist_root,
+                sessions_dir=_VIBE_SESSIONS_DIR,
+                session_id=artist_slug,
+                prompt=prompt,
+                system_prompt=system_prompt,
+                log=_vibe_log,
+                artist_slug=artist_slug,
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+            yield 'data: {"type": "stream_end"}\n\n'
+        except Exception as e:
+            _vibe_log.exception(f'[{artist_slug}] vibe_agent crashed')
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+        finally:
+            _claude_streaming.pop(artist_slug, None)
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        }
+    )
+
+
+@bp.route('/vibe/reset', methods=['POST'])
+def vibe_reset():
+    """Clear the artist's vibe-coder conversation. Snapshots first."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    # Refuse mid-stream — would corrupt the conversation file
+    active = _claude_streaming.get(artist_slug)
+    if active and time.time() - active.get('since', 0) < 600:
+        return jsonify({'error': 'Cannot reset while a turn is in flight', 'busy': True}), 409
+
+    artist_path = get_artist_path(artist_slug)
+    try:
+        import tarfile
+        snap_dir = artist_path / '.snapshots'
+        snap_dir.mkdir(exist_ok=True)
+        ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
+        snap_path = snap_dir / f'{ts}_auto-before-vibe-reset.tar.gz'
+        _excl = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.env'}
+        with tarfile.open(str(snap_path), 'w:gz') as tar:
+            for item in sorted(artist_path.iterdir()):
+                if item.name not in _excl:
+                    tar.add(str(item), arcname=item.name)
+        for old in sorted(snap_dir.glob('*.tar.gz'), reverse=True)[30:]:
+            old.unlink()
+    except Exception:
+        pass
+
+    cleared = vibe_agent.clear_session(_VIBE_SESSIONS_DIR, artist_slug)
+    _vibe_log.info(f'[{artist_slug}] ── RESET (cleared={cleared}) ──')
+    return jsonify({'ok': True, 'cleared': cleared})
+
+
+@bp.route('/claude-stream-legacy', methods=['POST'])
+def claude_stream_legacy():
+    """LEGACY: Claude CLI subprocess implementation. Kept for one-deploy rollback.
+
+    Flip dashboard.html's fetch URL back to this if the new vibe_agent path
+    misbehaves. Remove after the new path is validated in prod (>= one week
+    of clean traffic, no rollback events in vibe.log).
+    """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
@@ -5023,14 +5157,36 @@ def list_endpoints():
 
 @bp.route('/claude-reset', methods=['POST'])
 def claude_reset():
-    """Reset Claude session for the artist. Requires auth."""
+    """Reset the Vibe Coder conversation for the artist. Requires auth.
+
+    Clears state for both the new vibe_agent path and the legacy claude CLI
+    path, so this works regardless of which backend the dashboard is hitting.
+    The frontend button at dashboard.html line 861 calls this.
+    """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
 
+    # Refuse mid-stream — clearing during a turn would corrupt the conversation file
+    active = _claude_streaming.get(artist_slug)
+    if active and time.time() - active.get('since', 0) < 600:
+        return jsonify({'error': 'Cannot reset while a turn is in flight', 'busy': True}), 409
+
+    # Legacy: drop the resume token
+    legacy_cleared = artist_slug in _claude_sessions
     _claude_sessions.pop(artist_slug, None)
     _save_claude_sessions(_claude_sessions)
-    return jsonify({'ok': True, 'message': 'Session reset. Next message will start a fresh conversation.'})
+
+    # New: drop the vibe_agent conversation file
+    new_cleared = vibe_agent.clear_session(_VIBE_SESSIONS_DIR, artist_slug)
+
+    _vibe_log.info(
+        f'[{artist_slug}] ── RESET (legacy={legacy_cleared}, vibe_agent={new_cleared}) ──'
+    )
+    return jsonify({
+        'ok': True,
+        'message': 'Session reset. Next message will start a fresh conversation.',
+    })
 
 
 @bp.route('/claude-halt', methods=['POST'])
