@@ -4696,6 +4696,32 @@ def claude_stream():
     )
 
 
+@bp.route('/list-vibe-files', methods=['GET'])
+def list_vibe_files():
+    """List artist files for the @-mention picker. Excludes large/binary subtrees."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    artist_path = get_artist_path(artist_slug)
+    if not artist_path.exists():
+        return jsonify({'files': []})
+    excluded_dirs = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
+    files = []
+    for p in sorted(artist_path.rglob('*')):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(artist_path)
+        parts = set(rel.parts)
+        if parts & excluded_dirs:
+            continue
+        if p.name.startswith('.') or p.name.endswith(('.pyc', '.db', '.db-shm', '.db-wal', '.bak')):
+            continue
+        files.append(str(rel))
+        if len(files) >= 500:
+            break
+    return jsonify({'files': files})
+
+
 @bp.route('/vibe/reset', methods=['POST'])
 def vibe_reset():
     """Clear the artist's vibe-coder conversation. Snapshots first."""

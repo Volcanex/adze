@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
+    <!-- Phosphor icons (per design-language/project/Adze Design Language.html) -->
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
     <!-- Apply saved theme before first paint to prevent light→dark flash -->
     <script>if(localStorage.getItem('dashboard-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
@@ -484,50 +486,103 @@
 
         .unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: none; margin-left: 6px; box-shadow: 0 0 6px rgba(200,168,64,0.4); }
 
-        /* ── Claude Terminal ── */
-        .claude-terminal { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: #1a1a1e; height: 100%; position: relative; --vc-scale: 1; }
-        .claude-term-output { flex: 1; overflow-y: auto; padding: 16px 20px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: calc(13px * var(--vc-scale)); line-height: 1.65; color: #e8e6e0; white-space: pre-wrap; word-wrap: break-word; }
-        .vc-fs-controls { position: absolute; top: 6px; right: 10px; z-index: 5; display: flex; gap: 2px; background: rgba(34,34,38,0.85); backdrop-filter: blur(4px); border: 1px solid #333; border-radius: 5px; padding: 2px; }
-        .vc-fs-controls button { background: transparent; color: #c8c5bd; border: none; width: 22px; height: 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--body-font, sans-serif); line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
-        .vc-fs-controls button:hover { background: #3a3a40; color: #fff; }
+        /* ── Vibe Coder Terminal ──────────────────────────────────────────
+           This pane runs always-dark even in light dashboard mode. Tokens
+           below scope locally so children can use var(--…) and stay aligned
+           with /design-language/project/Adze Design Language.html. */
+        .claude-terminal {
+            /* Local always-dark token scope */
+            --bg: #1a1a1e;
+            --bg2: #222226;
+            --surface: #2c2c30;
+            --surface2: #343438;
+            --border: #3e3e44;
+            --text: #e8e6e0;
+            --text2: #9a978e;
+            --accent: #99cdff;
+            --accent-soft: #7ea3c4;
+            --accent-hover: #b8ddff;
+            --accent-text: #1a1a1e;
+            --warn: #c8a840;
+            --danger: #e74c3c;
+            --success: #6dca8a;
+            --radius: 6px;
+            /* Layout */
+            display: flex; flex-direction: column; flex: 1; min-height: 0;
+            overflow: hidden; background: var(--bg); height: 100%;
+            position: relative; --vc-scale: 1;
+        }
+        .claude-term-output { flex: 1; overflow-y: auto; padding: 16px 20px; font-family: var(--mono); font-size: calc(13px * var(--vc-scale)); line-height: 1.65; color: var(--text); white-space: pre-wrap; word-wrap: break-word; }
+        .vc-fs-controls { position: absolute; top: 6px; right: 10px; z-index: 5; display: flex; gap: 2px; background: rgba(34,34,38,0.85); backdrop-filter: blur(4px); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px; }
+        .vc-fs-controls button { background: transparent; color: var(--text); border: none; width: 22px; height: 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--body-font, sans-serif); line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .vc-fs-controls button:hover { background: var(--surface2); color: #fff; }
         .vc-fs-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
-        .vc-fs-controls .vc-fs-label { color: #8a8780; font-size: 10px; padding: 0 4px; align-self: center; min-width: 28px; text-align: center; font-family: var(--body-font, sans-serif); user-select: none; }
+        .vc-fs-controls .vc-fs-label { color: var(--text2); font-size: 10px; padding: 0 4px; align-self: center; min-width: 28px; text-align: center; font-family: var(--body-font, sans-serif); user-select: none; }
         .claude-term-output::-webkit-scrollbar { width: 6px; }
-        .claude-term-output::-webkit-scrollbar-track { background: #222; }
-        .claude-term-output::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        .claude-term-output::-webkit-scrollbar-track { background: var(--bg2); }
+        .claude-term-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         .claude-term-line { margin-bottom: 3px; font-size: calc(10px * var(--vc-scale)); padding: 2px 0; }
-        .claude-term-line.user-input { color: #99cdff; font-weight: 600; font-size: calc(12px * var(--vc-scale)); }
-        .claude-term-line.user-input::before { content: '❯ '; color: #99cdff; }
+        .claude-term-line.user-input { color: var(--accent); font-weight: 600; font-size: calc(12px * var(--vc-scale)); }
+        .claude-term-line.user-input::before { content: '❯ '; color: var(--accent); }
         .claude-term-line.queued { opacity: 0.5; }
         .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: calc(9px * var(--vc-scale)); color: var(--text2); }
-        .claude-term-line.system { color: #666; font-style: italic; font-size: calc(9px * var(--vc-scale)); }
-        .claude-term-line.error { color: #e74c3c; font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.thinking { color: #9a978e; font-style: italic; font-size: calc(10px * var(--vc-scale)); }
+        .claude-term-line.system { color: var(--text2); font-style: italic; font-size: calc(9px * var(--vc-scale)); opacity: 0.75; }
+        .claude-term-line.error { color: var(--danger); font-size: calc(10px * var(--vc-scale)); }
+        .claude-term-line.thinking { color: var(--text2); font-style: italic; font-size: calc(10px * var(--vc-scale)); }
         .claude-term-line.thinking::before { content: ''; }
-        .claude-term-line.tool-use { color: #aaa79e; font-size: calc(10px * var(--vc-scale)); padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid #444; }
-        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #c8a840; font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.tool-use .tool-header svg { width: 11px; height: 11px; stroke: #c8a840; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: #888; margin-top: 2px; word-break: break-all; }
-        .claude-term-line.result-text { color: #e8e6e0; font-size: calc(10px * var(--vc-scale)); line-height: 1.5; margin-top: 6px; }
+        .claude-term-line.tool-use { color: var(--text2); font-size: calc(10px * var(--vc-scale)); padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid var(--border); }
+        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--warn); font-size: calc(10px * var(--vc-scale)); }
+        .claude-term-line.tool-use .tool-header i { font-size: calc(13px * var(--vc-scale)); color: var(--warn); }
+        .claude-term-line.tool-use .tool-header svg { width: 11px; height: 11px; stroke: var(--warn); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: var(--text2); margin-top: 2px; word-break: break-all; opacity: 0.75; }
+        .claude-term-line.result-text { color: var(--text); font-size: calc(10px * var(--vc-scale)); line-height: 1.5; margin-top: 6px; }
         .claude-term-line.result-text strong { color: #fff; }
-        .claude-term-line.result-text em { color: #bbb; font-style: italic; }
-        .claude-term-line.result-text code { background: #2c2c30; padding: 1px 5px; border-radius: 3px; font-size: calc(9px * var(--vc-scale)); color: #6a9fd4; }
-        .claude-term-line.result-text a { color: #99cdff; text-decoration: underline; }
-        .claude-term-code-block { background: #111; border: 1px solid #333; border-radius: 6px; padding: 12px 14px; margin: 8px 0; overflow-x: auto; font-size: 12px; line-height: 1.5; color: #ccc; }
-        .claude-term-code-block .code-lang { color: #666; font-size: 10px; text-transform: uppercase; margin-bottom: 6px; display: block; }
-        .claude-term-separator { border: none; border-top: 1px solid #2a2a2e; margin: 12px 0; }
-        .claude-term-input-bar { display: flex; gap: 5px; padding: 8px 10px; background: #222226; border-top: 1px solid #333; flex-shrink: 0; align-items: center; }
-        .claude-term-input-bar input { flex: 1; background: #1a1a1e; color: #e8e6e0; border: 1px solid #3e3e44; border-radius: 5px; padding: 6px 10px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 11px; outline: none; }
-        .claude-term-input-bar input:focus { border-color: #1C4F82; box-shadow: 0 0 0 2px rgba(28,79,130,0.2); }
-        .claude-term-input-bar input::placeholder { color: #555; }
-        .claude-term-input-bar button { padding: 6px 11px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .claude-term-input-bar .claude-send { background: #1C4F82; color: #fff; }
-        .claude-term-input-bar .claude-send:hover { background: #6a9fd4; }
+        .claude-term-line.result-text em { color: var(--text2); font-style: italic; }
+        .claude-term-line.result-text code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: calc(9px * var(--vc-scale)); color: var(--accent-soft); }
+        .claude-term-line.result-text a { color: var(--accent); text-decoration: underline; }
+        /* Diff card emitted by the server when an Edit/Write tool fires. */
+        .claude-term-line.diff-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin: 8px 0; padding: 0; overflow: hidden; font-size: calc(10px * var(--vc-scale)); }
+        .claude-term-line.diff-card .diff-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--surface); border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: var(--text2); cursor: pointer; user-select: none; }
+        .claude-term-line.diff-card .diff-head i { font-size: calc(12px * var(--vc-scale)); color: var(--accent); }
+        .claude-term-line.diff-card .diff-head .diff-path { color: var(--text); font-weight: 600; }
+        .claude-term-line.diff-card .diff-head .diff-stat { margin-left: auto; font-size: calc(8.5px * var(--vc-scale)); }
+        .claude-term-line.diff-card .diff-head .diff-stat .add { color: var(--success); }
+        .claude-term-line.diff-card .diff-head .diff-stat .rem { color: var(--danger); }
+        .claude-term-line.diff-card .diff-body { display: none; padding: 8px 10px; max-height: 240px; overflow-y: auto; font-family: var(--mono); white-space: pre; line-height: 1.4; }
+        .claude-term-line.diff-card.expanded .diff-body { display: block; }
+        .claude-term-line.diff-card .diff-body .ln-add { color: var(--success); display: block; }
+        .claude-term-line.diff-card .diff-body .ln-rem { color: var(--danger); display: block; opacity: 0.85; }
+        .claude-term-line.diff-card .diff-body .ln-ctx { color: var(--text2); display: block; opacity: 0.6; }
+        .claude-term-code-block { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 8px 0; overflow-x: auto; font-size: 12px; line-height: 1.5; color: var(--text); }
+        .claude-term-code-block .code-lang { color: var(--text2); font-size: 10px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+        .claude-term-separator { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+        .claude-term-input-bar { display: flex; gap: 5px; padding: 8px 10px; background: var(--bg2); border-top: 1px solid var(--border); flex-shrink: 0; align-items: center; position: relative; }
+        .claude-term-input-bar input { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; font-family: var(--mono); font-size: 11px; outline: none; }
+        .claude-term-input-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(153,205,255,0.18); }
+        .claude-term-input-bar input::placeholder { color: var(--text2); opacity: 0.6; }
+        .claude-term-input-bar button { padding: 6px 11px; border-radius: var(--radius); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+        .claude-term-input-bar button i { font-size: 14px; }
+        .claude-term-input-bar .claude-send { background: var(--accent); color: var(--accent-text); border: 1px solid var(--accent); }
+        .claude-term-input-bar .claude-send:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
         .claude-term-input-bar .claude-send:disabled { opacity: 0.4; }
-        .claude-term-input-bar .claude-halt { background: #c0392b; color: #fff; padding: 6px 11px; }
-        .claude-term-input-bar .claude-halt:hover { background: #e74c3c; }
-        .claude-term-input-bar .claude-reset { background: transparent; color: #666; border: 1px solid #3e3e44; padding: 10px 12px; }
-        .claude-term-input-bar .claude-reset:hover { color: #e74c3c; border-color: #e74c3c; }
+        .claude-term-input-bar .claude-halt { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
+        .claude-term-input-bar .claude-halt:hover { filter: brightness(1.15); }
+        /* Cost meter pill — sits beside the input. Updates per result event. */
+        .claude-cost-pill { font-family: var(--mono); font-size: 10px; color: var(--text2); padding: 4px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; cursor: default; user-select: none; opacity: 0; transition: opacity 0.25s; }
+        .claude-cost-pill.show { opacity: 1; }
+        .claude-cost-pill .cost-val { color: var(--accent); font-weight: 600; }
+        .claude-cost-pill .tok-val { color: var(--text); margin-left: 6px; }
+        .claude-cost-pill .ctx-bar { display: inline-block; width: 28px; height: 4px; background: var(--bg2); border-radius: 999px; margin-left: 6px; vertical-align: middle; overflow: hidden; }
+        .claude-cost-pill .ctx-bar > span { display: block; height: 100%; background: var(--accent-soft); transition: width 0.3s; }
+        /* Slash command + @-mention popovers — same shape, anchored above the input bar. */
+        .claude-popover { position: absolute; left: 10px; right: 10px; bottom: calc(100% + 4px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; z-index: 50; display: none; }
+        .claude-popover.show { display: block; }
+        .claude-popover .pop-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 11px; color: var(--text2); cursor: pointer; transition: background 0.1s; }
+        .claude-popover .pop-item:hover, .claude-popover .pop-item.active { background: var(--surface2); color: var(--text); }
+        .claude-popover .pop-item i { font-size: 13px; color: var(--accent); flex-shrink: 0; }
+        .claude-popover .pop-item .pop-name { font-family: var(--mono); font-weight: 600; color: var(--text); }
+        .claude-popover .pop-item .pop-desc { font-size: 10px; color: var(--text2); margin-left: auto; opacity: 0.75; }
+        .claude-popover .pop-empty { padding: 10px; font-size: 11px; color: var(--text2); font-style: italic; text-align: center; opacity: 0.6; }
         /* Vibe Coder presence badge — shown when another browser tab is editing the same artist */
         .vibe-presence-badge { display: none; align-items: center; gap: 8px; padding: 6px 10px; background: #2a2a1e; border-top: 1px solid #5c5230; color: #d9c78a; font-size: 11px; flex-shrink: 0; }
         .vibe-presence-badge.show { display: flex; }
@@ -539,31 +594,32 @@
         /* Takeover overlay — shown when another tab took over this session */
         .vibe-takeover-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,12,0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
         .vibe-takeover-overlay.show { display: flex; }
-        .vibe-takeover-overlay .vto-box { background: #1a1a1e; border: 1px solid #3e3e44; border-radius: 8px; padding: 32px 36px; max-width: 420px; text-align: center; color: #e8e6e0; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
-        .vibe-takeover-overlay h3 { margin: 0 0 10px; font-size: 16px; color: #99cdff; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
-        .vibe-takeover-overlay p { margin: 0 0 22px; font-size: 13px; line-height: 1.5; color: #bbb; }
-        .vibe-takeover-overlay button { background: #1C4F82; color: #fff; border: none; border-radius: 5px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-        .vibe-takeover-overlay button:hover { background: #2a6bb0; }
-        .claude-tools-toggle { width: 26px; flex-shrink: 0; background: #2a2a2e; color: #999; border: 1px solid #3e3e44; border-radius: 5px; font-size: 14px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 6px 0; line-height: 1; box-sizing: border-box; }
-        .claude-tools-toggle:hover { color: #fff; border-color: #1C4F82; }
-        .claude-tools-toggle.open { background: #1C4F82; color: #fff; border-color: #1C4F82; transform: rotate(45deg); }
+        .vibe-takeover-overlay .vto-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 32px 36px; max-width: 420px; text-align: center; color: var(--text); font-family: var(--mono); }
+        .vibe-takeover-overlay h3 { margin: 0 0 10px; font-family: var(--heading-font); font-style: italic; font-weight: 400; font-size: 22px; color: var(--accent); letter-spacing: 0; text-transform: none; }
+        .vibe-takeover-overlay p { margin: 0 0 22px; font-size: 13px; line-height: 1.5; color: var(--text2); }
+        .vibe-takeover-overlay button { background: var(--accent); color: var(--accent-text); border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .vibe-takeover-overlay button:hover { background: var(--accent-hover); }
+        .claude-tools-toggle { width: 26px; flex-shrink: 0; background: var(--surface); color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 6px 0; line-height: 1; box-sizing: border-box; }
+        .claude-tools-toggle:hover { color: var(--text); border-color: var(--accent); }
+        .claude-tools-toggle.open { background: var(--accent); color: var(--accent-text); border-color: var(--accent); transform: rotate(45deg); }
         .claude-term-tools { display: flex; }
-        .claude-tool-btn { background: transparent; color: #888; border: 1px solid #3e3e44; padding: 8px 10px; font-size: 11px; border-radius: 5px; white-space: nowrap; cursor: pointer; transition: all 0.15s; }
-        .claude-tool-btn:hover { color: #99cdff; border-color: #99cdff; }
-        .claude-tool-btn.active { color: #99cdff; border-color: #99cdff; background: rgba(153,205,255,0.1); }
+        .claude-tool-btn { background: transparent; color: var(--text2); border: 1px solid var(--border); padding: 8px 10px; font-size: 11px; border-radius: var(--radius); white-space: nowrap; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+        .claude-tool-btn i { font-size: 13px; }
+        .claude-tool-btn:hover { color: var(--accent); border-color: var(--accent); }
+        .claude-tool-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(153,205,255,0.1); }
         .claude-term-welcome { padding: 30px 20px; text-align: center; }
-        .claude-term-welcome h2 { font-family: 'Cardo', Georgia, serif; font-weight: 700; font-style: normal; color: #99cdff; font-size: 22px; margin-bottom: 8px; letter-spacing: 3px; text-transform: uppercase; }
-        .claude-term-welcome p { color: #666; font-size: 13px; line-height: 1.3; max-width: 500px; margin: 0 auto; }
+        .claude-term-welcome h2 { font-family: var(--heading-font); font-weight: 400; font-style: italic; color: var(--accent); font-size: 28px; margin-bottom: 8px; letter-spacing: 0; text-transform: none; }
+        .claude-term-welcome p { color: var(--text2); font-size: 13px; line-height: 1.3; max-width: 500px; margin: 0 auto; }
         .claude-term-welcome .vc-line1 { font-size: 13px; }
         .claude-term-welcome .vc-line2 { font-size: 11.5px; margin-top: 1px; }
         .claude-term-welcome .vc-line3 { font-size: 10px; margin-top: 1px; }
         .claude-term-welcome .vc-line4 { font-size: 8.5px; margin-top: 1px; }
-        .claude-term-welcome .vc-try { margin-top: 10px; }
-        .claude-term-welcome kbd { background: #2c2c30; padding: 2px 6px; border-radius: 3px; font-family: 'Menlo', monospace; font-size: 11px; color: #999; border: 1px solid #3e3e44; transition: opacity 0.25s, transform 0.25s; cursor: pointer; }
-        .claude-term-welcome kbd:hover { color: #ccc; border-color: #555; }
+        .claude-term-welcome .vc-try { margin-top: 14px; }
+        .claude-term-welcome kbd { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-family: var(--mono); font-size: 11px; color: var(--text2); border: 1px solid var(--border); transition: opacity 0.25s, transform 0.25s; cursor: pointer; }
+        .claude-term-welcome kbd:hover { color: var(--text); border-color: var(--text2); }
         @keyframes vcFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         .vc-suggestion { display: inline-block; animation: vcFadeIn 0.3s ease; }
-        .claude-thinking-indicator { display: inline-flex; align-items: center; gap: 6px; color: #9a978e; font-style: italic; font-size: 13px; padding: 4px 0; }
+        .claude-thinking-indicator { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-style: italic; font-size: 13px; padding: 4px 0; }
         .claude-thinking-indicator .dots span { animation: dotPulse 1.4s infinite; opacity: 0.3; }
         .claude-thinking-indicator .dots span:nth-child(2) { animation-delay: 0.2s; }
         .claude-thinking-indicator .dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -851,14 +907,14 @@
                                 </div>
                                 <div class="claude-term-output" id="claudeOutput">
                                     <div class="claude-term-welcome" id="vcWelcome">
-                                        <h2>Coder</h2>
+                                        <h2>Vibe Coder</h2>
                                         <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
                                     </div>
                                 </div>
-                                <div class="claude-term-tools" id="claudeToolsRow" style="display:none;padding:6px 10px;background:#222226;border-top:1px solid #333;gap:6px;flex-shrink:0;flex-wrap:wrap;">
-                                    <button class="claude-tool-btn" onclick="openClaudeAssetModal()" title="Insert asset reference">+ Asset</button>
-                                    <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview">Pointer</button>
-                                    <button class="claude-tool-btn" onclick="resetClaudeSession()" title="Clear memory and start fresh">Clear Memory</button>
+                                <div class="claude-term-tools" id="claudeToolsRow" style="display:none;padding:6px 10px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
+                                    <button class="claude-tool-btn" onclick="openClaudeAssetModal()" title="Insert asset reference"><i class="ph ph-image"></i> Asset</button>
+                                    <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview"><i class="ph ph-cursor"></i> Pointer</button>
+                                    <button class="claude-tool-btn" onclick="resetClaudeSession()" title="Clear memory and start fresh"><i class="ph ph-broom"></i> Clear Memory</button>
                                 </div>
                                 <div class="vibe-presence-badge" id="vibePresenceBadge" role="status">
                                     <span class="vp-dot"></span>
@@ -866,10 +922,16 @@
                                     <button type="button" class="vp-takeover" onclick="vibeTakeover()">Take over</button>
                                 </div>
                                 <div class="claude-term-input-bar">
-                                    <input type="text" id="claudeInput" placeholder="Ask anything about your site..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClaudeMessage();}">
-                                    <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools">+</button>
-                                    <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn">Send</button>
-                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder">Stop</button>
+                                    <div class="claude-popover" id="claudePopover"></div>
+                                    <input type="text" id="claudeInput" placeholder="Ask, or / for commands, @ to attach a file…" onkeydown="onClaudeInputKeydown(event)" oninput="onClaudeInputChange(event)">
+                                    <span class="claude-cost-pill" id="claudeCostPill" title="This conversation: cost · tokens · context fill">
+                                        <span class="cost-val" id="ccPillCost">$0.00</span>
+                                        <span class="tok-val" id="ccPillTok">0 tok</span>
+                                        <span class="ctx-bar"><span id="ccPillCtxBar" style="width:0%"></span></span>
+                                    </span>
+                                    <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools" aria-label="Tools"><i class="ph ph-plus"></i></button>
+                                    <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn" aria-label="Send"><i class="ph ph-paper-plane-tilt"></i></button>
+                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder" aria-label="Stop"><i class="ph ph-stop-fill"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -6546,15 +6608,20 @@ async function sendClaudeMessage() {
                         }
                     }
 
-                    // Tool result
+                    // Tool result — render diff card if the tool emitted one (Edit/Write)
                     if (data.type === 'tool_result') {
-                        // Tool results are usually just confirmations, show briefly
+                        if (data.meta && data.meta.diff) {
+                            claudeRenderDiffCard(data.meta);
+                        }
                     }
 
-                    // Result event (final)
+                    // Result event (final): update cost meter, finalize text
                     if (data.type === 'result') {
                         if (!thinkingRemoved) { thinkingEl.remove(); thinkingRemoved = true; }
                         if (thinkingTextEl) { thinkingTextEl.remove(); thinkingTextEl = null; }
+                        if (typeof data.cost_usd === 'number') claudeCost += data.cost_usd;
+                        if (typeof data.tokens === 'number' && data.tokens > 0) claudeTokens = data.tokens;
+                        claudeUpdateCostPill();
                         if (data.result && data.result !== currentAssistantText) {
                             if (currentTextEl) currentTextEl.remove();
                             claudeAppendLine(claudeRenderMarkdown(data.result), 'result-text');
@@ -6642,16 +6709,288 @@ async function haltClaude() {
     }
 }
 
+// ── Vibe Coder v2: cost meter, slash + @ popover, diff cards ─────────────────
+let claudeCost = 0;
+let claudeTokens = 0;
+const VIBE_CONTEXT_TOKENS = 1_000_000;  // Gemini 2.5 Flash 1M context
+
+function claudeUpdateCostPill() {
+    const pill = document.getElementById('claudeCostPill');
+    if (!pill) return;
+    document.getElementById('ccPillCost').textContent = '$' + claudeCost.toFixed(4);
+    document.getElementById('ccPillTok').textContent =
+        (claudeTokens >= 1000 ? (claudeTokens/1000).toFixed(1) + 'K' : claudeTokens) + ' tok';
+    const pct = Math.min(100, (claudeTokens / VIBE_CONTEXT_TOKENS) * 100);
+    document.getElementById('ccPillCtxBar').style.width = pct + '%';
+    pill.classList.add('show');
+}
+function claudeResetCostMeter() {
+    claudeCost = 0;
+    claudeTokens = 0;
+    const pill = document.getElementById('claudeCostPill');
+    if (!pill) return;
+    pill.classList.remove('show');
+    document.getElementById('ccPillCost').textContent = '$0.00';
+    document.getElementById('ccPillTok').textContent = '0 tok';
+    document.getElementById('ccPillCtxBar').style.width = '0%';
+}
+
+const VIBE_SLASH_COMMANDS = [
+    {name: '/clear',    desc: 'Clear memory',          icon: 'ph-broom',                  action: () => resetClaudeSession()},
+    {name: '/snapshot', desc: 'Save restore point',    icon: 'ph-floppy-disk',            action: () => slashSnapshot()},
+    {name: '/restore',  desc: 'Browse snapshots',      icon: 'ph-clock-counter-clockwise',action: () => slashRestore()},
+    {name: '/copy',     desc: 'Download as markdown',  icon: 'ph-clipboard-text',         action: () => slashCopy()},
+    {name: '/help',     desc: 'Show shortcuts',        icon: 'ph-question',               action: () => slashHelp()},
+];
+
+let _vibePopItems = [];
+let _vibePopIdx = -1;
+let _vibePopMode = null;
+let _vibeMentionFiles = null;
+
+function onClaudeInputKeydown(e) {
+    const popover = document.getElementById('claudePopover');
+    if (popover && popover.classList.contains('show')) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); navigatePopover(1); return; }
+        if (e.key === 'ArrowUp')   { e.preventDefault(); navigatePopover(-1); return; }
+        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectPopoverItem(); return; }
+        if (e.key === 'Escape')    { hidePopover(); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendClaudeMessage();
+    }
+}
+function onClaudeInputChange(e) {
+    const val = e.target.value;
+    if (val.startsWith('/')) { showSlashPopover(val); return; }
+    const cursorPos = e.target.selectionStart || val.length;
+    const before = val.slice(0, cursorPos);
+    const m = before.match(/(?:^|\s)@([^\s]*)$/);
+    if (m) {
+        showMentionPopover(m[1]);
+    } else {
+        hidePopover();
+    }
+}
+function showSlashPopover(query) {
+    const q = query.toLowerCase();
+    const items = VIBE_SLASH_COMMANDS
+        .filter(c => c.name.startsWith(q) || q === '/')
+        .map(c => ({icon: c.icon, name: c.name, desc: c.desc, onSelect: c.action}));
+    _vibePopMode = 'slash';
+    renderPopover(items);
+}
+async function showMentionPopover(query) {
+    if (_vibeMentionFiles === null) {
+        try {
+            const r = await apiFetch('/api/adze/list-vibe-files');
+            const d = await r.json();
+            _vibeMentionFiles = d.files || [];
+        } catch (e) {
+            _vibeMentionFiles = [];
+        }
+    }
+    const q = query.toLowerCase();
+    const items = _vibeMentionFiles
+        .filter(f => f.toLowerCase().includes(q))
+        .slice(0, 12)
+        .map(f => ({
+            icon: f.endsWith('.md')   ? 'ph-file-text'
+                : f.endsWith('.json') ? 'ph-brackets-curly'
+                : f.endsWith('.py')   ? 'ph-file-code'
+                : f.endsWith('.html') ? 'ph-file-html'
+                : f.endsWith('.css')  ? 'ph-file-css'
+                : 'ph-file',
+            name: f,
+            desc: '',
+            onSelect: () => insertMention(f),
+        }));
+    _vibePopMode = 'mention';
+    renderPopover(items);
+}
+function renderPopover(items) {
+    const popover = document.getElementById('claudePopover');
+    if (items.length === 0) {
+        popover.innerHTML = '<div class="pop-empty">No matches</div>';
+    } else {
+        popover.innerHTML = items.map((it, i) =>
+            `<div class="pop-item ${i===0?'active':''}" data-idx="${i}">
+                <i class="ph ${it.icon}"></i>
+                <span class="pop-name">${escHtml(it.name)}</span>
+                ${it.desc ? `<span class="pop-desc">${escHtml(it.desc)}</span>` : ''}
+            </div>`).join('');
+        popover.querySelectorAll('.pop-item').forEach((el, i) => {
+            el.addEventListener('mouseenter', () => { _vibePopIdx = i; updatePopoverActive(); });
+            el.addEventListener('mousedown', (ev) => { ev.preventDefault(); _vibePopIdx = i; selectPopoverItem(); });
+        });
+    }
+    popover.classList.add('show');
+    _vibePopItems = items;
+    _vibePopIdx = items.length > 0 ? 0 : -1;
+}
+function navigatePopover(dir) {
+    if (_vibePopItems.length === 0) return;
+    _vibePopIdx = (_vibePopIdx + dir + _vibePopItems.length) % _vibePopItems.length;
+    updatePopoverActive();
+}
+function updatePopoverActive() {
+    document.querySelectorAll('.claude-popover .pop-item').forEach((el, i) => {
+        el.classList.toggle('active', i === _vibePopIdx);
+    });
+    const active = document.querySelector('.claude-popover .pop-item.active');
+    if (active) active.scrollIntoView({block: 'nearest'});
+}
+function selectPopoverItem() {
+    if (_vibePopIdx < 0 || _vibePopIdx >= _vibePopItems.length) { hidePopover(); return; }
+    const item = _vibePopItems[_vibePopIdx];
+    item.onSelect();
+    hidePopover();
+}
+function hidePopover() {
+    const popover = document.getElementById('claudePopover');
+    if (popover) popover.classList.remove('show');
+    _vibePopItems = [];
+    _vibePopIdx = -1;
+    _vibePopMode = null;
+}
+function insertMention(filePath) {
+    const input = document.getElementById('claudeInput');
+    const val = input.value;
+    const cursorPos = input.selectionStart || val.length;
+    const before = val.slice(0, cursorPos);
+    const after = val.slice(cursorPos);
+    const newBefore = before.replace(/(@[^\s]*)$/, '@' + filePath + ' ');
+    input.value = newBefore + after;
+    input.focus();
+    const newPos = newBefore.length;
+    input.setSelectionRange(newPos, newPos);
+}
+
+async function slashSnapshot() {
+    document.getElementById('claudeInput').value = '';
+    try {
+        const r = await apiFetch('/api/adze/create-snapshot', { method: 'POST' });
+        if (r.ok) {
+            toast('Snapshot saved', 'success');
+            claudeAppendLine('Snapshot saved.', 'system');
+        } else {
+            toast('Snapshot failed', 'error');
+        }
+    } catch (e) { toast('Snapshot error: ' + e.message, 'error'); }
+}
+async function slashRestore() {
+    document.getElementById('claudeInput').value = '';
+    try {
+        const r = await apiFetch('/api/adze/list-snapshots');
+        const d = await r.json();
+        const snaps = d.snapshots || [];
+        if (snaps.length === 0) { claudeAppendLine('No snapshots to restore.', 'system'); return; }
+        const list = snaps.slice(0, 10).map((s, i) => `${i+1}. ${s.name || s.timestamp || s.id}`).join('\n');
+        const choice = prompt(`Choose a snapshot to restore (1-${Math.min(10, snaps.length)}):\n\n${list}`);
+        if (!choice) return;
+        const idx = parseInt(choice, 10) - 1;
+        if (isNaN(idx) || !snaps[idx]) { toast('Invalid choice', 'error'); return; }
+        const target = snaps[idx];
+        if (!confirm(`Restore "${target.name || target.id}"? Current files in the artist's directory will be overwritten.`)) return;
+        const rr = await apiFetch('/api/adze/restore-snapshot', { method: 'POST', body: { name: target.name || target.id } });
+        if (rr.ok) {
+            toast('Restored', 'success');
+            claudeAppendLine(`Restored snapshot: ${target.name || target.id}.`, 'system');
+            try { loadPages(); loadAssets(); if (currentPage) refreshPreview(); } catch(e) {}
+        } else {
+            toast('Restore failed', 'error');
+        }
+    } catch (e) { toast('Restore error: ' + e.message, 'error'); }
+}
+function slashCopy() {
+    document.getElementById('claudeInput').value = '';
+    const output = document.getElementById('claudeOutput');
+    if (!output) return;
+    const lines = [];
+    output.querySelectorAll('.claude-term-line').forEach(el => {
+        if (el.classList.contains('user-input')) {
+            lines.push('### You\n\n' + el.textContent.replace(/^❯\s*/, ''));
+        } else if (el.classList.contains('result-text')) {
+            lines.push('### Vibe Coder\n\n' + el.textContent);
+        } else if (el.classList.contains('tool-use')) {
+            const header = el.querySelector('.tool-header')?.textContent.trim() || 'Tool';
+            const args = el.querySelector('.tool-args')?.textContent.trim() || '';
+            lines.push('> _' + header + (args ? ' — ' + args : '') + '_');
+        }
+    });
+    const md = `# Vibe Coder conversation\n\n_${currentArtist} · ${new Date().toISOString()}_\n\n` + lines.join('\n\n');
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vibe-coder-${currentArtist}-${new Date().toISOString().slice(0,10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Conversation downloaded', 'success');
+}
+function slashHelp() {
+    document.getElementById('claudeInput').value = '';
+    const html = `<div style="line-height:1.7;">
+        <div style="font-weight:600;color:var(--accent);margin-bottom:6px;">Vibe Coder shortcuts</div>
+        <div><b>/clear</b> · clear memory</div>
+        <div><b>/snapshot</b> · save a restore point</div>
+        <div><b>/restore</b> · browse snapshots</div>
+        <div><b>/copy</b> · download as markdown</div>
+        <div><b>/help</b> · this</div>
+        <div style="margin-top:6px;"><b>@filepath</b> · attach a file by name</div>
+        <div><b>@flash</b> / <b>@pro</b> / <b>@lite</b> · pick model for one turn</div>
+        <div style="margin-top:6px;opacity:0.7;font-size:10px;">Enter sends · ↑↓ navigates popover · Esc closes</div>
+    </div>`;
+    claudeAppendLine(html, 'system');
+}
+
+function claudeRenderDiffCard(meta) {
+    const path = meta.path || '(file)';
+    const tool = (meta.tool || 'Edit').toLowerCase();
+    const added = meta.added || 0;
+    const removed = meta.removed || 0;
+    const diffText = meta.diff || '';
+    const lines = diffText.split('\n').map(ln => {
+        if (ln.startsWith('+++') || ln.startsWith('---') || ln.startsWith('@@')) {
+            return `<span class="ln-ctx">${escHtml(ln)}</span>`;
+        }
+        if (ln.startsWith('+')) return `<span class="ln-add">${escHtml(ln)}</span>`;
+        if (ln.startsWith('-')) return `<span class="ln-rem">${escHtml(ln)}</span>`;
+        return `<span class="ln-ctx">${escHtml(ln)}</span>`;
+    }).join('');
+    const stat = (added > 0 ? `<span class="add">+${added}</span>` : '')
+               + (removed > 0 ? ` <span class="rem">−${removed}</span>` : '');
+    const div = document.createElement('div');
+    div.className = 'claude-term-line diff-card';
+    div.innerHTML = `
+        <div class="diff-head" onclick="this.parentElement.classList.toggle('expanded')">
+            <i class="ph ph-git-diff"></i>
+            <span class="diff-path">${escHtml(path)}</span>
+            <span style="color:var(--text2);font-size:9px;">${tool}</span>
+            <span class="diff-stat">${stat}</span>
+        </div>
+        <div class="diff-body">${lines}</div>
+    `;
+    const out = document.getElementById('claudeOutput');
+    out.appendChild(div);
+    out.scrollTop = out.scrollHeight;
+}
+// ── /Vibe Coder v2 ────────────────────────────────────────────────────────────
+
 async function resetClaudeSession() {
     if (claudeIsStreaming) return;
     if (!confirm('Clear memory and start fresh?\n\nThis wipes the conversation so the Vibe Coder forgets everything from this session. It can also speed things up if responses have gotten slow.')) return;
     try {
         await apiFetch('/api/adze/claude-reset', { method: 'POST' });
         document.getElementById('claudeOutput').innerHTML = '';
+        claudeResetCostMeter();
         claudeFirstMessage = true;
         const output = document.getElementById('claudeOutput');
         output.innerHTML = `<div class="claude-term-welcome" id="vcWelcome">
-            <h2>VIBE-CODER</h2>
+            <h2>Vibe Coder</h2>
             <p class="vc-line1">Session reset. Start a fresh conversation.</p>
             <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
         </div>`;

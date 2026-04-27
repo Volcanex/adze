@@ -30,13 +30,14 @@ import re
 import json
 import time
 import shlex
+import difflib
 import fnmatch
 import logging
 import subprocess
 import urllib.request
 import urllib.error
 from pathlib import Path
-from typing import Iterator, Dict, Any, Optional, List
+from typing import Iterator, Dict, Any, Optional, List, Union
 
 try:
     import litellm
@@ -131,14 +132,35 @@ def _tool_read(artist_root: Path, args: dict) -> str:
     return "\n".join(f"{i + 1 + base}\t{ln}" for i, ln in enumerate(lines))
 
 
-def _tool_write(artist_root: Path, args: dict) -> str:
+def _tool_write(artist_root: Path, args: dict) -> dict:
     path = _resolve_path(artist_root, args["file_path"])
+    pre_text = ""
+    is_new = not path.exists()
+    if not is_new:
+        try:
+            pre_text = path.read_text(encoding="utf-8")
+        except Exception:
+            pre_text = ""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(args["content"], encoding="utf-8")
-    return f"Wrote {args['file_path']} ({len(args['content'])} bytes)"
+    new_text = args["content"]
+    path.write_text(new_text, encoding="utf-8")
+    diff = "".join(difflib.unified_diff(
+        pre_text.splitlines(keepends=True),
+        new_text.splitlines(keepends=True),
+        fromfile=("(new) " + args["file_path"]) if is_new else args["file_path"],
+        tofile=args["file_path"], n=2,
+    ))
+    added = sum(1 for ln in diff.splitlines() if ln.startswith("+") and not ln.startswith("+++"))
+    removed = sum(1 for ln in diff.splitlines() if ln.startswith("-") and not ln.startswith("---"))
+    label = "Created" if is_new else "Wrote"
+    return {
+        "text": f"{label} {args['file_path']} ({len(new_text)} bytes)",
+        "meta": {"diff": diff, "path": args["file_path"], "tool": "Write",
+                 "added": added, "removed": removed, "is_new": is_new},
+    }
 
 
-def _tool_edit(artist_root: Path, args: dict) -> str:
+def _tool_edit(artist_root: Path, args: dict) -> dict:
     path = _resolve_path(artist_root, args["file_path"])
     text = path.read_text(encoding="utf-8")
     old = args["old_string"]
@@ -157,7 +179,18 @@ def _tool_edit(artist_root: Path, args: dict) -> str:
     new_text = text.replace(old, new)
     path.write_text(new_text, encoding="utf-8")
     n = occurrences if replace_all else 1
-    return f"Replaced {n} occurrence(s) in {args['file_path']}"
+    diff = "".join(difflib.unified_diff(
+        text.splitlines(keepends=True),
+        new_text.splitlines(keepends=True),
+        fromfile=args["file_path"], tofile=args["file_path"], n=2,
+    ))
+    added = sum(1 for ln in diff.splitlines() if ln.startswith("+") and not ln.startswith("+++"))
+    removed = sum(1 for ln in diff.splitlines() if ln.startswith("-") and not ln.startswith("---"))
+    return {
+        "text": f"Replaced {n} occurrence(s) in {args['file_path']}",
+        "meta": {"diff": diff, "path": args["file_path"], "tool": "Edit",
+                 "added": added, "removed": removed},
+    }
 
 
 def _tool_glob(artist_root: Path, args: dict) -> str:
@@ -426,10 +459,16 @@ def run_turn(
     total_cost: float = 0.0
     final_text = ""
 
+    total_tokens = 0  # rolling token usage for the cost-meter context bar
+
     try:
         for iteration in range(1, MAX_ITERATIONS + 1):
+            # Stream the model's output. Text deltas go straight to the wire as
+            # content_block_delta events (typewriter effect — dashboard parses at
+            # line 6514). Tool calls accumulate across chunks and are emitted in
+            # one assistant event after the stream finishes.
             try:
-                response = litellm.completion(
+                response_stream = litellm.completion(
                     model=model,
                     messages=history,
                     tools=_tool_specs(),
@@ -437,126 +476,173 @@ def run_turn(
                     api_key=os.getenv("OPENROUTER_API_KEY"),
                     api_base="https://openrouter.ai/api/v1",
                     temperature=0.3,
+                    stream=True,
+                    stream_options={"include_usage": True},
                 )
             except Exception as e:
                 log.error(f"{slug_tag}LLM error iteration {iteration}: {e}")
                 yield {"type": "error", "error": f"Model call failed: {e}"}
                 return
 
+            text = ""
+            tool_calls_acc: list[dict] = []
+            chunks: list = []
+
             try:
-                turn_cost = float(litellm.completion_cost(response) or 0.0)
+                for chunk in response_stream:
+                    chunks.append(chunk)
+                    if not getattr(chunk, "choices", None):
+                        continue
+                    delta = chunk.choices[0].delta
+                    if delta is None:
+                        continue
+                    content_piece = getattr(delta, "content", None)
+                    if content_piece:
+                        text += content_piece
+                        yield {
+                            "type": "content_block_delta",
+                            "delta": {"type": "text_delta", "text": content_piece},
+                        }
+                    for tc in (getattr(delta, "tool_calls", None) or []):
+                        idx = getattr(tc, "index", 0) or 0
+                        while len(tool_calls_acc) <= idx:
+                            tool_calls_acc.append({"id": "", "name": "", "arguments": ""})
+                        slot = tool_calls_acc[idx]
+                        if getattr(tc, "id", None):
+                            slot["id"] = tc.id
+                        fn = getattr(tc, "function", None)
+                        if fn:
+                            if getattr(fn, "name", None):
+                                slot["name"] += fn.name
+                            if getattr(fn, "arguments", None):
+                                slot["arguments"] += fn.arguments
+            except Exception as e:
+                log.exception(f"{slug_tag}stream error iteration {iteration}")
+                yield {"type": "error", "error": f"Stream error: {e}"}
+                return
+
+            tool_calls_acc = [tc for tc in tool_calls_acc if tc["name"]]
+
+            # Cost + token usage from the assembled stream
+            try:
+                built = litellm.stream_chunk_builder(chunks, messages=history)
+                turn_cost = float(litellm.completion_cost(built) or 0.0)
                 total_cost += turn_cost
+                usage = getattr(built, "usage", None)
+                if usage is not None:
+                    tt = getattr(usage, "total_tokens", 0) or 0
+                    if tt:
+                        total_tokens = int(tt)
             except Exception:
                 turn_cost = 0.0
 
-            choice = response.choices[0]
-            msg = choice.message
-            text = msg.content or ""
-            tool_calls = getattr(msg, "tool_calls", None) or []
-
-            # Build the content array shaped like Anthropic's stream-json format
+            # Build content array (text + tool_use blocks)
             content_blocks: list[dict] = []
             if text:
                 content_blocks.append({"type": "text", "text": text})
-                final_text = text  # last non-empty assistant text wins
-            for tc in tool_calls:
+                final_text = text
+            for tc in tool_calls_acc:
                 try:
-                    parsed_args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    parsed_args = json.loads(tc["arguments"]) if tc["arguments"] else {}
                 except json.JSONDecodeError:
-                    parsed_args = {"_raw": tc.function.arguments}
+                    parsed_args = {"_raw": tc["arguments"]}
                 content_blocks.append({
                     "type": "tool_use",
-                    "id": tc.id,
-                    "name": tc.function.name,
+                    "id": tc["id"],
+                    "name": tc["name"],
                     "input": parsed_args,
                 })
                 snippet = json.dumps(parsed_args)[:300]
-                log.info(f"{slug_tag}TOOL: {tc.function.name} → {snippet}")
+                log.info(f"{slug_tag}TOOL: {tc['name']} → {snippet}")
 
-            # Echo to the wire
             yield {"type": "assistant", "message": {"content": content_blocks}}
 
-            # Append assistant turn to history (LiteLLM-compatible shape)
             history.append({
                 "role": "assistant",
                 "content": text or None,
                 "tool_calls": [
                     {
-                        "id": tc.id,
+                        "id": tc["id"],
                         "type": "function",
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        },
-                    } for tc in tool_calls
-                ] if tool_calls else None,
+                        "function": {"name": tc["name"], "arguments": tc["arguments"]},
+                    } for tc in tool_calls_acc
+                ] if tool_calls_acc else None,
             })
 
-            # If no tool calls, the turn is done
-            if not tool_calls:
+            # No tool calls → done
+            if not tool_calls_acc:
                 if text:
                     log.info(f"{slug_tag}TEXT: {text[:500]}")
                 duration_ms = int((time.time() - started) * 1000)
                 log.info(
-                    f"{slug_tag}── END (ok) cost=${total_cost:.4f} duration={duration_ms}ms ──"
+                    f"{slug_tag}── END (ok) cost=${total_cost:.4f} "
+                    f"tokens={total_tokens} duration={duration_ms}ms ──"
                 )
                 yield {
                     "type": "result",
                     "result": final_text,
                     "cost_usd": round(total_cost, 6),
+                    "tokens": total_tokens,
                     "duration_ms": duration_ms,
                 }
                 return
 
-            # Execute each tool call and append results to history
-            for tc in tool_calls:
-                name = tc.function.name
+            # Execute each tool call
+            for tc in tool_calls_acc:
+                name = tc["name"]
                 try:
-                    args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    args = json.loads(tc["arguments"]) if tc["arguments"] else {}
                 except json.JSONDecodeError:
                     args = {}
 
                 impl = TOOL_IMPLS.get(name)
+                result_meta: dict = {}
                 if impl is None:
                     result_text = f"Unknown tool: {name}"
                     is_error = True
                 else:
                     try:
-                        result_text = impl(artist_root, args)
+                        raw = impl(artist_root, args)
+                        if isinstance(raw, dict):
+                            result_text = raw.get("text", "")
+                            result_meta = raw.get("meta", {}) or {}
+                        else:
+                            result_text = raw
                         is_error = False
                     except (PermissionError, FileNotFoundError, IsADirectoryError, ValueError) as e:
                         result_text = f"{type(e).__name__}: {e}"
                         is_error = True
                     except subprocess.TimeoutExpired:
-                        result_text = f"Bash command timed out"
+                        result_text = "Bash command timed out"
                         is_error = True
                     except Exception as e:
                         log.exception(f"{slug_tag}Tool {name} crashed")
                         result_text = f"Tool crashed: {type(e).__name__}: {e}"
                         is_error = True
 
-                # Cap result text — keep tokens sane
                 if len(result_text) > 30_000:
                     result_text = result_text[:30_000] + "\n... (truncated)"
 
-                yield {
+                event: dict = {
                     "type": "tool_result",
-                    "tool_use_id": tc.id,
+                    "tool_use_id": tc["id"],
                     "content": result_text,
                     "is_error": is_error,
                 }
+                if result_meta:
+                    event["meta"] = result_meta
+                yield event
+
                 history.append({
                     "role": "tool",
-                    "tool_call_id": tc.id,
+                    "tool_call_id": tc["id"],
                     "content": result_text,
                 })
 
-        # Hit the iteration cap
         log.warning(f"{slug_tag}Reached MAX_ITERATIONS={MAX_ITERATIONS}")
         yield {
             "type": "error",
             "error": f"Reached the {MAX_ITERATIONS}-step safety limit. Try splitting the request.",
         }
     finally:
-        # Always persist whatever conversation got built
         save_history(sessions_dir, session_id, history)
