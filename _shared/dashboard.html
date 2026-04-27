@@ -6988,8 +6988,12 @@ function vcInitAiderTerminal() {
         withCredentials: true,  // send adze_session cookie for cookie-auth fallback
     });
 
+    // Suppress noisy reconnect-attempt errors (WS upgrade can flap during
+    // initial handshake and Socket.IO retries automatically — only surface
+    // after several consecutive failures).
+    let _vcConnectErrors = 0;
     _vcXtermSocket.on('connect', () => {
-        _vcXterm.write('\x1b[2m[adze] connected.\x1b[0m\r\n');
+        _vcConnectErrors = 0;
         _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
     });
     _vcXtermSocket.on('aider:output', (data) => {
@@ -6998,11 +7002,18 @@ function vcInitAiderTerminal() {
     _vcXtermSocket.on('aider:exit', () => {
         _vcXterm.write('\r\n\x1b[33m[adze] aider session ended. Switch tabs and back to restart.\x1b[0m\r\n');
     });
-    _vcXtermSocket.on('disconnect', () => {
-        _vcXterm.write('\r\n\x1b[31m[adze] disconnected.\x1b[0m\r\n');
+    _vcXtermSocket.on('disconnect', (reason) => {
+        if (reason !== 'io client disconnect') {
+            console.warn('[vibe-coder] socket disconnect:', reason);
+        }
     });
     _vcXtermSocket.on('connect_error', (err) => {
-        _vcXterm.write(`\r\n\x1b[31m[adze] connect error: ${err.message || err}\x1b[0m\r\n`);
+        _vcConnectErrors += 1;
+        console.warn('[vibe-coder] connect error:', err.message || err);
+        if (_vcConnectErrors >= 5) {
+            _vcXterm.write(`\r\n\x1b[31m[adze] persistent connect error: ${err.message || err}\x1b[0m\r\n`);
+            _vcConnectErrors = 0;  // reset so we don't spam
+        }
     });
 
     _vcXterm.onData((data) => {

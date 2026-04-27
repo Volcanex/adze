@@ -69,12 +69,19 @@ class AiderSession:
         env['GIT_DIR'] = '/dev/null'
         env['GIT_WORK_TREE'] = '/dev/null'
 
+        # `--no-stream` because aider's --stream uses rich's Live region with
+        # cursor-up redraws, which fight xterm.js whenever the pty size and
+        # the actual terminal viewport diverge for even one frame (very common
+        # over WS — resize event arrives after aider has already started
+        # streaming). Result was garbled spinner frames stacking up. Without
+        # streaming, aider prints the full reply when it's done. Keep --pretty
+        # so search-replace blocks and markdown still render with colour.
         cmd = [
             'aider',
             '--no-git',
             '--no-auto-commits',
             '--no-auto-lint',
-            '--stream',
+            '--no-stream',
             '--yes-always',
             '--no-show-model-warnings',
             '--model', model,
