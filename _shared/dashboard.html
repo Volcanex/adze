@@ -627,36 +627,36 @@
            Calm 240ms fade-in. Streaming text appends per-chunk spans that
            opacity-fade so the prose grows softly instead of snapping. */
         .claude-term-output { scroll-behavior: smooth; }
+        /* Assistant turn = charcoal card. User turn = plain prose with an
+           accent-left-border (no card). The card-vs-no-card contrast makes
+           the speaker obvious without needing a label at the top. */
         .vc-turn {
-            /* Charcoal cards — barely lifted from the page bg, terminal-flat */
-            background: #1f1f23;
-            border: 1px solid #2c2c30;
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            margin: 0 0 10px;
             animation: vcTurnIn 240ms cubic-bezier(.2,.7,.2,1);
             display: flex; flex-direction: column; gap: 8px;
         }
         @keyframes vcTurnIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .vc-turn-head {
-            display: flex; align-items: center; gap: 8px;
-            font-family: var(--mono); font-size: 10px;
-            color: var(--text2); letter-spacing: 0.04em;
+        .vc-turn.assistant {
+            background: #1f1f23;
+            border: 1px solid #2c2c30;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin: 0 0 12px;
         }
-        /* Author label: mono uppercase, terminal register (was italic Cardo — felt too editorial) */
-        .vc-turn-head .vc-who {
-            font-family: var(--mono);
-            font-style: normal;
-            font-weight: 600;
-            font-size: 10px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            line-height: 1;
+        .vc-turn.user {
+            background: transparent;
+            border: none;
+            border-left: 2px solid var(--accent);
+            padding: 2px 0 2px 12px;
+            margin: 4px 0 8px;
+            gap: 0;
         }
-        .vc-turn.user .vc-turn-head .vc-who { color: var(--accent); }
-        .vc-turn.assistant .vc-turn-head .vc-who { color: var(--accent-soft); }
-        .vc-turn-head .vc-meta { opacity: 0.55; }
-        .vc-turn-head .vc-meta::before { content: '·'; margin-right: 6px; opacity: 0.5; }
+        .vc-turn.user .vc-prose {
+            color: var(--text);
+            font-family: var(--body-font);
+            font-size: calc(13px * var(--vc-scale));
+            line-height: 1.5;
+            opacity: 0.88;
+        }
         .vc-turn-body {
             font-family: var(--body-font);
             font-size: calc(13px * var(--vc-scale));
@@ -765,17 +765,27 @@
         .vc-diff .diff-body .ln-rem { color: var(--danger); display: block; opacity: 0.85; }
         .vc-diff .diff-body .ln-ctx { color: var(--text2); display: block; opacity: 0.55; }
 
-        /* Per-turn footer with cost / tokens / duration */
+        /* Per-turn footer — author label moved here (was at the top), with
+           timestamp and the cost / tokens / total-time meta */
         .vc-turn-foot {
-            display: flex; gap: 12px;
+            display: flex; gap: 10px; align-items: center;
             font-family: var(--mono); font-size: 10px;
-            color: var(--text2); opacity: 0.6;
-            border-top: 1px solid var(--border);
+            color: var(--text2);
+            border-top: 1px solid #2c2c30;
             padding-top: 8px;
-            margin-top: 2px;
+            margin-top: 4px;
             animation: vcFadeIn 250ms ease-out;
+            letter-spacing: 0.04em;
         }
-        .vc-turn-foot .vc-cost { color: var(--accent-soft); }
+        .vc-turn-foot .vc-foot-who {
+            color: var(--accent-soft);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .vc-turn-foot .vc-foot-time { opacity: 0.55; }
+        .vc-turn-foot > span:not(.vc-foot-who):not(.vc-foot-time) { opacity: 0.65; }
+        .vc-turn-foot .vc-cost { color: var(--accent-soft); opacity: 0.85; }
 
         /* Inline error inside a turn */
         .vc-error {
@@ -1104,7 +1114,7 @@
                                     </span>
                                     <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools" aria-label="Tools"><i class="ph ph-plus"></i></button>
                                     <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn" aria-label="Send"><i class="ph ph-paper-plane-tilt"></i></button>
-                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder" aria-label="Stop"><i class="ph ph-stop-fill"></i></button>
+                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder" aria-label="Stop"><i class="ph ph-stop"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -7088,20 +7098,14 @@ function vcChatScroll() {
 function vcTimeStamp() {
     return new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 }
-function vcStartTurn(role, who) {
+function vcStartTurn(role) {
     const out = document.getElementById('claudeOutput');
     // First message: drop the welcome screen
     const welcome = document.getElementById('vcWelcome');
     if (welcome) welcome.remove();
     const el = document.createElement('div');
     el.className = 'vc-turn ' + role;
-    el.innerHTML = `
-        <div class="vc-turn-head">
-            <span class="vc-who">${escHtml(who)}</span>
-            <span class="vc-meta">${escHtml(vcTimeStamp())}</span>
-        </div>
-        <div class="vc-turn-body"></div>
-    `;
+    el.innerHTML = `<div class="vc-turn-body"></div>`;
     out.appendChild(el);
     vcChatScroll();
     return {
@@ -7109,12 +7113,13 @@ function vcStartTurn(role, who) {
         body: el.querySelector('.vc-turn-body'),
         textEl: null,
         thinkingEl: null,
-        tools: new Map(),  // tool_use_id -> tile element
+        tools: new Map(),
         streamedText: '',
+        startedAt: vcTimeStamp(),  // captured for the footer
     };
 }
 function vcUserTurn(text) {
-    const turn = vcStartTurn('user', 'You');
+    const turn = vcStartTurn('user');
     const p = document.createElement('div');
     p.className = 'vc-prose';
     p.textContent = text;
@@ -7122,11 +7127,10 @@ function vcUserTurn(text) {
     return turn;
 }
 function vcAssistantTurn() {
-    const turn = vcStartTurn('assistant', 'Vibe Coder');
-    // Show a single pulsing thinking dot until first content arrives
+    const turn = vcStartTurn('assistant');
     const dot = document.createElement('div');
     dot.className = 'vc-thinking';
-    dot.innerHTML = '<span class="vc-dot"></span><span>thinking</span>';
+    dot.innerHTML = '<span class="vc-dot"></span><span>Thinking</span>';
     turn.body.appendChild(dot);
     turn.thinkingEl = dot;
     return turn;
@@ -7282,20 +7286,21 @@ function vcAddTurnFooter(turn, data, timings) {
     const toks = typeof data.tokens === 'number' ? data.tokens : null;
     const dur  = typeof data.duration_ms === 'number' ? data.duration_ms : null;
     const parts = [];
-    // Total roundtrip (client perception) vs LLM-only time. If they diverge,
-    // the gap is in network / Werkzeug / system-prompt build / history I/O.
+    // Author label moves down here, right of the body. Keeps the card
+    // visually clean — speaker is implied by the card itself.
+    parts.push(`<span class="vc-foot-who">Vibe Coder</span>`);
+    parts.push(`<span class="vc-foot-time">${escHtml(turn.startedAt || vcTimeStamp())}</span>`);
     if (timings && timings.total_ms != null) {
         const breakdown = [];
         if (timings.ttfb_ms != null) breakdown.push(`ttfb ${(timings.ttfb_ms/1000).toFixed(1)}s`);
         if (dur != null)             breakdown.push(`llm ${(dur/1000).toFixed(1)}s`);
         const tooltip = breakdown.join(' · ');
-        parts.push(`<span title="${escHtml(tooltip)}">${(timings.total_ms/1000).toFixed(1)}s total</span>`);
+        parts.push(`<span title="${escHtml(tooltip)}">${(timings.total_ms/1000).toFixed(1)}s</span>`);
     } else if (dur !== null) {
         parts.push(`<span>${(dur/1000).toFixed(1)}s</span>`);
     }
     if (toks !== null) parts.push(`<span>${toks >= 1000 ? (toks/1000).toFixed(1) + 'K' : toks} tok</span>`);
     if (cost !== null) parts.push(`<span class="vc-cost">$${cost.toFixed(4)}</span>`);
-    if (parts.length === 0) return;
     const foot = document.createElement('div');
     foot.className = 'vc-turn-foot';
     foot.innerHTML = parts.join('');
