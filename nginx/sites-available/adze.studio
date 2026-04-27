@@ -1,0 +1,140 @@
+server {
+    server_name adze.studio www.adze.studio;
+
+    root /home/gabriel/adze/output;
+
+    # Static assets (logo etc)
+    location /static/ {
+        alias /home/gabriel/adze/static/;
+        expires 24h;
+    }
+
+    # Dashboard at /dashboard (clean URL)
+    # Super-admin dashboard
+    location = /admin {
+        proxy_pass http://127.0.0.1:5001/api/adze/admin;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /dashboard {
+        proxy_pass http://127.0.0.1:5001/api/adze/dashboard;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Root → dashboard
+    location = / {
+        return 302 /dashboard;
+    }
+
+    # Docs at /docs (clean URL)
+    location = /docs {
+        proxy_pass http://127.0.0.1:5001/api/adze/docs;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # API endpoints
+    location /api/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        client_max_body_size 50M;
+
+        # Vibe Coder streams can run 5+ minutes
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_connect_timeout 60s;
+
+        # Disable buffering for SSE streams
+        proxy_buffering off;
+    }
+
+    # Socket.IO (aider terminal bridge: /aider namespace + Flask-SocketIO core)
+    # Browser handshakes at /socket.io/?EIO=4&...; long-polling first, then
+    # upgrade to wss. Needs the Upgrade/Connection headers passed through and
+    # buffering off so events arrive promptly.
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+
+    # Same-origin preview of an artist site (for cross-site iframe embeds)
+    location /preview/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Artist sites — serve static files, fall back to Flask
+    location /artists/ {
+        try_files $uri $uri/index.html @proxy;
+        expires 1h;
+    }
+
+    location @proxy {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/adze.studio/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/adze.studio/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+
+server {
+    if ($host = www.adze.studio) {
+        return 301 https://$host$request_uri;
+    }
+    if ($host = adze.studio) {
+        return 301 https://$host$request_uri;
+    }
+    server_name adze.studio www.adze.studio;
+    return 404;
+
+
+}server {
+    if ($host = adze.studio) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    server_name adze.studio www.adze.studio;
+
+    listen [::]:80 default_server;
+    listen 80 default_server;
+    return 404; # managed by Certbot
+
+
+}
