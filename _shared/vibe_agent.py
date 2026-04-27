@@ -50,17 +50,16 @@ except ImportError as e:
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
-DEFAULT_MODEL = "openrouter/google/gemini-2.5-flash"
-PRO_MODEL = "openrouter/google/gemini-2.5-pro"
+DEFAULT_MODEL = "openrouter/google/gemini-2.5-pro"
+FLASH_MODEL = "openrouter/google/gemini-2.5-flash"
 LITE_MODEL = "openrouter/google/gemini-2.5-flash-lite"
 
-# Per-call model override via prompt prefix.
-# Default is Flash for snappy turns; user prefixes `@pro <prompt>` for harder
-# multi-step reasoning. Keeps the typical experience fast and the smart route
-# available on demand.
+# Per-call model override via prompt prefix. Default is Pro — slow turns are
+# preferable to dumb turns. `@flash <prompt>` drops one turn to Flash for
+# trivial cases; `@lite` for cheapest.
 MODEL_PREFIXES = {
-    "@pro ": PRO_MODEL,
-    "@flash ": DEFAULT_MODEL,
+    "@pro ": DEFAULT_MODEL,
+    "@flash ": FLASH_MODEL,
     "@lite ": LITE_MODEL,
 }
 

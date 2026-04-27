@@ -7226,10 +7226,12 @@ function vcRenderDiff(turn, meta) {
     const added = meta.added || 0;
     const removed = meta.removed || 0;
     const diffText = meta.diff || '';
-    const linesHtml = diffText.split('\n').map(ln => {
-        if (ln.startsWith('+++') || ln.startsWith('---') || ln.startsWith('@@')) {
-            return `<span class="ln-ctx">${escHtml(ln)}</span>`;
-        }
+    // Skip the file headers (---/+++) and hunk markers (@@). Those are
+    // confusing for non-devs. Keep the +/- prefix on real lines as a
+    // familiar mental model for added/removed.
+    const linesHtml = diffText.split('\n').filter(ln =>
+        !ln.startsWith('+++') && !ln.startsWith('---') && !ln.startsWith('@@')
+    ).map(ln => {
         if (ln.startsWith('+')) return `<span class="ln-add">${escHtml(ln)}</span>`;
         if (ln.startsWith('-')) return `<span class="ln-rem">${escHtml(ln)}</span>`;
         return `<span class="ln-ctx">${escHtml(ln)}</span>`;
@@ -7286,9 +7288,7 @@ function vcAddTurnFooter(turn, data, timings) {
     const toks = typeof data.tokens === 'number' ? data.tokens : null;
     const dur  = typeof data.duration_ms === 'number' ? data.duration_ms : null;
     const parts = [];
-    // Author label moves down here, right of the body. Keeps the card
-    // visually clean — speaker is implied by the card itself.
-    parts.push(`<span class="vc-foot-who">Vibe Coder</span>`);
+    // No author label — the card itself is the signal that it's the agent.
     parts.push(`<span class="vc-foot-time">${escHtml(turn.startedAt || vcTimeStamp())}</span>`);
     if (timings && timings.total_ms != null) {
         const breakdown = [];
