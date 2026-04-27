@@ -44,32 +44,43 @@ DEFAULT_MODEL = 'openrouter/anthropic/claude-sonnet-4.5'
 _DOCS_DIR = Path(__file__).parent / 'docs'
 
 
-def _collect_initial_files(artist_root: Path, max_files: int = 30) -> list[Path]:
-    """The editable surface — files we hand aider on `--file` at startup
-    so the user doesn't have to type `/add` for every page. Picks each
-    page's content.md + config.json plus root config.json /
-    default-styles.css / api.py if present. Caps at max_files to avoid
-    pathological sites blowing up the boot context.
+def _collect_initial_files(artist_root: Path) -> list[Path]:
+    """Small, always-relevant files preloaded at boot — site config and
+    default styles are tiny and touched in nearly every session, plus
+    home/content.md as the highest-traffic page. Per-page content.md
+    files for *other* pages stay out and get /added on first mention.
     """
     files: list[Path] = []
-    excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
-
-    for name in ('config.json', 'default-styles.css', 'api.py'):
-        p = artist_root / name
-        if p.exists():
+    for rel in ('config.json', 'default-styles.css', 'home/content.md'):
+        p = artist_root / rel
+        if p.exists() and p.is_file():
             files.append(p)
+    return files
 
-    for d in sorted(artist_root.iterdir()):
+
+def _scan_page_slugs(artist_root: Path) -> set[str]:
+    """Page slugs (subdir names with a content.md) the user might mention."""
+    excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
+    pages: set[str] = set()
+    for d in artist_root.iterdir():
         if not d.is_dir() or d.name in excluded or d.name.startswith('.'):
             continue
-        for name in ('content.md', 'config.json'):
-            p = d / name
-            if p.exists():
-                files.append(p)
-                if len(files) >= max_files:
-                    return files
+        if (d / 'content.md').exists():
+            pages.add(d.name)
+    return pages
 
-    return files
+
+# Synonyms mapped to canonical page slugs the user can drop into a sentence
+# without typing the slug itself ("homepage" / "front page" → home).
+_PAGE_SYNONYMS = {
+    'homepage': 'home',
+    'home page': 'home',
+    'front page': 'home',
+    'landing page': 'home',
+    'index': 'home',
+    'about page': 'about',
+    'contact page': 'contact',
+}
 
 
 def _build_context_file(artist_root: Path) -> Path:
@@ -126,6 +137,13 @@ class AiderSession:
         self.proc: subprocess.Popen | None = None
         self.master_fd: int | None = None
         self._lock = threading.Lock()
+        # Page-mention auto-/add state
+        self._pages: set[str] = _scan_page_slugs(artist_root)
+        self._added_files: set[str] = set()  # files we've already /added
+        self._input_line_buf: str = ''
+        # Pre-loaded files don't need re-/add
+        for f in _collect_initial_files(artist_root):
+            self._added_files.add(str(f.relative_to(artist_root)))
 
     def start(self, socketio, model: str = DEFAULT_MODEL) -> None:
         master, slave = pty.openpty()
@@ -160,10 +178,16 @@ class AiderSession:
         except Exception:
             ctx_arg = []  # don't fail to spawn if context build trips on something
 
-        # Lazy load (not eager). The conventions doc lists every page that
-        # exists; aider's --yes-always auto-confirms file additions when
-        # the model proposes an edit. So the artist never types /add, and
-        # we don't pay for 30K tokens of pages the user isn't editing.
+        # Pre-load the always-relevant small files (config, default-styles,
+        # home/content.md). Other pages auto-/add when the user mentions them
+        # — see the input interceptor in self.write().
+        file_args: list[str] = []
+        try:
+            for f in _collect_initial_files(self.artist_root):
+                file_args.extend(['--file', str(f.relative_to(self.artist_root))])
+        except Exception:
+            file_args = []
+
         cmd = [
             'aider',
             '--no-git',
@@ -173,6 +197,7 @@ class AiderSession:
             '--yes-always',
             '--no-show-model-warnings',
             *ctx_arg,
+            *file_args,
             '--model', model,
         ]
 
@@ -222,13 +247,72 @@ class AiderSession:
 
         socketio.start_background_task(reader)
 
+    def _detect_pages(self, line: str) -> list[str]:
+        """Return page slugs the user mentioned that aren't already added."""
+        text = line.lower()
+        hits: list[str] = []
+        # Direct slug mentions
+        for slug in self._pages:
+            if slug in text:
+                hits.append(slug)
+        # Synonym mentions ("homepage" → "home")
+        for syn, slug in _PAGE_SYNONYMS.items():
+            if syn in text and slug in self._pages and slug not in hits:
+                hits.append(slug)
+        # Filter out already-added files
+        out = []
+        for slug in hits:
+            rel = f'{slug}/content.md'
+            if rel not in self._added_files:
+                out.append(slug)
+                self._added_files.add(rel)
+        return out
+
+    def _raw_write(self, data: str) -> None:
+        if self.master_fd is None:
+            return
+        try:
+            os.write(self.master_fd, data.encode('utf-8'))
+        except OSError:
+            pass
+
     def write(self, data: str) -> None:
+        """Write user input to the pty.
+
+        Buffers per-line so we can intercept complete user messages and
+        auto-prepend `/add <slug>/content.md` for any page the user
+        mentions but hasn't loaded yet. Slash commands and partial
+        keystrokes pass through unchanged.
+        """
+        if not data:
+            return
         with self._lock:
-            if self.master_fd is not None:
-                try:
-                    os.write(self.master_fd, data.encode('utf-8'))
-                except OSError:
-                    pass
+            self._input_line_buf += data
+            while True:
+                # Find first \r or \n
+                cr = self._input_line_buf.find('\r')
+                lf = self._input_line_buf.find('\n')
+                if cr == -1 and lf == -1:
+                    # No newline yet — flush buffer as keystrokes (so xterm
+                    # echo / aider prompt-toolkit can react in real time).
+                    self._raw_write(self._input_line_buf)
+                    self._input_line_buf = ''
+                    return
+                idx = cr if (cr != -1 and (lf == -1 or cr < lf)) else lf
+                line = self._input_line_buf[:idx]
+                term = self._input_line_buf[idx:idx + 1]
+                self._input_line_buf = self._input_line_buf[idx + 1:]
+
+                stripped = line.strip()
+                # Slash command or empty line: passthrough
+                if not stripped or stripped.startswith('/'):
+                    self._raw_write(line + term)
+                    continue
+
+                # Auto-/add any pages this message mentions
+                for slug in self._detect_pages(stripped):
+                    self._raw_write(f'/add {slug}/content.md\r')
+                self._raw_write(line + term)
 
     def resize(self, cols: int, rows: int) -> None:
         with self._lock:
