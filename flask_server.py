@@ -502,6 +502,14 @@ window.addEventListener('pagehide',send);
         except Exception as e:
             print(f"Error loading artist admin API: {e}")
 
+        # Register the aider WebSocket bridge (pty per artist over /aider namespace)
+        try:
+            import aider_bridge
+            aider_bridge.register(self.socketio)
+            print("Registered aider WebSocket bridge on /aider")
+        except Exception as e:
+            print(f"Error registering aider bridge: {e}")
+
     def _register_artist_features(self):
         """Register per-artist feature blueprints based on config.json features list."""
         artists_dir = Path('artists')

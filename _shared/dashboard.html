@@ -11,6 +11,11 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
     <!-- Phosphor icons (per design-language/project/Adze Design Language.html) -->
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+    <!-- xterm.js terminal + Socket.IO client for the aider pty bridge -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js" defer></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
     <!-- Apply saved theme before first paint to prevent light→dark flash -->
     <script>if(localStorage.getItem('dashboard-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
@@ -1125,11 +1130,8 @@
                                     <span class="vc-fs-label" id="vcFsLabel">100%</span>
                                     <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
                                 </div>
-                                <div class="claude-term-output" id="claudeOutput">
-                                    <div class="claude-term-welcome" id="vcWelcome">
-                                        <h2>Vibe Coder</h2>
-                                        <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
-                                    </div>
+                                <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;">
+                                    <div id="vcXtermHost" style="width:100%;height:100%;background:#1a1a1e;"></div>
                                 </div>
                                 <div class="claude-term-tools" id="claudeToolsRow" style="display:none;padding:6px 10px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
                                     <button class="claude-tool-btn" onclick="openClaudeAssetModal()" title="Insert asset reference"><i class="ph ph-image"></i> Asset</button>
@@ -1141,7 +1143,7 @@
                                     <span class="vp-msg" id="vibePresenceMsg">Someone else is editing this site.</span>
                                     <button type="button" class="vp-takeover" onclick="vibeTakeover()">Take over</button>
                                 </div>
-                                <div class="claude-term-input-bar">
+                                <div class="claude-term-input-bar" style="display:none;">
                                     <div class="claude-popover" id="claudePopover"></div>
                                     <input type="text" id="claudeInput" placeholder="Ask, or / for commands, @ to attach a file…" onkeydown="onClaudeInputKeydown(event)" oninput="onClaudeInputChange(event)">
                                     <span class="claude-cost-pill" id="claudeCostPill" title="This conversation: cost · tokens · context fill">
@@ -3353,6 +3355,7 @@ function switchTab(tab, btn) {
         if (tab === 'share') loadShareTab();
         if (tab === 'marketplace') loadMarketplaceTab();
         if (tab === 'styles') loadStylesTab();
+        if (tab === 'claude') vcInitAiderTerminal();
         // Keep widget editor state when switching to vibe coder (preview stays as widget)
         // Exit widget editor for all other tabs
         if (tab !== 'edit' && tab !== 'claude') exitWidgetEditorMode();
@@ -6886,6 +6889,116 @@ async function haltClaude() {
     } catch (e) {
         toast('Failed to stop: ' + e.message, 'error');
     }
+}
+
+// ── Vibe Coder v3: aider over xterm.js + Socket.IO pty bridge ────────────────
+// xterm.js renders the live aider session in the pane. The Flask /aider
+// namespace bridges a pty subprocess running aider per artist.
+let _vcXterm = null;
+let _vcXtermFit = null;
+let _vcXtermSocket = null;
+let _vcXtermInitTries = 0;
+
+function vcInitAiderTerminal() {
+    if (_vcXterm) {
+        // Already running — just refit on tab return
+        try { _vcXtermFit && _vcXtermFit.fit(); } catch(e) {}
+        return;
+    }
+    if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined' || typeof io === 'undefined') {
+        // CDN scripts haven't loaded yet (deferred). Try again shortly.
+        if (_vcXtermInitTries++ < 30) {
+            setTimeout(vcInitAiderTerminal, 200);
+        }
+        return;
+    }
+    const host = document.getElementById('vcXtermHost');
+    if (!host || !currentArtist || !currentToken) return;
+
+    _vcXterm = new Terminal({
+        cursorBlink: true,
+        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        fontSize: 13,
+        scrollback: 5000,
+        theme: {
+            background: '#1a1a1e',
+            foreground: '#e8e6e0',
+            cursor: '#99cdff',
+            cursorAccent: '#1a1a1e',
+            selectionBackground: 'rgba(153,205,255,0.25)',
+            black: '#1a1a1e',
+            red: '#e74c3c',
+            green: '#6dca8a',
+            yellow: '#e0c060',
+            blue: '#7ea3c4',
+            magenta: '#c4a37e',
+            cyan: '#7ec4c4',
+            white: '#e8e6e0',
+            brightBlack: '#5a5750',
+            brightRed: '#ff7361',
+            brightGreen: '#8fdfa6',
+            brightYellow: '#f0d077',
+            brightBlue: '#99cdff',
+            brightMagenta: '#d8b78e',
+            brightCyan: '#9adada',
+            brightWhite: '#ffffff',
+        },
+    });
+    _vcXtermFit = new FitAddon.FitAddon();
+    _vcXterm.loadAddon(_vcXtermFit);
+    _vcXterm.open(host);
+    try { _vcXtermFit.fit(); } catch(e) {}
+
+    _vcXterm.write('\x1b[2m[adze] connecting to aider…\x1b[0m\r\n');
+
+    _vcXtermSocket = io('/aider', {
+        auth: { artist_slug: currentArtist, token: currentToken },
+        transports: ['websocket', 'polling'],
+    });
+
+    _vcXtermSocket.on('connect', () => {
+        _vcXterm.write('\x1b[2m[adze] connected.\x1b[0m\r\n');
+        _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+    });
+    _vcXtermSocket.on('aider:output', (data) => {
+        _vcXterm.write(data);
+    });
+    _vcXtermSocket.on('aider:exit', () => {
+        _vcXterm.write('\r\n\x1b[33m[adze] aider session ended. Switch tabs and back to restart.\x1b[0m\r\n');
+    });
+    _vcXtermSocket.on('disconnect', () => {
+        _vcXterm.write('\r\n\x1b[31m[adze] disconnected.\x1b[0m\r\n');
+    });
+    _vcXtermSocket.on('connect_error', (err) => {
+        _vcXterm.write(`\r\n\x1b[31m[adze] connect error: ${err.message || err}\x1b[0m\r\n`);
+    });
+
+    _vcXterm.onData((data) => {
+        if (_vcXtermSocket && _vcXtermSocket.connected) {
+            _vcXtermSocket.emit('aider:input', { data });
+        }
+    });
+
+    // Refit on container resize
+    if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => {
+            if (!_vcXtermFit || !_vcXterm) return;
+            try { _vcXtermFit.fit(); } catch(e) { return; }
+            if (_vcXtermSocket && _vcXtermSocket.connected) {
+                _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+            }
+        });
+        ro.observe(host);
+    }
+}
+
+// Buttons that paste into the running terminal (Asset modal callback etc.).
+function vcPasteIntoTerminal(text) {
+    if (!_vcXterm) return;
+    if (_vcXtermSocket && _vcXtermSocket.connected) {
+        _vcXtermSocket.emit('aider:input', { data: text });
+    }
+    _vcXterm.focus();
 }
 
 // ── Vibe Coder v2: cost meter, slash + @ popover, diff cards ─────────────────
