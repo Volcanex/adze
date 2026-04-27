@@ -756,14 +756,36 @@
         .vc-diff .diff-head .diff-chev { font-size: 9px; color: var(--text2); transition: transform 0.2s; opacity: 0.55; }
         .vc-diff.expanded .diff-head .diff-chev { transform: rotate(90deg); }
         .vc-diff .diff-body {
-            display: none; padding: 8px 10px;
-            max-height: 260px; overflow-y: auto;
-            font-family: var(--mono); white-space: pre; line-height: 1.45;
+            display: none;
+            padding: 4px 0;
+            max-height: 320px; overflow: auto;
+            background: #16161a;
+            font-family: var(--mono); font-size: 11px;
+            white-space: pre; line-height: 1.55;
         }
         .vc-diff.expanded .diff-body { display: block; }
-        .vc-diff .diff-body .ln-add { color: var(--success); display: block; }
-        .vc-diff .diff-body .ln-rem { color: var(--danger); display: block; opacity: 0.85; }
-        .vc-diff .diff-body .ln-ctx { color: var(--text2); display: block; opacity: 0.55; }
+        /* Each line: 3px colored left bar + subtle bg tint, no +/- prefix
+           character (the bar communicates it). Source indentation is
+           preserved because we strip just the leading marker. */
+        .vc-diff .diff-body > span {
+            display: block;
+            padding: 0 12px 0 9px;
+            border-left: 3px solid transparent;
+        }
+        .vc-diff .diff-body .ln-add {
+            border-left-color: var(--success);
+            background: rgba(74,154,106,0.10);
+            color: #c5e0cd;
+        }
+        .vc-diff .diff-body .ln-rem {
+            border-left-color: var(--danger);
+            background: rgba(192,57,43,0.10);
+            color: #d8a8a3;
+        }
+        .vc-diff .diff-body .ln-ctx {
+            color: var(--text2);
+            opacity: 0.55;
+        }
 
         /* Per-turn footer — author label moved here (was at the top), with
            timestamp and the cost / tokens / total-time meta */
@@ -7128,11 +7150,7 @@ function vcUserTurn(text) {
 }
 function vcAssistantTurn() {
     const turn = vcStartTurn('assistant');
-    const dot = document.createElement('div');
-    dot.className = 'vc-thinking';
-    dot.innerHTML = '<span class="vc-dot"></span><span>Thinking</span>';
-    turn.body.appendChild(dot);
-    turn.thinkingEl = dot;
+    vcEnsureThinkingAtEnd(turn);
     return turn;
 }
 function vcDropThinking(turn) {
@@ -7140,6 +7158,21 @@ function vcDropThinking(turn) {
         turn.thinkingEl.remove();
         turn.thinkingEl = null;
     }
+}
+function vcEnsureThinkingAtEnd(turn) {
+    // Keep a persistent "Thinking" dot at the bottom of the assistant card
+    // whenever the agent is between events (waiting on the model). It hides
+    // during text streaming (the prose itself signals progress) and during
+    // a running tool call (the tile's spinner is the signal); it returns
+    // between iterations so users don't see a blank silent gap.
+    if (!turn) return;
+    if (!turn.thinkingEl || !turn.thinkingEl.parentNode) {
+        const dot = document.createElement('div');
+        dot.className = 'vc-thinking';
+        dot.innerHTML = '<span class="vc-dot"></span><span>Thinking</span>';
+        turn.thinkingEl = dot;
+    }
+    turn.body.appendChild(turn.thinkingEl);  // appendChild moves if already in DOM
 }
 function vcAppendDelta(turn, deltaText) {
     if (!turn) return;
@@ -7213,11 +7246,14 @@ function vcMarkToolDone(turn, toolUseId, isError) {
     tile.dataset.state = isError ? 'error' : 'done';
     const state = tile.querySelector('.vc-tool-state');
     if (state) {
-        const icon = vcToolIconFor(tile.querySelector('.vc-tool-name')?.textContent || '');
         state.innerHTML = isError
             ? '<i class="ph ph-x-circle"></i>'
             : '<i class="ph ph-check"></i>';
     }
+    // Tool finished; agent may now be thinking about the next step. Show the
+    // thinking dot at the bottom so the silent gap before the next event has
+    // a visible signal.
+    vcEnsureThinkingAtEnd(turn);
 }
 function vcRenderDiff(turn, meta) {
     if (!turn) return;
@@ -7226,14 +7262,16 @@ function vcRenderDiff(turn, meta) {
     const added = meta.added || 0;
     const removed = meta.removed || 0;
     const diffText = meta.diff || '';
-    // Skip the file headers (---/+++) and hunk markers (@@). Those are
-    // confusing for non-devs. Keep the +/- prefix on real lines as a
-    // familiar mental model for added/removed.
+    // Skip file headers (---/+++) and hunk markers (@@). Strip the leading
+    // marker character (+ / - / space) from each remaining line — the colored
+    // left-bar + bg tint communicates the change; source indentation is
+    // preserved without prefix noise.
     const linesHtml = diffText.split('\n').filter(ln =>
         !ln.startsWith('+++') && !ln.startsWith('---') && !ln.startsWith('@@')
     ).map(ln => {
-        if (ln.startsWith('+')) return `<span class="ln-add">${escHtml(ln)}</span>`;
-        if (ln.startsWith('-')) return `<span class="ln-rem">${escHtml(ln)}</span>`;
+        if (ln.startsWith('+')) return `<span class="ln-add">${escHtml(ln.slice(1))}</span>`;
+        if (ln.startsWith('-')) return `<span class="ln-rem">${escHtml(ln.slice(1))}</span>`;
+        if (ln.startsWith(' ')) return `<span class="ln-ctx">${escHtml(ln.slice(1))}</span>`;
         return `<span class="ln-ctx">${escHtml(ln)}</span>`;
     }).join('');
     const stat = (added > 0 ? `<span class="add">+${added}</span>` : '')
@@ -7251,6 +7289,7 @@ function vcRenderDiff(turn, meta) {
         <div class="diff-body">${linesHtml}</div>
     `;
     turn.body.appendChild(card);
+    vcEnsureThinkingAtEnd(turn);  // keep thinking dot below the diff
     vcChatScroll();
 }
 function vcRenderError(turn, msg) {
