@@ -44,6 +44,34 @@ DEFAULT_MODEL = 'openrouter/anthropic/claude-sonnet-4.5'
 _DOCS_DIR = Path(__file__).parent / 'docs'
 
 
+def _collect_initial_files(artist_root: Path, max_files: int = 30) -> list[Path]:
+    """The editable surface — files we hand aider on `--file` at startup
+    so the user doesn't have to type `/add` for every page. Picks each
+    page's content.md + config.json plus root config.json /
+    default-styles.css / api.py if present. Caps at max_files to avoid
+    pathological sites blowing up the boot context.
+    """
+    files: list[Path] = []
+    excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
+
+    for name in ('config.json', 'default-styles.css', 'api.py'):
+        p = artist_root / name
+        if p.exists():
+            files.append(p)
+
+    for d in sorted(artist_root.iterdir()):
+        if not d.is_dir() or d.name in excluded or d.name.startswith('.'):
+            continue
+        for name in ('content.md', 'config.json'):
+            p = d / name
+            if p.exists():
+                files.append(p)
+                if len(files) >= max_files:
+                    return files
+
+    return files
+
+
 def _build_context_file(artist_root: Path) -> Path:
     """Write a per-session context summary that aider pre-reads as
     read-only context. Gives it Adze's conventions, the artist's config,
@@ -132,6 +160,14 @@ class AiderSession:
         except Exception:
             ctx_arg = []  # don't fail to spawn if context build trips on something
 
+        # Auto-load the editable surface so artists don't have to know /add.
+        file_args: list[str] = []
+        try:
+            for f in _collect_initial_files(self.artist_root):
+                file_args.extend(['--file', str(f.relative_to(self.artist_root))])
+        except Exception:
+            file_args = []
+
         cmd = [
             'aider',
             '--no-git',
@@ -141,6 +177,7 @@ class AiderSession:
             '--yes-always',
             '--no-show-model-warnings',
             *ctx_arg,
+            *file_args,
             '--model', model,
         ]
 
