@@ -309,9 +309,14 @@ class AiderSession:
                     self._raw_write(line + term)
                     continue
 
-                # Auto-/add any pages this message mentions
-                for slug in self._detect_pages(stripped):
-                    self._raw_write(f'/add {slug}/content.md\r')
+                # Auto-/add any pages this message mentions. Combine into a
+                # single `/add a b c` command so aider only re-renders its
+                # prompt once instead of N times (each redraw is what looks
+                # like flicker in the terminal).
+                slugs = self._detect_pages(stripped)
+                if slugs:
+                    files = ' '.join(f'{s}/content.md' for s in slugs)
+                    self._raw_write(f'/add {files}\r')
                 self._raw_write(line + term)
 
     def resize(self, cols: int, rows: int) -> None:
