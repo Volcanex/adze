@@ -185,32 +185,56 @@ a:hover { color: var(--accent); }
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 20px;
+        padding: 8px 16px;
         position: sticky;
         top: 0;
-        background: var(--bg);
+        background: #000;
         z-index: 1000;
         border-bottom: 1px solid #000;
-        box-shadow: 0 4px 8px var(--shadow-dark);
     }
-    .mobile-header .site-name { font-size: 16px; animation: none; }
-    .menu-toggle { display: block; }
+    .mobile-header .site-name {
+        font-size: 13px;
+        line-height: 1;
+        animation: none;
+        padding: 5px 8px;
+        border-width: 2px;
+    }
+    .menu-toggle { display: block; height: 14px; width: 22px; align-self: center; }
+    .menu-toggle span { background: #fff; }
+    .menu-toggle span:nth-child(1) { top: 2px; }
+    .menu-toggle span:nth-child(2) { bottom: 2px; }
 
     .sidebar {
         width: 100%; min-width: 100%; min-height: 0;
-        padding: 0 20px; gap: 16px; overflow: hidden;
-        display: grid; grid-template-rows: 0fr;
+        padding: 0 20px;
+        gap: 0;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: 0fr;
         transition: grid-template-rows 0.45s ease;
         border: none;
         box-shadow: none;
     }
-    .sidebar.open { grid-template-rows: 1fr; border-bottom: 1px solid #000; }
-    .sidebar > .sidebar-inner { overflow: hidden; }
+    .sidebar.open { grid-template-rows: 1fr; }
+    .sidebar > .sidebar-inner { overflow: hidden; padding: 10px 0; }
     .sidebar .site-name { display: none; }
-    .sidebar .nav-links { padding-top: 16px; flex-direction: column; gap: 8px; }
-    .sidebar .nav-links a { font-size: 12px; }
-    .sidebar .social-links { padding-bottom: 20px; margin-top: 8px; }
-    .social-links a { font-size: 11px; }
+    .sidebar .nav-links { flex-direction: column; gap: 0; }
+    .sidebar .nav-links a {
+        font-size: 13px;
+        padding: 8px 0;
+        border-bottom-width: 1px;
+    }
+    .sidebar .social-links { margin-top: 0; padding-bottom: 4px; }
+    .sidebar .social-links a {
+        font-size: 13px;
+        padding: 8px 0;
+        border-bottom-width: 1px;
+        letter-spacing: -0.5px;
+    }
+    .sidebar .social-links a:hover {
+        background: var(--accent);
+        border-bottom-color: var(--accent);
+    }
 }
 
 /* ── Main Content ── */

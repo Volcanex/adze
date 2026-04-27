@@ -25,6 +25,13 @@ html, body {
     min-height: 100%;
     height: auto;
     overflow-x: hidden;
+    overscroll-behavior: none;
+}
+
+html {
+    background-color: #281800;
+    background-image: url('../assets/gifs/ceramic.gif');
+    background-repeat: repeat;
 }
 
 body {
@@ -86,6 +93,35 @@ img {
     overflow-y: auto;
     z-index: 100;
     box-shadow: 5px 0 15px rgba(0,0,0,0.7);
+    transform: translateX(-105%);
+    transition: transform 0.3s ease;
+}
+
+.sidebar-trigger {
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 70px;
+    background: linear-gradient(180deg, #1a0000 0%, #330000 100%);
+    border: 2px solid #660000;
+    border-left: none;
+    color: #ffff00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-family: 'Cardinal', serif;
+    z-index: 99;
+    cursor: pointer;
+    box-shadow: 3px 0 8px rgba(0,0,0,0.5);
+}
+
+.sidebar-trigger:hover ~ .gothic-sidebar,
+.gothic-sidebar:hover,
+.gothic-sidebar:focus-within {
+    transform: translateX(0);
 }
 
 .sidebar-logo {
@@ -150,16 +186,65 @@ img {
 }
 
 .main-content-1996 {
-    margin-left: 350px; /* From music page */
-    margin-right: 100px; /* From music page */
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 80px;
     position: relative;
     z-index: 2;
-    padding: 20px; /* Keep existing padding */
+}
+
+.section {
+    text-align: center;
+    margin: 0 0 64px;
+}
+
+.section:last-child {
+    margin-bottom: 0;
+}
+
+.hero {
+    margin-bottom: 48px;
+}
+
+.hero .tagline {
+    margin-top: 18px;
+    font-size: 16px;
+    letter-spacing: 1px;
+}
+
+.section-heading {
+    font-family: 'Cardinal', serif;
+    font-size: 22px;
+    color: #ffff00;
+    text-shadow: 1px 1px 2px #ff0000;
+    letter-spacing: 3px;
+    margin: 0 0 24px;
+}
+
+.contact-email {
+    margin-top: 12px;
+    font-size: 18px;
+}
+
+.footer-meta {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-bottom: 24px;
+}
+
+@media (min-width: 1600px) {
+    .main-content-1996 {
+        max-width: 1280px;
+        padding: 60px 100px;
+    }
+    .gothic-title {
+        font-size: 96px;
+    }
 }
 
 .border-left {
     position: fixed;
-    left: 240px;
+    left: 0;
     top: 0;
     height: 100%;
     z-index: 50;
@@ -234,6 +319,11 @@ b {
         border-top: 3px solid #660000;
         padding: 10px;
         box-shadow: none;
+        transform: none;
+    }
+
+    .sidebar-trigger {
+        display: none;
     }
 
     .gothic-sidebar .sidebar-footer {
@@ -269,7 +359,15 @@ b {
         margin-right: 0;
         width: 100%;
         order: 1; /* Place above sidebar */
-        padding: 10px;
+        padding: 20px 10px;
+    }
+
+    .section {
+        margin-bottom: 36px;
+    }
+
+    .hero {
+        margin-bottom: 28px;
     }
 
     .border-left, .border-right {
@@ -302,6 +400,7 @@ b {
 <img class="border-right" src="../assets/gifs/right.gif">
 
 <div class="site-container">
+    <div class="sidebar-trigger">☰</div>
     <!-- Sidebar Navigation -->
     <div class="gothic-sidebar">
         <div class="sidebar-logo">
@@ -356,78 +455,59 @@ b {
 
     <!-- Main Content -->
     <div class="main-content-1996">
-    <center>
-        <h1 class="gothic-title">MARIA SLAUGHTER</h1>
-        <img src="../assets/gifs/jump.webp" width="100">
-    </center>
-    <br>
+        <div class="section hero">
+            <h1 class="gothic-title">MARIA SLAUGHTER</h1>
+            <img src="../assets/gifs/jump.webp" width="100">
+            <div class="tagline"><b>REVIVALIST OF THE DARK ARTS</b></div>
+        </div>
 
-    <center>
-        <font size="2" color="#ffff00" style="font-style: italic;">REVIVALIST OF THE DARK ARTS</font>
-        <br>
-        <font size="4"><b>FOR</b></font>
-        <br><br>
+        <div class="section">
+            <table border="5" cellpadding="10">
+                <tr>
+                    <td align="center">
+                        <a href="../gallery">
+                            <img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="240" border="0">
+                            <br>
+                            <font size="2"><b>ENTER GALLERY</b></font>
+                        </a>
+                    </td>
+                    <td align="center">
+                        <a href="../music">
+                            <img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="240" border="0">
+                            <br>
+                            <font size="2"><b>HEAR THE SOUNDS</b></font>
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-        {}
-    </center>
-    <br><br>
+        <div class="section">
+            <div class="section-heading">LATEST WORKS</div>
+            <table border="5" cellpadding="10">
+                <tr>
+                    <td align="center">
+                        <img src="../assets/images/2025-10-25_17-29-26_UTC_1.jpg" width="200" border="0">
+                    </td>
+                    <td align="center">
+                        <img src="../assets/images/2023-10-05_16-13-19_UTC_1.jpg" width="200" border="0">
+                    </td>
+                    <td align="center">
+                        <img src="../assets/images/2025-09-16_20-53-46_UTC_1.jpg" width="200" border="0">
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-    <center>
-        <table border="5" cellpadding="10">
-            <tr>
-                <td align="center">
-                    <a href="../gallery">
-                        <img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="200" border="0">
-                        <br>
-                        <font size="2"><b>ENTER GALLERY</b></font>
-                    </a>
-                </td>
-                <td align="center">
-                    <a href="../music">
-                        <img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="200" border="0">
-                        <br>
-                        <font size="2"><b>HEAR THE SOUNDS</b></font>
-                    </a>
-                </td>
-            </tr>
-        </table>
-    </center>
-    <br><br>
+        <div class="section">
+            <img src="../assets/gifs/email.webp" width="180" border="0">
+            <div class="contact-email"><b>FALLENANGELSELVATICA@GMAIL.COM</b></div>
+        </div>
 
-    <center>
-        <font size="3">LATEST WORKS</font>
-        <br><br>
-        <table border="5" cellpadding="10">
-            <tr>
-                <td align="center">
-                    <img src="../assets/images/2025-10-25_17-29-26_UTC_1.jpg" width="150" border="0">
-                </td>
-                <td align="center">
-                    <img src="../assets/images/2023-10-05_16-13-19_UTC_1.jpg" width="150" border="0">
-                </td>
-                <td align="center">
-                    <img src="../assets/images/2025-09-16_20-53-46_UTC_1.jpg" width="150" border="0">
-                </td>
-            </tr>
-        </table>
-    </center>
-    <br><br>
-
-    <center>
-        <img src="../assets/gifs/email.webp" width="180" border="0">
-        <br>
-        <font size="4" color="#ff0000"><b>FALLENANGELSELVATICA@GMAIL.COM</b></font>
-    </center>
-    <br><br>
-
-    <center>
-        <font size="2">&copy; MARIA SLAUGHTER - DIGITAL NECROPOLIS</font>
-    </center>
-    <br><br>
-
-    <center>
-        <img src="../assets/gifs/bottom.gif" class="border-bottom">
-    </center>
+        <div class="section">
+            <div class="footer-meta">&copy; MARIA SLAUGHTER &mdash; DIGITAL NECROPOLIS</div>
+            <img src="../assets/gifs/bottom.gif" class="border-bottom">
+        </div>
     </div>
 </div>
 </html>

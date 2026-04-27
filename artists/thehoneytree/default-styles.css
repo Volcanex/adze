@@ -1,0 +1,44 @@
+:root {
+    /* ── Colours (whiter ground, leafier greens, warm honey) ── */
+    --primary: #1f2a1c;          /* deep forest, slightly cool */
+    --accent: #4f7a3a;            /* leaf green */
+    --accent-hover: #355c25;     /* darker leaf */
+    --leaf-soft: #cfe0bf;         /* pale leaf wash */
+    --honey: #c89342;             /* warm honey, holds against more white */
+    --bg: #fbfbf6;                /* near-white with faint warm tint */
+    --bg-soft: #eef2e6;           /* whisper of green for cards */
+    --border: #dde4d2;            /* pale leafy border */
+    --text-muted: #515b48;        /* greener-grey body */
+    --text-light: #8a9484;        /* lighter sage-grey */
+
+    /* ── Fonts ── */
+    --text-font: 'Inter', sans-serif;
+    --heading-font: 'Cardo', serif;
+
+    /* ── Body Text ── */
+    --body-size: 1.05rem;
+    --body-weight: 400;
+    --body-line-height: 1.7;
+
+    /* ── Headings ── */
+    --h1-size: 2.6rem;
+    --h1-weight: 400;
+    --h2-size: 1.55rem;
+    --h2-weight: 400;
+    --h3-size: 1.15rem;
+    --h3-weight: 600;
+    --heading-line-height: 1.35;
+
+    /* ── Spacing & Layout ── */
+    --content-max-width: 680px;
+    --sidebar-width: 280px;
+    --page-padding: 48px;
+    --section-gap: 28px;
+    --border-radius: 6px;
+
+    /* ── Nav ── */
+    --nav-size: 14px;
+    --nav-weight: 400;
+    --site-name-size: 19px;
+    --site-name-weight: 700;
+}

@@ -4,5 +4,7 @@
     "domain": "jackdt.com",
     "admin_token": "jack123",
     "description": "",
-    "contact_email": ""
+    "contact_email": "",
+    "last_login": 1776864761,
+    "last_login_ip": "113.185.85.55"
 }

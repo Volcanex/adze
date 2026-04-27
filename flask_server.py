@@ -9,7 +9,7 @@ import os
 import sys
 import importlib.util
 from pathlib import Path
-from flask import Flask, jsonify, send_from_directory, send_file, request
+from flask import Flask, jsonify, send_from_directory, send_file, request, redirect
 from flask_cors import CORS
 from flask_socketio import SocketIO
 import psutil
@@ -359,6 +359,33 @@ window.addEventListener('pagehide',send);
 
     def _setup_basic_routes(self):
         """Setup basic Flask routes"""
+
+        @self.app.route('/preview/<slug>/', defaults={'subpath': ''})
+        @self.app.route('/preview/<slug>/<path:subpath>')
+        def serve_preview(slug, subpath):
+            """Same-origin preview of an artist site for embedding in iframes
+            from other artist sites (e.g. lastplacesite's case-study tiles)."""
+            artist_dir = Path('artists') / slug
+            if not artist_dir.is_dir() or slug.startswith('_'):
+                return jsonify({'error': f'Unknown artist: {slug}'}), 404
+            artist_base = self.static_dir / 'artists' / slug
+
+            # Redirect bare /preview/<slug>/ to /preview/<slug>/home/ so the
+            # served HTML's relative asset paths (../assets/...) resolve here
+            # the same way they do on the artist's real domain.
+            if not subpath:
+                return redirect(f'/preview/{slug}/home/', code=302)
+
+            file_path = artist_base / subpath
+            if file_path.exists() and file_path.is_file():
+                return send_from_directory(str(artist_base), subpath)
+
+            if '.' not in subpath.rsplit('/', 1)[-1]:
+                idx = artist_base / subpath / 'index.html'
+                if idx.exists():
+                    return send_from_directory(str(artist_base / subpath), 'index.html')
+
+            return jsonify({'error': f'File {subpath} not found for {slug}'}), 404
 
         @self.app.route('/')
         def serve_homepage():

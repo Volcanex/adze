@@ -6,7 +6,7 @@
     "admin_token": "clive123",
     "description": "Independent publishing house and creative studio.",
     "contact_email": "contact@erlabrunn.org.uk",
-    "platform_widgets": [
-        "beehiiv"
-    ]
+    "platform_widgets": [],
+    "last_login": 1776888922,
+    "last_login_ip": "81.157.75.88"
 }

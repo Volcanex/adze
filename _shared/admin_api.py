@@ -2026,7 +2026,7 @@ def update_site_config():
             config = json.load(f)
 
         # Only allow safe fields to be updated
-        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon']
+        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon', 'schema']
         for key in allowed:
             if key in new_config:
                 config[key] = new_config[key]
@@ -4391,6 +4391,90 @@ _claude_sessions = _load_claude_sessions()
 _claude_processes = {}  # artist_slug -> subprocess.Popen
 # Per-artist streaming lock: prevents two users from running Claude simultaneously
 _claude_streaming = {}  # artist_slug -> { 'since': timestamp, 'prompt': str }
+
+# Per-artist Vibe Coder tab presence. Tabs heartbeat; a "take over" moves every
+# other known tab_id into a `kicked` set so their next heartbeat returns
+# `kicked: true` and the client shows a "reload to continue" overlay.
+# SSH / direct filesystem edits are invisible here by design.
+_vibe_presence = {}       # artist_slug -> {'epoch': int, 'tabs': {tab_id: last_seen_ts}, 'kicked': {tab_id: kicked_at_ts}}
+_vibe_presence_lock = _threading.Lock()
+_VIBE_PRESENCE_STALE_S = 15   # live tabs idle longer than this are pruned
+_VIBE_KICKED_TTL_S = 60 * 30  # forget kicked tab ids after this (bounded memory)
+
+
+def _vibe_prune_locked(slot):
+    """Drop stale live tabs and expired kicked entries. Caller holds the lock."""
+    now = _time.time()
+    slot['tabs'] = {tid: ts for tid, ts in slot['tabs'].items() if now - ts < _VIBE_PRESENCE_STALE_S}
+    slot['kicked'] = {tid: ts for tid, ts in slot['kicked'].items() if now - ts < _VIBE_KICKED_TTL_S}
+
+
+def _vibe_slot_locked(artist_slug):
+    return _vibe_presence.setdefault(artist_slug, {'epoch': 0, 'tabs': {}, 'kicked': {}})
+
+
+@bp.route('/vibe-presence/heartbeat', methods=['POST'])
+def vibe_presence_heartbeat():
+    """
+    Heartbeat for a Vibe Coder browser tab.
+    Body: {tab_id}
+    Returns: {ok, epoch, kicked, others: [{idle_s}]}
+    `kicked` is true when another tab has taken over since this one last heartbeat.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.get_json(silent=True) or {}
+    tab_id = (data.get('tab_id') or '').strip()
+    if not tab_id or len(tab_id) > 64:
+        return jsonify({'error': 'tab_id required'}), 400
+    now = _time.time()
+    with _vibe_presence_lock:
+        slot = _vibe_slot_locked(artist_slug)
+        _vibe_prune_locked(slot)
+        if tab_id in slot['kicked']:
+            return jsonify({'ok': True, 'epoch': slot['epoch'], 'kicked': True, 'others': []})
+        slot['tabs'][tab_id] = now
+        others = [
+            {'idle_s': round(now - ts, 1)}
+            for tid, ts in slot['tabs'].items()
+            if tid != tab_id
+        ]
+        return jsonify({
+            'ok': True,
+            'epoch': slot['epoch'],
+            'kicked': False,
+            'others': others,
+        })
+
+
+@bp.route('/vibe-presence/takeover', methods=['POST'])
+def vibe_presence_takeover():
+    """
+    Bump the epoch, mark the caller as the sole live tab, and move every other
+    currently-known tab_id into `kicked` so their next heartbeat sees it.
+    Body: {tab_id}
+    Returns: {ok, epoch}
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        return jsonify({'error': 'Not authenticated'}), 401
+    data = request.get_json(silent=True) or {}
+    tab_id = (data.get('tab_id') or '').strip()
+    if not tab_id or len(tab_id) > 64:
+        return jsonify({'error': 'tab_id required'}), 400
+    now = _time.time()
+    with _vibe_presence_lock:
+        slot = _vibe_slot_locked(artist_slug)
+        _vibe_prune_locked(slot)
+        for tid in slot['tabs']:
+            if tid != tab_id:
+                slot['kicked'][tid] = now
+        slot['epoch'] += 1
+        slot['tabs'] = {tab_id: now}
+        # If the caller was previously kicked (shouldn't normally happen but be safe), clear it.
+        slot['kicked'].pop(tab_id, None)
+        return jsonify({'ok': True, 'epoch': slot['epoch']})
 
 
 def _load_docs() -> str:

@@ -1,0 +1,9 @@
+/* Example dashboard theme. Override CSS variables only — do not re-style selectors.
+   Dir name starting with _ is ignored by the admin listing. */
+:root {
+    --accent: #c46a3f;
+    --accent-hover: #a05531;
+    --bg: #faf6f0;
+    --bg2: #f2ebe0;
+    --surface: #ffffff;
+}

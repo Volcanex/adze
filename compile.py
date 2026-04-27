@@ -88,6 +88,28 @@ class AdzeCompiler:
                 count += 1
         return count
 
+    def _build_schema_blocks(self, artist_config, page_config):
+        """Collect JSON-LD blocks from artist + page config and serialize to <script> tags."""
+        items = []
+        for src in (artist_config.get('schema'), page_config.get('schema')):
+            if not src:
+                continue
+            if isinstance(src, list):
+                items.extend(x for x in src if isinstance(x, (dict, list)))
+            elif isinstance(src, dict):
+                items.append(src)
+        if not items:
+            return ''
+        out = []
+        for item in items:
+            try:
+                payload = json.dumps(item, ensure_ascii=False, separators=(',', ':'))
+            except (TypeError, ValueError):
+                continue
+            payload = payload.replace('</', '<\\/')
+            out.append(f'\n    <script type="application/ld+json">{payload}</script>')
+        return ''.join(out)
+
     def compile_page(self, artist_slug, page_dir):
         """Compile a single page into output/{slug}/{page}/index.html."""
         config = json.loads((page_dir / 'config.json').read_text(encoding='utf-8'))
@@ -98,14 +120,17 @@ class AdzeCompiler:
 
         # Check for artist-specific favicon
         favicon_link = '<link rel="icon" href="../assets/favicon.png">'
+        artist_config = {}
         artist_config_file = self.artists_dir / artist_slug / 'config.json'
         if artist_config_file.exists():
             try:
-                ac = json.loads(artist_config_file.read_text(encoding='utf-8'))
-                if ac.get('favicon'):
-                    favicon_link = f'<link rel="icon" href="../assets/{ac["favicon"]}">'
+                artist_config = json.loads(artist_config_file.read_text(encoding='utf-8'))
+                if artist_config.get('favicon'):
+                    favicon_link = f'<link rel="icon" href="../assets/{artist_config["favicon"]}">'
             except:
                 pass
+
+        schema_blocks = self._build_schema_blocks(artist_config, config)
 
         full_html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -113,7 +138,7 @@ class AdzeCompiler:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">{meta_section}
     <title>{config.get('title', 'Untitled')}</title>
-    {favicon_link}
+    {favicon_link}{schema_blocks}
     {css_content}
 </head>
 <body>

@@ -10,15 +10,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
     <!-- Apply saved theme before first paint to prevent light→dark flash -->
-    <script>if(localStorage.getItem('dashboard-theme')==='dark')document.documentElement.setAttribute('data-theme','dark');</script>
+    <script>if(localStorage.getItem('dashboard-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
         /* ── Reset & Variables ── */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         /* ── Light Theme (default) ── */
         :root {
-            --accent: #5a8bbe;
-            --accent-hover: #4a7db0;
+            /* Tokens — canonical source: /design-language/project/Adze Design Language.html — keep in sync.
+               Dashboard intentionally diverges from canon: --radius 6px (vs 8px), denser --text2,
+               extra --bg3 — chosen for tight admin UI density. Don't homogenise. */
+            --accent: #1C4F82;
+            --accent-soft: #6b8cae;
+            --accent-hover: #163f68;
             --accent-text: #fff;
             --danger: #c0392b;
             --bg: #f5f2ed;
@@ -41,8 +45,9 @@
 
         /* ── Dark Theme ── */
         [data-theme="dark"] {
-            --accent: #6a9fd4;
-            --accent-hover: #82b3e0;
+            --accent: #99cdff;
+            --accent-soft: #7ea3c4;
+            --accent-hover: #b8ddff;
             --accent-text: #1a1a1e;
             --danger: #e74c3c;
             --bg: #1a1a1e;
@@ -68,7 +73,7 @@
         button:hover { background: var(--accent-hover); }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         input, textarea, select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; font-size: 11px; font-family: var(--body-font); transition: border-color 0.2s, background 0.3s; }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(107,140,174,0.12); }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(28,79,130,0.12); }
         textarea { font-family: var(--mono); font-size: 10px; line-height: 1.5; resize: none; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg2); }
@@ -103,6 +108,8 @@
         [data-theme="dark"] .btn-danger:hover { background: #c0392b; }
         .btn-success { background: var(--success); color: white; }
         .btn-success:hover { opacity: 0.9; }
+        .btn-publish { background: var(--success); color: #fff; }
+        .btn-publish:hover { background: #3d8558; }
 
         /* ── Logo ── */
         .adze-logo { transition: filter 0.3s; }
@@ -167,7 +174,7 @@
         .ai-msg { padding: 8px 11px; border-radius: 8px; font-size: 11px; line-height: 1.5; max-width: 90%; word-wrap: break-word; }
         .ai-msg.user { background: var(--accent); color: var(--accent-text); align-self: flex-end; border-bottom-right-radius: 3px; }
         .ai-msg.assistant { background: var(--surface2); color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; }
-        .ai-msg.system { background: rgba(107,140,174,0.1); color: var(--accent); align-self: center; font-size: 10px; text-align: center; }
+        .ai-msg.system { background: rgba(28,79,130,0.1); color: var(--accent); align-self: center; font-size: 10px; text-align: center; }
         [data-theme="dark"] .ai-msg.system { background: rgba(126,163,196,0.12); }
         .ai-msg pre { background: var(--bg); padding: 6px; border-radius: 4px; overflow-x: auto; margin: 5px 0; font-size: 9px; font-family: var(--mono); white-space: pre-wrap; }
         .ai-msg code { font-family: var(--mono); font-size: 9px; background: var(--bg); padding: 1px 3px; border-radius: 2px; }
@@ -198,7 +205,7 @@
         /* Pointer pick overlay */
         .pointer-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 50; cursor: crosshair; display: none; }
         .pointer-overlay.active { display: block; }
-        .pointer-highlight { position: absolute; border: 2px solid var(--accent); background: rgba(107,140,174,0.15); pointer-events: none; z-index: 51; border-radius: 2px; }
+        .pointer-highlight { position: absolute; border: 2px solid var(--accent); background: rgba(28,79,130,0.15); pointer-events: none; z-index: 51; border-radius: 2px; }
         .pointer-label { position: absolute; background: var(--accent); color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; pointer-events: none; z-index: 52; white-space: nowrap; font-family: var(--mono); }
 
         .pane-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 11px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 500; color: var(--text2); flex-shrink: 0; height: 27px; }
@@ -286,12 +293,12 @@
         .api-card-header h4 { margin: 0; font-size: 14px; font-weight: 600; }
         .api-method { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.5px; }
         .api-method.get { background: rgba(74,154,106,0.15); color: var(--success); }
-        .api-method.post { background: rgba(107,140,174,0.15); color: var(--accent); }
+        .api-method.post { background: rgba(28,79,130,0.15); color: var(--accent); }
         .api-method.delete { background: rgba(192,57,43,0.15); color: var(--danger); }
         .api-method.put { background: rgba(200,168,64,0.15); color: var(--warn); }
         .api-badge-auth { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: var(--bg3); color: var(--text2); }
         .api-badge-public { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: rgba(74,154,106,0.12); color: var(--success); }
-        .api-badge-custom { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: rgba(107,140,174,0.12); color: var(--accent); }
+        .api-badge-custom { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 600; background: rgba(28,79,130,0.12); color: var(--accent); }
         .api-detail { font-size: 13px; color: var(--text2); margin: 0; }
         .api-url { font-family: var(--mono); font-size: 11px; color: var(--text2); background: var(--bg); padding: 4px 8px; border-radius: 4px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; }
         .api-url code { flex: 1; overflow-x: auto; }
@@ -375,7 +382,7 @@
         .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
         .asset-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; cursor: pointer; border: 2px solid var(--border); transition: all 0.15s; box-shadow: var(--shadow-sm); position: relative; }
         .asset-card:hover { border-color: var(--accent); }
-        .asset-card.selected { border-color: var(--accent); background: rgba(90,139,190,0.08); }
+        .asset-card.selected { border-color: var(--accent); background: rgba(28,79,130,0.08); }
         .asset-card img { width: 100%; height: 80px; object-fit: cover; display: block; background: var(--bg); }
         .asset-card .file-icon { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--bg); }
         .asset-card-info { padding: 6px 8px 2px; }
@@ -478,53 +485,74 @@
         .unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: none; margin-left: 6px; box-shadow: 0 0 6px rgba(200,168,64,0.4); }
 
         /* ── Claude Terminal ── */
-        .claude-terminal { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: #1a1a1e; height: 100%; }
-        .claude-term-output { flex: 1; overflow-y: auto; padding: 16px 20px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 13px; line-height: 1.65; color: #e8e6e0; white-space: pre-wrap; word-wrap: break-word; }
+        .claude-terminal { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; background: #1a1a1e; height: 100%; position: relative; --vc-scale: 1; }
+        .claude-term-output { flex: 1; overflow-y: auto; padding: 16px 20px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: calc(13px * var(--vc-scale)); line-height: 1.65; color: #e8e6e0; white-space: pre-wrap; word-wrap: break-word; }
+        .vc-fs-controls { position: absolute; top: 6px; right: 10px; z-index: 5; display: flex; gap: 2px; background: rgba(34,34,38,0.85); backdrop-filter: blur(4px); border: 1px solid #333; border-radius: 5px; padding: 2px; }
+        .vc-fs-controls button { background: transparent; color: #c8c5bd; border: none; width: 22px; height: 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--body-font, sans-serif); line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .vc-fs-controls button:hover { background: #3a3a40; color: #fff; }
+        .vc-fs-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+        .vc-fs-controls .vc-fs-label { color: #8a8780; font-size: 10px; padding: 0 4px; align-self: center; min-width: 28px; text-align: center; font-family: var(--body-font, sans-serif); user-select: none; }
         .claude-term-output::-webkit-scrollbar { width: 6px; }
         .claude-term-output::-webkit-scrollbar-track { background: #222; }
         .claude-term-output::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-        .claude-term-line { margin-bottom: 3px; font-size: 10px; padding: 2px 0; }
-        .claude-term-line.user-input { color: #5a8bbe; font-weight: 600; font-size: 10px; }
-        .claude-term-line.user-input::before { content: '❯ '; color: #5a8bbe; }
+        .claude-term-line { margin-bottom: 3px; font-size: calc(10px * var(--vc-scale)); padding: 2px 0; }
+        .claude-term-line.user-input { color: #99cdff; font-weight: 600; font-size: calc(12px * var(--vc-scale)); }
+        .claude-term-line.user-input::before { content: '❯ '; color: #99cdff; }
         .claude-term-line.queued { opacity: 0.5; }
-        .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: 9px; color: var(--text2); }
-        .claude-term-line.system { color: #666; font-style: italic; font-size: 9px; }
-        .claude-term-line.error { color: #e74c3c; font-size: 10px; }
-        .claude-term-line.thinking { color: #9a978e; font-style: italic; font-size: 10px; }
+        .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: calc(9px * var(--vc-scale)); color: var(--text2); }
+        .claude-term-line.system { color: #666; font-style: italic; font-size: calc(9px * var(--vc-scale)); }
+        .claude-term-line.error { color: #e74c3c; font-size: calc(10px * var(--vc-scale)); }
+        .claude-term-line.thinking { color: #9a978e; font-style: italic; font-size: calc(10px * var(--vc-scale)); }
         .claude-term-line.thinking::before { content: ''; }
-        .claude-term-line.tool-use { color: #aaa79e; font-size: 10px; padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid #444; }
-        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #c8a840; font-size: 10px; }
+        .claude-term-line.tool-use { color: #aaa79e; font-size: calc(10px * var(--vc-scale)); padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid #444; }
+        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #c8a840; font-size: calc(10px * var(--vc-scale)); }
         .claude-term-line.tool-use .tool-header svg { width: 11px; height: 11px; stroke: #c8a840; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: 9px; color: #888; margin-top: 2px; word-break: break-all; }
-        .claude-term-line.result-text { color: #e8e6e0; font-size: 10px; line-height: 1.5; margin-top: 6px; }
+        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: #888; margin-top: 2px; word-break: break-all; }
+        .claude-term-line.result-text { color: #e8e6e0; font-size: calc(10px * var(--vc-scale)); line-height: 1.5; margin-top: 6px; }
         .claude-term-line.result-text strong { color: #fff; }
         .claude-term-line.result-text em { color: #bbb; font-style: italic; }
-        .claude-term-line.result-text code { background: #2c2c30; padding: 1px 5px; border-radius: 3px; font-size: 9px; color: #6a9fd4; }
-        .claude-term-line.result-text a { color: #5a8bbe; text-decoration: underline; }
+        .claude-term-line.result-text code { background: #2c2c30; padding: 1px 5px; border-radius: 3px; font-size: calc(9px * var(--vc-scale)); color: #6a9fd4; }
+        .claude-term-line.result-text a { color: #99cdff; text-decoration: underline; }
         .claude-term-code-block { background: #111; border: 1px solid #333; border-radius: 6px; padding: 12px 14px; margin: 8px 0; overflow-x: auto; font-size: 12px; line-height: 1.5; color: #ccc; }
         .claude-term-code-block .code-lang { color: #666; font-size: 10px; text-transform: uppercase; margin-bottom: 6px; display: block; }
         .claude-term-separator { border: none; border-top: 1px solid #2a2a2e; margin: 12px 0; }
         .claude-term-input-bar { display: flex; gap: 5px; padding: 8px 10px; background: #222226; border-top: 1px solid #333; flex-shrink: 0; align-items: center; }
         .claude-term-input-bar input { flex: 1; background: #1a1a1e; color: #e8e6e0; border: 1px solid #3e3e44; border-radius: 5px; padding: 6px 10px; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 11px; outline: none; }
-        .claude-term-input-bar input:focus { border-color: #5a8bbe; box-shadow: 0 0 0 2px rgba(90,139,190,0.2); }
+        .claude-term-input-bar input:focus { border-color: #1C4F82; box-shadow: 0 0 0 2px rgba(28,79,130,0.2); }
         .claude-term-input-bar input::placeholder { color: #555; }
         .claude-term-input-bar button { padding: 6px 11px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .claude-term-input-bar .claude-send { background: #5a8bbe; color: #fff; }
+        .claude-term-input-bar .claude-send { background: #1C4F82; color: #fff; }
         .claude-term-input-bar .claude-send:hover { background: #6a9fd4; }
         .claude-term-input-bar .claude-send:disabled { opacity: 0.4; }
         .claude-term-input-bar .claude-halt { background: #c0392b; color: #fff; padding: 6px 11px; }
         .claude-term-input-bar .claude-halt:hover { background: #e74c3c; }
         .claude-term-input-bar .claude-reset { background: transparent; color: #666; border: 1px solid #3e3e44; padding: 10px 12px; }
         .claude-term-input-bar .claude-reset:hover { color: #e74c3c; border-color: #e74c3c; }
+        /* Vibe Coder presence badge — shown when another browser tab is editing the same artist */
+        .vibe-presence-badge { display: none; align-items: center; gap: 8px; padding: 6px 10px; background: #2a2a1e; border-top: 1px solid #5c5230; color: #d9c78a; font-size: 11px; flex-shrink: 0; }
+        .vibe-presence-badge.show { display: flex; }
+        .vibe-presence-badge .vp-dot { width: 6px; height: 6px; border-radius: 50%; background: #d9c78a; flex-shrink: 0; box-shadow: 0 0 0 0 rgba(217,199,138,0.6); animation: vpPulse 2s ease-in-out infinite; }
+        @keyframes vpPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,199,138,0.6); } 50% { box-shadow: 0 0 0 5px rgba(217,199,138,0); } }
+        .vibe-presence-badge .vp-msg { flex: 1; }
+        .vibe-presence-badge .vp-takeover { background: transparent; color: #d9c78a; border: 1px solid #5c5230; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 500; }
+        .vibe-presence-badge .vp-takeover:hover { background: #d9c78a; color: #1a1a1a; }
+        /* Takeover overlay — shown when another tab took over this session */
+        .vibe-takeover-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,12,0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .vibe-takeover-overlay.show { display: flex; }
+        .vibe-takeover-overlay .vto-box { background: #1a1a1e; border: 1px solid #3e3e44; border-radius: 8px; padding: 32px 36px; max-width: 420px; text-align: center; color: #e8e6e0; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; }
+        .vibe-takeover-overlay h3 { margin: 0 0 10px; font-size: 16px; color: #99cdff; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+        .vibe-takeover-overlay p { margin: 0 0 22px; font-size: 13px; line-height: 1.5; color: #bbb; }
+        .vibe-takeover-overlay button { background: #1C4F82; color: #fff; border: none; border-radius: 5px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+        .vibe-takeover-overlay button:hover { background: #2a6bb0; }
         .claude-tools-toggle { width: 26px; flex-shrink: 0; background: #2a2a2e; color: #999; border: 1px solid #3e3e44; border-radius: 5px; font-size: 14px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 6px 0; line-height: 1; box-sizing: border-box; }
-        .claude-tools-toggle:hover { color: #fff; border-color: #5a8bbe; }
-        .claude-tools-toggle.open { background: #5a8bbe; color: #fff; border-color: #5a8bbe; transform: rotate(45deg); }
+        .claude-tools-toggle:hover { color: #fff; border-color: #1C4F82; }
+        .claude-tools-toggle.open { background: #1C4F82; color: #fff; border-color: #1C4F82; transform: rotate(45deg); }
         .claude-term-tools { display: flex; }
         .claude-tool-btn { background: transparent; color: #888; border: 1px solid #3e3e44; padding: 8px 10px; font-size: 11px; border-radius: 5px; white-space: nowrap; cursor: pointer; transition: all 0.15s; }
-        .claude-tool-btn:hover { color: #5a8bbe; border-color: #5a8bbe; }
-        .claude-tool-btn.active { color: #5a8bbe; border-color: #5a8bbe; background: rgba(90,139,190,0.1); }
+        .claude-tool-btn:hover { color: #99cdff; border-color: #99cdff; }
+        .claude-tool-btn.active { color: #99cdff; border-color: #99cdff; background: rgba(153,205,255,0.1); }
         .claude-term-welcome { padding: 30px 20px; text-align: center; }
-        .claude-term-welcome h2 { font-family: 'Cardo', Georgia, serif; font-weight: 700; font-style: normal; color: var(--accent, #5a8bbe); font-size: 22px; margin-bottom: 8px; letter-spacing: 3px; text-transform: uppercase; }
+        .claude-term-welcome h2 { font-family: 'Cardo', Georgia, serif; font-weight: 700; font-style: normal; color: #99cdff; font-size: 22px; margin-bottom: 8px; letter-spacing: 3px; text-transform: uppercase; }
         .claude-term-welcome p { color: #666; font-size: 13px; line-height: 1.3; max-width: 500px; margin: 0 auto; }
         .claude-term-welcome .vc-line1 { font-size: 13px; }
         .claude-term-welcome .vc-line2 { font-size: 11.5px; margin-top: 1px; }
@@ -728,7 +756,7 @@
                 <!-- Tab bar -->
                 <div class="tab-bar" id="tabBar" style="display:none;">
                     <button class="tab" data-tab="edit" onclick="switchTab('edit', this)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="tab-label">Manual Edit</span></button>
-                    <button class="tab active" data-tab="claude" onclick="switchTab('claude', this)"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="tab-label">Vibe Coder</span></button>
+                    <button class="tab active" data-tab="claude" onclick="switchTab('claude', this)"><img src="/api/adze/logo.png" alt="" class="adze-logo" style="height:10px;width:auto;vertical-align:middle;margin-right:2px;position:relative;top:-1px;"><span class="tab-label">Coder</span></button>
                     <button class="tab" data-tab="config" onclick="switchTab('config', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="tab-label">Settings</span></button>
                     <button class="tab" data-tab="styles" onclick="switchTab('styles', this)"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg><span class="tab-label">Styles</span></button>
                     <button class="tab" data-tab="assets" onclick="switchTab('assets', this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="tab-label">Assets</span></button>
@@ -743,7 +771,7 @@
                     <button class="tab" data-tab="about" onclick="switchTab('about', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="tab-label">About</span></button>
                     <span id="widgetTabsContainer"></span>
                     <span class="tab-spacer"></span>
-                    <button class="btn-sm" id="livePageLink" onclick="publishAndView()" style="margin-left:auto;">Publish</button>
+                    <button class="btn-sm btn-publish" id="livePageLink" onclick="publishAndView()" style="margin-left:auto;">Publish</button>
                     <button class="btn-sm btn-danger" onclick="showModal('deletePageModal')" style="margin-left:4px;">Delete Page</button>
                 </div>
 
@@ -815,10 +843,15 @@
                 <div class="tab-panel active" id="panel-claude">
                     <div class="split-pane">
                         <div class="editor-pane" id="claudeEditorPane">
-                            <div class="claude-terminal">
+                            <div class="claude-terminal" id="claudeTerminal">
+                                <div class="vc-fs-controls" role="group" aria-label="Vibe Coder text size">
+                                    <button type="button" onclick="vcFontSize(-1)" id="vcFsMinus" title="Smaller text" aria-label="Decrease text size">A−</button>
+                                    <span class="vc-fs-label" id="vcFsLabel">100%</span>
+                                    <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
+                                </div>
                                 <div class="claude-term-output" id="claudeOutput">
                                     <div class="claude-term-welcome" id="vcWelcome">
-                                        <h2>VIBE-CODER</h2>
+                                        <h2>Coder</h2>
                                         <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
                                     </div>
                                 </div>
@@ -826,6 +859,11 @@
                                     <button class="claude-tool-btn" onclick="openClaudeAssetModal()" title="Insert asset reference">+ Asset</button>
                                     <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview">Pointer</button>
                                     <button class="claude-tool-btn" onclick="resetClaudeSession()" title="Clear memory and start fresh">Clear Memory</button>
+                                </div>
+                                <div class="vibe-presence-badge" id="vibePresenceBadge" role="status">
+                                    <span class="vp-dot"></span>
+                                    <span class="vp-msg" id="vibePresenceMsg">Someone else is editing this site.</span>
+                                    <button type="button" class="vp-takeover" onclick="vibeTakeover()">Take over</button>
                                 </div>
                                 <div class="claude-term-input-bar">
                                     <input type="text" id="claudeInput" placeholder="Ask anything about your site..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClaudeMessage();}">
@@ -848,7 +886,7 @@
                             <div id="previewErrorBar" style="display:none;background:#2d1b1b;border-bottom:1px solid #5a2d2d;padding:6px 12px;font-size:12px;color:#e8a0a0;flex-shrink:0;align-items:center;gap:8px;">
                                 <span id="previewErrorCount" style="font-weight:600;"></span>
                                 <span id="previewErrorSummary" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c88;"></span>
-                                <button onclick="sendErrorsToVibeCoder()" style="background:#5a8bbe;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to Vibe Coder</button>
+                                <button onclick="sendErrorsToVibeCoder()" style="background:#1C4F82;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to Vibe Coder</button>
                                 <button onclick="dismissErrors()" style="background:none;border:none;color:#886;cursor:pointer;font-size:14px;padding:2px 4px;">✕</button>
                             </div>
                             <iframe id="previewFrameClaude" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
@@ -919,7 +957,7 @@
                             <div style="padding:20px;">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                                     <h3 style="font-family:var(--heading-font);font-weight:400;font-size:16px;">Default Styles</h3>
-                                    <button class="btn btn-primary" onclick="saveDefaultStyles()" style="font-size:12px;padding:6px 16px;">Save &amp; Compile</button>
+                                    <button class="btn btn-publish" onclick="saveDefaultStyles()" style="font-size:12px;padding:6px 16px;">Save &amp; Compile</button>
                                 </div>
                                 <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Site-wide CSS custom properties. These apply to every page. Hover a variable to highlight elements using it in the preview.</p>
                                 <div id="stylesEditor"></div>
@@ -1158,6 +1196,9 @@
                                     <div id="faviconPath" style="font-size:9px;color:var(--text2);margin-top:8px;font-family:var(--mono);display:none;"></div>
                                 </div>
 
+                                <!-- Site Identity (Schema.org) — applies to every page -->
+                                <div id="siteSchemaSection"></div>
+
                                 <!-- Page-specific sharing content -->
                                 <div id="shareContent"><p style="color:var(--text2);font-size:10px;">Select a page to see sharing options</p></div>
                             </div>
@@ -1226,6 +1267,15 @@
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Vibe Coder takeover overlay — shown when another tab has taken the session -->
+    <div class="vibe-takeover-overlay" id="vibeTakeoverOverlay" role="dialog" aria-modal="true">
+        <div class="vto-box">
+            <h3>Session taken over</h3>
+            <p>Someone else has taken over this editing session. Reload to continue.</p>
+            <button type="button" onclick="location.reload()">Reload</button>
+        </div>
+    </div>
 
     <!-- Create Page Modal -->
     <div class="modal" id="createPageModal">
@@ -1306,7 +1356,7 @@ let assetPickerTarget = null; // field ID to fill when asset is picked
 // ── Theme Toggle ──
 function initTheme() {
     const saved = localStorage.getItem('dashboard-theme');
-    if (saved === 'dark') {
+    if (saved !== 'light') {
         document.documentElement.setAttribute('data-theme', 'dark');
     }
     updateThemeIcon();
@@ -1483,6 +1533,7 @@ async function login(slug, token) {
 
 function _initDashboard(info) {
     artistConfig = info.config || {};
+    applyDashboardOverrides(artistConfig);
     const loginScreen = document.getElementById('loginScreen');
     loginScreen.classList.add('fading-out');
     setTimeout(() => { loginScreen.style.display = 'none'; }, 150);
@@ -1491,9 +1542,91 @@ function _initDashboard(info) {
     document.getElementById('artistName').textContent = info.name || info.config?.display_name || currentArtist;
     loadPages(true);
     loadAssets().then(() => loadWidgets());
+    startVibePresence();
     requestAnimationFrame(() => requestAnimationFrame(() => {
         dash.classList.add('faded-in');
     }));
+}
+
+// ── Vibe Coder presence (per browser-tab awareness) ──────────────────────────
+// Each tab heartbeats to the server so we can warn when two tabs are editing
+// the same artist. "Take over" bumps the epoch and kicks the other tabs.
+// SSH / direct filesystem edits are intentionally invisible here.
+const vibeTabId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
+let vibeKicked = false;
+let _vibePresenceTimer = null;
+
+async function _vibeHeartbeat() {
+    if (!currentArtist || vibeKicked) return;
+    try {
+        const r = await apiFetch('/api/adze/vibe-presence/heartbeat', {
+            method: 'POST',
+            body: { tab_id: vibeTabId },
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (data.kicked) {
+            vibeKicked = true;
+            document.getElementById('vibeTakeoverOverlay').classList.add('show');
+            if (_vibePresenceTimer) { clearInterval(_vibePresenceTimer); _vibePresenceTimer = null; }
+            return;
+        }
+        const badge = document.getElementById('vibePresenceBadge');
+        if (!badge) return;
+        if (data.others && data.others.length > 0) {
+            badge.classList.add('show');
+        } else {
+            badge.classList.remove('show');
+        }
+    } catch (e) { /* network hiccup — retry next tick */ }
+}
+
+function startVibePresence() {
+    if (_vibePresenceTimer) return;
+    _vibeHeartbeat();
+    _vibePresenceTimer = setInterval(_vibeHeartbeat, 5000);
+}
+
+async function vibeTakeover() {
+    if (!currentArtist) return;
+    try {
+        const r = await apiFetch('/api/adze/vibe-presence/takeover', {
+            method: 'POST',
+            body: { tab_id: vibeTabId },
+        });
+        if (!r.ok) { toast('Take over failed', 'error'); return; }
+        const data = await r.json();
+        vibeKnownEpoch = data.epoch;
+        document.getElementById('vibePresenceBadge').classList.remove('show');
+        toast('You took over this session', 'info');
+    } catch (e) {
+        toast('Take over failed: ' + e.message, 'error');
+    }
+}
+
+// Admin-controlled dashboard overrides: hide T1 tabs and apply theme CSS.
+// T2/T3 widgets are filtered server-side in /list-widgets. T4 is always on.
+function applyDashboardOverrides(config) {
+    const d = (config && config.dashboard) || {};
+    const hidden = Array.isArray(d.hidden_widgets) ? d.hidden_widgets : [];
+    for (const name of hidden) {
+        document.querySelectorAll(`.tab[data-tab="${name}"]`).forEach(el => { el.style.display = 'none'; });
+    }
+    if (d.theme_override) {
+        fetch('/api/adze/dashboard-theme', { headers: { 'X-Artist-Slug': currentArtist } })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data || !data.css) return;
+                let styleEl = document.getElementById('dashboard-theme-override');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'dashboard-theme-override';
+                    document.head.appendChild(styleEl);
+                }
+                styleEl.textContent = data.css;
+            })
+            .catch(() => {});
+    }
 }
 
 async function logout() {
@@ -3683,7 +3816,7 @@ async function uploadAsset(file) {
     el.innerHTML = `
         <div style="font-size:12px;margin-bottom:6px;"><strong>Uploading:</strong> ${escHtml(file.name)} (${sizeMB}MB)</div>
         <div style="height:4px;background:var(--border,#444);border-radius:2px;overflow:hidden;">
-            <div class="upload-bar" style="height:100%;background:var(--accent,#6b8cae);width:0%;transition:width 0.2s;border-radius:2px;"></div>
+            <div class="upload-bar" style="height:100%;background:var(--accent,#1C4F82);width:0%;transition:width 0.2s;border-radius:2px;"></div>
         </div>
         <div class="upload-status" style="font-size:11px;margin-top:4px;opacity:0.7;">0%</div>
     `;
@@ -3981,6 +4114,7 @@ async function clearFavicon() {
 
 function loadShareTab() {
     renderFaviconPreview();
+    renderSiteSchemaEditor();
     const container = document.getElementById('shareContent');
     if (!container) return;
     if (!currentPage) {
@@ -4105,7 +4239,184 @@ function loadShareTab() {
             </div>
             <p style="font-size:9px;color:var(--text2);margin-top:10px;line-height:1.5;">Edit these values in the Config tab. Changes to title, description, and og_image will update social previews.</p>
         </div>
+
+        ${renderPageSchemaEditorHtml(pageUrl)}
     `;
+    wireSchemaEditor('page');
+}
+
+function schemaToText(value) {
+    if (value == null) return '';
+    try { return JSON.stringify(value, null, 2); } catch(e) { return ''; }
+}
+
+const SITE_SCHEMA_TEMPLATES = {
+    Person: { '@context': 'https://schema.org', '@type': 'Person', name: '', url: '', sameAs: [''] },
+    MusicGroup: { '@context': 'https://schema.org', '@type': 'MusicGroup', name: '', genre: '', url: '', sameAs: [''] },
+    Organization: { '@context': 'https://schema.org', '@type': 'Organization', name: '', url: '', logo: '', sameAs: [''] },
+    ArtGallery: { '@context': 'https://schema.org', '@type': 'ArtGallery', name: '', url: '', address: '' },
+    WebSite: { '@context': 'https://schema.org', '@type': 'WebSite', name: '', url: '' }
+};
+
+const PAGE_SCHEMA_TEMPLATES = {
+    Event: { '@context': 'https://schema.org', '@type': 'Event', name: '', startDate: '', endDate: '', location: { '@type': 'Place', name: '', address: '' }, offers: { '@type': 'Offer', url: '', price: '', priceCurrency: 'GBP' } },
+    MusicEvent: { '@context': 'https://schema.org', '@type': 'MusicEvent', name: '', startDate: '', location: { '@type': 'MusicVenue', name: '', address: '' }, performer: { '@type': 'MusicGroup', name: '' }, offers: { '@type': 'Offer', url: '' } },
+    MusicAlbum: { '@context': 'https://schema.org', '@type': 'MusicAlbum', name: '', byArtist: { '@type': 'MusicGroup', name: '' }, datePublished: '' },
+    Article: { '@context': 'https://schema.org', '@type': 'Article', headline: '', author: { '@type': 'Person', name: '' }, datePublished: '', image: '' },
+    FAQPage: { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [{ '@type': 'Question', name: '', acceptedAnswer: { '@type': 'Answer', text: '' } }] },
+    BreadcrumbList: { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: '', item: '' }] }
+};
+
+function renderSchemaEditorBlock(scope, title, hint, currentValue, templates) {
+    const txt = escHtml(schemaToText(currentValue));
+    const opts = Object.keys(templates).map(k => `<option value="${k}">${k}</option>`).join('');
+    return `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:10px;flex-wrap:wrap;">
+                <div style="font-size:12px;font-weight:600;">${escHtml(title)}</div>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <select id="schemaTpl_${scope}" style="font-size:10px;padding:4px 6px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);">
+                        <option value="">Insert template…</option>
+                        ${opts}
+                    </select>
+                </div>
+            </div>
+            <p style="font-size:10px;color:var(--text2);margin:0 0 8px;line-height:1.5;">${hint}</p>
+            <textarea id="schemaText_${scope}" spellcheck="false" style="width:100%;min-height:160px;font-family:var(--mono);font-size:11px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);resize:vertical;" placeholder='{"@context":"https://schema.org","@type":"Person","name":"..."}'>${txt}</textarea>
+            <div id="schemaStatus_${scope}" style="font-size:10px;color:var(--text2);margin-top:6px;min-height:14px;"></div>
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                <button onclick="validateSchema('${scope}')" class="btn-ghost" style="font-size:10px;padding:5px 10px;">Validate JSON</button>
+                <button onclick="saveSchema('${scope}')" style="font-size:10px;padding:5px 12px;">Save</button>
+                <button onclick="clearSchema('${scope}')" class="btn-ghost" style="font-size:10px;padding:5px 10px;">Clear</button>
+                ${scope === 'page' ? `<button onclick="testRichResults()" class="btn-ghost" style="font-size:10px;padding:5px 10px;margin-left:auto;">Test in Google Rich Results ↗</button>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function renderSiteSchemaEditor() {
+    const host = document.getElementById('siteSchemaSection');
+    if (!host) return;
+    const current = artistConfig?.schema ?? null;
+    host.innerHTML = renderSchemaEditorBlock(
+        'site',
+        'Site identity (Schema.org)',
+        'Injected on every page of this site as JSON-LD. Use Person, MusicGroup, Organization, or ArtGallery to describe who/what this site is — Google and AI crawlers read this directly. <code style="font-size:10px;">sameAs</code> links (Spotify, Bandcamp, Instagram) drive the Google knowledge panel.',
+        current,
+        SITE_SCHEMA_TEMPLATES
+    );
+    wireSchemaEditor('site');
+}
+
+function renderPageSchemaEditorHtml(pageUrl) {
+    const current = currentPage?.config?.schema ?? null;
+    return `
+        <div style="font-size:12px;font-weight:600;margin:24px 0 10px;">Page Schema (Schema.org)</div>
+        ${renderSchemaEditorBlock(
+            'page',
+            'This page',
+            'Page-specific JSON-LD layered on top of the site identity. Use Event for gigs, MusicAlbum for releases, Article for blog posts, FAQPage for Q&A. Leave blank if the site identity is enough.',
+            current,
+            PAGE_SCHEMA_TEMPLATES
+        )}
+        <input type="hidden" id="schemaPageUrl" value="${escHtml(pageUrl)}">
+    `;
+}
+
+function wireSchemaEditor(scope) {
+    const sel = document.getElementById(`schemaTpl_${scope}`);
+    if (!sel) return;
+    sel.onchange = () => {
+        const key = sel.value;
+        sel.value = '';
+        if (!key) return;
+        const tpl = (scope === 'site' ? SITE_SCHEMA_TEMPLATES : PAGE_SCHEMA_TEMPLATES)[key];
+        if (!tpl) return;
+        const ta = document.getElementById(`schemaText_${scope}`);
+        if (!ta) return;
+        const existing = ta.value.trim();
+        if (existing && !confirm('Replace the current schema with the template?')) return;
+        ta.value = JSON.stringify(tpl, null, 2);
+        setSchemaStatus(scope, 'Template inserted — fill in the empty fields then Save.', 'info');
+    };
+}
+
+function setSchemaStatus(scope, msg, kind) {
+    const el = document.getElementById(`schemaStatus_${scope}`);
+    if (!el) return;
+    const colors = { ok: 'var(--accent, #4ade80)', err: '#ff7676', info: 'var(--text2)' };
+    el.style.color = colors[kind] || 'var(--text2)';
+    el.textContent = msg || '';
+}
+
+function parseSchemaInput(scope) {
+    const ta = document.getElementById(`schemaText_${scope}`);
+    if (!ta) return { ok: false, err: 'Editor missing' };
+    const raw = ta.value.trim();
+    if (!raw) return { ok: true, value: null };
+    try {
+        const v = JSON.parse(raw);
+        return { ok: true, value: v };
+    } catch(e) {
+        return { ok: false, err: e.message };
+    }
+}
+
+function validateSchema(scope) {
+    const r = parseSchemaInput(scope);
+    if (!r.ok) { setSchemaStatus(scope, 'Invalid JSON: ' + r.err, 'err'); return false; }
+    if (r.value === null) { setSchemaStatus(scope, 'Empty (nothing will be injected).', 'info'); return true; }
+    const items = Array.isArray(r.value) ? r.value : [r.value];
+    for (const item of items) {
+        if (!item || typeof item !== 'object') { setSchemaStatus(scope, 'Each entry must be a JSON object.', 'err'); return false; }
+        if (!item['@type']) { setSchemaStatus(scope, 'Missing "@type" — every block needs one (e.g. "Person", "Event").', 'err'); return false; }
+        if (!item['@context']) { setSchemaStatus(scope, 'Missing "@context": "https://schema.org".', 'err'); return false; }
+    }
+    setSchemaStatus(scope, `Valid — ${items.length} block(s).`, 'ok');
+    return true;
+}
+
+async function saveSchema(scope) {
+    const r = parseSchemaInput(scope);
+    if (!r.ok) { setSchemaStatus(scope, 'Invalid JSON: ' + r.err, 'err'); return; }
+    setSchemaStatus(scope, 'Saving…', 'info');
+    try {
+        if (scope === 'site') {
+            const resp = await apiFetch('/api/adze/update-site-config', {
+                method: 'POST', body: { config: { schema: r.value } }
+            });
+            if (!resp.ok) { setSchemaStatus(scope, 'Save failed.', 'err'); return; }
+            if (artistConfig) artistConfig.schema = r.value;
+            setSchemaStatus(scope, 'Saved. Recompile any page to see it in the source.', 'ok');
+            toast('Site schema saved', 'success');
+        } else {
+            if (!currentPage) { setSchemaStatus(scope, 'No page selected.', 'err'); return; }
+            const slug = currentPage.slug;
+            const cfg = { ...(currentPage.config || {}) };
+            if (r.value === null) delete cfg.schema; else cfg.schema = r.value;
+            const resp = await apiFetch('/api/adze/edit-page', {
+                method: 'POST', body: { page_slug: slug, config: cfg }
+            });
+            if (!resp.ok) { setSchemaStatus(scope, 'Save failed.', 'err'); return; }
+            currentPage.config = cfg;
+            setSchemaStatus(scope, 'Saved and recompiled.', 'ok');
+            toast('Page schema saved', 'success');
+        }
+    } catch(e) {
+        setSchemaStatus(scope, 'Error: ' + e.message, 'err');
+    }
+}
+
+function clearSchema(scope) {
+    const ta = document.getElementById(`schemaText_${scope}`);
+    if (ta) ta.value = '';
+    setSchemaStatus(scope, 'Cleared in editor — click Save to apply.', 'info');
+}
+
+function testRichResults() {
+    const url = document.getElementById('schemaPageUrl')?.value;
+    if (!url) { toast('No page URL', 'error'); return; }
+    window.open(`https://search.google.com/test/rich-results?url=${encodeURIComponent(url)}`, '_blank');
 }
 
 function downloadShareQR() {
@@ -4714,6 +5025,44 @@ const AI_TOOLS = [{
                 },
                 required: ['page_slug']
             }
+        },
+        {
+            name: 'read_site_schema',
+            description: 'Read the artist-level Schema.org JSON-LD that is injected on every page (e.g. Person, MusicGroup, Organization).',
+            parameters: { type: 'OBJECT', properties: {} }
+        },
+        {
+            name: 'set_site_schema',
+            description: 'Replace the artist-level Schema.org JSON-LD. Pass a single JSON-LD object or an array of objects (each with @context and @type). Pass null or {} to clear.',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    schema: { type: 'STRING', description: 'The complete JSON-LD as a JSON string. Use "null" or "" to clear.' }
+                },
+                required: ['schema']
+            }
+        },
+        {
+            name: 'read_page_schema',
+            description: 'Read the page-specific Schema.org JSON-LD for a given page slug (or the current page if omitted).',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    page_slug: { type: 'STRING', description: 'Page slug. Omit to use the current page.' }
+                }
+            }
+        },
+        {
+            name: 'set_page_schema',
+            description: 'Replace the page-specific Schema.org JSON-LD for a given page slug (or current page). Pass a single JSON-LD object or an array. Pass "" or "null" to clear.',
+            parameters: {
+                type: 'OBJECT',
+                properties: {
+                    page_slug: { type: 'STRING', description: 'Page slug. Omit to use the current page.' },
+                    schema: { type: 'STRING', description: 'The complete JSON-LD as a JSON string. Use "null" or "" to clear.' }
+                },
+                required: ['schema']
+            }
         }
     ]
 }];
@@ -4817,6 +5166,65 @@ async function executeToolCall(name, args) {
                 return { success: true, config };
             } catch(e) { return { error: e.message }; }
         }
+        case 'read_site_schema': {
+            try {
+                const r = await apiFetch('/api/adze/artist-info');
+                if (!r.ok) return { error: 'Failed to read config' };
+                const data = await r.json();
+                return { schema: data.config?.schema ?? null };
+            } catch(e) { return { error: e.message }; }
+        }
+        case 'set_site_schema': {
+            try {
+                let parsed = null;
+                const raw = (args.schema ?? '').trim();
+                if (raw && raw !== 'null') {
+                    try { parsed = JSON.parse(raw); }
+                    catch(e) { return { error: 'Invalid JSON: ' + e.message }; }
+                }
+                const r = await apiFetch('/api/adze/update-site-config', {
+                    method: 'POST', body: { config: { schema: parsed } }
+                });
+                if (!r.ok) return { error: 'Failed to save site schema' };
+                if (artistConfig) artistConfig.schema = parsed;
+                if (typeof loadShareTab === 'function') loadShareTab();
+                return { success: true, schema: parsed };
+            } catch(e) { return { error: e.message }; }
+        }
+        case 'read_page_schema': {
+            try {
+                const slug = args.page_slug || currentPage?.slug;
+                if (!slug) return { error: 'No page slug and no current page' };
+                const r = await apiFetch(`/api/adze/get-page-content?page_slug=${encodeURIComponent(slug)}`);
+                if (!r.ok) return { error: `Page "${slug}" not found` };
+                const data = await r.json();
+                return { page_slug: slug, schema: data.config?.schema ?? null };
+            } catch(e) { return { error: e.message }; }
+        }
+        case 'set_page_schema': {
+            try {
+                const slug = args.page_slug || currentPage?.slug;
+                if (!slug) return { error: 'No page slug and no current page' };
+                let parsed = null;
+                const raw = (args.schema ?? '').trim();
+                if (raw && raw !== 'null') {
+                    try { parsed = JSON.parse(raw); }
+                    catch(e) { return { error: 'Invalid JSON: ' + e.message }; }
+                }
+                const r = await apiFetch(`/api/adze/get-page-content?page_slug=${encodeURIComponent(slug)}`);
+                if (!r.ok) return { error: `Page "${slug}" not found` };
+                const data = await r.json();
+                const config = data.config || {};
+                if (parsed === null) delete config.schema; else config.schema = parsed;
+                const saveR = await apiFetch('/api/adze/edit-page', {
+                    method: 'POST', body: { page_slug: slug, config }
+                });
+                if (!saveR.ok) return { error: 'Failed to save page schema' };
+                if (currentPage?.slug === slug) currentPage.config = config;
+                if (typeof loadShareTab === 'function') loadShareTab();
+                return { success: true, page_slug: slug, schema: parsed };
+            } catch(e) { return { error: e.message }; }
+        }
         default:
             return { error: `Unknown tool: ${name}` };
     }
@@ -4844,6 +5252,7 @@ WORKFLOW:
 10. To read site config (name, favicon, domain, etc.), call read_config
 11. To update site config, call update_config with the fields to change (e.g. favicon, name, description, domain, contact_email)
 12. Favicon path is relative to assets/ (e.g. "images/favicon.png"). Upload a favicon via assets first, then set it with update_config.
+13. To manage Schema.org / JSON-LD structured data: read_site_schema / set_site_schema for the artist-wide identity block (Person, MusicGroup, Organization), and read_page_schema / set_page_schema for per-page schema (Event, MusicAlbum, Article, FAQPage, etc.). Always include "@context": "https://schema.org" and a "@type". Prefer real values from the user — do not fabricate dates, venues, ticket URLs, or sameAs links.
 
 Keep text responses concise — describe what you changed briefly.`;
 }
@@ -4877,7 +5286,11 @@ function addAiToolIndicator(toolName) {
         read_page: 'Reading another page...',
         list_pages: 'Listing pages...',
         list_assets: 'Listing assets...',
-        edit_page: 'Saving page...'
+        edit_page: 'Saving page...',
+        read_site_schema: 'Reading site schema...',
+        set_site_schema: 'Saving site schema...',
+        read_page_schema: 'Reading page schema...',
+        set_page_schema: 'Saving page schema...'
     };
     div.textContent = labels[toolName] || `Using ${toolName}...`;
     container.appendChild(div);
@@ -6249,6 +6662,41 @@ async function resetClaudeSession() {
     }
 }
 
+// ── Vibe Coder text size (accessibility) ──
+const VC_FS_STEPS = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2];
+function vcFontSizeApply(scale) {
+    const term = document.getElementById('claudeTerminal');
+    if (!term) return;
+    term.style.setProperty('--vc-scale', scale);
+    const label = document.getElementById('vcFsLabel');
+    if (label) label.textContent = Math.round(scale * 100) + '%';
+    const minus = document.getElementById('vcFsMinus');
+    const plus = document.getElementById('vcFsPlus');
+    if (minus) minus.disabled = scale <= VC_FS_STEPS[0] + 0.001;
+    if (plus) plus.disabled = scale >= VC_FS_STEPS[VC_FS_STEPS.length - 1] - 0.001;
+    try { localStorage.setItem('adze-vc-scale', String(scale)); } catch (e) {}
+}
+function vcFontSize(delta) {
+    const current = parseFloat(
+        getComputedStyle(document.getElementById('claudeTerminal')).getPropertyValue('--vc-scale')
+    ) || 1;
+    // Find nearest step, then move by delta
+    let idx = 0, bestDiff = Infinity;
+    VC_FS_STEPS.forEach((s, i) => { const d = Math.abs(s - current); if (d < bestDiff) { bestDiff = d; idx = i; } });
+    idx = Math.max(0, Math.min(VC_FS_STEPS.length - 1, idx + delta));
+    vcFontSizeApply(VC_FS_STEPS[idx]);
+}
+(function restoreVcScale() {
+    let saved = 1;
+    try { const v = parseFloat(localStorage.getItem('adze-vc-scale')); if (v > 0) saved = v; } catch (e) {}
+    // Defer until the terminal element exists
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => vcFontSizeApply(saved));
+    } else {
+        vcFontSizeApply(saved);
+    }
+})();
+
 // ── Claude Pointer Pick ──
 let claudePointerActive = false;
 
@@ -6383,20 +6831,23 @@ function enableTextEdit(iframe) {
         const style = doc.createElement('style');
         style.id = 'adze-text-edit-style';
         style.textContent = `
-            .adze-text-hover { outline: 2px dashed var(--accent, #5a8bbe) !important; outline-offset: 2px; cursor: text !important; }
-            .adze-text-editing { outline: 2px solid #5a8bbe !important; outline-offset: 2px; background: rgba(90,139,190,0.05) !important; }
+            .adze-text-hover { outline: 2px dashed var(--accent, #1C4F82) !important; outline-offset: 2px; cursor: text !important; }
+            .adze-text-editing { outline: 2px solid #1C4F82 !important; outline-offset: 2px; background: rgba(28,79,130,0.05) !important; }
         `;
         doc.head.appendChild(style);
 
         const isTextNode = (el) => {
             const tag = el.tagName?.toLowerCase();
             if (['script','style','iframe','img','svg','video','audio','canvas','br','hr','input','select','textarea'].includes(tag)) return false;
-            // Has direct text content
+            // Only allow elements whose children are all text nodes — mixing
+            // inline tags (<em>, <a>, etc.) means textContent can't be mapped
+            // back to a single substring of the source.
+            let hasText = false;
             for (const child of el.childNodes) {
-                if (child.nodeType === 3 && child.textContent.trim()) return true;
+                if (child.nodeType === 1) return false;
+                if (child.nodeType === 3 && child.textContent.trim()) hasText = true;
             }
-            // Or is a typical text container
-            return ['h1','h2','h3','h4','h5','h6','p','span','a','li','td','th','label','button','figcaption','blockquote','em','strong','b','i','small','code','pre'].includes(tag);
+            return hasText;
         };
 
         let hoveredEl = null;
@@ -6476,19 +6927,43 @@ function disableTextEdit() {
     }
 }
 
+let _textEditAutosaveTimer = null;
+function scheduleTextEditAutosave(delay = 1200) {
+    clearTimeout(_textEditAutosaveTimer);
+    _textEditAutosaveTimer = setTimeout(() => {
+        _textEditAutosaveTimer = null;
+        if (typeof hasUnsavedChanges !== 'undefined' && !hasUnsavedChanges) return;
+        savePage();
+    }, delay);
+}
+
 function applyTextEditToSource(oldText, newText) {
     // Find and replace in the HTML editor
     const htmlEditor = document.getElementById('htmlEditor');
     if (!htmlEditor) return;
 
     const html = htmlEditor.value;
-    // Escape for regex but do a simple string replace
-    const idx = html.indexOf(oldText);
-    if (idx !== -1) {
-        htmlEditor.value = html.substring(0, idx) + newText + html.substring(idx + oldText.length);
-        schedulePreview(0);
-        markUnsaved();
+    let idx = html.indexOf(oldText);
+    let matchLen = oldText.length;
+    if (idx === -1) {
+        // DOM textContent collapses whitespace; source may have newlines,
+        // tabs, or runs of spaces. Retry with a whitespace-tolerant regex.
+        const trimmed = oldText.trim();
+        if (trimmed) {
+            const pattern = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+            const m = html.match(new RegExp(pattern));
+            if (m) { idx = m.index; matchLen = m[0].length; }
+        }
     }
+    if (idx === -1) {
+        toast('Could not locate text in source — edit not saved', 'warn');
+        return;
+    }
+    const escapedNew = newText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    htmlEditor.value = html.substring(0, idx) + escapedNew + html.substring(idx + matchLen);
+    schedulePreview(0);
+    setUnsaved(true);
+    scheduleTextEditAutosave();
 }
 
 function openClaudeAssetModal() {

@@ -9,8 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
-            --accent: #6b8cae;
-            --accent-hover: #547a9e;
+            /* Tokens — canonical source: /design-language/project/Adze Design Language.html — keep in sync */
+            --accent: #1C4F82;
+            --accent-soft: #6b8cae;
+            --accent-hover: #163f68;
             --accent-text: #fff;
             --danger: #c0392b;
             --bg: #f5f2ed;
@@ -31,8 +33,9 @@
         }
 
         [data-theme="dark"] {
-            --accent: #7ea3c4;
-            --accent-hover: #96b8d6;
+            --accent: #99cdff;
+            --accent-soft: #7ea3c4;
+            --accent-hover: #b8ddff;
             --accent-text: #1a1a1e;
             --danger: #e74c3c;
             --bg: #1a1a1e;
@@ -111,6 +114,8 @@
         .btn-danger:hover { background: #a93226; }
         .btn-sm { padding: 5px 10px; font-size: 12px; }
         .btn-success { background: var(--success); }
+        .btn-publish { background: var(--success); color: #fff; }
+        .btn-publish:hover { background: #3d8558; }
 
         /* ── Layout ── */
         .container {
@@ -515,7 +520,7 @@
             </div>
             <div class="header-actions">
                 <button class="btn-ghost btn-sm" onclick="refreshAll()">Refresh</button>
-                <button class="btn-sm" id="compileBtn" onclick="triggerCompile()">Compile &amp; Publish</button>
+                <button class="btn-sm btn-publish" id="compileBtn" onclick="triggerCompile()">Compile &amp; Publish</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn" title="Toggle dark mode">
                     <span id="themeIcon">&#9790;</span>
                 </button>
@@ -563,7 +568,7 @@
                 <button class="btn-sm" onclick="addLayoutGap()">+ Add Gap</button>
                 <button class="btn-ghost btn-sm" onclick="removeLastGap()">− Remove Gap</button>
                 <button class="btn-sm" onclick="saveLayout()" id="saveLayoutBtn">Save Layout</button>
-                <button class="btn-sm" onclick="saveLayoutAndCompile()" id="saveCompileBtn">Save &amp; Compile</button>
+                <button class="btn-sm btn-publish" onclick="saveLayoutAndCompile()" id="saveCompileBtn">Save &amp; Compile</button>
                 <span class="layout-status" id="layoutStatus"></span>
             </div>
             <div class="layout-grid" id="layoutGrid"></div>
