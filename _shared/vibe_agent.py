@@ -50,14 +50,14 @@ except ImportError as e:
 
 # ── Models ────────────────────────────────────────────────────────────────────
 
-DEFAULT_MODEL = "openrouter/google/gemini-2.5-flash"
-PRO_MODEL = "openrouter/google/gemini-2.5-pro"
+DEFAULT_MODEL = "openrouter/google/gemini-2.5-pro"
+FLASH_MODEL = "openrouter/google/gemini-2.5-flash"
 LITE_MODEL = "openrouter/google/gemini-2.5-flash-lite"
 
 # Per-call model override via prompt prefix
 MODEL_PREFIXES = {
-    "@pro ": PRO_MODEL,
-    "@flash ": DEFAULT_MODEL,
+    "@pro ": DEFAULT_MODEL,
+    "@flash ": FLASH_MODEL,
     "@lite ": LITE_MODEL,
 }
 
@@ -451,8 +451,17 @@ def run_turn(
         yield {"type": "system_message", "text": f"Routing this turn through {model.split('/')[-1]}."}
 
     history = load_history(sessions_dir, session_id)
-    if not history:
+    # Always refresh the system prompt at history[0]. The docs/*.md files in
+    # _shared/docs/ change occasionally; without this, an old session keeps
+    # the stale prompt until the user runs /clear (which we don't want — they
+    # shouldn't have to know that). Cheap: dropping/setting one message.
+    if history and history[0].get("role") == "system":
+        history[0]["content"] = system_prompt
+    elif not history:
         history.append({"role": "system", "content": system_prompt})
+    else:
+        # Defensive: history exists but no system message at index 0. Insert.
+        history.insert(0, {"role": "system", "content": system_prompt})
     history.append({"role": "user", "content": prompt})
 
     started = time.time()

@@ -628,31 +628,34 @@
            opacity-fade so the prose grows softly instead of snapping. */
         .claude-term-output { scroll-behavior: smooth; }
         .vc-turn {
-            background: var(--surface);
-            border: 1px solid var(--border);
+            /* Charcoal cards — barely lifted from the page bg, terminal-flat */
+            background: #1f1f23;
+            border: 1px solid #2c2c30;
             border-radius: var(--radius);
-            padding: 14px 18px;
-            margin: 0 0 12px;
+            padding: 12px 16px;
+            margin: 0 0 10px;
             animation: vcTurnIn 240ms cubic-bezier(.2,.7,.2,1);
-            display: flex; flex-direction: column; gap: 10px;
+            display: flex; flex-direction: column; gap: 8px;
         }
         @keyframes vcTurnIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .vc-turn-head {
-            display: flex; align-items: baseline; gap: 8px;
+            display: flex; align-items: center; gap: 8px;
             font-family: var(--mono); font-size: 10px;
             color: var(--text2); letter-spacing: 0.04em;
         }
+        /* Author label: mono uppercase, terminal register (was italic Cardo — felt too editorial) */
         .vc-turn-head .vc-who {
-            font-family: var(--heading-font);
-            font-style: italic; font-weight: 400;
-            font-size: 16px;
-            letter-spacing: 0;
-            color: var(--text);
+            font-family: var(--mono);
+            font-style: normal;
+            font-weight: 600;
+            font-size: 10px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             line-height: 1;
         }
         .vc-turn.user .vc-turn-head .vc-who { color: var(--accent); }
         .vc-turn.assistant .vc-turn-head .vc-who { color: var(--accent-soft); }
-        .vc-turn-head .vc-meta { opacity: 0.7; }
+        .vc-turn-head .vc-meta { opacity: 0.55; }
         .vc-turn-head .vc-meta::before { content: '·'; margin-right: 6px; opacity: 0.5; }
         .vc-turn-body {
             font-family: var(--body-font);
@@ -721,32 +724,36 @@
         .vc-tool[data-state="done"]  { border-color: rgba(109,202,138,0.25); }
         .vc-tool[data-state="error"] { border-color: rgba(231,76,60,0.4); background: rgba(231,76,60,0.06); }
 
-        /* Diff card — sits inside assistant turn body, slightly inset from tool tile */
+        /* Diff card — sits inside assistant turn body. Compact when collapsed
+           so the head matches a tool tile in size; expands on click. */
         .vc-diff {
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            background: var(--bg2);
+            border: 1px solid #2c2c30;
+            border-radius: 4px;
+            background: #1a1a1e;
             overflow: hidden;
+            font-family: var(--mono);
             font-size: 11px;
             animation: vcToolIn 200ms ease-out;
         }
         .vc-diff .diff-head {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 10px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            font-family: var(--mono); color: var(--text2);
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 10px;
+            background: transparent;
+            color: var(--text2);
             cursor: pointer; user-select: none;
             transition: background 0.15s;
+            font-size: 11px;
+            line-height: 1.5;
         }
-        .vc-diff .diff-head:hover { background: var(--surface2); }
-        .vc-diff .diff-head i { font-size: 12px; color: var(--accent); }
+        .vc-diff.expanded .diff-head { border-bottom: 1px solid #2c2c30; }
+        .vc-diff .diff-head:hover { background: #1f1f23; }
+        .vc-diff .diff-head > i { font-size: 12px; color: var(--accent); }
         .vc-diff .diff-head .diff-path { color: var(--text); font-weight: 600; }
-        .vc-diff .diff-head .diff-tool { font-size: 9px; opacity: 0.7; }
-        .vc-diff .diff-head .diff-stat { margin-left: auto; font-size: 9px; }
+        .vc-diff .diff-head .diff-tool { font-size: 9px; opacity: 0.55; text-transform: lowercase; }
+        .vc-diff .diff-head .diff-stat { margin-left: auto; font-size: 10px; }
         .vc-diff .diff-head .diff-stat .add { color: var(--success); }
         .vc-diff .diff-head .diff-stat .rem { color: var(--danger); }
-        .vc-diff .diff-head .diff-chev { font-size: 10px; color: var(--text2); transition: transform 0.2s; }
+        .vc-diff .diff-head .diff-chev { font-size: 9px; color: var(--text2); transition: transform 0.2s; opacity: 0.55; }
         .vc-diff.expanded .diff-head .diff-chev { transform: rotate(90deg); }
         .vc-diff .diff-body {
             display: none; padding: 8px 10px;
@@ -6651,6 +6658,11 @@ async function sendClaudeMessage() {
     vcUserTurn(msg);
     let currentTurn = vcAssistantTurn();
     let resultData = null;
+    // Client-side timing — reveals whether the gap is in the LLM call itself or
+    // somewhere else in the pipeline (network, Werkzeug, system-prompt build).
+    const tSendStart = performance.now();
+    let tFirstByte = null;
+    let tFirstEvent = null;
 
     try {
         const response = await fetch('/api/adze/claude-stream', {
@@ -6673,6 +6685,7 @@ async function sendClaudeMessage() {
             return;
         }
 
+        tFirstByte = performance.now();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -6680,6 +6693,7 @@ async function sendClaudeMessage() {
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+            if (tFirstEvent === null) tFirstEvent = performance.now();
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
@@ -6750,7 +6764,14 @@ async function sendClaudeMessage() {
         }
 
         vcDropThinking(currentTurn);
-        if (resultData) vcAddTurnFooter(currentTurn, resultData);
+        if (resultData) {
+            const tEnd = performance.now();
+            vcAddTurnFooter(currentTurn, resultData, {
+                total_ms: Math.round(tEnd - tSendStart),
+                ttfb_ms: tFirstByte != null ? Math.round(tFirstByte - tSendStart) : null,
+                stream_ms: tFirstEvent != null ? Math.round(tEnd - tFirstEvent) : null,
+            });
+        }
 
         // Reload pages/assets in case Claude changed things
         loadPages();
@@ -7255,15 +7276,25 @@ function vcRenderSystem(text) {
     out.appendChild(div);
     vcChatScroll();
 }
-function vcAddTurnFooter(turn, data) {
+function vcAddTurnFooter(turn, data, timings) {
     if (!turn) return;
     const cost = typeof data.cost_usd === 'number' ? data.cost_usd : null;
     const toks = typeof data.tokens === 'number' ? data.tokens : null;
     const dur  = typeof data.duration_ms === 'number' ? data.duration_ms : null;
     const parts = [];
-    if (cost !== null) parts.push(`<span class="vc-cost">$${cost.toFixed(4)}</span>`);
+    // Total roundtrip (client perception) vs LLM-only time. If they diverge,
+    // the gap is in network / Werkzeug / system-prompt build / history I/O.
+    if (timings && timings.total_ms != null) {
+        const breakdown = [];
+        if (timings.ttfb_ms != null) breakdown.push(`ttfb ${(timings.ttfb_ms/1000).toFixed(1)}s`);
+        if (dur != null)             breakdown.push(`llm ${(dur/1000).toFixed(1)}s`);
+        const tooltip = breakdown.join(' · ');
+        parts.push(`<span title="${escHtml(tooltip)}">${(timings.total_ms/1000).toFixed(1)}s total</span>`);
+    } else if (dur !== null) {
+        parts.push(`<span>${(dur/1000).toFixed(1)}s</span>`);
+    }
     if (toks !== null) parts.push(`<span>${toks >= 1000 ? (toks/1000).toFixed(1) + 'K' : toks} tok</span>`);
-    if (dur !== null)  parts.push(`<span>${(dur/1000).toFixed(1)}s</span>`);
+    if (cost !== null) parts.push(`<span class="vc-cost">$${cost.toFixed(4)}</span>`);
     if (parts.length === 0) return;
     const foot = document.createElement('div');
     foot.className = 'vc-turn-foot';
