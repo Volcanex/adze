@@ -4054,20 +4054,31 @@ async function savePage() {
 }
 
 async function publishAndView() {
-    if (!currentPage) return;
     const btn = document.getElementById('livePageLink');
-    const liveUrl = btn.dataset.url;
     const origText = btn.textContent;
+    const restore = () => { btn.textContent = origText; btn.disabled = false; };
+
+    // Non-page file open in the tree: just save, no live URL exists.
+    if (_currentFilePath && _currentFileKind !== 'markdown') {
+        btn.disabled = true;
+        btn.textContent = 'Saving…';
+        try { await saveCurrentFile(); } finally { restore(); }
+        return;
+    }
+
+    if (!currentPage) {
+        toast('Open a page first', 'warn');
+        return;
+    }
 
     try {
-        // Save content to disk (no snapshot) so compile picks it up
         const css = document.getElementById('cssEditor').value;
         const html = document.getElementById('htmlEditor').value;
         const content = serializeContent(css, html);
         const config = getConfigFromForm();
 
         btn.disabled = true;
-        btn.textContent = 'Publishing...';
+        btn.textContent = 'Publishing…';
         toast('Press Cmd+Shift+R to hard refresh and see updates', 'info');
 
         const r = await apiFetch('/api/adze/edit-page', {
@@ -4078,26 +4089,29 @@ async function publishAndView() {
         if (!r.ok) {
             const errData = await r.text();
             toast('Publish failed: ' + r.status + ' ' + errData, 'error');
-            btn.textContent = origText;
-            btn.disabled = false;
+            restore();
             return;
         }
 
         setUnsaved(false);
+        autoSnapshot();
 
-        // Countdown
-        for (let i = 3; i > 0; i--) {
-            btn.textContent = `Opening in ${i}...`;
-            await new Promise(r => setTimeout(r, 1000));
+        const liveUrl = btn.dataset.url;
+        if (!liveUrl) {
+            toast('Saved (no live URL set for this page)', 'success');
+            restore();
+            return;
         }
 
+        for (let i = 3; i > 0; i--) {
+            btn.textContent = `Opening in ${i}…`;
+            await new Promise(r => setTimeout(r, 1000));
+        }
         window.open(liveUrl, '_blank');
-        btn.textContent = origText;
-        btn.disabled = false;
+        restore();
     } catch(e) {
         toast('Error: ' + e.message, 'error');
-        btn.textContent = origText;
-        btn.disabled = false;
+        restore();
     }
 }
 
