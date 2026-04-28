@@ -29,6 +29,11 @@ artists/*/.adze-context.md
 artists/*/.env
 .env
 
+# External (remote Seed) artists — per-deployment SSH key + manifest cache
+artists/*/ssh_key
+artists/*/ssh_key.pub
+artists/*/.adze-remote.cache.json
+
 # Compiled output
 output/
 

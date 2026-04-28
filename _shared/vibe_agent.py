@@ -104,34 +104,215 @@ BASH_ALLOWED = frozenset({
 })
 
 
-# ── Path scoping ──────────────────────────────────────────────────────────────
+# ── Filesystem facade (Root) ──────────────────────────────────────────────────
+# Tools operate on a Root, not on a Path. LocalRoot wraps an on-disk artist
+# directory; RemoteRoot delegates to remote_fs which routes operations over
+# SSH to a Seed deployment. The agent loop and tool dispatch don't care which.
 
-def _resolve_path(artist_root: Path, given: str) -> Path:
-    """Resolve a tool-supplied path inside artist_root, refusing escapes."""
-    p = Path(given)
-    if not p.is_absolute():
-        p = artist_root / p
-    p = p.resolve()
-    root_resolved = artist_root.resolve()
-    try:
-        p.relative_to(root_resolved)
-    except ValueError:
-        raise PermissionError(
-            f"Path '{given}' resolves outside the artist directory "
-            f"({artist_root.name}/). Refusing."
+import remote_fs as _remote_fs  # noqa: E402
+import external_artist as _external_artist  # noqa: E402
+
+
+class _Root:
+    """Filesystem facade scoped to one artist."""
+
+    def read(self, rel: str) -> str: raise NotImplementedError
+    def write(self, rel: str, content: str) -> None: raise NotImplementedError
+    def exists(self, rel: str) -> bool: raise NotImplementedError
+    def is_dir(self, rel: str) -> bool: raise NotImplementedError
+    def list_files(self) -> List[str]: raise NotImplementedError  # all files, relative
+    def grep(self, pattern: str, rel: str = ".") -> str: raise NotImplementedError
+    def bash(self, command: str, timeout: int) -> tuple[int, str, str]: raise NotImplementedError
+    def display(self) -> str: raise NotImplementedError
+
+
+class LocalRoot(_Root):
+    def __init__(self, path: Path):
+        self.path = path
+
+    def _resolve(self, given: str) -> Path:
+        p = Path(given)
+        if not p.is_absolute():
+            p = self.path / p
+        p = p.resolve()
+        root_resolved = self.path.resolve()
+        try:
+            p.relative_to(root_resolved)
+        except ValueError:
+            raise PermissionError(
+                f"Path '{given}' resolves outside the artist directory "
+                f"({self.path.name}/). Refusing."
+            )
+        return p
+
+    def read(self, rel: str) -> str:
+        target = self._resolve(rel)
+        if not target.exists():
+            raise FileNotFoundError(f"{rel} does not exist")
+        if target.is_dir():
+            raise IsADirectoryError(f"{rel} is a directory; use Glob or Bash(ls)")
+        return target.read_text(encoding="utf-8", errors="replace")
+
+    def write(self, rel: str, content: str) -> None:
+        target = self._resolve(rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+    def exists(self, rel: str) -> bool:
+        try:
+            return self._resolve(rel).exists()
+        except PermissionError:
+            return False
+
+    def is_dir(self, rel: str) -> bool:
+        try:
+            return self._resolve(rel).is_dir()
+        except PermissionError:
+            return False
+
+    def list_files(self) -> List[str]:
+        return sorted(
+            str(p.relative_to(self.path))
+            for p in self.path.rglob("*")
+            if p.is_file()
         )
-    return p
+
+    def grep(self, pattern: str, rel: str = ".") -> str:
+        target = self._resolve(rel)
+        try:
+            rg = subprocess.run(
+                ["rg", "-n", "--no-heading", pattern, str(target)],
+                capture_output=True, text=True, timeout=30,
+            )
+            if rg.returncode in (0, 1):
+                return rg.stdout or "(no matches)"
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
+        try:
+            rx = re.compile(pattern)
+        except re.error as e:
+            raise ValueError(f"Invalid regex: {e}")
+        out: list[str] = []
+        files = [target] if target.is_file() else target.rglob("*")
+        for p in files:
+            if not p.is_file():
+                continue
+            try:
+                for i, ln in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+                    if rx.search(ln):
+                        out.append(f"{p.relative_to(self.path)}:{i}:{ln}")
+            except (UnicodeDecodeError, PermissionError):
+                continue
+        return "\n".join(out) or "(no matches)"
+
+    def bash(self, command: str, timeout: int) -> tuple[int, str, str]:
+        proc = subprocess.run(
+            command, shell=True, cwd=str(self.path),
+            capture_output=True, text=True, timeout=timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+
+    def display(self) -> str:
+        return f"{self.path.name}/"
 
 
-# ── Tool implementations ──────────────────────────────────────────────────────
+class RemoteRoot(_Root):
+    """Routes every operation through remote_fs (SSH to a Seed deployment)."""
 
-def _tool_read(artist_root: Path, args: dict) -> str:
-    path = _resolve_path(artist_root, args["file_path"])
-    if not path.exists():
-        raise FileNotFoundError(f"{args['file_path']} does not exist")
-    if path.is_dir():
-        raise IsADirectoryError(f"{args['file_path']} is a directory; use Glob or Bash(ls)")
-    text = path.read_text(encoding="utf-8", errors="replace")
+    def __init__(self, slug: str):
+        self.slug = slug
+        self._cfg = _external_artist.load_remote_config(slug)
+        if not self._cfg:
+            raise ValueError(f"artist '{slug}' has no remote config")
+
+    def read(self, rel: str) -> str:
+        try:
+            return _remote_fs.read(self.slug, rel)
+        except _remote_fs.RemoteCommandFailed as e:
+            if "no such file" in e.stderr.lower() or "not found" in e.stderr.lower():
+                raise FileNotFoundError(f"{rel} does not exist")
+            raise
+
+    def write(self, rel: str, content: str) -> None:
+        _remote_fs.write(self.slug, rel, content)
+
+    def exists(self, rel: str) -> bool:
+        try:
+            _remote_fs._safe_rel(rel)
+        except _remote_fs.UnsafePathError:
+            return False
+        full = f"{self._cfg['path'].rstrip('/')}/{rel.lstrip('/')}"
+        rc, _, _ = _remote_fs._run_ssh(self._cfg, f"test -e {shlex.quote(full)}")
+        return rc == 0
+
+    def is_dir(self, rel: str) -> bool:
+        try:
+            _remote_fs._safe_rel(rel)
+        except _remote_fs.UnsafePathError:
+            return False
+        full = f"{self._cfg['path'].rstrip('/')}/{rel.lstrip('/')}"
+        rc, _, _ = _remote_fs._run_ssh(self._cfg, f"test -d {shlex.quote(full)}")
+        return rc == 0
+
+    def list_files(self) -> List[str]:
+        # Files only, relative to the remote root, excluding common noise.
+        cmd = (
+            f"cd {shlex.quote(self._cfg['path'])} && "
+            "find . -type f "
+            "-not -path './.git/*' "
+            "-not -path './output/*' "
+            "-not -path './__pycache__/*' "
+            "-not -path './node_modules/*' "
+            "| sed 's|^\\./||' | sort"
+        )
+        rc, out, err = _remote_fs._run_ssh(self._cfg, cmd)
+        if rc != 0:
+            raise _remote_fs._classify_ssh_failure(rc, err, cmd)
+        return [line for line in out.splitlines() if line]
+
+    def grep(self, pattern: str, rel: str = ".") -> str:
+        target_rel = "" if rel in ("", ".") else rel
+        if target_rel:
+            _remote_fs._safe_rel(target_rel)
+            full = f"{self._cfg['path'].rstrip('/')}/{target_rel}"
+        else:
+            full = self._cfg["path"]
+        # grep -rn is universal; ripgrep is not guaranteed on the Seed box.
+        cmd = f"grep -rn -- {shlex.quote(pattern)} {shlex.quote(full)} 2>/dev/null || true"
+        rc, out, err = _remote_fs._run_ssh(self._cfg, cmd)
+        if rc == 255:
+            raise _remote_fs._classify_ssh_failure(rc, err, cmd)
+        if not out:
+            return "(no matches)"
+        # Strip the absolute remote prefix so paths are relative.
+        prefix = self._cfg["path"].rstrip("/") + "/"
+        cleaned = "\n".join(
+            line[len(prefix):] if line.startswith(prefix) else line
+            for line in out.splitlines()
+        )
+        return cleaned
+
+    def bash(self, command: str, timeout: int) -> tuple[int, str, str]:
+        return _remote_fs.exec(self.slug, command, timeout=timeout)
+
+    def display(self) -> str:
+        return f"remote:{self._cfg['host']}:{self._cfg['path']}/"
+
+
+def make_root(artist_slug: str, local_path: Optional[Path] = None) -> _Root:
+    """Build the right Root for an artist. Local path is optional fallback."""
+    if _external_artist.is_remote(artist_slug):
+        return RemoteRoot(artist_slug)
+    if local_path is None:
+        local_path = Path(f"artists/{artist_slug}")
+    return LocalRoot(local_path.resolve())
+
+
+# ── Tool implementations (operate on a Root) ──────────────────────────────────
+
+def _tool_read(root: _Root, args: dict) -> str:
+    rel = args["file_path"]
+    text = root.read(rel)
     lines = text.splitlines()
     offset = args.get("offset", 0)
     limit = args.get("limit")
@@ -143,37 +324,36 @@ def _tool_read(artist_root: Path, args: dict) -> str:
     return "\n".join(f"{i + 1 + base}\t{ln}" for i, ln in enumerate(lines))
 
 
-def _tool_write(artist_root: Path, args: dict) -> dict:
-    path = _resolve_path(artist_root, args["file_path"])
+def _tool_write(root: _Root, args: dict) -> dict:
+    rel = args["file_path"]
     pre_text = ""
-    is_new = not path.exists()
+    is_new = not root.exists(rel)
     if not is_new:
         try:
-            pre_text = path.read_text(encoding="utf-8")
+            pre_text = root.read(rel)
         except Exception:
             pre_text = ""
-    path.parent.mkdir(parents=True, exist_ok=True)
     new_text = args["content"]
-    path.write_text(new_text, encoding="utf-8")
+    root.write(rel, new_text)
     diff = "".join(difflib.unified_diff(
         pre_text.splitlines(keepends=True),
         new_text.splitlines(keepends=True),
-        fromfile=("(new) " + args["file_path"]) if is_new else args["file_path"],
-        tofile=args["file_path"], n=2,
+        fromfile=("(new) " + rel) if is_new else rel,
+        tofile=rel, n=2,
     ))
     added = sum(1 for ln in diff.splitlines() if ln.startswith("+") and not ln.startswith("+++"))
     removed = sum(1 for ln in diff.splitlines() if ln.startswith("-") and not ln.startswith("---"))
     label = "Created" if is_new else "Wrote"
     return {
-        "text": f"{label} {args['file_path']} ({len(new_text)} bytes)",
-        "meta": {"diff": diff, "path": args["file_path"], "tool": "Write",
+        "text": f"{label} {rel} ({len(new_text)} bytes)",
+        "meta": {"diff": diff, "path": rel, "tool": "Write",
                  "added": added, "removed": removed, "is_new": is_new},
     }
 
 
-def _tool_edit(artist_root: Path, args: dict) -> dict:
-    path = _resolve_path(artist_root, args["file_path"])
-    text = path.read_text(encoding="utf-8")
+def _tool_edit(root: _Root, args: dict) -> dict:
+    rel = args["file_path"]
+    text = root.read(rel)
     old = args["old_string"]
     new = args["new_string"]
     replace_all = bool(args.get("replace_all", False))
@@ -181,75 +361,43 @@ def _tool_edit(artist_root: Path, args: dict) -> dict:
         raise ValueError("old_string and new_string are identical")
     occurrences = text.count(old)
     if occurrences == 0:
-        raise ValueError(f"old_string not found in {args['file_path']}")
+        raise ValueError(f"old_string not found in {rel}")
     if occurrences > 1 and not replace_all:
         raise ValueError(
-            f"old_string appears {occurrences} times in {args['file_path']}. "
+            f"old_string appears {occurrences} times in {rel}. "
             f"Pass replace_all=true or include more surrounding context."
         )
     new_text = text.replace(old, new)
-    path.write_text(new_text, encoding="utf-8")
+    root.write(rel, new_text)
     n = occurrences if replace_all else 1
     diff = "".join(difflib.unified_diff(
         text.splitlines(keepends=True),
         new_text.splitlines(keepends=True),
-        fromfile=args["file_path"], tofile=args["file_path"], n=2,
+        fromfile=rel, tofile=rel, n=2,
     ))
     added = sum(1 for ln in diff.splitlines() if ln.startswith("+") and not ln.startswith("+++"))
     removed = sum(1 for ln in diff.splitlines() if ln.startswith("-") and not ln.startswith("---"))
     return {
-        "text": f"Replaced {n} occurrence(s) in {args['file_path']}",
-        "meta": {"diff": diff, "path": args["file_path"], "tool": "Edit",
+        "text": f"Replaced {n} occurrence(s) in {rel}",
+        "meta": {"diff": diff, "path": rel, "tool": "Edit",
                  "added": added, "removed": removed},
     }
 
 
-def _tool_glob(artist_root: Path, args: dict) -> str:
+def _tool_glob(root: _Root, args: dict) -> str:
     pattern = args["pattern"]
-    matches: list[str] = []
-    for p in artist_root.rglob("*"):
-        if p.is_file():
-            rel = str(p.relative_to(artist_root))
-            if fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(p.name, pattern):
-                matches.append(rel)
-    matches.sort()
+    matches = [
+        rel for rel in root.list_files()
+        if fnmatch.fnmatch(rel, pattern) or fnmatch.fnmatch(Path(rel).name, pattern)
+    ]
     return "\n".join(matches) or "(no matches)"
 
 
-def _tool_grep(artist_root: Path, args: dict) -> str:
-    pattern = args["pattern"]
-    path = args.get("path", ".")
-    target = _resolve_path(artist_root, path)
-    # Prefer ripgrep for speed and decent default behaviour
-    try:
-        rg = subprocess.run(
-            ["rg", "-n", "--no-heading", pattern, str(target)],
-            capture_output=True, text=True, timeout=30,
-        )
-        if rg.returncode in (0, 1):  # 0=found, 1=not-found
-            return rg.stdout or "(no matches)"
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
-    # Python fallback
-    try:
-        rx = re.compile(pattern)
-    except re.error as e:
-        raise ValueError(f"Invalid regex: {e}")
-    out = []
-    files = [target] if target.is_file() else target.rglob("*")
-    for p in files:
-        if not p.is_file():
-            continue
-        try:
-            for i, ln in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-                if rx.search(ln):
-                    out.append(f"{p.relative_to(artist_root)}:{i}:{ln}")
-        except (UnicodeDecodeError, PermissionError):
-            continue
-    return "\n".join(out) or "(no matches)"
+def _tool_grep(root: _Root, args: dict) -> str:
+    return root.grep(args["pattern"], args.get("path", "."))
 
 
-def _tool_bash(artist_root: Path, args: dict) -> str:
+def _tool_bash(root: _Root, args: dict) -> str:
     command = args["command"]
     timeout = int(args.get("timeout", 60))
     try:
@@ -262,32 +410,28 @@ def _tool_bash(artist_root: Path, args: dict) -> str:
             f"Command '{bin_name}' is not in the vibe-coder allow-list. "
             f"Tell the user what you wanted to run; they can add it if it's safe."
         )
-    proc = subprocess.run(
-        command, shell=True, cwd=str(artist_root),
-        capture_output=True, text=True, timeout=timeout,
-    )
-    out = proc.stdout
-    if proc.stderr:
-        out += ("\n[stderr]\n" if out else "[stderr]\n") + proc.stderr
-    if proc.returncode != 0:
-        out += f"\n[exit code: {proc.returncode}]"
+    rc, stdout, stderr = root.bash(command, timeout)
+    out = stdout
+    if stderr:
+        out += ("\n[stderr]\n" if out else "[stderr]\n") + stderr
+    if rc != 0:
+        out += f"\n[exit code: {rc}]"
     return out or "(no output)"
 
 
-def _tool_webfetch(artist_root: Path, args: dict) -> str:
+def _tool_webfetch(root: _Root, args: dict) -> str:
     url = args["url"]
     if not url.startswith(("http://", "https://")):
         raise ValueError("URL must start with http:// or https://")
     req = urllib.request.Request(url, headers={"User-Agent": "AdzeVibeCoder/1.0"})
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
-            body = resp.read(200_000)  # cap at ~200kB
+            body = resp.read(200_000)
     except urllib.error.HTTPError as e:
         return f"HTTP {e.code}: {e.reason}"
     except urllib.error.URLError as e:
         return f"URL error: {e.reason}"
     text = body.decode("utf-8", errors="replace")
-    # Strip script/style for token efficiency
     text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.S | re.I)
     text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.S | re.I)
     return text[:50_000]
@@ -485,6 +629,7 @@ def run_turn(
     system_prompt: str,
     log: Optional[logging.Logger] = None,
     artist_slug: Optional[str] = None,
+    root: Optional[_Root] = None,
 ) -> Iterator[dict]:
     """
     Run one user turn (one prompt -> one final assistant text), looping over
@@ -503,6 +648,15 @@ def run_turn(
     """
     log = log or logging.getLogger("vibe")
     slug_tag = f"[{artist_slug}] " if artist_slug else ""
+
+    # Build the filesystem facade. Callers can pass `root` directly (preferred);
+    # otherwise we infer from artist_slug (remote-capable) or fall back to the
+    # legacy artist_root path.
+    if root is None:
+        if artist_slug:
+            root = make_root(artist_slug, artist_root)
+        else:
+            root = LocalRoot(artist_root)
 
     model, prompt = _select_model(prompt)
     if model != DEFAULT_MODEL:
@@ -697,13 +851,29 @@ def run_turn(
                     is_error = True
                 else:
                     try:
-                        raw = impl(artist_root, args)
+                        raw = impl(root, args)
                         if isinstance(raw, dict):
                             result_text = raw.get("text", "")
                             result_meta = raw.get("meta", {}) or {}
                         else:
                             result_text = raw
                         is_error = False
+                    except _remote_fs.RemoteError as e:
+                        # Translate SSH-layer failures into chat-friendly notices
+                        # so the (often non-technical) external-artist user has
+                        # recourse beyond a generic "tool crashed".
+                        kind = type(e).__name__
+                        friendly = {
+                            "RemoteAuthError": "SSH key was rejected. Check that the public key is in the Seed box's authorized_keys.",
+                            "RemoteUnreachable": "Cannot reach the Seed box (network, DNS, or refused connection).",
+                            "RemoteTimeout": "SSH timed out. The Seed box may be busy or unreachable.",
+                            "RemoteCommandFailed": "Remote command failed.",
+                            "UnsafePathError": "Refused a path that tried to escape the artist root.",
+                        }.get(kind, "Remote operation failed.")
+                        yield {"type": "system_message", "text": f"{friendly} ({e})"}
+                        log.warning(f"{slug_tag}{kind}: {e}")
+                        result_text = f"{kind}: {e}"
+                        is_error = True
                     except (PermissionError, FileNotFoundError, IsADirectoryError, ValueError) as e:
                         result_text = f"{type(e).__name__}: {e}"
                         is_error = True

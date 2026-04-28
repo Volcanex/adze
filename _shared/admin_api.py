@@ -1200,16 +1200,68 @@ def serve_favicon():
 
 # ── List Pages ─────────────────────────────────────────────────────────────
 
+# ── External manifest ─────────────────────────────────────────────────────
+# Lets the dashboard discover whether it's looking at a remote (Seed) artist
+# and adjust the preview iframe + tab visibility accordingly.
+
+@bp.route('/external-manifest', methods=['GET'])
+def external_manifest():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    import external_artist as _ext
+    import remote_fs as _rfs
+    if not _ext.is_remote(artist_slug):
+        return jsonify({'remote': False})
+    try:
+        manifest = _rfs.fetch_manifest(artist_slug)
+    except _rfs.RemoteError as exc:
+        cached = _ext.cached_manifest(artist_slug) or _ext.manifest_defaults(artist_slug)
+        return jsonify({'remote': True, 'manifest': cached, 'fetch_error': str(exc)})
+    return jsonify({'remote': True, 'manifest': manifest})
+
+
 @bp.route('/list-pages', methods=['GET'])
 def list_pages():
     """
     List all pages for an artist.
     Requires X-Artist-Slug and X-Admin-Token headers.
+
+    For external (remote Seed) artists, enumerates `pages/<slug>/` on the
+    remote box — Seed's convention — instead of the local artist dir.
     """
     artist_slug = get_authenticated_artist()
 
     if not artist_slug:
         abort(401, description='Authentication required')
+
+    import external_artist as _ext
+    import remote_fs as _rfs
+
+    if _ext.is_remote(artist_slug):
+        try:
+            entries = _rfs.list(artist_slug, 'pages')
+        except _rfs.RemoteError as exc:
+            return jsonify({'error': f'remote: {exc}'}), 502
+        pages = []
+        for name in entries:
+            try:
+                cfg_text = _rfs.read(artist_slug, f'pages/{name}/config.json')
+            except _rfs.RemoteError:
+                continue
+            except FileNotFoundError:
+                continue
+            try:
+                config = json.loads(cfg_text)
+            except json.JSONDecodeError:
+                continue
+            pages.append({
+                'slug': name,
+                'title': config.get('title', name),
+                'path': f'pages/{name}',
+                'config': config,
+            })
+        return jsonify({'artist': artist_slug, 'pages': pages, 'remote': True})
 
     artist_path = get_artist_path(artist_slug)
 
@@ -1262,6 +1314,30 @@ def get_page_content():
     if not page_slug:
         return jsonify({'error': 'page_slug parameter required'}), 400
 
+    import external_artist as _ext
+    import remote_fs as _rfs
+
+    if _ext.is_remote(artist_slug):
+        # Seed shape: pages/<slug>/{config.json, content.html}
+        try:
+            cfg_text = _rfs.read(artist_slug, f'pages/{page_slug}/config.json')
+            content = _rfs.read(artist_slug, f'pages/{page_slug}/content.html')
+        except FileNotFoundError:
+            return jsonify({'error': 'Page not found'}), 404
+        except _rfs.RemoteError as exc:
+            return jsonify({'error': f'remote: {exc}'}), 502
+        try:
+            config = json.loads(cfg_text)
+        except json.JSONDecodeError as e:
+            return jsonify({'error': f'Bad config.json: {e}'}), 500
+        return jsonify({
+            'slug': page_slug,
+            'config': config,
+            'content': content,
+            'content_filename': 'content.html',
+            'remote': True,
+        })
+
     page_path = get_page_path(artist_slug, page_slug)
     config_file = page_path / 'config.json'
     content_file = page_path / 'content.md'
@@ -1291,7 +1367,9 @@ def get_page_content():
 @bp.route('/edit-page', methods=['POST'])
 def edit_page():
     """
-    Edit a page's content and/or config.
+    Edit a page's content and/or config. (External artists: writes to
+    pages/<slug>/{content.html,config.json} on the remote Seed repo via
+    remote_fs; no local compile is triggered.)
     JSON body: {page_slug, content?, config?}
     Headers: X-Artist-Slug, X-Admin-Token
     """
@@ -1306,6 +1384,29 @@ def edit_page():
         return jsonify({'error': 'page_slug required'}), 400
 
     page_slug = data['page_slug']
+
+    import external_artist as _ext
+    import remote_fs as _rfs
+
+    if _ext.is_remote(artist_slug):
+        try:
+            if 'content' in data:
+                _rfs.write(artist_slug, f'pages/{page_slug}/content.html', data['content'])
+            if 'config' in data:
+                _rfs.write(
+                    artist_slug,
+                    f'pages/{page_slug}/config.json',
+                    json.dumps(data['config'], indent=2, ensure_ascii=False),
+                )
+        except _rfs.RemoteError as exc:
+            return jsonify({'error': f'remote: {exc}'}), 502
+        return jsonify({
+            'success': True,
+            'message': 'Page updated (remote). Build separately.',
+            'page_slug': page_slug,
+            'remote': True,
+        })
+
     page_path = get_page_path(artist_slug, page_slug)
 
     if not page_path.exists():
@@ -4736,12 +4837,71 @@ def _load_docs() -> str:
     return '\n\n---\n\n'.join(parts)
 
 
+def _build_external_system_prompt(artist_slug):
+    """
+    System prompt for an external (remote Seed) artist. Dramatically shorter
+    than the local prompt — Seed's own CLAUDE.md does the orientation work.
+    Three short paragraphs: where you are, who you're talking to, how to
+    build. Then the remote CLAUDE.md inlined.
+    """
+    import external_artist as _ext
+    import remote_fs as _rfs
+
+    try:
+        manifest = _rfs.fetch_manifest(artist_slug)
+    except _rfs.RemoteError as exc:
+        manifest = _ext.cached_manifest(artist_slug) or _ext.manifest_defaults(artist_slug)
+        _vibe_log.warning(f'[{artist_slug}] manifest fetch failed: {exc}; using cache/defaults')
+
+    cfg = _ext.load_remote_config(artist_slug) or {}
+    host = cfg.get('host', '?')
+    path = cfg.get('path', '?')
+
+    readme_text = ''
+    readme_path = manifest.get('readme_path') or 'CLAUDE.md'
+    try:
+        readme_text = _rfs.read(artist_slug, readme_path)
+    except (_rfs.RemoteError, FileNotFoundError) as exc:
+        readme_text = f'(could not read {readme_path}: {exc})'
+
+    client_brief = manifest.get('client_brief') or ''
+    client_block = f'\nAbout the user: {client_brief}\n' if client_brief else '\n'
+
+    return f"""You are the Vibe Coder for an external Seed deployment.
+
+Repo location: {host}:{path}. Treat it as your working directory; all
+filesystem and shell tools are scoped to it transparently.
+
+Build: when you change source files, run `{manifest.get('build_command', 'python3 compile.py')}`.
+This deployment uses `build_on: agent` — the build does not run automatically.
+Preview lives at {manifest.get('preview_url') or '(not set)'}.
+{client_block}You are talking to a non-technical client. Prefer small, reversible edits;
+ask before destructive operations; explain in plain language what you're
+about to do, then do it. Do not produce large rewrites without confirming.
+
+Project conventions live in the file below — it is the authoritative
+orientation. Read sub-directory CLAUDE.md files (via Read) when working
+in those areas.
+
+---
+
+{readme_text}
+"""
+
+
 def _get_artist_system_prompt(artist_slug):
     """
     Build the system prompt for the Vibe Coder.
     Static foundation = docs/*.md files (single source of truth).
     Runtime context = artist-specific data appended at the end.
+
+    For external (remote Seed) artists, returns a much shorter prompt that
+    defers to Seed's own CLAUDE.md — see _build_external_system_prompt.
     """
+    import external_artist as _ext
+    if _ext.is_remote(artist_slug):
+        return _build_external_system_prompt(artist_slug)
+
     artist_path = get_artist_path(artist_slug)
     config_path = artist_path / 'config.json'
     abs_artist_path = str(Path.cwd() / artist_path)
@@ -4886,10 +5046,13 @@ def claude_stream():
     artist_path = get_artist_path(artist_slug)
     artist_root = (Path.cwd() / artist_path).resolve()
 
-    # Auto-snapshot before the FIRST turn of a new session
+    # Auto-snapshot before the FIRST turn of a new session.
+    # Skipped for external (remote) artists — Seed has git, the local artist
+    # dir is just a shell pointing at an SSH target.
     session_file = _VIBE_SESSIONS_DIR / f'{artist_slug}.json'
     is_new_session = not session_file.exists()
-    if is_new_session:
+    import external_artist as _ext
+    if is_new_session and not _ext.is_remote(artist_slug):
         try:
             ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
             snap_path = artist_path / '.snapshots' / f'{ts}_auto-before-vibe-coder.tar.gz'

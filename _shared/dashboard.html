@@ -1884,6 +1884,17 @@ async function login(slug, token) {
 function _initDashboard(info) {
     artistConfig = info.config || {};
     applyDashboardOverrides(artistConfig);
+    // Detect external (remote Seed) artists. The dashboard adapts the preview
+    // iframe and the default-hidden tab list when this flag is present.
+    apiFetch('/api/adze/external-manifest')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (data && data.remote) {
+                window.__adzeRemote = data.manifest || {};
+                applyExternalDefaults(artistConfig);
+            }
+        })
+        .catch(() => {});
     const loginScreen = document.getElementById('loginScreen');
     loginScreen.classList.add('fading-out');
     setTimeout(() => { loginScreen.style.display = 'none'; }, 150);
@@ -1956,6 +1967,25 @@ async function vibeTakeover() {
         toast('You took over this session', 'info');
     } catch (e) {
         toast('Take over failed: ' + e.message, 'error');
+    }
+}
+
+// External (remote Seed) artists default to a stripped-down dashboard:
+// only the Vibe Coder, Pages, Preview, and Settings tabs make sense without
+// the Adze-side machinery (assets pipeline, snapshots, marketplace, etc.).
+// The artist can still un-hide individual tabs by setting
+// config.dashboard.hidden_widgets explicitly.
+// Visible by default for external artists: 'claude' (Vibe Coder), 'edit'
+// (Manual Edit / pages), 'config' (Settings). The Preview iframe lives
+// inside those tabs, not as a separate tab. Everything else is Adze-side
+// machinery that doesn't apply to a remote Seed deployment.
+const EXTERNAL_HIDDEN_DEFAULTS = ['assets', 'snapshots', 'analytics', 'marketplace', 'domain', 'export', 'fonts', 'share', 'styles', 'api', 'about'];
+
+function applyExternalDefaults(config) {
+    const explicit = config && config.dashboard && Array.isArray(config.dashboard.hidden_widgets);
+    if (explicit) return;  // artist took ownership; respect their list
+    for (const name of EXTERNAL_HIDDEN_DEFAULTS) {
+        document.querySelectorAll(`.tab[data-tab="${name}"]`).forEach(el => { el.style.display = 'none'; });
     }
 }
 
@@ -3706,6 +3736,19 @@ ${css}</style>
 
 function updatePreview() {
     if (!currentPage) return;
+    // External (remote Seed) artists: the live site is the preview. Skip the
+    // synthetic-doc rebuild and point every iframe at the manifest URL.
+    if (window.__adzeRemote && window.__adzeRemote.preview_url) {
+        const url = window.__adzeRemote.preview_url;
+        ['previewFrame','previewFrameClaude','previewFrame2','previewFrame3','previewFrame4','previewFrame5'].forEach(id => {
+            const frame = document.getElementById(id);
+            if (frame && frame.src !== url) {
+                frame.removeAttribute('srcdoc');
+                frame.src = url;
+            }
+        });
+        return;
+    }
     // Clear previous errors before loading new content
     previewErrors = [];
     previewErrorDedup = new Set();

@@ -25,6 +25,28 @@ Whenever you discover something non-obvious about a subdirectory — an unusual 
 
 If something in this file becomes wrong, fix it.
 
+## External (remote Seed) artists
+
+An artist is "external" when its `config.json` carries a `remote` block
+(`host`, `path`, `key`). Adze reads/writes their files over SSH instead of
+the local `artists/<slug>/` tree. The local artist dir holds only the
+config skeleton, the per-deployment SSH key (`ssh_key`, gitignored),
+and the manifest cache. Bootstrap a new one with
+`scripts/add-external-artist.sh <slug> <host> <remote-path>`.
+
+Filesystem ops route through `_shared/remote_fs.py`; the Vibe Coder
+operates the same way for both kinds of artist (the `_Root` abstraction
+in `_shared/vibe_agent.py` hides the difference). The dashboard auto-
+detects external artists via `/api/adze/external-manifest` and
+applies a stripped-down tab list + points the preview iframe at the
+manifest's `preview_url`.
+
+**Auth boundary.** Adze SSHes into the Seed box as a filesystem user.
+That identity is **distinct** from Seed's own web admin (`ADMIN_PASSWORD`
+in Seed's `core/api/admin.py`). Adze External bypasses Seed's web admin
+entirely — it operates at the filesystem layer. Don't add Seed admin
+gates expecting them to apply to external Adze sessions.
+
 ## ⚠ Concurrent edits with the in-browser vibe coder
 The dashboard ships a vibe coder that another Claude (or the user) uses to edit `artists/<slug>/` files live. **Both you and the vibe coder write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
 
@@ -50,5 +72,5 @@ hand-edit between the markers.
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-04-27 18:01 UTC — 6 doc(s) found._
+_Auto-compiled 2026-04-28 09:10 UTC — 6 doc(s) found._
 <!-- DOCS:END -->
