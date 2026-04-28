@@ -1359,6 +1359,201 @@ def edit_page():
         return jsonify({'error': f'Error writing page: {str(e)}'}), 500
 
 
+# ── Raw File Browser ───────────────────────────────────────────────────────
+# Backs the Manual Edit tab's file tree. Walks the artist's working dir and
+# exposes a constrained read/write surface for power users who want to edit
+# raw files without going through the curated tabs (Settings / Styles /
+# Backend / etc.). Same compile + autosave path as edit-page.
+
+# Folders that are either too heavy to surface here or already managed by a
+# dedicated tab (Assets, Snapshots, Widgets).
+FILES_TREE_HIDDEN_DIRS = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.git'}
+FILES_HIDDEN_NAMES = {'.DS_Store'}
+
+# Extensions the Manual Edit panel knows how to render.
+FILES_TEXT_EXTENSIONS = {
+    '.md', '.html', '.htm', '.css', '.js', '.json', '.py', '.txt', '.env',
+    '.yml', '.yaml', '.toml', '.ini', '.conf', '.svg', '.xml', '.sh',
+}
+FILES_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp', '.avif'}
+FILES_MAX_TEXT_BYTES = 512 * 1024  # 512 KB cap on read/write to keep textareas usable
+
+
+def _file_kind(path):
+    """Classify a file for the dashboard so it can pick the right editor."""
+    suffix = path.suffix.lower()
+    if path.name == '.env' or suffix == '.env':
+        return 'env'
+    if suffix == '.md':
+        return 'markdown'
+    if suffix in FILES_IMAGE_EXTENSIONS:
+        return 'image'
+    if suffix in FILES_TEXT_EXTENSIONS:
+        return 'text'
+    return 'binary'
+
+
+def _resolve_artist_file(artist_slug, rel_path):
+    """
+    Resolve `rel_path` inside the artist dir, rejecting any escape attempt.
+    Returns (artist_path, file_path) — never raises; returns (None, None)
+    on rejection. Symlinks, '..', absolute paths, and hidden-dir traversal
+    are all blocked.
+    """
+    if not rel_path or '\x00' in rel_path:
+        return None, None
+    rel_path = rel_path.lstrip('/').replace('\\', '/')
+    if '..' in rel_path.split('/'):
+        return None, None
+    artist_path = get_artist_path(artist_slug)
+    artist_root = artist_path.resolve()
+    target = (artist_path / rel_path).resolve()
+    try:
+        target.relative_to(artist_root)
+    except ValueError:
+        return None, None
+    if target.is_symlink():
+        return None, None
+    # Refuse to touch anything under a hidden/managed folder.
+    parts = target.relative_to(artist_root).parts
+    if any(p in FILES_TREE_HIDDEN_DIRS for p in parts):
+        return None, None
+    return artist_path, target
+
+
+@bp.route('/list-artist-files', methods=['GET'])
+def list_artist_files():
+    """Return every editable file in the artist dir, with kind hints for the UI."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    artist_path = get_artist_path(artist_slug)
+    if not artist_path.exists():
+        return jsonify({'files': []})
+
+    files = []
+    for p in sorted(artist_path.rglob('*')):
+        if not p.is_file() or p.is_symlink():
+            continue
+        if p.name in FILES_HIDDEN_NAMES:
+            continue
+        rel = p.relative_to(artist_path)
+        if any(part in FILES_TREE_HIDDEN_DIRS for part in rel.parts):
+            continue
+        try:
+            size = p.stat().st_size
+        except OSError:
+            continue
+        files.append({
+            'path': str(rel),
+            'kind': _file_kind(p),
+            'size': size,
+        })
+        if len(files) >= 1000:
+            break
+    return jsonify({'files': files})
+
+
+@bp.route('/read-artist-file', methods=['GET'])
+def read_artist_file():
+    """Read a text file's contents. Binary files are refused."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    rel = request.args.get('path', '')
+    artist_path, target = _resolve_artist_file(artist_slug, rel)
+    if target is None:
+        return jsonify({'error': 'Invalid path'}), 400
+    if not target.exists() or not target.is_file():
+        return jsonify({'error': 'Not found'}), 404
+    kind = _file_kind(target)
+    if kind == 'binary' or kind == 'image':
+        return jsonify({'error': 'Binary file — open in a dedicated tab', 'kind': kind, 'size': target.stat().st_size}), 415
+    size = target.stat().st_size
+    if size > FILES_MAX_TEXT_BYTES:
+        return jsonify({'error': f'File too large for inline editing ({size} bytes)', 'kind': kind, 'size': size}), 413
+    try:
+        content = target.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        return jsonify({'error': 'File is not valid UTF-8 text', 'kind': 'binary'}), 415
+    return jsonify({'path': rel, 'kind': kind, 'size': size, 'content': content})
+
+
+@bp.route('/write-artist-file', methods=['POST'])
+def write_artist_file():
+    """
+    Overwrite a text file inside the artist dir, then trigger compile.
+    Body: { "path": "home/content.md", "content": "..." }
+    Refuses paths outside the dir, paths in hidden folders, binary files,
+    and content that leaks .env secrets into frontend files.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    data = request.get_json() or {}
+    rel = data.get('path', '')
+    content = data.get('content', '')
+    if not isinstance(content, str):
+        return jsonify({'error': 'content must be a string'}), 400
+    if len(content.encode('utf-8')) > FILES_MAX_TEXT_BYTES:
+        return jsonify({'error': f'File too large (>{FILES_MAX_TEXT_BYTES} bytes)'}), 413
+
+    artist_path, target = _resolve_artist_file(artist_slug, rel)
+    if target is None:
+        return jsonify({'error': 'Invalid path'}), 400
+
+    kind = _file_kind(target) if target.exists() else _file_kind(Path(rel))
+    if kind in ('binary', 'image'):
+        return jsonify({'error': 'Cannot write binary files through this endpoint'}), 415
+
+    # Frontend files never need real secret values — block obvious leaks.
+    suffix = target.suffix.lower()
+    if suffix in {'.md', '.html', '.htm'}:
+        leaked = scan_for_leaked_secrets(artist_slug, content)
+        if leaked:
+            return jsonify({
+                'error': f'BLOCKED: Secret values detected for keys: {", ".join(leaked)}. '
+                         f'Secrets must stay in .env / api.py.',
+                'leaked_keys': leaked,
+            }), 400
+
+    # JSON files: validate before persisting so we never leave broken config on disk.
+    if suffix == '.json' and content.strip():
+        try:
+            json.loads(content)
+        except json.JSONDecodeError as e:
+            return jsonify({'error': f'Invalid JSON: {e.msg} (line {e.lineno}, col {e.colno})'}), 400
+
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding='utf-8')
+    except OSError as e:
+        return jsonify({'error': f'Write failed: {e}'}), 500
+
+    # Recompile so changes show up in published output. Cheap per-artist.
+    compile_ok = True
+    compile_error = None
+    compile_script = Path.cwd() / 'compile.py'
+    if compile_script.exists():
+        import subprocess
+        result = subprocess.run(
+            ['python3', str(compile_script), '--artist', artist_slug],
+            capture_output=True, text=True,
+        )
+        compile_ok = result.returncode == 0
+        if not compile_ok:
+            compile_error = (result.stderr or result.stdout or 'Unknown compile error').strip()
+
+    return jsonify({
+        'ok': True,
+        'path': rel,
+        'kind': kind,
+        'size': target.stat().st_size,
+        'compile_ok': compile_ok,
+        'compile_error': compile_error,
+    })
+
+
 # ── Create Page ────────────────────────────────────────────────────────────
 
 @bp.route('/create-page', methods=['POST'])
@@ -4781,17 +4976,14 @@ def vibe_reset():
 
     artist_path = get_artist_path(artist_slug)
     try:
-        import tarfile
-        snap_dir = artist_path / '.snapshots'
-        snap_dir.mkdir(exist_ok=True)
         ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
-        snap_path = snap_dir / f'{ts}_auto-before-vibe-reset.tar.gz'
-        _excl = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.env'}
-        with tarfile.open(str(snap_path), 'w:gz') as tar:
-            for item in sorted(artist_path.iterdir()):
-                if item.name not in _excl:
-                    tar.add(str(item), arcname=item.name)
-        for old in sorted(snap_dir.glob('*.tar.gz'), reverse=True)[30:]:
+        snap_path = artist_path / '.snapshots' / f'{ts}_auto-before-vibe-reset.tar.gz'
+        _write_artist_tarball(artist_path, snap_path)
+        user_snaps = sorted(
+            (s for s in snap_path.parent.glob('*.tar.gz') if s.name != AUTOSAVE_FILENAME),
+            reverse=True,
+        )
+        for old in user_snaps[SNAPSHOT_KEEP:]:
             old.unlink()
     except Exception:
         pass

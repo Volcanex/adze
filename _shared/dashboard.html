@@ -170,6 +170,36 @@
         .editor-pane { width: 50%; min-width: 200px; display: flex; flex-direction: column; border-right: none; overflow: hidden; }
         .preview-pane { flex: 1; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
 
+        /* ── File Tree (Manual Edit) ── */
+        .file-tree-pane { width: 220px; min-width: 140px; max-width: 400px; display: flex; flex-direction: column; background: var(--bg2); border-right: 1px solid var(--border); overflow: hidden; }
+        .ftp-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 11px; font-size: 9px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+        .ftp-filter { margin: 6px 8px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 11px; font-family: var(--body-font, sans-serif); }
+        .ftp-filter:focus { outline: none; border-color: var(--accent); }
+        .ftp-tree { flex: 1; overflow-y: auto; padding: 4px 0 12px; font-family: var(--mono); font-size: 11px; }
+        .ftp-tree::-webkit-scrollbar { width: 6px; }
+        .ftp-tree::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .ftp-folder { display: flex; align-items: center; gap: 4px; padding: 3px 10px 3px 8px; cursor: pointer; color: var(--text2); user-select: none; }
+        .ftp-folder:hover { color: var(--text); background: var(--surface); }
+        .ftp-folder .ftp-caret { display: inline-block; width: 10px; transition: transform 0.1s; flex-shrink: 0; }
+        .ftp-folder.collapsed .ftp-caret { transform: rotate(-90deg); }
+        .ftp-folder-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ftp-children { padding-left: 12px; }
+        .ftp-folder.collapsed + .ftp-children { display: none; }
+        .ftp-file { display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 22px; cursor: pointer; color: var(--text); border-left: 2px solid transparent; }
+        .ftp-file:hover { background: var(--surface); }
+        .ftp-file.selected { background: var(--surface2); border-left-color: var(--accent); color: var(--accent); }
+        .ftp-file-icon { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.7; }
+        .ftp-file-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ftp-file.kind-binary, .ftp-file.kind-image { color: var(--text2); font-style: italic; }
+        .ftp-file.kind-env { color: var(--warn); }
+        .ftp-file-size { margin-left: auto; font-size: 9px; color: var(--text2); opacity: 0.5; flex-shrink: 0; }
+
+        /* ── Open-file breadcrumb ── */
+        .file-crumb { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 11px; flex-shrink: 0; }
+        .fc-icon { width: 12px; height: 12px; flex-shrink: 0; opacity: 0.7; }
+        .fc-path { color: var(--text); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fc-kind { margin-left: auto; font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 6px; background: var(--surface); border-radius: 3px; flex-shrink: 0; }
+
         /* ── Resizer ── */
         .pane-resizer { width: 4px; cursor: col-resize; background: var(--border); flex-shrink: 0; transition: background 0.15s; position: relative; z-index: 10; }
         .pane-resizer:hover, .pane-resizer.dragging { background: var(--accent); }
@@ -1074,8 +1104,27 @@
                         </div>
                     </div>
                     <div class="split-pane">
+                        <!-- File tree: every text file in the artist dir,
+                             grouped by folder. Click selects an editor below. -->
+                        <div class="file-tree-pane" id="fileTreePane">
+                            <div class="ftp-header">
+                                <span>Files</span>
+                                <button class="btn-sm btn-ghost" onclick="loadArtistFiles(true)" title="Reload from disk" style="padding:2px 6px;font-size:10px;">↻</button>
+                            </div>
+                            <input type="text" id="fileTreeFilter" class="ftp-filter" placeholder="Filter…" oninput="renderFileTree()">
+                            <div class="ftp-tree" id="fileTreeBody">
+                                <div style="padding:12px;color:var(--text2);font-size:11px;">Loading files…</div>
+                            </div>
+                        </div>
+                        <div class="pane-resizer" data-target="fileTreePane"></div>
                         <div class="editor-pane" id="editEditorPane">
-                            <!-- JS editor (widget mode) -->
+                            <!-- Open-file breadcrumb (always visible in file mode). -->
+                            <div class="file-crumb" id="fileCrumb" style="display:none;">
+                                <span class="fc-icon" id="fileCrumbIcon"></span>
+                                <span class="fc-path" id="fileCrumbPath">no file selected</span>
+                                <span class="fc-kind" id="fileCrumbKind"></span>
+                            </div>
+                            <!-- JS editor (widget mode — unchanged) -->
                             <div class="js-editor-block" id="jsEditorBlock">
                                 <div class="editor-block-header">
                                     <span>Widget JS</span>
@@ -1083,32 +1132,44 @@
                                 </div>
                                 <textarea id="jsEditor" spellcheck="false" placeholder="// Your widget code here..."></textarea>
                             </div>
-                            <!-- Page editors (page mode) -->
+                            <!-- Page editors: shown when a content.md is open -->
                             <div id="pageEditorsBlock">
-                            <div class="editor-split">
-                                <div class="editor-block">
-                                    <div class="editor-block-header"><span>Styles (CSS)</span></div>
-                                    <textarea id="cssEditor" spellcheck="false"></textarea>
-                                </div>
-                                <div class="editor-block">
-                                    <div class="editor-block-header"><span>Content (HTML)</span></div>
-                                    <textarea id="htmlEditor" spellcheck="false"></textarea>
-                                </div>
-                                <div class="editor-block" id="envEditorBlock" style="flex:0 0 auto;max-height:200px;">
-                                    <div class="editor-block-header">
-                                        <span>.env (secrets)</span>
-                                        <button class="btn-sm btn-ghost" id="envToggleBtn" onclick="toggleEnvEditor()" style="font-size:11px;padding:2px 8px;margin-left:auto;">Show</button>
+                                <div class="editor-split">
+                                    <div class="editor-block">
+                                        <div class="editor-block-header"><span>Styles (CSS)</span></div>
+                                        <textarea id="cssEditor" spellcheck="false"></textarea>
                                     </div>
-                                    <div id="envEditorWarning" style="padding:8px 12px;font-size:12px;color:var(--text2);background:var(--surface2);">
-                                        Contains API keys and secrets. <span style="color:#e8a73d;">Edit with care.</span>
+                                    <div class="editor-block">
+                                        <div class="editor-block-header"><span>Content (HTML)</span></div>
+                                        <textarea id="htmlEditor" spellcheck="false"></textarea>
                                     </div>
-                                    <textarea id="envEditor" spellcheck="false" style="font-family:monospace;font-size:12px;display:none;"></textarea>
                                 </div>
                             </div>
-                            </div><!-- /pageEditorsBlock -->
+                            <!-- Raw text editor: shown for json/css/py/txt/env/etc. -->
+                            <div id="rawFileEditorBlock" style="display:none;flex:1;min-height:0;flex-direction:column;">
+                                <div class="editor-block-header" id="rawFileEditorHeader">
+                                    <span id="rawFileEditorLabel">file</span>
+                                    <span id="rawFileValidationMsg" style="margin-left:auto;font-size:10px;color:var(--text2);"></span>
+                                </div>
+                                <textarea id="rawFileEditor" spellcheck="false" style="flex:1;width:100%;border:none;border-radius:0;padding:10px 12px;font-family:var(--mono);font-size:12px;line-height:1.5;background:var(--bg);color:var(--text);"></textarea>
+                            </div>
+                            <!-- Image preview: shown for png/jpg/etc. -->
+                            <div id="imageViewerBlock" style="display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;background:var(--bg2);padding:24px;">
+                                <img id="imageViewerImg" alt="" style="max-width:100%;max-height:100%;border-radius:var(--radius);box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+                                <div id="imageViewerCaption" style="margin-top:12px;font-size:11px;color:var(--text2);"></div>
+                            </div>
+                            <!-- Binary placeholder: shown when a non-editable file is selected. -->
+                            <div id="binaryNoticeBlock" style="display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);font-size:13px;text-align:center;padding:24px;">
+                                <svg viewBox="0 0 24 24" style="width:36px;height:36px;stroke:currentColor;fill:none;stroke-width:1.5;opacity:0.4;margin-bottom:12px;"><circle cx="12" cy="12" r="9"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                <div id="binaryNoticeText">Binary file — open in a dedicated tab.</div>
+                            </div>
+                            <!-- Empty state: nothing selected (or no .md page loaded yet). -->
+                            <div id="fileEmptyBlock" style="display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);font-size:13px;text-align:center;padding:24px;">
+                                Pick a file from the tree to start editing.
+                            </div>
                         </div>
                         <div class="pane-resizer" data-target="editEditorPane"></div>
-                        <div class="preview-pane">
+                        <div class="preview-pane" id="editPreviewPane">
                             <div class="pane-header">
                                 <span>Preview</span>
                                 <div class="pane-actions">
@@ -1832,6 +1893,7 @@ function _initDashboard(info) {
     loadPages(true);
     loadAssets().then(() => loadWidgets());
     loadDefaultStylesForPreview();
+    loadArtistFiles();
     startVibePresence();
     // Vibe Coder is the initial active tab; switchTab won't fire on first load,
     // so kick the aider terminal init manually now that currentArtist is set.
@@ -3458,6 +3520,12 @@ async function loadPage(slug, clickedEl) {
         document.querySelectorAll('.page-item').forEach(el => el.classList.remove('active'));
         if (clickedEl) clickedEl.classList.add('active');
 
+        // Sync the file-tree state so Manual Edit reflects the active page.
+        _currentFilePath = `${slug}/content.md`;
+        _currentFileKind = 'markdown';
+        highlightFileInTree(_currentFilePath);
+        _showFileEditor('page');
+
         // Enable save
         document.getElementById('saveBtn').disabled = false;
         setUnsaved(false);
@@ -3678,6 +3746,8 @@ function schedulePreview(delay = 300) {
 // Editor input listeners
 document.getElementById('cssEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); });
 document.getElementById('htmlEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); });
+// Raw file editor: just unsaved + JSON validation tick (no preview rebuild).
+document.getElementById('rawFileEditor')?.addEventListener('input', () => { setUnsaved(true); validateRawFile(); });
 
 // ── Unsaved indicator ──
 function setUnsaved(val) {
@@ -3685,9 +3755,265 @@ function setUnsaved(val) {
     document.getElementById('unsavedDot').classList.toggle('show', val);
 }
 
+// ── File Tree (Manual Edit) ──────────────────────────────────────────────
+// Backs the Manual Edit tab's file browser. Talks to the
+// /list-artist-files, /read-artist-file, /write-artist-file endpoints.
+let _artistFiles = [];          // [{path, kind, size}, ...]
+let _currentFilePath = null;
+let _currentFileKind = null;    // 'page' | 'raw' | 'image' | 'binary' | null
+let _treeCollapsed = new Set(); // folder paths the user has collapsed
+
+async function loadArtistFiles(forceReselect) {
+    const body = document.getElementById('fileTreeBody');
+    if (!body) return;
+    if (!_artistFiles.length) body.innerHTML = '<div style="padding:12px;color:var(--text2);font-size:11px;">Loading files…</div>';
+    try {
+        const r = await apiFetch('/api/adze/list-artist-files');
+        if (!r.ok) { body.innerHTML = '<div style="padding:12px;color:var(--danger);font-size:11px;">Failed to load files</div>'; return; }
+        const data = await r.json();
+        _artistFiles = data.files || [];
+        renderFileTree();
+        // Default selection: current page's content.md, else first .md
+        if (forceReselect || !_currentFilePath) {
+            const target = currentPage
+                ? `${currentPage.slug}/content.md`
+                : (_artistFiles.find(f => f.kind === 'markdown')?.path);
+            if (target && _artistFiles.some(f => f.path === target)) {
+                highlightFileInTree(target);
+            }
+        }
+    } catch(e) {
+        body.innerHTML = '<div style="padding:12px;color:var(--danger);font-size:11px;">' + e.message + '</div>';
+    }
+}
+
+function _fileIconSvg(kind, name) {
+    // Phosphor-ish minimal icons. Kind drives the shape; name disambiguates content.md.
+    if (kind === 'markdown') return '<svg class="ftp-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    if (kind === 'image') return '<svg class="ftp-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+    if (kind === 'env') return '<svg class="ftp-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+    if (kind === 'binary') return '<svg class="ftp-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 13-2 2 2 2"/><path d="m15 13 2 2-2 2"/></svg>';
+    return '<svg class="ftp-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>';
+}
+
+function _formatFileSize(n) {
+    if (n < 1024) return n + 'B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(0) + 'K';
+    return (n / 1048576).toFixed(1) + 'M';
+}
+
+function renderFileTree() {
+    const body = document.getElementById('fileTreeBody');
+    const filter = (document.getElementById('fileTreeFilter')?.value || '').toLowerCase().trim();
+    if (!body) return;
+
+    // Build a nested tree from flat paths.
+    const root = { folders: new Map(), files: [] };
+    const matches = filter
+        ? _artistFiles.filter(f => f.path.toLowerCase().includes(filter))
+        : _artistFiles;
+    for (const f of matches) {
+        const parts = f.path.split('/');
+        let node = root;
+        for (let i = 0; i < parts.length - 1; i++) {
+            const seg = parts[i];
+            if (!node.folders.has(seg)) node.folders.set(seg, { folders: new Map(), files: [] });
+            node = node.folders.get(seg);
+        }
+        node.files.push({ ...f, name: parts[parts.length - 1] });
+    }
+
+    const renderNode = (node, prefix) => {
+        const lines = [];
+        // Folders first, alphabetised
+        for (const [name, child] of [...node.folders.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+            const folderPath = prefix ? `${prefix}/${name}` : name;
+            const collapsed = _treeCollapsed.has(folderPath) && !filter; // expand all when filtering
+            lines.push(
+                `<div class="ftp-folder${collapsed ? ' collapsed' : ''}" data-folder="${escHtml(folderPath)}" onclick="toggleTreeFolder('${escHtml(folderPath)}')">`
+                + `<span class="ftp-caret">▾</span>`
+                + `<span class="ftp-folder-name">${escHtml(name)}</span>`
+                + `</div>`
+                + `<div class="ftp-children">${renderNode(child, folderPath)}</div>`
+            );
+        }
+        // Files
+        for (const f of node.files.sort((a, b) => a.name.localeCompare(b.name))) {
+            const selected = (f.path === _currentFilePath) ? ' selected' : '';
+            const kindClass = ` kind-${f.kind}`;
+            lines.push(
+                `<div class="ftp-file${selected}${kindClass}" data-path="${escHtml(f.path)}" onclick="selectArtistFile('${escHtml(f.path)}')">`
+                + _fileIconSvg(f.kind, f.name)
+                + `<span class="ftp-file-name">${escHtml(f.name)}</span>`
+                + `<span class="ftp-file-size">${_formatFileSize(f.size)}</span>`
+                + `</div>`
+            );
+        }
+        return lines.join('');
+    };
+
+    body.innerHTML = renderNode(root, '');
+    if (matches.length === 0) {
+        body.innerHTML = `<div style="padding:12px;color:var(--text2);font-size:11px;">No files match "${escHtml(filter)}"</div>`;
+    }
+}
+
+function toggleTreeFolder(folderPath) {
+    if (_treeCollapsed.has(folderPath)) _treeCollapsed.delete(folderPath);
+    else _treeCollapsed.add(folderPath);
+    renderFileTree();
+}
+
+function highlightFileInTree(path) {
+    document.querySelectorAll('.ftp-file').forEach(el => {
+        el.classList.toggle('selected', el.dataset.path === path);
+    });
+}
+
+function _showFileEditor(mode) {
+    // mode: 'page' | 'raw' | 'image' | 'binary' | 'empty'
+    const blocks = {
+        page: ['pageEditorsBlock', ''],
+        raw: ['rawFileEditorBlock', 'flex'],
+        image: ['imageViewerBlock', 'flex'],
+        binary: ['binaryNoticeBlock', 'flex'],
+        empty: ['fileEmptyBlock', 'flex'],
+    };
+    Object.entries(blocks).forEach(([m, [id, disp]]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (m === mode) ? disp : 'none';
+    });
+    const prev = document.getElementById('editPreviewPane');
+    if (prev) prev.style.display = (mode === 'page') ? '' : 'none';
+    const crumb = document.getElementById('fileCrumb');
+    if (crumb) crumb.style.display = (mode === 'empty' || mode === 'page') ? 'none' : 'flex';
+}
+
+function _updateFileCrumb(path, kind) {
+    const crumb = document.getElementById('fileCrumb');
+    if (!crumb) return;
+    document.getElementById('fileCrumbPath').textContent = path;
+    document.getElementById('fileCrumbKind').textContent = kind;
+    document.getElementById('fileCrumbIcon').innerHTML = _fileIconSvg(kind, path);
+}
+
+async function selectArtistFile(path) {
+    const file = _artistFiles.find(f => f.path === path);
+    if (!file) return;
+    if (hasUnsavedChanges && !confirm('You have unsaved changes. Discard them?')) return;
+
+    _currentFilePath = path;
+    _currentFileKind = file.kind;
+    highlightFileInTree(path);
+    document.getElementById('saveBtn').disabled = false;
+
+    // content.md inside a page dir → drop into the existing page-edit flow
+    // so the CSS+HTML split editor + preview continue to work as before.
+    const pageMatch = /^(.+)\/content\.md$/.exec(path);
+    if (file.kind === 'markdown' && pageMatch) {
+        const pageSlug = pageMatch[1];
+        _showFileEditor('page');
+        const page = pages.find(p => p.slug === pageSlug);
+        const el = page ? Array.from(document.querySelectorAll('.page-item')).find(it => it.dataset.slug === page.slug) : null;
+        await loadPage(pageSlug, el);
+        return;
+    }
+
+    if (file.kind === 'image') {
+        _showFileEditor('image');
+        _updateFileCrumb(path, 'image');
+        document.getElementById('imageViewerImg').src = `/artists/${currentArtist}/${path}?t=${Date.now()}`;
+        document.getElementById('imageViewerCaption').textContent = `${path} · ${formatBytes(file.size)}`;
+        currentPage = null;
+        setUnsaved(false);
+        return;
+    }
+    if (file.kind === 'binary') {
+        _showFileEditor('binary');
+        _updateFileCrumb(path, 'binary');
+        document.getElementById('binaryNoticeText').textContent = `${path} is a binary file. Manage it from the relevant tab (Assets / Backend / etc.).`;
+        currentPage = null;
+        setUnsaved(false);
+        return;
+    }
+
+    // Raw text editor for everything else (json, css, py, txt, env, html, …)
+    try {
+        const r = await apiFetch('/api/adze/read-artist-file?path=' + encodeURIComponent(path));
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            _showFileEditor('binary');
+            _updateFileCrumb(path, file.kind);
+            document.getElementById('binaryNoticeText').textContent = err.error || 'Cannot open this file inline.';
+            return;
+        }
+        const data = await r.json();
+        _showFileEditor('raw');
+        _updateFileCrumb(path, data.kind);
+        document.getElementById('rawFileEditorLabel').textContent = path;
+        document.getElementById('rawFileValidationMsg').textContent = '';
+        document.getElementById('rawFileEditor').value = data.content;
+        currentPage = null;
+        setUnsaved(false);
+        validateRawFile();
+    } catch(e) {
+        toast('Failed to open: ' + e.message, 'error');
+    }
+}
+
+function validateRawFile() {
+    // JSON-only: surface parse errors live so users don't save broken config.
+    if (!_currentFilePath?.endsWith('.json')) {
+        document.getElementById('rawFileValidationMsg').textContent = '';
+        return true;
+    }
+    const v = document.getElementById('rawFileEditor').value.trim();
+    const msg = document.getElementById('rawFileValidationMsg');
+    if (!v) { msg.textContent = ''; return true; }
+    try { JSON.parse(v); msg.textContent = 'valid JSON'; msg.style.color = 'var(--success)'; return true; }
+    catch(e) { msg.textContent = e.message; msg.style.color = 'var(--danger)'; return false; }
+}
+
+async function saveCurrentFile() {
+    if (!_currentFilePath) return;
+    const content = document.getElementById('rawFileEditor').value;
+    if (_currentFilePath.endsWith('.json') && !validateRawFile()) {
+        toast('Fix the JSON before saving', 'error');
+        return;
+    }
+    try {
+        const r = await apiFetch('/api/adze/write-artist-file', {
+            method: 'POST',
+            body: { path: _currentFilePath, content },
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+            if (data.compile_ok === false) {
+                toast('Saved — compile failed: ' + (data.compile_error || 'unknown'), 'warn');
+            } else {
+                toast('Saved!');
+            }
+            const now = new Date();
+            document.getElementById('lastSavedLabel').textContent =
+                'Saved ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setUnsaved(false);
+            autoSnapshot();
+            // Side-effects: refresh things that read from disk lazily.
+            if (_currentFilePath === 'default-styles.css') invalidateDefaultStylesCache();
+            if (_currentFilePath.endsWith('config.json')) loadPages();
+        } else {
+            toast(data.error || 'Save failed', 'error');
+        }
+    } catch(e) { toast('Error: ' + e.message, 'error'); }
+}
+
 // ── Save ──
 async function savePage() {
     if (currentWidget) { await saveCurrentWidget(); return; }
+    // Raw (non-page) file is open — dispatch to the file-browser save path.
+    if (_currentFilePath && _currentFileKind !== 'markdown') {
+        return saveCurrentFile();
+    }
     if (!currentPage) return;
     try {
         const css = document.getElementById('cssEditor').value;
@@ -3697,7 +4023,7 @@ async function savePage() {
         // Get config from form
         const config = getConfigFromForm();
 
-        // Save .env if modified
+        // Save .env if modified (legacy inline editor — now no-ops if absent)
         await saveEnvEditor();
 
         const r = await apiFetch('/api/adze/edit-page', {
