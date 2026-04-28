@@ -1036,7 +1036,7 @@
                 <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
                 <span id="lastSavedLabel" style="font-size:10px;color:var(--text2);opacity:0.7;"></span>
                 <button onclick="savePage()" id="saveBtn" disabled>Save</button>
-                <button class="btn-publish" id="livePageLink" onclick="publishAndView()" title="Save and open the published page in a new tab">Save &amp; view ↗</button>
+                <button class="btn-publish" id="livePageLink" onclick="publishAndView()" title="Save and open the published page in a new tab">Save &amp; view</button>
                 <button class="btn-ghost" onclick="snapshotNow()" title="Capture a named restore point in History">Snapshot</button>
                 <button class="btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle dark mode"></button>
@@ -1133,7 +1133,7 @@
                                 <textarea id="jsEditor" spellcheck="false" placeholder="// Your widget code here..."></textarea>
                             </div>
                             <!-- Page editors: shown when a content.md is open -->
-                            <div id="pageEditorsBlock">
+                            <div id="pageEditorsBlock" style="display:none;flex:1;min-height:0;flex-direction:column;">
                                 <div class="editor-split">
                                     <div class="editor-block">
                                         <div class="editor-block-header"><span>Styles (CSS)</span></div>
@@ -1164,7 +1164,7 @@
                                 <div id="binaryNoticeText">Binary file — open in a dedicated tab.</div>
                             </div>
                             <!-- Empty state: nothing selected (or no .md page loaded yet). -->
-                            <div id="fileEmptyBlock" style="display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);font-size:13px;text-align:center;padding:24px;">
+                            <div id="fileEmptyBlock" style="display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;color:var(--text2);font-size:13px;text-align:center;padding:24px;">
                                 Pick a file from the tree to start editing.
                             </div>
                         </div>
@@ -3872,16 +3872,15 @@ function highlightFileInTree(path) {
 
 function _showFileEditor(mode) {
     // mode: 'page' | 'raw' | 'image' | 'binary' | 'empty'
-    const blocks = {
-        page: ['pageEditorsBlock', ''],
-        raw: ['rawFileEditorBlock', 'flex'],
-        image: ['imageViewerBlock', 'flex'],
-        binary: ['binaryNoticeBlock', 'flex'],
-        empty: ['fileEmptyBlock', 'flex'],
-    };
-    Object.entries(blocks).forEach(([m, [id, disp]]) => {
+    // Every block is a flex column when visible so it fills editor-pane.
+    const blockIds = ['pageEditorsBlock', 'rawFileEditorBlock', 'imageViewerBlock', 'binaryNoticeBlock', 'fileEmptyBlock'];
+    const targetId = {
+        page: 'pageEditorsBlock', raw: 'rawFileEditorBlock', image: 'imageViewerBlock',
+        binary: 'binaryNoticeBlock', empty: 'fileEmptyBlock',
+    }[mode];
+    blockIds.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = (m === mode) ? disp : 'none';
+        if (el) el.style.display = (id === targetId) ? 'flex' : 'none';
     });
     const prev = document.getElementById('editPreviewPane');
     if (prev) prev.style.display = (mode === 'page') ? '' : 'none';
