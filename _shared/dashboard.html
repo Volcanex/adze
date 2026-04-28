@@ -1006,6 +1006,7 @@
                 <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
                 <span id="lastSavedLabel" style="font-size:10px;color:var(--text2);opacity:0.7;"></span>
                 <button onclick="savePage()" id="saveBtn" disabled>Save</button>
+                <button class="btn-publish" id="livePageLink" onclick="publishAndView()" title="Save and open the published page in a new tab">Save &amp; view ↗</button>
                 <button class="btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle dark mode"></button>
                 <button class="btn-ghost" onclick="logout()">Logout</button>
@@ -1052,7 +1053,6 @@
                     <button class="tab" data-tab="about" onclick="switchTab('about', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span class="tab-label">About</span></button>
                     <span id="widgetTabsContainer"></span>
                     <span class="tab-spacer"></span>
-                    <button class="btn-sm btn-publish" id="livePageLink" onclick="publishAndView()" style="margin-left:auto;">Publish</button>
                     <button class="btn-sm btn-danger" onclick="showModal('deletePageModal')" style="margin-left:4px;">Delete Page</button>
                 </div>
 
@@ -1093,7 +1093,7 @@
                                     <div class="editor-block-header"><span>Content (HTML)</span></div>
                                     <textarea id="htmlEditor" spellcheck="false"></textarea>
                                 </div>
-                                <div class="editor-block" id="envEditorBlock" style="max-height:150px;">
+                                <div class="editor-block" id="envEditorBlock" style="flex:0 0 auto;max-height:200px;">
                                     <div class="editor-block-header">
                                         <span>.env (secrets)</span>
                                         <button class="btn-sm btn-ghost" id="envToggleBtn" onclick="toggleEnvEditor()" style="font-size:11px;padding:2px 8px;margin-left:auto;">Show</button>
@@ -1131,8 +1131,10 @@
                                     <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
                                 </div>
                                 <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;background:#1a1a1e;min-height:0;position:relative;">
-                                    <div id="vcXtermHost" style="position:absolute;inset:10px;background:#1a1a1e;">
-                                        <div id="vcXtermBoot" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9a978e;font-family:Menlo,Monaco,monospace;font-size:11px;letter-spacing:0.05em;text-transform:uppercase;opacity:0.6;">loading aider…</div>
+                                    <div id="vcXtermHost" style="position:absolute;inset:0;background:#1a1a1e;">
+                                        <div id="vcXtermBoot" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5a5750;font-family:Menlo,Monaco,monospace;font-size:11px;opacity:0.5;">
+                                            <span class="vc-boot-dot"></span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="claude-term-tools" id="claudeToolsRow" style="display:flex;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
@@ -1828,6 +1830,7 @@ function _initDashboard(info) {
     document.getElementById('artistName').textContent = info.name || info.config?.display_name || currentArtist;
     loadPages(true);
     loadAssets().then(() => loadWidgets());
+    loadDefaultStylesForPreview();
     startVibePresence();
     // Vibe Coder is the initial active tab; switchTab won't fire on first load,
     // so kick the aider terminal init manually now that currentArtist is set.
@@ -2970,6 +2973,7 @@ async function saveDefaultStyles() {
             }).catch(() => {});
         }
         toast('Styles saved & compiled', 'success');
+        invalidateDefaultStylesCache();
     } else {
         toast('Failed to save styles', 'error');
     }
@@ -3543,6 +3547,29 @@ function dismissErrors() {
 }
 
 // ── Live Preview ──
+// Cache of the artist's default-styles.css so the preview iframe matches
+// what compile.py emits (which prepends default-styles.css to every page).
+let _defaultStylesCache = '';
+let _defaultStylesArtist = null;
+
+async function loadDefaultStylesForPreview() {
+    if (!currentArtist) return;
+    if (_defaultStylesArtist === currentArtist) return;
+    _defaultStylesArtist = currentArtist;
+    try {
+        const r = await apiFetch('/api/adze/default-styles');
+        if (!r.ok) { _defaultStylesCache = ''; return; }
+        const data = await r.json();
+        _defaultStylesCache = data.css || '';
+        if (currentPage) updatePreview();
+    } catch(e) { _defaultStylesCache = ''; }
+}
+
+function invalidateDefaultStylesCache() {
+    _defaultStylesArtist = null;
+    return loadDefaultStylesForPreview();
+}
+
 function buildPreviewDoc(css, html) {
     const title = currentPage?.config?.title || 'Preview';
     const baseHref = `/artists/${currentArtist}/${currentPage?.slug}/`;
@@ -3598,7 +3625,8 @@ document.addEventListener('click', function(e) {
 <title>${title}</title>
 <base href="${baseHref}">
 ${errorCaptureScript}
-<style>${css}</style>
+<style>${_defaultStylesCache}
+${css}</style>
 </head>
 <body>${html}${linkInterceptScript}</body>
 </html>`;
@@ -5037,14 +5065,17 @@ function toggleEnvEditor() {
     const editor = document.getElementById('envEditor');
     const warning = document.getElementById('envEditorWarning');
     const btn = document.getElementById('envToggleBtn');
+    const block = document.getElementById('envEditorBlock');
     if (editor.style.display === 'none') {
         editor.style.display = '';
         warning.style.display = 'none';
         btn.textContent = 'Hide';
+        if (block) { block.style.flex = '1'; block.style.maxHeight = ''; }
     } else {
         editor.style.display = 'none';
         warning.style.display = '';
         btn.textContent = 'Show';
+        if (block) { block.style.flex = '0 0 auto'; block.style.maxHeight = '200px'; }
     }
 }
 
@@ -7009,8 +7040,6 @@ function vcInitAiderTerminal() {
     safeFit();
     setTimeout(safeFit, 50);
     setTimeout(safeFit, 200);
-
-    _vcXterm.write('\x1b[2m[adze] connecting to aider…\x1b[0m\r\n');
 
     _vcXtermSocket = io('/aider', {
         auth: { artist_slug: currentArtist, token: currentToken || '' },
