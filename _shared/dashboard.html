@@ -3501,8 +3501,11 @@ async function loadPage(slug, clickedEl) {
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('tabBar').style.display = 'flex';
         document.getElementById('livePageLink').dataset.url = `/artists/${currentArtist}/${data.slug}/`;
-        document.querySelectorAll('.tab-panel').forEach(p => { /* make sure they exist in DOM */ });
-        switchTab('claude');
+        // Only force a tab on first-ever page load. If the user is already
+        // working in Manual Edit (or any other tab), don't yank them away.
+        if (!document.querySelector('.tab-panel.active')) {
+            switchTab('claude');
+        }
 
         // Parse content into CSS + HTML
         const { css, html } = parseContent(data.content);
@@ -3908,10 +3911,11 @@ async function selectArtistFile(path) {
 
     // content.md inside a page dir → drop into the existing page-edit flow
     // so the CSS+HTML split editor + preview continue to work as before.
+    // loadPage handles _showFileEditor('page') itself once the content is
+    // fetched, so the editors aren't briefly visible with stale values.
     const pageMatch = /^(.+)\/content\.md$/.exec(path);
     if (file.kind === 'markdown' && pageMatch) {
         const pageSlug = pageMatch[1];
-        _showFileEditor('page');
         const page = pages.find(p => p.slug === pageSlug);
         const el = page ? Array.from(document.querySelectorAll('.page-item')).find(it => it.dataset.slug === page.slug) : null;
         await loadPage(pageSlug, el);
