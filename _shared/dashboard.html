@@ -1007,6 +1007,7 @@
                 <span id="lastSavedLabel" style="font-size:10px;color:var(--text2);opacity:0.7;"></span>
                 <button onclick="savePage()" id="saveBtn" disabled>Save</button>
                 <button class="btn-publish" id="livePageLink" onclick="publishAndView()" title="Save and open the published page in a new tab">Save &amp; view ↗</button>
+                <button class="btn-ghost" onclick="snapshotNow()" title="Capture a named restore point in History">Snapshot</button>
                 <button class="btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
                 <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Toggle dark mode"></button>
                 <button class="btn-ghost" onclick="logout()">Logout</button>
@@ -1313,7 +1314,7 @@
                                 <div class="snapshot-actions">
                                     <button onclick="createServerSnapshot()">Save Snapshot</button>
                                 </div>
-                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. A snapshot is also auto-created before each new Vibe Coder session.</p>
+                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. The latest <em>Save</em> is always kept as a one-step <strong>autosave</strong> (pinned at the top). Named snapshots roll over after 10. A snapshot is also auto-created before each new Vibe Coder session.</p>
                                 <ul class="snapshot-list" id="snapshotList"></ul>
                             </div>
                         </div>
@@ -5108,6 +5109,7 @@ async function saveEnvEditor() {
 
 // ── Snapshots (server-side tarballs) ──
 let _snapshots = [];
+let _autosaveSnapshot = null;
 
 async function loadSnapshots() {
     const list = document.getElementById('snapshotList');
@@ -5118,6 +5120,7 @@ async function loadSnapshots() {
         if (!r.ok) { list.innerHTML = '<li style="color:var(--danger);padding:12px;font-size:13px;">Failed to load snapshots.</li>'; return; }
         const data = await r.json();
         _snapshots = data.snapshots || [];
+        _autosaveSnapshot = data.autosave || null;
         renderSnapshots();
     } catch (e) {
         list.innerHTML = '<li style="color:var(--danger);padding:12px;font-size:13px;">Error: ' + e.message + '</li>';
@@ -5176,10 +5179,29 @@ function renderSnapshots() {
     const list = document.getElementById('snapshotList');
     if (!list) return;
     list.innerHTML = '';
-    if (!_snapshots.length) {
-        list.innerHTML = '<li style="color:var(--text2);padding:12px;font-size:13px;">No snapshots yet. Save your first one! A snapshot is also auto-created before each Vibe Coder session.</li>';
+
+    // Autosave row pinned at the top — overwritten by every Save, never pruned.
+    if (_autosaveSnapshot) {
+        const a = _autosaveSnapshot;
+        const li = document.createElement('li');
+        li.className = 'snapshot-item';
+        const ts = a.timestamp.replace('T', ' ').replace(/-/g, ':').slice(0, 19) + ' UTC';
+        li.innerHTML = `
+            <div class="snapshot-item-info">
+                <div class="snapshot-item-name">${escHtml(a.name)} <span style="color:var(--accent);font-size:11px;">(autosave)</span></div>
+                <div class="snapshot-item-date">${ts} · ${formatBytes(a.size)}</div>
+            </div>
+            <div class="snapshot-item-actions">
+                <button class="btn-sm btn-ghost" onclick="restoreServerSnapshot('${escHtml(a.filename)}')">Restore</button>
+            </div>`;
+        list.appendChild(li);
+    }
+
+    if (!_snapshots.length && !_autosaveSnapshot) {
+        list.innerHTML = '<li style="color:var(--text2);padding:12px;font-size:13px;">No snapshots yet. Hit Snapshot in the header (or Save Snapshot here) to capture a restore point. The latest Save is also kept as an autosave automatically.</li>';
         return;
     }
+
     _snapshots.forEach(s => {
         const li = document.createElement('li');
         li.className = 'snapshot-item';
@@ -5199,8 +5221,30 @@ function renderSnapshots() {
     });
 }
 
-// Legacy stubs for any code still calling old functions
-function autoSnapshot() {}
+// Fire-and-forget tarball into the rolling autosave slot. Called after
+// every Save so the user has one-step undo without growing History.
+function autoSnapshot() {
+    apiFetch('/api/adze/autosave-snapshot', { method: 'POST' }).catch(() => {});
+}
+
+// Header "Snapshot" button — quick named restore point, no prompt.
+async function snapshotNow() {
+    try {
+        const stamp = new Date().toISOString().slice(11, 16).replace(':', '');
+        const r = await apiFetch('/api/adze/create-snapshot', {
+            method: 'POST',
+            body: { name: `quick-${stamp}` },
+        });
+        if (r.ok) {
+            toast('Snapshot saved · open History to manage', 'success');
+            if (document.getElementById('panel-snapshots')?.classList.contains('active')) loadSnapshots();
+        } else {
+            const d = await r.json().catch(() => ({}));
+            toast(d.error || 'Snapshot failed', 'error');
+        }
+    } catch (e) { toast('Error: ' + e.message, 'error'); }
+}
+
 function saveSnapshot() { createServerSnapshot(); }
 function getSnapshots() { return []; }
 function storeSnapshots() {}

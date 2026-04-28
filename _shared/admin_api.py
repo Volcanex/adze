@@ -3200,12 +3200,48 @@ def delete_site():
 
 
 # ── Snapshots ──────────────────────────────────────────────────────────────
+# Two flavours of snapshot live in the same .snapshots/ dir:
+#   - User snapshots: timestamped, capped at SNAPSHOT_KEEP, shown in History.
+#   - Autosave: single rolling slot (AUTOSAVE_FILENAME) overwritten by every
+#     Save. Excluded from the cap and surfaced separately.
+
+AUTOSAVE_FILENAME = '_autosave.tar.gz'
+SNAPSHOT_KEEP = 10
+SNAPSHOT_EXCLUDE_DIRS = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups'}
+SNAPSHOT_EXCLUDE_FILES = {'.env'}
+
+
+def _write_artist_tarball(artist_path, snap_path):
+    """Tar+gzip the artist dir into snap_path, skipping heavy/secret items."""
+    import tarfile
+    snap_path.parent.mkdir(exist_ok=True)
+    with tarfile.open(str(snap_path), 'w:gz') as tar:
+        for item in sorted(artist_path.iterdir()):
+            if item.name in SNAPSHOT_EXCLUDE_DIRS or item.name in SNAPSHOT_EXCLUDE_FILES:
+                continue
+            tar.add(str(item), arcname=item.name)
+
+
+def _parse_snapshot_filename(f):
+    """Turn a timestamped snapshot file into a UI-ready dict."""
+    stem = f.stem.replace('.tar', '')
+    parts = stem.split('_', 1)
+    timestamp = parts[0] if parts else stem
+    name = parts[1].replace('-', ' ') if len(parts) > 1 else 'Unnamed'
+    return {
+        'filename': f.name,
+        'name': name,
+        'timestamp': timestamp,
+        'size': f.stat().st_size,
+    }
+
 
 @bp.route('/list-snapshots', methods=['GET'])
 def list_snapshots():
     """
     List all snapshots for an artist.
     Headers: X-Artist-Slug, X-Admin-Token
+    Returns: { "snapshots": [...], "autosave": {...} | null }
     """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
@@ -3213,67 +3249,57 @@ def list_snapshots():
 
     snap_dir = get_artist_path(artist_slug) / '.snapshots'
     if not snap_dir.exists():
-        return jsonify({'snapshots': []})
+        return jsonify({'snapshots': [], 'autosave': None})
 
     snapshots = []
+    autosave = None
     for f in sorted(snap_dir.glob('*.tar.gz'), reverse=True):
-        # Parse name: 2026-03-27T08-15-30_my-snapshot-name.tar.gz
-        stem = f.stem.replace('.tar', '')
-        parts = stem.split('_', 1)
-        timestamp = parts[0] if parts else stem
-        name = parts[1].replace('-', ' ') if len(parts) > 1 else 'Unnamed'
-        snapshots.append({
-            'filename': f.name,
-            'name': name,
-            'timestamp': timestamp,
-            'size': f.stat().st_size,
-        })
+        if f.name == AUTOSAVE_FILENAME:
+            autosave = {
+                'filename': f.name,
+                'name': 'Autosave (latest Save)',
+                'timestamp': _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime(f.stat().st_mtime)),
+                'size': f.stat().st_size,
+                'autosave': True,
+            }
+            continue
+        snapshots.append(_parse_snapshot_filename(f))
 
-    return jsonify({'snapshots': snapshots})
+    return jsonify({'snapshots': snapshots, 'autosave': autosave})
 
 
 @bp.route('/create-snapshot', methods=['POST'])
 def create_snapshot():
     """
-    Create a tarball snapshot of the artist's site (excluding assets/ and widgets/).
+    Create a user-named snapshot of the artist's site.
     Headers: X-Artist-Slug, X-Admin-Token
     Body: { "name": "optional snapshot name" }
     """
-    import tarfile
-    import time
-
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
 
     data = request.get_json() or {}
     name = data.get('name', 'manual').strip()
-    # Sanitise name for filename
     safe_name = name.lower().replace(' ', '-')
-    safe_name = ''.join(c for c in safe_name if c.isalnum() or c == '-')[:40]
+    safe_name = ''.join(c for c in safe_name if c.isalnum() or c == '-')[:40] or 'manual'
 
     artist_path = get_artist_path(artist_slug)
     snap_dir = artist_path / '.snapshots'
-    snap_dir.mkdir(exist_ok=True)
 
-    timestamp = time.strftime('%Y-%m-%dT%H-%M-%S', time.gmtime())
+    timestamp = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
     filename = f'{timestamp}_{safe_name}.tar.gz'
     snap_path = snap_dir / filename
 
-    EXCLUDE_DIRS = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups'}
-    EXCLUDE_FILES = {'.env'}
-
     try:
-        with tarfile.open(str(snap_path), 'w:gz') as tar:
-            for item in sorted(artist_path.iterdir()):
-                if item.name in EXCLUDE_DIRS or item.name in EXCLUDE_FILES:
-                    continue
-                arcname = item.name
-                tar.add(str(item), arcname=arcname)
+        _write_artist_tarball(artist_path, snap_path)
 
-        # Prune old snapshots — keep max 30
-        snaps = sorted(snap_dir.glob('*.tar.gz'), reverse=True)
-        for old in snaps[30:]:
+        # Prune user snapshots — keep max SNAPSHOT_KEEP, never touching the autosave slot.
+        user_snaps = sorted(
+            (s for s in snap_dir.glob('*.tar.gz') if s.name != AUTOSAVE_FILENAME),
+            reverse=True,
+        )
+        for old in user_snaps[SNAPSHOT_KEEP:]:
             old.unlink()
 
         return jsonify({
@@ -3284,6 +3310,28 @@ def create_snapshot():
 
     except Exception as e:
         return jsonify({'error': f'Snapshot failed: {str(e)}'}), 500
+
+
+@bp.route('/autosave-snapshot', methods=['POST'])
+def autosave_snapshot():
+    """
+    Overwrite the rolling autosave slot. Called fire-and-forget by the
+    dashboard after every Save so the user always has one-step undo
+    without growing the snapshot pile.
+    Headers: X-Artist-Slug, X-Admin-Token
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    artist_path = get_artist_path(artist_slug)
+    snap_path = artist_path / '.snapshots' / AUTOSAVE_FILENAME
+
+    try:
+        _write_artist_tarball(artist_path, snap_path)
+        return jsonify({'ok': True, 'filename': AUTOSAVE_FILENAME, 'size': snap_path.stat().st_size})
+    except Exception as e:
+        return jsonify({'error': f'Autosave failed: {str(e)}'}), 500
 
 
 @bp.route('/restore-snapshot', methods=['POST'])
@@ -4648,17 +4696,14 @@ def claude_stream():
     is_new_session = not session_file.exists()
     if is_new_session:
         try:
-            import tarfile
-            snap_dir = artist_path / '.snapshots'
-            snap_dir.mkdir(exist_ok=True)
             ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
-            snap_path = snap_dir / f'{ts}_auto-before-vibe-coder.tar.gz'
-            _excl = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.env'}
-            with tarfile.open(str(snap_path), 'w:gz') as tar:
-                for item in sorted(artist_path.iterdir()):
-                    if item.name not in _excl:
-                        tar.add(str(item), arcname=item.name)
-            for old in sorted(snap_dir.glob('*.tar.gz'), reverse=True)[30:]:
+            snap_path = artist_path / '.snapshots' / f'{ts}_auto-before-vibe-coder.tar.gz'
+            _write_artist_tarball(artist_path, snap_path)
+            user_snaps = sorted(
+                (s for s in snap_path.parent.glob('*.tar.gz') if s.name != AUTOSAVE_FILENAME),
+                reverse=True,
+            )
+            for old in user_snaps[SNAPSHOT_KEEP:]:
                 old.unlink()
         except Exception:
             pass  # Don't block the turn if snapshotting fails
