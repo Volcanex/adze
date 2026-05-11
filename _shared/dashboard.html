@@ -169,6 +169,9 @@
         .split-pane { display: flex; flex: 1; overflow: hidden; position: relative; }
         .editor-pane { width: 50%; min-width: 200px; display: flex; flex-direction: column; border-right: none; overflow: hidden; }
         .preview-pane { flex: 1; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        /* Terminal tab: give the terminal the full pane — no preview split */
+        #panel-claude .editor-pane { width: 100% !important; }
+        #panel-claude .pane-resizer, #panel-claude .preview-pane { display: none !important; }
 
         /* ── File Tree (Manual Edit) ── */
         .file-tree-pane { width: 220px; min-width: 140px; max-width: 400px; display: flex; flex-direction: column; background: var(--bg2); border-right: 1px solid var(--border); overflow: hidden; }
@@ -8042,6 +8045,14 @@ function vcFontSizeApply(scale) {
     if (minus) minus.disabled = scale <= VC_FS_STEPS[0] + 0.001;
     if (plus) plus.disabled = scale >= VC_FS_STEPS[VC_FS_STEPS.length - 1] - 0.001;
     try { localStorage.setItem('adze-vc-scale', String(scale)); } catch (e) {}
+    // Also update the live xterm.js terminal and refit so cols/rows stay accurate
+    if (_vcXterm) {
+        _vcXterm.options.fontSize = Math.round(13 * scale);
+        try { _vcXtermFit && _vcXtermFit.fit(); } catch(e) {}
+        if (_vcXtermSocket && _vcXtermSocket.connected) {
+            _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+        }
+    }
 }
 function vcFontSize(delta) {
     const current = parseFloat(
