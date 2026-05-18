@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adze"
+version = "0.1.0"
+description = "Multi-tenant static site host: compiles per-artist Markdown into HTML and serves it via domain-routed Flask, with an in-browser vibe-coder dashboard."
+requires-python = ">=3.9"
+dependencies = [
+    "Flask>=2.0.0",
+    "Flask-CORS>=4.0.0",
+    "Flask-SocketIO>=5.0.0",
+    "stripe",
+    "psutil",
+    "requests",
+    "litellm>=1.50.0",
+]
+
+[tool.gcore]

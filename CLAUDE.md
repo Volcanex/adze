@@ -44,11 +44,13 @@ hand-edit between the markers.
 | Path | Summary |
 |------|---------|
 | `_shared/CLAUDE.md` | Shared — Flask code, docs, widgets, and themes |
+| `_shared/dashboard-themes/CLAUDE.md` | dashboard-themes/ — admin dashboard color themes |
 | `_shared/features/CLAUDE.md` | Features — Site-wide capability modules |
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard-privileged Flask blueprints |
 | `artists/CLAUDE.md` | Artists — coordination with the in-browser vibe coder |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
+| `shared/CLAUDE.md` | shared/ — legacy stub, do not use |
 
-_Auto-compiled 2026-04-27 18:01 UTC — 6 doc(s) found._
+_Auto-compiled 2026-05-18 23:13 UTC — 8 doc(s) found._
 <!-- DOCS:END -->
