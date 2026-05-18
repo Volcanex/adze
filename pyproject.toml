@@ -1,0 +1,7 @@
+[project]
+name = "adze"
+version = "0.1.0"
+description = "Multi-tenant artist site hosting"
+
+[tool.gcore]
+starter = "gseed-app"
