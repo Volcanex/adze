@@ -8,8 +8,126 @@ from pathlib import Path
 from flask import request, abort
 import json
 
-# Admin token from environment — no hardcoded fallback
-DEFAULT_ADMIN_TOKEN = os.environ.get('DEV_ADMIN_TOKEN', '')
+# ── Admin identities & workspaces ─────────────────────────────────────────────
+# An admin identity has a username, a password, a display name, and a list of
+# workspaces it can see. "Workspace" tags artists/leads (default 'lastplace').
+# Gabriel is hard-coded as the super-master: access to every workspace and the
+# only identity allowed to re-scope artists between workspaces.
+
+ALL_WORKSPACES = ['personal', 'lastplace']
+DEFAULT_WORKSPACE = 'lastplace'
+
+# Hard-coded super identity. Password sourced from env so it isn't in the repo.
+_GABRIEL_PASSWORD = os.environ.get('GABRIEL_PASSWORD', '') or os.environ.get('DEV_ADMIN_TOKEN', '')
+
+# username -> {password, name, workspaces, super}
+ADMIN_IDENTITIES = {}
+if _GABRIEL_PASSWORD:
+    ADMIN_IDENTITIES['gabriel'] = {
+        'username': 'gabriel',
+        'password': _GABRIEL_PASSWORD,
+        'name': 'Gabriel',
+        'workspaces': list(ALL_WORKSPACES),
+        'super': True,
+    }
+
+# Additional identities loaded from ADMIN_IDENTITIES_JSON:
+# [{"username":"clive","password":"...","name":"Clive","workspaces":["lastplace"]}]
+_identities_json = os.environ.get('ADMIN_IDENTITIES_JSON', '').strip()
+if _identities_json:
+    try:
+        for entry in json.loads(_identities_json):
+            uname = (entry.get('username') or '').strip().lower()
+            pw = entry.get('password') or ''
+            if not uname or not pw or uname == 'gabriel':
+                continue
+            ADMIN_IDENTITIES[uname] = {
+                'username': uname,
+                'password': pw,
+                'name': entry.get('name') or uname.title(),
+                'workspaces': entry.get('workspaces') or [DEFAULT_WORKSPACE],
+                'super': bool(entry.get('super')),
+            }
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+# Legacy back-compat: DEV_ADMIN_TOKENS_EXTRA still accepted as raw passwords
+# that map to a generic "lastplace-only" identity (so existing Clive token
+# keeps working until ADMIN_IDENTITIES_JSON is wired up in .env).
+_EXTRA_ADMIN_TOKENS = {t.strip() for t in os.environ.get('DEV_ADMIN_TOKENS_EXTRA', '').split(',') if t.strip()}
+for _idx, _tok in enumerate(sorted(_EXTRA_ADMIN_TOKENS)):
+    if any(i['password'] == _tok for i in ADMIN_IDENTITIES.values()):
+        continue
+    _uname = f'legacy{_idx}'
+    ADMIN_IDENTITIES[_uname] = {
+        'username': _uname,
+        'password': _tok,
+        'name': 'Designer',
+        'workspaces': [DEFAULT_WORKSPACE],
+        'super': False,
+    }
+
+# Legacy flat token set — used by is_admin_token() so existing call sites
+# (cookies, headers) keep working without knowing about identities.
+DEFAULT_ADMIN_TOKEN = _GABRIEL_PASSWORD
+ADMIN_TOKENS = {i['password'] for i in ADMIN_IDENTITIES.values()}
+# Back-compat: keep the legacy DEV_ADMIN_TOKEN valid so existing admin
+# session cookies / saved master passwords keep working after the identity
+# refactor (resolves to the gabriel super-identity via get_identity_by_token).
+_legacy_admin = os.environ.get('DEV_ADMIN_TOKEN', '').strip()
+if _legacy_admin:
+    ADMIN_TOKENS.add(_legacy_admin)
+    if 'gabriel' in ADMIN_IDENTITIES:
+        ADMIN_IDENTITIES.setdefault('gabriel-legacy', {
+            'username': 'gabriel',
+            'password': _legacy_admin,
+            'name': 'Gabriel',
+            'workspaces': list(ALL_WORKSPACES),
+            'super': True,
+        })
+
+def is_admin_token(token):
+    """True if `token` matches any admin identity's password."""
+    return bool(token) and token in ADMIN_TOKENS
+
+def verify_admin_credentials(username, password):
+    """Return identity dict for valid (username, password), else None.
+    Username match is case-insensitive."""
+    if not username or not password:
+        return None
+    ident = ADMIN_IDENTITIES.get(username.strip().lower())
+    if ident and ident['password'] == password:
+        return ident
+    return None
+
+def get_identity_by_token(token):
+    """Return identity dict whose password matches `token`, else None.
+    Used to resolve the adze_admin_session cookie back to an identity."""
+    if not token:
+        return None
+    for ident in ADMIN_IDENTITIES.values():
+        if ident['password'] == token:
+            return ident
+    return None
+
+def current_admin_identity():
+    """Resolve the current request's admin identity from cookie/header.
+    Returns identity dict or None."""
+    token = request.headers.get('X-Admin-Token', '')
+    ident = get_identity_by_token(token)
+    if ident:
+        return ident
+    cookie = request.cookies.get('adze_admin_session', '')
+    ident = get_identity_by_token(cookie)
+    if ident:
+        return ident
+    artist_cookie = request.cookies.get('adze_session', '')
+    if artist_cookie and ':' in artist_cookie:
+        _, _, tok = artist_cookie.partition(':')
+        ident = get_identity_by_token(tok)
+        if ident:
+            return ident
+    return None
 
 def get_artist_config(artist_slug):
     """
@@ -90,7 +208,7 @@ def verify_artist_token(artist_slug, token):
         return True
 
     # Fallback to default admin token (for super admin)
-    if DEFAULT_ADMIN_TOKEN and token == DEFAULT_ADMIN_TOKEN:
+    if is_admin_token(token):
         return True
 
     return False
@@ -134,8 +252,19 @@ def get_authenticated_artist():
     if artist_slug and verify_artist_token(artist_slug, token):
         return artist_slug
 
-    # Cookie fallback (persistent browser sessions)
+    # Super-admin browser session: allow the dashboard to choose an artist
+    # with X-Artist-Slug while authenticating via the httpOnly admin cookie.
+    admin_cookie = request.cookies.get('adze_admin_session', '')
+    if artist_slug and is_admin_token(admin_cookie):
+        if get_artist_config(artist_slug):
+            return artist_slug
     session_cookie = request.cookies.get('adze_session', '')
+    if artist_slug and ':' in session_cookie:
+        _, _, session_token = session_cookie.partition(':')
+        if is_admin_token(session_token) and get_artist_config(artist_slug):
+            return artist_slug
+
+    # Cookie fallback (persistent browser sessions)
     if session_cookie and ':' in session_cookie:
         slug, _, tok = session_cookie.partition(':')
         if slug and verify_artist_token(slug, tok):

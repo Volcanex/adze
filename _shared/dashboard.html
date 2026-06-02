@@ -11,11 +11,16 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
     <!-- Phosphor icons (per design-language/project/Adze Design Language.html) -->
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
-    <!-- xterm.js terminal + Socket.IO client for the aider pty bridge -->
+    <!-- xterm.js terminal + Socket.IO client for the Claude Code pty bridge -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-webgl@0.18.0/lib/addon-webgl.min.js" defer></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+    <!-- Auto-Code chat renderer: markdown + sanitiser. Loaded sync (no defer)
+         so AutoCode init can use them without race against later <script> tags. -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <!-- Apply saved theme before first paint to prevent light→dark flash -->
     <script>if(localStorage.getItem('dashboard-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
     <style>
@@ -107,6 +112,11 @@
         .header-bar .artist-name { color: var(--accent); font-style: italic; }
         .header-actions { display: flex; gap: 5px; align-items: center; }
         .header-actions button { padding: 5px 10px; font-size: 10px; }
+        .admin-mode-banner { display: none; align-items: center; gap: 8px; padding: 4px 9px; border: 1px solid #7a6430; background: #2a2110; color: #f0d077; border-radius: 4px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
+        .admin-mode-banner.show { display: inline-flex; }
+        .admin-site-switcher { display: none; align-items: center; gap: 6px; color: var(--text2); font-size: 10px; }
+        .admin-site-switcher.show { display: inline-flex; }
+        .admin-site-switcher select { height: 25px; min-width: 150px; max-width: 230px; padding: 3px 24px 3px 8px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-family: var(--mono); font-size: 10px; }
         .btn-sm { padding: 4px 8px; font-size: 9px; }
         .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
         .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
@@ -158,8 +168,9 @@
         .work-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
         /* ── Tab Bar ── */
-        .tab-bar { display: flex; align-items: center; padding: 0 13px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 30px; gap: 2px; }
-        .tab { padding: 5px 11px; font-size: 10px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 4px 4px 0 0; border: none; background: none; transition: all 0.15s; font-family: var(--body-font); display: inline-flex; align-items: center; gap: 4px; }
+        .tab-bar { display: flex; align-items: center; padding: 0 13px; background: var(--bg2); border-bottom: 1px solid var(--border); flex-shrink: 0; height: 30px; gap: 2px; overflow: hidden; }
+        .tab { padding: 5px 11px; font-size: 10px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 4px 4px 0 0; border: none; background: none; transition: all 0.15s; font-family: var(--body-font); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0; }
+        .tab .tab-label { white-space: nowrap; }
         .tab svg, .tab-icon { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
         .tab:hover { color: var(--text); background: var(--surface); }
         .tab.active { color: var(--accent); background: var(--surface); border-bottom: 2px solid var(--accent); font-weight: 600; }
@@ -169,9 +180,6 @@
         .split-pane { display: flex; flex: 1; overflow: hidden; position: relative; }
         .editor-pane { width: 50%; min-width: 200px; display: flex; flex-direction: column; border-right: none; overflow: hidden; }
         .preview-pane { flex: 1; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        /* Terminal tab: give the terminal the full pane — no preview split */
-        #panel-claude .editor-pane { width: 100% !important; }
-        #panel-claude .pane-resizer, #panel-claude .preview-pane { display: none !important; }
 
         /* ── File Tree (Manual Edit) ── */
         .file-tree-pane { width: 220px; min-width: 140px; max-width: 400px; display: flex; flex-direction: column; background: var(--bg2); border-right: 1px solid var(--border); overflow: hidden; }
@@ -225,6 +233,303 @@
         .ai-input-bar .ai-tool-btn:hover { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
         .ai-input-bar .ai-tool-btn.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
         .ai-typing { color: var(--text2); font-size: 12px; font-style: italic; padding: 4px 14px; }
+
+        /* ── Auto-Code chat (opencode-serve client) ── */
+        .ac-chat { display:flex; flex-direction:column; flex:1; min-height:0; background:var(--bg); }
+        .ac-header {
+            display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+            padding:8px 12px; background:var(--surface);
+            border-bottom:1px solid var(--border);
+            font-size:11px; color:var(--text2); flex-shrink:0;
+        }
+        .ac-header .ac-label { color:var(--text2); }
+        .ac-header .ac-spacer { flex:1; }
+        .ac-segment {
+            display:inline-flex; border:1px solid var(--border);
+            border-radius:var(--radius); overflow:hidden;
+        }
+        .ac-seg-btn {
+            background:transparent; color:var(--text);
+            border:none; padding:4px 12px;
+            font-family:inherit; font-size:11px; font-weight:600;
+            cursor:pointer;
+        }
+        .ac-seg-btn + .ac-seg-btn { border-left:1px solid var(--border); }
+        .ac-seg-btn.active { background:var(--accent); color:var(--accent-text); }
+        .ac-model { color:var(--text2); font-size:10px; font-family:var(--mono); }
+        .ac-cost {
+            display:inline-flex; align-items:center; gap:6px;
+            background:var(--surface2); border:1px solid var(--border);
+            border-radius:999px; padding:4px 10px;
+            font-size:11px; color:var(--text2);
+        }
+        .ac-cost i { color:var(--accent); font-size:13px; }
+        .ac-cost .ac-cost-value { color:var(--accent); font-weight:600; }
+        .ac-btn {
+            display:inline-flex; align-items:center; gap:4px;
+            background:transparent; color:var(--text2);
+            border:1px solid var(--border); border-radius:var(--radius);
+            padding:4px 10px; font:inherit; font-size:11px;
+            cursor:pointer;
+        }
+        .ac-btn:hover:not(:disabled) { color:var(--text); border-color:var(--text2); }
+        .ac-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+        /* Tab strip — one tab per worktree workspace. */
+        .ac-tabs {
+            display:flex; align-items:stretch; gap:2px;
+            padding:6px 8px 0; background:var(--surface);
+            border-bottom:1px solid var(--border);
+            flex-shrink:0; overflow-x:auto;
+        }
+        .ac-tab {
+            display:inline-flex; align-items:center; gap:6px;
+            background:var(--bg2); color:var(--text2);
+            border:1px solid var(--border); border-bottom:none;
+            border-radius:var(--radius) var(--radius) 0 0;
+            padding:5px 9px 6px 11px; font:inherit; font-size:11px;
+            cursor:pointer; max-width:220px;
+            position:relative; top:1px;
+        }
+        .ac-tab.active { background:var(--bg); color:var(--text); border-bottom-color:var(--bg); }
+        .ac-tab-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px; font-weight:600; }
+        .ac-tab-branch { color:var(--text2); font-family:var(--mono); font-size:10px; opacity:0.7; }
+        .ac-tab-close { background:transparent; border:0; color:var(--text2); padding:0 2px; cursor:pointer; font-size:13px; line-height:1; }
+        .ac-tab-close:hover { color:var(--danger); }
+        .ac-tab-merge { background:transparent; border:0; color:var(--text2); padding:0 2px; cursor:pointer; font-size:13px; line-height:1; }
+        .ac-tab-merge:hover { color:var(--success); }
+        .ac-tab-new {
+            background:transparent; color:var(--text2);
+            border:1px dashed var(--border); border-bottom:none;
+            border-radius:var(--radius) var(--radius) 0 0;
+            padding:5px 12px; font:inherit; font-size:13px;
+            cursor:pointer; line-height:1;
+        }
+        .ac-tab-new:hover { color:var(--text); border-color:var(--text2); }
+        .ac-tab-new:disabled { opacity:0.4; cursor:not-allowed; }
+
+        /* Context (token-window) bar, sits between tabs and transcript. */
+        .ac-context-bar {
+            position:relative; height:5px; background:var(--surface2);
+            border-bottom:1px solid var(--border); flex-shrink:0;
+            cursor:default;
+        }
+        .ac-context-fill {
+            position:absolute; left:0; top:0; bottom:0;
+            background:var(--accent);
+            width:0%; transition:width 0.4s ease-out;
+        }
+        .ac-context-fill[data-warn="high"]   { background:var(--warn); }
+        .ac-context-fill[data-warn="crit"]   { background:var(--danger); }
+        .ac-context-label {
+            position:absolute; right:8px; top:-15px;
+            font-family:var(--mono); font-size:9px; color:var(--text2);
+            background:var(--bg); padding:0 4px; line-height:1;
+            pointer-events:none;
+        }
+
+        /* Transcript host holds one pane per tab; only the active is shown. */
+        .ac-transcript-host {
+            flex:1; min-height:0; display:flex; flex-direction:column;
+            position:relative; background:var(--bg);
+        }
+        .ac-transcript-pane { display:none; flex:1; min-height:0; }
+        .ac-transcript-pane.active { display:flex; flex-direction:column; }
+        .ac-transcript-host:has(.ac-transcript-pane .ai-msg) .ac-empty-note,
+        .ac-empty-note.dismissed { display:none; }
+
+        .ac-transcript {
+            flex:1; min-height:0; overflow-y:auto;
+            padding:14px; gap:10px;
+            background:var(--bg);
+            position:relative;
+        }
+        .ac-empty-note {
+            position:absolute; inset:0;
+            display:flex; align-items:center; justify-content:center;
+            padding:32px 28px;
+            pointer-events:none;
+        }
+        .ac-transcript:has(.ai-msg) .ac-empty-note,
+        .ac-empty-note.dismissed { display:none; }
+        .ac-empty-note-inner {
+            pointer-events:auto;
+            max-width:460px;
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:var(--radius);
+            padding:18px 22px 16px;
+            font-size:12px; line-height:1.55;
+            color:var(--text2);
+            position:relative;
+        }
+        .ac-empty-note-inner h4 {
+            margin:0 0 8px; font-size:12px; font-weight:700;
+            color:var(--text); letter-spacing:0.2px;
+        }
+        .ac-empty-note-inner ul { margin:6px 0 0; padding-left:18px; }
+        .ac-empty-note-inner li { margin:3px 0; }
+        .ac-empty-note-inner li b { color:var(--text); }
+        .ac-empty-note-close {
+            position:absolute; top:6px; right:8px;
+            background:transparent; border:0; color:var(--text2);
+            cursor:pointer; padding:4px; line-height:1;
+            font-size:14px;
+        }
+        .ac-empty-note-close:hover { color:var(--text); }
+        .ac-transcript .ai-msg { max-width:92%; font-size:12px; line-height:1.55; }
+        .ac-transcript .ai-msg.assistant { padding:10px 12px; }
+        .ac-transcript .ai-msg.assistant > :first-child { margin-top:0; }
+        .ac-transcript .ai-msg.assistant > :last-child { margin-bottom:0; }
+        .ac-transcript .ai-msg.assistant h1,
+        .ac-transcript .ai-msg.assistant h2,
+        .ac-transcript .ai-msg.assistant h3 { font-family:var(--body-font); font-size:13px; margin:8px 0 4px; font-weight:700; }
+        .ac-transcript .ai-msg.assistant p { margin:4px 0; }
+        .ac-transcript .ai-msg.assistant ul,
+        .ac-transcript .ai-msg.assistant ol { margin:4px 0 4px 18px; }
+        .ac-transcript .ai-msg.assistant pre { font-size:10px; }
+        .ac-transcript .ai-msg.assistant code { font-size:10px; }
+        .ac-transcript .ai-msg.assistant a { color:var(--accent); text-decoration:underline; }
+
+        .ac-tool {
+            align-self:stretch; max-width:none;
+            border:1px solid var(--border); border-radius:var(--radius);
+            background:var(--surface); padding:0;
+            font-size:11px;
+        }
+        .ac-tool-head {
+            display:flex; align-items:center; gap:8px;
+            padding:7px 10px;
+            cursor:pointer; color:var(--text2);
+            user-select:none;
+        }
+        .ac-tool-head:hover { color:var(--text); }
+        .ac-tool-head i { font-size:14px; }
+        .ac-tool-head .ac-tool-name { font-weight:600; color:var(--text); }
+        .ac-tool-head .ac-tool-arg { font-family:var(--mono); font-size:10px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+        .ac-tool-head .ac-tool-state { font-size:11px; flex-shrink:0; }
+        .ac-tool-head .ac-tool-state.ok { color:var(--success); }
+        .ac-tool-head .ac-tool-state.err { color:var(--danger); }
+        .ac-tool-body {
+            border-top:1px solid var(--border);
+            background:var(--bg); margin:0; padding:8px 10px;
+            font-family:var(--mono); font-size:10px;
+            max-height:280px; overflow:auto; white-space:pre-wrap; word-break:break-word;
+            display:none;
+        }
+        .ac-tool.open .ac-tool-body { display:block; }
+        .ac-reasoning .ac-tool-head { color:var(--text2); }
+        .ac-reasoning .ac-tool-head i { color:var(--accent-soft); }
+        .ac-reasoning .ac-tool-body { font-style:italic; color:var(--text2); }
+
+        .ac-perm {
+            align-self:stretch; max-width:none;
+            border:1px solid var(--warn); border-radius:var(--radius);
+            background:color-mix(in srgb, var(--warn) 14%, var(--surface));
+            padding:10px 12px;
+            display:flex; flex-direction:column; gap:8px;
+            font-size:11px;
+        }
+        .ac-perm .ac-perm-head { display:flex; align-items:center; gap:8px; color:var(--text); font-weight:600; }
+        .ac-perm .ac-perm-head i { color:var(--warn); font-size:16px; }
+        .ac-perm .ac-perm-body { color:var(--text); font-family:var(--mono); font-size:10px; white-space:pre-wrap; word-break:break-word; }
+        .ac-perm .ac-perm-actions { display:flex; gap:6px; flex-wrap:wrap; }
+        .ac-perm button {
+            border:1px solid transparent; border-radius:var(--radius);
+            padding:5px 12px; font:inherit; font-size:11px; font-weight:600; cursor:pointer;
+        }
+        .ac-perm .ac-perm-ok { background:var(--success); color:#fff; }
+        .ac-perm .ac-perm-always { background:transparent; color:var(--text); border-color:var(--border); }
+        .ac-perm .ac-perm-deny { background:transparent; color:var(--danger); border-color:var(--danger); }
+        .ac-perm.resolved { opacity:0.55; }
+        .ac-perm.resolved button { display:none; }
+
+        .ac-status {
+            display:flex; align-items:center; gap:8px;
+            padding:5px 12px; font-size:10px; color:var(--text2);
+            border-top:1px solid var(--border); background:var(--surface);
+            flex-shrink:0;
+        }
+        .ac-led { width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--text2); }
+        .ac-led[data-state="connecting"] { background:var(--warn); animation:ac-pulse 1.2s infinite; }
+        .ac-led[data-state="thinking"]   { background:var(--accent); animation:ac-pulse 1.2s infinite; }
+        .ac-led[data-state="tool"]       { background:var(--accent); }
+        .ac-led[data-state="error"]      { background:var(--danger); }
+        @keyframes ac-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+        .ac-thinking {
+            align-self:flex-start;
+            display:inline-flex; align-items:center; gap:6px;
+            padding:8px 12px;
+            background:var(--surface2); color:var(--text2);
+            border-radius:var(--radius);
+            font-size:11px;
+        }
+        .ac-thinking-dots { display:inline-flex; gap:3px; }
+        .ac-thinking-dots span {
+            width:5px; height:5px; border-radius:50%;
+            background:var(--accent); opacity:0.4;
+            animation:ac-bounce 1.2s infinite ease-in-out;
+        }
+        .ac-thinking-dots span:nth-child(2) { animation-delay:0.15s; }
+        .ac-thinking-dots span:nth-child(3) { animation-delay:0.3s; }
+        @keyframes ac-bounce {
+            0%,80%,100% { opacity:0.3; transform:translateY(0); }
+            40% { opacity:1; transform:translateY(-3px); }
+        }
+
+        .ac-composer {
+            display:flex; gap:8px; align-items:flex-end;
+            padding:10px 12px;
+            border-top:1px solid var(--border); background:var(--surface);
+            flex-shrink:0;
+        }
+        .ac-composer textarea {
+            flex:1; resize:none;
+            min-height:34px; max-height:240px;
+            border:1px solid var(--border); border-radius:var(--radius);
+            background:var(--bg); color:var(--text);
+            padding:8px 10px;
+            font-family:var(--body-font); font-size:12px; line-height:1.45;
+        }
+        .ac-composer textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(28,79,130,0.12); }
+        [data-theme="dark"] .ac-composer textarea:focus { box-shadow:0 0 0 3px rgba(153,205,255,0.18); }
+        .ac-send {
+            background:var(--accent); color:var(--accent-text);
+            border:none; border-radius:var(--radius);
+            padding:8px 14px; cursor:pointer;
+            display:inline-flex; align-items:center; gap:6px;
+            font-family:inherit; font-size:12px; font-weight:600;
+        }
+        .ac-send:hover:not(:disabled) { background:var(--accent-hover); }
+        .ac-send:disabled { opacity:0.4; cursor:not-allowed; }
+
+        .ac-transcript .ai-msg.user.queued {
+            opacity:0.55;
+            position:relative;
+            border:1px dashed rgba(255,255,255,0.25);
+        }
+        .ac-transcript .ai-msg.user.queued::after {
+            content:"queued";
+            position:absolute; bottom:-14px; right:0;
+            font-size:9px; color:var(--text2); font-weight:600; letter-spacing:0.5px;
+            text-transform:uppercase;
+        }
+
+        .ac-composer-tools { display:flex; gap:4px; align-items:center; }
+        .ac-tool-btn {
+            background:transparent; color:var(--text2);
+            border:1px solid var(--border); border-radius:var(--radius);
+            width:34px; height:34px;
+            display:inline-flex; align-items:center; justify-content:center;
+            cursor:pointer; font-size:16px;
+        }
+        .ac-tool-btn:hover { color:var(--text); border-color:var(--text2); }
+        .ac-tool-btn.active { background:var(--accent); color:var(--accent-text); border-color:var(--accent); }
+
+        .ac-chat :where(button,textarea,[role="button"]):focus-visible {
+            outline:2px solid var(--accent); outline-offset:2px;
+        }
 
         /* AI Asset Modal */
         .ai-asset-modal .modal-content { max-width: 720px; height: 85vh; display: flex; flex-direction: column; width: calc(100% - 32px); overflow: hidden; }
@@ -417,12 +722,61 @@
         .assets-toolbar .select-toggle { font-size: 11px; padding: 4px 10px; }
         .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 16px; cursor: pointer; transition: border-color 0.2s; }
         .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); }
+        .dh-link-add { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; }
+        .dh-link-add i { font-size: 16px; color: var(--text2); flex-shrink: 0; }
+        .dh-link-add input { flex: 1; border: 0; background: transparent; color: var(--text); font-size: 13px; outline: none; min-width: 0; }
+        .dh-link-add button { flex-shrink: 0; }
         .upload-zone p { color: var(--text2); font-size: 13px; margin-bottom: 8px; }
         .upload-zone input { display: none; }
         .asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
         .asset-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; cursor: pointer; border: 2px solid var(--border); transition: all 0.15s; box-shadow: var(--shadow-sm); position: relative; }
         .asset-card:hover { border-color: var(--accent); }
         .asset-card.selected { border-color: var(--accent); background: rgba(28,79,130,0.08); }
+        /* Selection is the default tap target — always-visible check. */
+        .asset-check {
+            position: absolute; top: 6px; left: 6px; z-index: 4;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--surface); border: 1.5px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px; color: var(--text);
+            pointer-events: none;
+        }
+        .asset-card.selected .asset-check { background: var(--accent); color: #fff; border-color: var(--accent); }
+        /* View button — explicit affordance to open the lightbox. */
+        .asset-view {
+            position: absolute; top: 6px; right: 6px; z-index: 4;
+            width: 24px; height: 24px; border-radius: 50%;
+            background: rgba(0,0,0,0.55); color: #fff; border: 0;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; transition: opacity 0.12s, background 0.12s;
+            font-size: 13px;
+        }
+        .asset-card:hover .asset-view { opacity: 1; }
+        .asset-view:hover { background: var(--text); }
+
+        /* Labels bar — dashboard side */
+        .dh-labels-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; min-height: 24px; }
+        .dh-labels-bar:empty { display: none; }
+        .dh-labels-title { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+        .dh-label-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 3px 3px 10px; border-radius: 999px; font-size: 11px; color: #fff; font-weight: 500; cursor: pointer; border: 2px solid transparent; transition: transform 0.12s, box-shadow 0.12s; user-select: none; }
+        .dh-label-pill:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.12); }
+        .dh-label-pill.is-filter { border-color: var(--text); }
+        .dh-label-count { opacity: 0.85; font-size: 9px; background: rgba(255,255,255,0.22); padding: 1px 6px; border-radius: 999px; }
+        .dh-label-x { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: rgba(0,0,0,0.18); color: #fff; font-size: 9px; opacity: 0; transition: opacity 0.12s; }
+        .dh-label-pill:hover .dh-label-x { opacity: 1; }
+        .dh-label-x:hover { background: rgba(0,0,0,0.4); }
+        .dh-label-add { padding: 3px 10px; border-radius: 999px; font-size: 11px; background: transparent; border: 1px dashed var(--border); color: var(--text2); cursor: pointer; }
+        .dh-label-add:hover { color: var(--text); border-color: var(--text); border-style: solid; }
+
+        /* Stickers on asset cards */
+        .dh-sticker-stack { position: absolute; top: 6px; right: 6px; z-index: 2; display: flex; flex-direction: column; gap: 3px; align-items: flex-end; pointer-events: none; }
+        .dh-sticker { padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 600; color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.18); white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; transform-origin: center; }
+        @keyframes dh-sticker-pop {
+            0%   { transform: scale(0) rotate(-25deg); opacity: 0; }
+            60%  { transform: scale(1.2) rotate(8deg); opacity: 1; }
+            100% { transform: scale(1) rotate(var(--rot, -4deg)); opacity: 1; }
+        }
+        .dh-sticker.is-new { animation: dh-sticker-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1); }
         .asset-card img { width: 100%; height: 80px; object-fit: cover; display: block; background: var(--bg); }
         .asset-card .file-icon { width: 100%; height: 80px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--bg); }
         .asset-card-info { padding: 6px 8px 2px; }
@@ -524,7 +878,7 @@
 
         .unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: none; margin-left: 6px; box-shadow: 0 0 6px rgba(200,168,64,0.4); }
 
-        /* ── Vibe Coder Terminal ──────────────────────────────────────────
+        /* ── Terminal Access Terminal ──────────────────────────────────────────
            This pane runs always-dark even in light dashboard mode. Tokens
            below scope locally so children can use var(--…) and stay aligned
            with /design-language/project/Adze Design Language.html. */
@@ -621,7 +975,7 @@
         .claude-popover .pop-item .pop-name { font-family: var(--mono); font-weight: 600; color: var(--text); }
         .claude-popover .pop-item .pop-desc { font-size: 10px; color: var(--text2); margin-left: auto; opacity: 0.75; }
         .claude-popover .pop-empty { padding: 10px; font-size: 11px; color: var(--text2); font-style: italic; text-align: center; opacity: 0.6; }
-        /* Vibe Coder presence badge — shown when another browser tab is editing the same artist */
+        /* Terminal Access presence badge — shown when another browser tab is editing the same artist */
         .vibe-presence-badge { display: none; align-items: center; gap: 8px; padding: 6px 10px; background: #2a2a1e; border-top: 1px solid #5c5230; color: #d9c78a; font-size: 11px; flex-shrink: 0; }
         .vibe-presence-badge.show { display: flex; }
         .vibe-presence-badge .vp-dot { width: 6px; height: 6px; border-radius: 50%; background: #d9c78a; flex-shrink: 0; box-shadow: 0 0 0 0 rgba(217,199,138,0.6); animation: vpPulse 2s ease-in-out infinite; }
@@ -1023,7 +1377,7 @@
             <span></span>
         </button>
         <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay" onclick="closeMobileSidebar()"></div>
-        <button class="mobile-preview-toggle" id="mobilePreviewToggle" onclick="toggleMobilePreview()">
+        <button class="mobile-preview-toggle show-mobile" id="mobilePreviewToggle" onclick="toggleMobilePreview()">
             <span id="previewToggleText">Preview</span>
         </button>
 
@@ -1036,6 +1390,11 @@
                 <span class="welcome-text" style="font-family:'Cardo',Georgia,serif;color:var(--text2);font-size:11px;margin-left:5px;">Welcome back, <span id="artistName" style="color:var(--text2);"></span></span>
             </div>
             <div class="header-actions">
+                <span class="admin-mode-banner" id="adminModeBanner">Admin Mode</span>
+                <label class="admin-site-switcher" id="adminSiteSwitcher">
+                    <span>Site</span>
+                    <select id="adminArtistSelect" onchange="switchAdminArtist(this.value)"></select>
+                </label>
                 <span class="unsaved-dot" id="unsavedDot" title="Unsaved changes"></span>
                 <span id="lastSavedLabel" style="font-size:10px;color:var(--text2);opacity:0.7;"></span>
                 <button onclick="savePage()" id="saveBtn" disabled>Save</button>
@@ -1072,7 +1431,8 @@
                 <!-- Tab bar -->
                 <div class="tab-bar" id="tabBar" style="display:none;">
                     <button class="tab" data-tab="edit" onclick="switchTab('edit', this)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="tab-label">Manual Edit</span></button>
-                    <button class="tab active" data-tab="claude" onclick="switchTab('claude', this)"><img src="/api/adze/logo.png" alt="" class="adze-logo" style="height:10px;width:auto;vertical-align:middle;margin-right:2px;position:relative;top:-1px;"><span class="tab-label">Coder</span></button>
+                    <button class="tab" data-tab="claude" onclick="switchTab('claude', this)"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="tab-label">Terminal</span></button>
+                    <button class="tab active" data-tab="autocode" onclick="switchTab('autocode', this)"><img src="/api/adze/logo.png" alt="" class="adze-logo" style="height:10px;width:auto;vertical-align:middle;margin-right:2px;position:relative;top:-1px;"><span class="tab-label">Auto-Code</span></button>
                     <button class="tab" data-tab="config" onclick="switchTab('config', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="tab-label">Settings</span></button>
                     <button class="tab" data-tab="styles" onclick="switchTab('styles', this)"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg><span class="tab-label">Styles</span></button>
                     <button class="tab" data-tab="assets" onclick="switchTab('assets', this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span class="tab-label">Assets</span></button>
@@ -1186,30 +1546,30 @@
                 </div>
 
                 <!-- Claude Terminal Tab -->
-                <div class="tab-panel active" id="panel-claude">
+                <div class="tab-panel" id="panel-claude">
                     <div class="split-pane">
                         <div class="editor-pane" id="claudeEditorPane">
                             <div class="claude-terminal" id="claudeTerminal">
-                                <div class="vc-fs-controls" role="group" aria-label="Vibe Coder text size">
+                                <div class="vc-fs-controls" role="group" aria-label="Terminal Access text size">
                                     <button type="button" onclick="vcFontSize(-1)" id="vcFsMinus" title="Smaller text" aria-label="Decrease text size">A−</button>
                                     <span class="vc-fs-label" id="vcFsLabel">100%</span>
                                     <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
                                 </div>
-                                <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;background:#1a1a1e;min-height:0;position:relative;">
-                                    <div id="vcXtermHost" style="position:absolute;inset:10px;background:#1a1a1e;">
+                                <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;background:#1a1a1e;min-height:0;display:flex;flex-direction:column;">
+                                    <div id="vcXtermHost" style="flex:1;min-height:0;min-width:0;overflow:hidden;background:#1a1a1e;position:relative;">
                                         <div id="vcXtermBoot" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5a5750;font-family:Menlo,Monaco,monospace;font-size:11px;opacity:0.5;">
                                             <span class="vc-boot-dot"></span>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="claude-term-tools" id="claudeToolsRow" style="display:flex;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
-                                    <button class="claude-tool-btn" onclick="vcInsertAssetIntoAider()" title="Pick an asset to inject its path"><i class="ph ph-image"></i> Asset</button>
+                                    <button class="claude-tool-btn" onclick="vcInsertAssetIntoTerminal()" title="Pick an asset to inject its path"><i class="ph ph-image"></i> Asset</button>
                                     <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview"><i class="ph ph-cursor"></i> Pointer</button>
-                                    <button class="claude-tool-btn" onclick="vcAiderClear()" title="Clear aider's chat history (/clear)"><i class="ph ph-broom"></i> Clear</button>
+                                    <button class="claude-tool-btn" onclick="vcTerminalClear()" title="Clear Claude Code chat history (/clear)"><i class="ph ph-broom"></i> Clear</button>
                                 </div>
                                 <div class="vibe-presence-badge" id="vibePresenceBadge" role="status">
                                     <span class="vp-dot"></span>
-                                    <span class="vp-msg" id="vibePresenceMsg">Someone else is editing this site.</span>
+                                    <span class="vp-msg" id="vibePresenceMsg">Another tab is attached to this terminal.</span>
                                     <button type="button" class="vp-takeover" onclick="vibeTakeover()">Take over</button>
                                 </div>
                                 <div class="claude-term-input-bar" style="display:none;">
@@ -1222,7 +1582,7 @@
                                     </span>
                                     <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools" aria-label="Tools"><i class="ph ph-plus"></i></button>
                                     <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn" aria-label="Send"><i class="ph ph-paper-plane-tilt"></i></button>
-                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop the Vibe Coder" aria-label="Stop"><i class="ph ph-stop"></i></button>
+                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop Terminal" aria-label="Stop"><i class="ph ph-stop"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -1239,13 +1599,99 @@
                             <div id="previewErrorBar" style="display:none;background:#2d1b1b;border-bottom:1px solid #5a2d2d;padding:6px 12px;font-size:12px;color:#e8a0a0;flex-shrink:0;align-items:center;gap:8px;">
                                 <span id="previewErrorCount" style="font-weight:600;"></span>
                                 <span id="previewErrorSummary" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c88;"></span>
-                                <button onclick="sendErrorsToVibeCoder()" style="background:#1C4F82;color:#fff;border:none;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">Send to Vibe Coder</button>
                                 <button onclick="dismissErrors()" style="background:none;border:none;color:#886;cursor:pointer;font-size:14px;padding:2px 4px;">✕</button>
                             </div>
                             <iframe id="previewFrameClaude" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
                             <div class="pointer-overlay" id="claudePointerOverlay"></div>
                             <div class="pointer-highlight" id="claudePointerHighlight" style="display:none;"></div>
                             <div class="pointer-label" id="claudePointerLabel" style="display:none;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Code Tab — custom chat client over opencode serve
+                     (HTTP+SSE proxied through /api/adze/autocode). -->
+                <div class="tab-panel active" id="panel-autocode">
+                    <div class="split-pane">
+                        <div class="editor-pane" id="autocodeEditorPane">
+                            <div class="ac-chat" id="acChat">
+                                <div class="ac-header">
+                                    <!-- Mode selector hidden for now — we default to standardplus
+                                         (anthropic/claude-haiku-4.5:thinking) only. Leave the markup here
+                                         so the other tiers can be re-enabled later.
+                                    <span class="ac-label">Mode</span>
+                                    <div class="ac-segment" role="group" aria-label="Auto-Code mode">
+                                        <button type="button" id="acModeStandard" class="ac-seg-btn" onclick="AutoCode.setMode('standard')" title="Nippy and competent. Claude Haiku 4.5, no thinking.">Standard</button>
+                                        <button type="button" id="acModeStandardPlus" class="ac-seg-btn active" onclick="AutoCode.setMode('standardplus')" title="Sweet spot — Haiku with extended thinking. Slower than Standard but smarter, and more cost-efficient than Smart.">Standard+</button>
+                                        <button type="button" id="acModeSmart" class="ac-seg-btn" onclick="AutoCode.setMode('smart')" title="Fixes problems fast. Claude Sonnet 4.5, no thinking.">Smart</button>
+                                        <button type="button" id="acModeSmartPlus" class="ac-seg-btn" onclick="AutoCode.setMode('smartplus')" title="For problems the others can't handle. Sonnet 4.5 with extended thinking — slowest, smartest. + models think: slower but smarter and more cost-efficient than the next tier up.">Smart+</button>
+                                    </div>
+                                    -->
+                                    <span class="ac-model" id="acModelLabel">anthropic/claude-haiku-4.5:thinking</span>
+                                    <span class="ac-spacer"></span>
+                                    <span class="ac-cost" title="Spend on this Auto-Code session (sum of completed assistant turns)">
+                                        <i class="ph ph-currency-dollar"></i>
+                                        <span>session</span>
+                                        <span class="ac-cost-value" id="acCostValue">$0.0000</span>
+                                    </span>
+                                    <button type="button" class="ac-btn" id="acAbortBtn" onclick="AutoCode.abort()" disabled title="Stop the model mid-stream"><i class="ph ph-stop-circle"></i> Abort</button>
+                                    <button type="button" class="ac-btn" onclick="AutoCode.restart()" title="End this conversation and start a new one"><i class="ph ph-arrow-clockwise"></i> Restart</button>
+                                </div>
+                                <div class="ac-tabs" id="acTabs" role="tablist"></div>
+                                <div class="ac-context-bar" id="acContextBar" title="Context window usage for the active tab">
+                                    <div class="ac-context-fill" id="acContextFill"></div>
+                                    <span class="ac-context-label" id="acContextLabel"></span>
+                                </div>
+                                <div class="ac-transcript-host" id="acTranscriptHost">
+                                    <div class="ac-empty-note" id="acEmptyNote">
+                                        <div class="ac-empty-note-inner">
+                                            <button type="button" class="ac-empty-note-close" onclick="AutoCode.dismissNote()" title="Dismiss" aria-label="Dismiss">✕</button>
+                                            <h4>Auto-Coder v3.2</h4>
+                                            <ul>
+                                                <li>Added Anthropic models.</li>
+                                                <li>Removed Qwen.</li>
+                                                <li>Added tabs.</li>
+                                                <li>Added worktrees.</li>
+                                                <li>Added context bar.</li>
+                                            </ul>
+                                            <h4 style="margin-top:14px;">Note to Clive</h4>
+                                            <p>Smart &amp; Smart+ use a good chunk more money. The <b>+</b> models think — slower, but smarter and more cost-efficient than the next tier up.</p>
+                                            <ul>
+                                                <li><b>Standard</b> — nippy and still competent.</li>
+                                                <li><b>Standard+</b> — the sweet spot, but slower.</li>
+                                                <li><b>Smart</b> — fixes problems fast.</li>
+                                                <li><b>Smart+</b> — for the ones the others can't handle. Slowest.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="ac-status">
+                                    <span class="ac-led" id="acStatusLed" data-state="idle"></span>
+                                    <span id="acStatusText">idle</span>
+                                </div>
+                                <div class="ac-composer">
+                                    <div class="ac-composer-tools">
+                                        <button type="button" class="ac-tool-btn" id="acPointerBtn" onclick="toggleAcPointer()" title="Pick an element on the preview"><i class="ph ph-cursor"></i></button>
+                                        <button type="button" class="ac-tool-btn" onclick="openAcAssetModal()" title="Insert an asset path"><i class="ph ph-image-square"></i></button>
+                                    </div>
+                                    <textarea id="acInput" rows="1"></textarea>
+                                    <button type="button" class="ac-send" onclick="AutoCode.send()" id="acSendBtn"><i class="ph ph-paper-plane-tilt"></i> Send</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pane-resizer" data-target="autocodeEditorPane"></div>
+                        <div class="preview-pane">
+                            <div class="pane-header">
+                                <span>Preview</span>
+                                <div class="pane-actions">
+                                    <button class="btn-sm btn-ghost" onclick="refreshPreview()" title="Reload preview from server">↻ Refresh</button>
+                                    <button class="btn-sm btn-ghost" onclick="toggleFullscreen()">Fullscreen</button>
+                                </div>
+                            </div>
+                            <iframe id="previewFrameAutocode" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+                            <div class="pointer-overlay" id="acPointerOverlay"></div>
+                            <div class="pointer-highlight" id="acPointerHighlight" style="display:none;"></div>
+                            <div class="pointer-label" id="acPointerLabel" style="display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -1327,19 +1773,25 @@
                     <div class="split-pane">
                         <div class="editor-pane" id="assetsEditorPane" style="overflow-y:auto;">
                             <div class="assets-panel">
-                                <div class="assets-toolbar">
-                                    <button class="btn-sm btn-ghost select-toggle" id="assetSelectToggle" onclick="toggleAssetSelectMode()">Select</button>
-                                </div>
                                 <div class="upload-zone" id="uploadZone" onclick="document.getElementById('assetFileInput').click()">
                                     <p>Drop files here or click to upload</p>
                                     <button class="btn-sm">Choose Files</button>
                                     <input type="file" id="assetFileInput" multiple>
                                 </div>
+                                <div class="dh-link-add">
+                                    <i class="ph ph-link"></i>
+                                    <input type="url" id="dhLinkInput" placeholder="Or paste a link (Vimeo, Instagram, Drive…) to save it as an asset"
+                                           onkeydown="if(event.key==='Enter'){event.preventDefault();dhAddLink();}">
+                                    <button class="btn-sm" id="dhLinkBtn" onclick="dhAddLink()">Add link</button>
+                                </div>
+                                <div class="dh-labels-bar" id="dhLabelsBar"></div>
                                 <div class="asset-grid" id="assetGrid"></div>
                                 <div class="asset-selection-bar" id="assetSelectionBar">
                                     <span id="assetSelectionCount">0 selected</span>
-                                    <div style="display:flex;gap:8px;">
-                                        <button onclick="sendSelectedToVibeCoder()">Send to Vibe Coder</button>
+                                    <div style="display:flex;gap:8px;align-items:center">
+                                        <span style="font-size:11px;color:var(--text2)">Pick a label to apply →</span>
+                                        <button class="btn-sm btn-ghost" onclick="dhClearSelection()">Clear</button>
+                                        <button class="btn-sm btn-ghost" onclick="dhDownloadSelected()">Download</button>
                                         <button class="danger" onclick="deleteSelectedAssets()">Delete</button>
                                     </div>
                                 </div>
@@ -1378,7 +1830,7 @@
                                 <div class="snapshot-actions">
                                     <button onclick="createServerSnapshot()">Save Snapshot</button>
                                 </div>
-                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. The latest <em>Save</em> is always kept as a one-step <strong>autosave</strong> (pinned at the top). Named snapshots roll over after 10. A snapshot is also auto-created before each new Vibe Coder session.</p>
+                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. The latest <em>Save</em> is always kept as a one-step <strong>autosave</strong> (pinned at the top). Named snapshots roll over after 10. A snapshot is also auto-created before each new Terminal Access session.</p>
                                 <ul class="snapshot-list" id="snapshotList"></ul>
                             </div>
                         </div>
@@ -1621,7 +2073,7 @@
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Vibe Coder takeover overlay — shown when another tab has taken the session -->
+    <!-- Terminal Access takeover overlay — shown when another tab has taken the session -->
     <div class="vibe-takeover-overlay" id="vibeTakeoverOverlay" role="dialog" aria-modal="true">
         <div class="vto-box">
             <h3>Session taken over</h3>
@@ -1700,6 +2152,8 @@
 <script>
 // ── State ──
 let currentArtist = null, currentToken = null, currentPage = null, pages = [];
+let isAdminMode = false;
+let adminArtists = [];
 let assetList = [];
 let artistConfig = null;
 let hasUnsavedChanges = false;
@@ -1879,6 +2333,7 @@ async function login(slug, token) {
         if (r.ok) {
             const info = await r.json();
             currentArtist = info.slug; currentToken = token;
+            isAdminMode = !!info.is_admin;
             _initDashboard(info);
         } else { showLoginError('Invalid credentials'); }
     } catch(e) { showLoginError('Login failed: ' + e.message); }
@@ -1886,6 +2341,8 @@ async function login(slug, token) {
 
 function _initDashboard(info) {
     artistConfig = info.config || {};
+    isAdminMode = !!info.is_admin;
+    renderAdminMode();
     applyDashboardOverrides(artistConfig);
     // Detect external (remote Seed) artists. The dashboard adapts the preview
     // iframe and the default-hidden tab list when this flag is present.
@@ -1909,24 +2366,57 @@ function _initDashboard(info) {
     loadDefaultStylesForPreview();
     loadArtistFiles();
     startVibePresence();
-    // Vibe Coder is the initial active tab; switchTab won't fire on first load,
-    // so kick the aider terminal init manually now that currentArtist is set.
-    vcInitAiderTerminal();
+    // Auto-Code is the initial active tab; switchTab won't fire on first
+    // load, so kick the chat init manually now that currentArtist is set.
+    AutoCode.init();
     requestAnimationFrame(() => requestAnimationFrame(() => {
         dash.classList.add('faded-in');
     }));
 }
 
-// ── Vibe Coder presence (per browser-tab awareness) ──────────────────────────
-// Each tab heartbeats to the server so we can warn when two tabs are editing
-// the same artist. "Take over" bumps the epoch and kicks the other tabs.
+function renderAdminMode() {
+    document.getElementById('adminModeBanner')?.classList.toggle('show', isAdminMode);
+    document.getElementById('adminSiteSwitcher')?.classList.toggle('show', isAdminMode);
+    if (isAdminMode) loadAdminArtists();
+}
+
+async function loadAdminArtists() {
+    try {
+        const r = await apiFetch('/api/adze/admin/artists');
+        if (!r.ok) return;
+        const data = await r.json();
+        adminArtists = data.artists || [];
+        const sel = document.getElementById('adminArtistSelect');
+        if (!sel) return;
+        sel.innerHTML = adminArtists.map(a => {
+            const label = `${a.name || a.slug} (${a.slug})`;
+            return `<option value="${escHtml(a.slug)}"${a.slug === currentArtist ? ' selected' : ''}>${escHtml(label)}</option>`;
+        }).join('');
+    } catch(e) {}
+}
+
+function switchAdminArtist(slug) {
+    if (!slug || slug === currentArtist) return;
+    if (hasUnsavedChanges && !confirm('You have unsaved changes. Switch sites anyway?')) {
+        const sel = document.getElementById('adminArtistSelect');
+        if (sel) sel.value = currentArtist;
+        return;
+    }
+    const url = new URL(location.href);
+    url.searchParams.set('slug', slug);
+    location.href = url.pathname + url.search;
+}
+
+// ── Terminal Access presence (per browser-tab awareness) ──────────────────────────
+// Each tab heartbeats to the server so we can warn when two tabs are attached
+// to the same artist terminal. "Take over" makes this tab the primary presence
+// owner, but does not kick the other tab; tmux is shared and attachable.
 // SSH / direct filesystem edits are intentionally invisible here.
 const vibeTabId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
-let vibeKicked = false;
 let _vibePresenceTimer = null;
 
 async function _vibeHeartbeat() {
-    if (!currentArtist || vibeKicked) return;
+    if (!currentArtist) return;
     try {
         const r = await apiFetch('/api/adze/vibe-presence/heartbeat', {
             method: 'POST',
@@ -1934,12 +2424,6 @@ async function _vibeHeartbeat() {
         });
         if (!r.ok) return;
         const data = await r.json();
-        if (data.kicked) {
-            vibeKicked = true;
-            document.getElementById('vibeTakeoverOverlay').classList.add('show');
-            if (_vibePresenceTimer) { clearInterval(_vibePresenceTimer); _vibePresenceTimer = null; }
-            return;
-        }
         const badge = document.getElementById('vibePresenceBadge');
         if (!badge) return;
         if (data.others && data.others.length > 0) {
@@ -1964,21 +2448,20 @@ async function vibeTakeover() {
             body: { tab_id: vibeTabId },
         });
         if (!r.ok) { toast('Take over failed', 'error'); return; }
-        const data = await r.json();
-        vibeKnownEpoch = data.epoch;
+        await r.json();
         document.getElementById('vibePresenceBadge').classList.remove('show');
-        toast('You took over this session', 'info');
+        toast('You are now the primary terminal tab', 'info');
     } catch (e) {
         toast('Take over failed: ' + e.message, 'error');
     }
 }
 
 // External (remote Seed) artists default to a stripped-down dashboard:
-// only the Vibe Coder, Pages, Preview, and Settings tabs make sense without
+// only the Terminal Access, Pages, Preview, and Settings tabs make sense without
 // the Adze-side machinery (assets pipeline, snapshots, marketplace, etc.).
 // The artist can still un-hide individual tabs by setting
 // config.dashboard.hidden_widgets explicitly.
-// Visible by default for external artists: 'claude' (Vibe Coder), 'edit'
+// Visible by default for external artists: 'claude' (Terminal Access), 'edit'
 // (Manual Edit / pages), 'config' (Settings). The Preview iframe lives
 // inside those tabs, not as a separate tab. Everything else is Adze-side
 // machinery that doesn't apply to a remote Seed deployment.
@@ -2027,10 +2510,12 @@ function showLoginError(msg) { const el = document.getElementById('loginError');
 // Auto-login from session cookie — show body once we know which screen to show
 (async () => {
     try {
-        const r = await fetch('/api/adze/whoami');
+        const requestedSlug = new URLSearchParams(location.search).get('slug') || '';
+        const headers = requestedSlug ? { 'X-Artist-Slug': requestedSlug } : {};
+        const r = await fetch('/api/adze/whoami', { headers });
         if (r.ok) {
             const info = await r.json();
-            if (info.ok) { currentArtist = info.slug; currentToken = ''; _initDashboard(info); return; }
+            if (info.ok) { currentArtist = info.slug; currentToken = ''; isAdminMode = !!info.is_admin; _initDashboard(info); return; }
         }
     } catch(e) {}
     // No session — login screen is already visible
@@ -2067,7 +2552,7 @@ let currentWidget = null;    // currently editing in widget editor mode
 let sidebarMode = 'pages';   // kept for compat; sidebar now shows both sections always
 let _mpData = null;          // cached marketplace data
 let _widgetPreviewDebounce = null;
-// Vibe Coder addon registry — populated exclusively by widget closures via ctx.registerVibeAddon()
+// Terminal Access addon registry — populated exclusively by widget closures via ctx.registerVibeAddon()
 // A vibe addon cannot exist without a widget; it is an arm of the widget that registers it.
 // When a widget is unloaded/replaced, its addon stays until the page reloads (acceptable).
 const vibeAddons = {};       // id → { id, label, pick() }
@@ -2388,7 +2873,7 @@ function openWidgetEditor(w) {
         document.getElementById('jsEditorAutoSaveLabel').textContent = '';
     }
 
-    // Switch to vibe coder tab and show widget preview
+    // Switch to Terminal Access tab and show widget preview
     switchTab('claude');
     setUnsaved(false);
     scheduleWidgetPreview(0);
@@ -2497,8 +2982,8 @@ function updateWidgetPreview() {
     if (!currentWidget) return;
     const jsCode = document.getElementById('jsEditor').value;
     const srcdoc = _buildWidgetPreviewSrcdoc(currentWidget.name, jsCode);
-    // Push to edit-tab preview AND vibe coder preview so both stay in sync
-    ['previewFrame', 'previewFrameClaude'].forEach(id => {
+    // Push to edit-tab preview AND Terminal Access preview so both stay in sync
+    ['previewFrame', 'previewFrameClaude', 'previewFrameAutocode'].forEach(id => {
         const f = document.getElementById(id);
         if (f) f.srcdoc = srcdoc;
     });
@@ -2843,7 +3328,7 @@ async function loadStylesTab() {
     _stylesVars = _parseRootVars(_stylesCss);
 
     if (!_stylesVars.length) {
-        editor.innerHTML = '<p style="color:var(--text2);font-size:13px;">No CSS custom properties found. Use the Vibe Coder to create your site first — it will generate default styles automatically.</p>';
+        editor.innerHTML = '<p style="color:var(--text2);font-size:13px;">No CSS custom properties found. Use the Terminal Access to create your site first — it will generate default styles automatically.</p>';
         return;
     }
 
@@ -3330,7 +3815,7 @@ function renderApiEndpoints() {
         html += `<div class="api-empty-custom">
             <p style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">No custom features yet</p>
             <p>Features like bookings, print shops, or custom tools can be added using this. These are the tendons of the site.</p>
-            <p style="margin-top:4px;">Also I can make custom dashboard components pretty easily for you that can call these API endpoints. So say you had a booking system, you could see it visually on the dashboard. But this is further embedded in the dashboard infrastructure, which is separate from your site (which is sandboxed). So you can't do it all from the Vibe Coder. I might change this later.</p>
+            <p style="margin-top:4px;">Also I can make custom dashboard components pretty easily for you that can call these API endpoints. So say you had a booking system, you could see it visually on the dashboard. But this is further embedded in the dashboard infrastructure, which is separate from your site (which is sandboxed). So you can't do it all from the Terminal Access. I might change this later.</p>
         </div>`;
     }
 
@@ -3460,8 +3945,9 @@ function switchTab(tab, btn) {
         if (tab === 'share') loadShareTab();
         if (tab === 'marketplace') loadMarketplaceTab();
         if (tab === 'styles') loadStylesTab();
-        if (tab === 'claude') vcInitAiderTerminal();
-        // Keep widget editor state when switching to vibe coder (preview stays as widget)
+        if (tab === 'claude') vcInitTerminal();
+        if (tab === 'autocode') AutoCode.init();
+        // Keep widget editor state when switching to Terminal Access (preview stays as widget)
         // Exit widget editor for all other tabs
         if (tab !== 'edit' && tab !== 'claude') exitWidgetEditorMode();
     } catch(e) {
@@ -3478,7 +3964,7 @@ function switchTab(tab, btn) {
         } else {
             toggleBtn.classList.remove('show-mobile');
         }
-        // Elevate button on Vibe Coder tab to avoid covering controls
+        // Elevate button on Terminal Access tab to avoid covering controls
         if (tab === 'claude') {
             toggleBtn.classList.add('elevated');
         } else {
@@ -3537,13 +4023,17 @@ async function loadPage(slug, clickedEl) {
         // Only force a tab on first-ever page load. If the user is already
         // working in Manual Edit (or any other tab), don't yank them away.
         if (!document.querySelector('.tab-panel.active')) {
-            switchTab('claude');
+            switchTab('autocode');
         }
 
         // Parse content into CSS + HTML
         const { css, html } = parseContent(data.content);
         document.getElementById('cssEditor').value = css;
         document.getElementById('htmlEditor').value = html;
+
+        // If a local draft from a previous (unsaved) session exists, offer
+        // to restore it before the user loses it.
+        maybeRestoreDraft(data.content);
 
         // Load .env
         loadEnvEditor();
@@ -3637,11 +4127,7 @@ window.addEventListener('message', (e) => {
 function sendErrorsToVibeCoder() {
     if (previewErrors.length === 0) return;
     const errorText = previewErrors.map((e, i) => `${i + 1}. [${e.type}] ${e.message}`).join('\n');
-    const input = document.getElementById('claudeInput');
-    input.value = `The live preview has ${previewErrors.length} error(s) in the browser console:\n\n${errorText}\n\nPlease fix these.`;
-    input.focus();
-    // Auto-send
-    sendClaudeMessage();
+    vcPasteIntoTerminal(`The live preview has ${previewErrors.length} error(s) in the browser console:\n\n${errorText}\n\nPlease fix these.\n`);
     dismissErrors();
 }
 
@@ -3743,7 +4229,7 @@ function updatePreview() {
     // synthetic-doc rebuild and point every iframe at the manifest URL.
     if (window.__adzeRemote && window.__adzeRemote.preview_url) {
         const url = window.__adzeRemote.preview_url;
-        ['previewFrame','previewFrameClaude','previewFrame2','previewFrame3','previewFrame4','previewFrame5'].forEach(id => {
+        ['previewFrame','previewFrameClaude','previewFrameAutocode','previewFrame2','previewFrame3','previewFrame4','previewFrame5'].forEach(id => {
             const frame = document.getElementById(id);
             if (frame && frame.src !== url) {
                 frame.removeAttribute('srcdoc');
@@ -3762,7 +4248,7 @@ function updatePreview() {
     const html = document.getElementById('htmlEditor').value;
     const doc = buildPreviewDoc(css, html);
     // Update all preview frames
-    ['previewFrame','previewFrameClaude','previewFrame2','previewFrame3','previewFrame4','previewFrame5'].forEach(id => {
+    ['previewFrame','previewFrameClaude','previewFrameAutocode','previewFrame2','previewFrame3','previewFrame4','previewFrame5'].forEach(id => {
         const frame = document.getElementById(id);
         if (frame) frame.srcdoc = doc;
     });
@@ -3773,18 +4259,47 @@ function syncAllPreviews() {
     else updatePreview();
 }
 
-async function refreshPreview() {
+async function refreshPreview(quiet = false) {
     if (!currentPage) return;
     try {
         const r = await apiFetch(`/api/adze/get-page-content?page_slug=${currentPage.slug}`);
-        if (!r.ok) { toast('Failed to refresh', 'error'); return; }
+        if (r.status === 404) {
+            // The active page was deleted out from under us — e.g. Auto-Code
+            // or Terminal Access removed it. Don't keep re-rendering a 404;
+            // reload the list and switch to a surviving page.
+            await handleCurrentPageGone(quiet);
+            return;
+        }
+        if (!r.ok) { if (!quiet) toast('Failed to refresh', 'error'); return; }
         const data = await r.json();
         const { css, html } = parseContent(data.content);
         document.getElementById('cssEditor').value = css;
         document.getElementById('htmlEditor').value = html;
         updatePreview();
-        toast('Preview refreshed', 'success');
-    } catch(e) { toast('Refresh failed', 'error'); }
+        if (!quiet) toast('Preview refreshed', 'success');
+    } catch(e) { if (!quiet) toast('Refresh failed', 'error'); }
+}
+
+// Called when the page we're currently viewing no longer exists on disk.
+// Reloads the page list and jumps to home (or the first surviving page),
+// or shows the empty state if the artist has no pages left.
+async function handleCurrentPageGone(quiet = false) {
+    const goneSlug = currentPage ? currentPage.slug : null;
+    // Discard any in-editor state for the deleted page so loadPage() doesn't
+    // prompt about "unsaved changes" we can no longer save anywhere.
+    currentPage = null;
+    hasUnsavedChanges = false;
+    await loadPages();
+    const survivor = pages.find(p => p.slug === 'home') || pages[0];
+    if (survivor) {
+        const items = document.querySelectorAll('.page-item');
+        const idx = pages.findIndex(p => p.slug === survivor.slug);
+        loadPage(survivor.slug, items[idx] || null);
+        if (!quiet && goneSlug) toast(`Page "${goneSlug}" was deleted — switched to "${survivor.slug}"`, 'warn');
+    } else {
+        document.getElementById('emptyState').style.display = 'flex';
+        if (!quiet && goneSlug) toast(`Page "${goneSlug}" was deleted`, 'warn');
+    }
 }
 
 function schedulePreview(delay = 300) {
@@ -3793,8 +4308,8 @@ function schedulePreview(delay = 300) {
 }
 
 // Editor input listeners
-document.getElementById('cssEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); });
-document.getElementById('htmlEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); });
+document.getElementById('cssEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); scheduleDraftSave(); });
+document.getElementById('htmlEditor').addEventListener('input', () => { setUnsaved(true); schedulePreview(); scheduleDraftSave(); });
 // Raw file editor: just unsaved + JSON validation tick (no preview rebuild).
 document.getElementById('rawFileEditor')?.addEventListener('input', () => { setUnsaved(true); validateRawFile(); });
 
@@ -3803,6 +4318,65 @@ function setUnsaved(val) {
     hasUnsavedChanges = val;
     document.getElementById('unsavedDot').classList.toggle('show', val);
 }
+
+// ── Local draft persistence (guards against losing work on refresh/crash) ──
+// Drafts are stashed in localStorage per artist+page on every keystroke
+// (debounced) and cleared on a successful Save. On page load we offer to
+// restore a draft if it differs from what's saved on the server.
+let _draftTimer = null;
+function _draftKey() {
+    if (!currentArtist || !currentPage) return null;
+    return `adze-draft:${currentArtist}:${currentPage.slug}`;
+}
+function scheduleDraftSave() {
+    clearTimeout(_draftTimer);
+    _draftTimer = setTimeout(() => {
+        const key = _draftKey();
+        if (!key) return;
+        try {
+            localStorage.setItem(key, JSON.stringify({
+                css: document.getElementById('cssEditor').value,
+                html: document.getElementById('htmlEditor').value,
+                ts: Date.now(),
+            }));
+        } catch (e) { /* quota / private mode — non-fatal */ }
+    }, 800);
+}
+function clearDraft() {
+    const key = _draftKey();
+    if (key) { try { localStorage.removeItem(key); } catch (e) {} }
+}
+// Called from loadPage AFTER the server content is in the editors.
+function maybeRestoreDraft(savedContent) {
+    const key = _draftKey();
+    if (!key) return;
+    let draft;
+    try { draft = JSON.parse(localStorage.getItem(key) || 'null'); }
+    catch (e) { return; }
+    if (!draft) return;
+    const savedSerialized = serializeContent(
+        document.getElementById('cssEditor').value,
+        document.getElementById('htmlEditor').value
+    );
+    const draftSerialized = serializeContent(draft.css || '', draft.html || '');
+    if (draftSerialized === savedSerialized) { clearDraft(); return; }  // nothing new
+    const when = draft.ts ? new Date(draft.ts).toLocaleString([], { hour:'2-digit', minute:'2-digit', day:'numeric', month:'short' }) : 'earlier';
+    if (confirm(`Unsaved changes from ${when} were found for this page (not yet saved to the server).\n\nRestore them? (Cancel keeps the saved version.)`)) {
+        document.getElementById('cssEditor').value = draft.css || '';
+        document.getElementById('htmlEditor').value = draft.html || '';
+        setUnsaved(true);
+        schedulePreview(0);
+    } else {
+        clearDraft();
+    }
+}
+
+// Warn before a hard refresh / tab close when there's unsaved work. The
+// soft in-app navigation guard (confirm in loadPage / site switch) does
+// not fire on F5 / Cmd-R, which is exactly how work was being lost.
+window.addEventListener('beforeunload', (e) => {
+    if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
+});
 
 // ── File Tree (Manual Edit) ──────────────────────────────────────────────
 // Backs the Manual Edit tab's file browser. Talks to the
@@ -4090,6 +4664,7 @@ async function savePage() {
             document.getElementById('lastSavedLabel').textContent =
                 'Saved ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             setUnsaved(false);
+            clearDraft();
             autoSnapshot();
             loadPages();
         } else {
@@ -4280,27 +4855,169 @@ function getConfigFromForm() {
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ── Assets ──
+let assetLabels = [];           // [{name, color, count}]
+let assetSelected = new Set();
+let assetFilterLabel = null;
+let assetPendingPop = new Set();
+
 async function loadAssets() {
     try {
         const r = await apiFetch('/api/adze/list-assets');
-        if (r.ok) { assetList = (await r.json()).assets; renderAssetGrid(); }
+        if (r.ok) {
+            const data = await r.json();
+            assetList = data.assets;
+            assetLabels = data.labels || [];
+            renderLabelsBar();
+            renderAssetGrid();
+        }
     } catch(e) { console.error('Failed to load assets', e); }
 }
 
-let assetSelectMode = false;
-let assetSelected = new Set();
+function colorForLabel(name) {
+    return (assetLabels.find(l => l.name === name) || {}).color || '#888';
+}
+
+function assetByPath(path) {
+    return assetList.find(a => a.path === path);
+}
+
+async function dhAddLink() {
+    const inp = document.getElementById('dhLinkInput');
+    const btn = document.getElementById('dhLinkBtn');
+    const url = inp.value.trim();
+    if (!url) { inp.focus(); return; }
+    btn.disabled = true;
+    const orig = btn.textContent; btn.textContent = 'Adding…';
+    try {
+        const r = await apiFetch('/api/adze/add-link', { method: 'POST', body: { url } });
+        if (!r.ok) {
+            const e = await r.json().catch(() => ({}));
+            throw new Error(e.error || `HTTP ${r.status}`);
+        }
+        inp.value = '';
+        toast('Link added', 'success');
+        await loadAssets();
+    } catch (err) {
+        toast(err.message || 'Could not add link', 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = orig;
+    }
+}
+
+function renderLabelsBar() {
+    const bar = document.getElementById('dhLabelsBar');
+    if (!bar) return;
+    const action = assetSelected.size
+        ? `apply to ${assetSelected.size} selected file${assetSelected.size===1?'':'s'}`
+        : 'filter the view';
+    bar.innerHTML = `
+        <span class="dh-labels-title">Labels</span>
+        ${assetLabels.map(l => {
+            const escName = escHtml(l.name).replace(/'/g, "\\'");
+            return `<span class="dh-label-pill ${l.name===assetFilterLabel?'is-filter':''}"
+                          style="background:${escHtml(l.color)}"
+                          onclick="dhOnLabelClick('${escName}')"
+                          title="Click to ${escHtml(action)}">
+                ${escHtml(l.name)}
+                <span class="dh-label-count">${l.count}</span>
+                <span class="dh-label-x" onclick="event.stopPropagation();dhDeleteLabel('${escName}')" title="Delete label"><i class="ph ph-x"></i></span>
+            </span>`;
+        }).join('')}
+        <button class="dh-label-add" onclick="dhCreateLabel()">+ New label</button>`;
+}
+
+async function dhCreateLabel() {
+    const name = prompt('Label name (e.g. Sculpture, Hero shot, 2024):');
+    if (!name || !name.trim()) return;
+    const r = await apiFetch(`/api/adze/admin/artists/${encodeURIComponent(currentArtist)}/labels`,
+        { method: 'POST', body: { name: name.trim() } });
+    if (r.ok) { toast('Label created', 'success'); loadAssets(); }
+    else toast('Create failed', 'error');
+}
+
+async function dhDeleteLabel(name) {
+    if (!confirm(`Delete label "${name}"? It'll be removed from every file.`)) return;
+    const r = await apiFetch(`/api/adze/admin/artists/${encodeURIComponent(currentArtist)}/labels/${encodeURIComponent(name)}`,
+        { method: 'DELETE' });
+    if (r.ok) { toast(`Deleted "${name}"`, 'success'); loadAssets(); }
+    else toast('Delete failed', 'error');
+}
+
+async function dhOnLabelClick(name) {
+    if (assetSelected.size) {
+        const paths = Array.from(assetSelected);
+        const lookup = new Map(assetList.map(a => [a.path, a]));
+        const allHave = paths.every(p => (lookup.get(p)?.labels || lookup.get(p)?.tags || []).includes(name));
+        const on = !allHave;
+        if (on) paths.forEach(p => assetPendingPop.add(p));
+        const r = await apiFetch(`/api/adze/admin/artists/${encodeURIComponent(currentArtist)}/apply-labels`,
+            { method: 'POST', body: { paths, label: name, on } });
+        if (!r.ok) { toast('Apply failed', 'error'); return; }
+        toast(on ? `Labelled ${paths.length} as "${name}"` : `Removed "${name}" from ${paths.length}`, 'success');
+        await loadAssets();
+        return;
+    }
+    assetFilterLabel = (assetFilterLabel === name) ? null : name;
+    renderLabelsBar();
+    renderAssetGrid();
+}
+
+function dhClearSelection() {
+    assetSelected.clear();
+    updateAssetSelectionBar();
+    renderAssetGrid();
+    renderLabelsBar();
+}
+
+async function dhDownloadSelected() {
+    const paths = [...assetSelected];
+    if (!paths.length) return;
+    toast(paths.length === 1 ? 'Downloading…' : `Zipping ${paths.length} files…`, 'info');
+    try {
+        const r = await apiFetch('/api/adze/download-assets', { method: 'POST', body: { paths } });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const blob = await r.blob();
+        const disp = r.headers.get('Content-Disposition') || '';
+        const m = disp.match(/filename="?([^";]+)"?/i);
+        const filename = m ? m[1] : (paths.length === 1 ? paths[0].split('/').pop() : `${currentArtist}-assets.zip`);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        toast('Download failed', 'error');
+    }
+}
+
+function dhToggleSelect(path, ev) {
+    if (ev) { ev.stopPropagation(); }
+    if (assetSelected.has(path)) assetSelected.delete(path);
+    else assetSelected.add(path);
+    updateAssetSelectionBar();
+    renderAssetGrid();
+    renderLabelsBar();
+}
 
 function renderAssetGrid() {
     const grid = document.getElementById('assetGrid');
     grid.innerHTML = '';
-    assetList.forEach(a => {
+    const items = assetFilterLabel
+        ? assetList.filter(a => (a.labels || a.tags || []).includes(assetFilterLabel))
+        : assetList;
+    items.forEach(a => {
         const card = document.createElement('div');
         card.className = 'asset-card' + (assetSelected.has(a.path) ? ' selected' : '');
+        const isLink = a.kind === 'link';
         const ext = a.filename.split('.').pop().toLowerCase();
         const fontExts = ['ttf', 'otf', 'woff', 'woff2'];
+        const browserUnrenderable = ['heic', 'tiff', 'bmp'];
         let preview;
-        if (a.is_image) {
-            preview = `<img src="/artists/${currentArtist}/assets/${escHtml(a.path)}" loading="lazy">`;
+        if (isLink) {
+            preview = `<div class="file-icon"><i class="ph ph-link"></i></div>`;
+        } else if (a.is_image && !browserUnrenderable.includes(ext)) {
+            const thumbSrc = `/api/adze/asset-thumb/${encodeURIComponent(currentArtist)}/${a.path.split('/').map(encodeURIComponent).join('/')}`;
+            preview = `<img src="${escHtml(thumbSrc)}" loading="lazy" onerror="this.outerHTML='<div class=&quot;file-icon&quot;>'+getFileIcon('${escHtml(a.filename)}')+'</div>'">`;
         } else if (fontExts.includes(ext)) {
             const fontFamily = 'assetprev-' + a.filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9]/g, '-');
             const fontUrl = `/artists/${currentArtist}/assets/${a.path}`;
@@ -4311,22 +5028,34 @@ function renderAssetGrid() {
         } else {
             preview = `<div class="file-icon">${getFileIcon(a.filename)}</div>`;
         }
-        const size = a.size > 1024*1024 ? (a.size/1024/1024).toFixed(1) + 'MB' : (a.size/1024).toFixed(0) + 'KB';
-        const checkState = assetSelected.has(a.path) ? 'show checked' : (assetSelectMode ? 'show' : '');
+        let hostText = '';
+        if (isLink) { try { hostText = new URL(a.url).hostname.replace(/^www\./, ''); } catch(e) { hostText = a.url || ''; } }
+        const size = isLink ? hostText : (a.size > 1024*1024 ? (a.size/1024/1024).toFixed(1) + 'MB' : (a.size/1024).toFixed(0) + 'KB');
+        const labels = a.labels || a.tags || [];
+        const popping = assetPendingPop.has(a.path);
+        const stickers = labels.map((name, i) => {
+            const rot = ((i * 7) % 12) - 5;
+            return `<span class="dh-sticker${popping?' is-new':''}" style="background:${escHtml(colorForLabel(name))}; --rot:${rot}deg; transform: rotate(${rot}deg)">${escHtml(name)}</span>`;
+        }).join('');
         card.innerHTML = `
-            <div class="asset-select-check ${checkState}">✓</div>
+            <div class="asset-check">${assetSelected.has(a.path) ? '<i class="ph ph-check"></i>' : ''}</div>
+            <button class="asset-view" onclick="event.stopPropagation();openAssetLightbox(${JSON.stringify(a).replace(/"/g,'&quot;')})" title="Preview"><i class="ph ph-eye"></i></button>
+            <div class="dh-sticker-stack">${stickers}</div>
             ${preview}
             <div class="asset-card-info">
                 <div class="asset-card-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</div>
                 <div class="asset-card-size">${size}</div>
             </div>
             <div class="asset-card-footer">
-                <button class="btn-sm btn-ghost copy-path-btn" onclick="event.stopPropagation();copyAssetPath('${escHtml(a.path)}')">Copy Path</button>
+                ${isLink
+                    ? `<a class="btn-sm btn-ghost" href="${escHtml(a.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open</a>`
+                    : `<button class="btn-sm btn-ghost copy-path-btn" onclick="event.stopPropagation();copyAssetPath('${escHtml(a.path)}')">Copy Path</button>`}
                 <button class="asset-three-dot" onclick="event.stopPropagation();showAssetMenu(event,'${escHtml(a.path)}','${escHtml(a.filename)}')">⋯</button>
             </div>`;
-        card.addEventListener('click', () => onAssetCardClick(a));
+        card.addEventListener('click', () => dhToggleSelect(a.path));
         grid.appendChild(card);
     });
+    assetPendingPop.clear();
 }
 
 function getFileIcon(filename) {
@@ -4340,25 +5069,8 @@ function copyAssetPath(path) {
     toast('Copied path', 'info');
 }
 
-function onAssetCardClick(a) {
-    if (assetSelectMode) {
-        if (assetSelected.has(a.path)) assetSelected.delete(a.path);
-        else assetSelected.add(a.path);
-        updateAssetSelectionBar();
-        renderAssetGrid();
-    } else {
-        openAssetLightbox(a);
-    }
-}
-
-// ── Select mode ──────────────────────────────────────────────────────────
-
-function toggleAssetSelectMode() {
-    assetSelectMode = !assetSelectMode;
-    if (!assetSelectMode) { assetSelected.clear(); updateAssetSelectionBar(); }
-    document.getElementById('assetSelectToggle').textContent = assetSelectMode ? 'Cancel' : 'Select';
-    renderAssetGrid();
-}
+// Selection is always available via the hover-checkbox on each card; the
+// old "Select mode" toggle has been removed in favour of that affordance.
 
 function updateAssetSelectionBar() {
     const bar = document.getElementById('assetSelectionBar');
@@ -4376,24 +5088,10 @@ async function deleteSelectedAssets() {
     if (d.deleted?.length) {
         toast(`Deleted ${d.deleted.length} file${d.deleted.length > 1 ? 's' : ''}`, 'success');
         assetSelected.clear();
-        assetSelectMode = false;
-        document.getElementById('assetSelectToggle').textContent = 'Select';
         updateAssetSelectionBar();
         await loadAssets();
     }
     if (d.errors?.length) toast(d.errors.join(', '), 'error');
-}
-
-function sendSelectedToVibeCoder() {
-    const paths = [...assetSelected].map(p => `../assets/${p}`).join('\n');
-    switchTab('vibe');
-    const input = document.getElementById('claudeInput');
-    if (input) { input.value = paths; input.focus(); }
-    assetSelected.clear();
-    assetSelectMode = false;
-    document.getElementById('assetSelectToggle').textContent = 'Select';
-    updateAssetSelectionBar();
-    renderAssetGrid();
 }
 
 // ── Three-dot context menu ───────────────────────────────────────────────
@@ -4401,10 +5099,13 @@ function sendSelectedToVibeCoder() {
 function showAssetMenu(e, path, filename) {
     closeAssetMenu();
     const menu = document.getElementById('assetCtxMenu');
+    const a = assetByPath(path);
+    const topItem = (a && a.kind === 'link')
+        ? `<button onclick="window.open('${escHtml(a.url)}','_blank','noopener');closeAssetMenu()">Open link</button>`
+        : `<button onclick="copyAssetPath('${escHtml(path)}');closeAssetMenu()">Copy Path</button>`;
     menu.innerHTML = `
-        <button onclick="copyAssetPath('${escHtml(path)}');closeAssetMenu()">Copy Path</button>
+        ${topItem}
         <button onclick="copyAssetUrl('${escHtml(path)}');closeAssetMenu()">Copy URL</button>
-        <button onclick="sendAssetToVibeCoder('${escHtml(path)}');closeAssetMenu()">Send to Vibe Coder</button>
         <hr>
         <button class="danger" onclick="deleteSingleAsset('${escHtml(path)}');closeAssetMenu()">Delete</button>`;
     menu.style.display = 'block';
@@ -4420,15 +5121,17 @@ function closeAssetMenu() {
 }
 
 function copyAssetUrl(path) {
-    const url = `${location.origin}/artists/${currentArtist}/assets/${path}`;
+    const a = assetByPath(path);
+    const url = (a && a.kind === 'link')
+        ? a.url
+        : `${location.origin}/artists/${currentArtist}/assets/${path}`;
     navigator.clipboard.writeText(url);
     toast('Copied URL', 'info');
 }
 
 function sendAssetToVibeCoder(path) {
-    switchTab('vibe');
-    const input = document.getElementById('claudeInput');
-    if (input) { input.value = `../assets/${path}`; input.focus(); }
+    switchTab('claude');
+    vcPasteIntoTerminal(`../assets/${path} `);
 }
 
 async function deleteSingleAsset(path) {
@@ -4442,8 +5145,9 @@ async function deleteSingleAsset(path) {
 // ── Lightbox ─────────────────────────────────────────────────────────────
 
 function openAssetLightbox(a) {
+    if (a.kind === 'link') { window.open(a.url, '_blank', 'noopener'); return; }
     const ext = a.filename.split('.').pop().toLowerCase();
-    const url = `/artists/${currentArtist}/assets/${a.path}`;
+    const url = `/api/adze/asset-thumb/${encodeURIComponent(currentArtist)}/${a.path.split('/').map(encodeURIComponent).join('/')}`;
     const size = a.size > 1024*1024 ? (a.size/1024/1024).toFixed(1) + 'MB' : (a.size/1024).toFixed(0) + 'KB';
     const fontExts = ['ttf','otf','woff','woff2'];
     const videoExts = ['mp4','mov','webm','ogg'];
@@ -4476,7 +5180,6 @@ function openAssetLightbox(a) {
     footer.innerHTML = `
         <button class="btn-sm btn-ghost" onclick="copyAssetPath('${escHtml(a.path)}')">Copy Path</button>
         <button class="btn-sm btn-ghost" onclick="copyAssetUrl('${escHtml(a.path)}')">Copy URL</button>
-        <button class="btn-sm btn-ghost" onclick="sendAssetToVibeCoder('${escHtml(a.path)}');closeAssetLightbox()">Send to Vibe Coder</button>
         <button class="btn-sm btn-ghost" onclick="downloadAsset('${escHtml(url)}','${escHtml(a.filename)}')">Download</button>
         <button class="btn-sm" style="background:var(--danger);color:white;border:none;margin-left:auto;" onclick="deleteSingleAsset('${escHtml(a.path)}');closeAssetLightbox()">Delete</button>`;
 
@@ -6191,18 +6894,19 @@ function openAiAssetModal() {
 function populateAiAssetGrid(list) {
     const grid = document.getElementById('aiAssetGrid');
     grid.innerHTML = '';
+    // Link assets have no servable ../assets/ path — not insertable into pages.
+    list = (list || []).filter(a => a.kind !== 'link');
     if (list.length === 0) {
         grid.innerHTML = '<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text2);font-size:13px;">No assets found. Upload some above!</div>';
         return;
     }
-    const baseUrl = `/artists/${currentArtist}/${currentPage?.slug || 'home'}/`;
     list.forEach(a => {
         const card = document.createElement('div');
         card.className = 'ai-asset-card';
         const url = `../assets/${a.path}`;
         if (a.is_image) {
-            const imgSrc = new URL(url, location.origin + baseUrl).href;
-            card.innerHTML = `<img class="thumb" src="${escHtml(imgSrc)}" alt="${escHtml(a.filename)}"><div class="card-label">${escHtml(a.filename)}</div>`;
+            const imgSrc = `/api/adze/asset-thumb/${encodeURIComponent(currentArtist)}/${a.path.split('/').map(encodeURIComponent).join('/')}`;
+            card.innerHTML = `<img class="thumb" src="${escHtml(imgSrc)}" alt="${escHtml(a.filename)}" onerror="this.outerHTML='<div class=\\"file-icon\\">${escHtml(a.filename.split('.').pop().toUpperCase())}</div>'"><div class="card-label">${escHtml(a.filename)}</div>`;
         } else {
             const ext = a.filename.split('.').pop() || '?';
             card.innerHTML = `<div class="file-icon">${escHtml(ext)}</div><div class="card-label">${escHtml(a.filename)}</div>`;
@@ -6629,20 +7333,20 @@ function renderAbout() {
     if (s) {
         html += `
             <p>You can change anything about how your site looks and what it says. Every page, every colour, every image — it's all yours to shape however you want.</p>
-            <p>The <strong>Vibe Coder</strong> tab is the easiest way to make changes. Describe what you want in plain English and it does it — "make my gallery bigger", "change the font", "add a new page called Press", whatever you need.</p>
+            <p>The <strong>Terminal Access</strong> tab is the easiest way to make changes. Describe what you want in plain English and it does it — "make my gallery bigger", "change the font", "add a new page called Press", whatever you need.</p>
             <p>You can also use <strong>Manual Edit</strong> if you want to tweak the code directly, or browse <strong>Assets</strong> to manage your images and files.</p>
         `;
     } else if (m) {
         html += `
             <p>You have full creative control. Each page is a folder containing a <code>content.md</code> file (your HTML + CSS) and a <code>config.json</code> (title, description, metadata).</p>
-            <p>You can edit these directly in the <strong>Manual Edit</strong> tab, or use the <strong>Vibe Coder</strong> — an AI assistant that can read and write all your site files. It can edit multiple pages at once, create new pages, restructure your nav, and more.</p>
+            <p>You can edit these directly in the <strong>Manual Edit</strong> tab, or use the <strong>Terminal Access</strong> — an AI assistant that can read and write all your site files. It can edit multiple pages at once, create new pages, restructure your nav, and more.</p>
             <p>Your assets (images, fonts, files) live in an <code>assets/</code> folder and are referenced with relative paths like <code>../assets/images/photo.jpg</code>.</p>
         `;
     } else {
         html += `
             <p>Each page is a directory under <code>pages/artists/${currentArtist}/</code> containing <code>content.md</code> and <code>config.json</code>. The content.md format is <code>&lt;style&gt;CSS&lt;/style&gt;\\n&lt;html&gt;HTML&lt;/html&gt;</code>.</p>
             <p>When you click <strong>Save</strong>, the server runs <code>compile.py</code> which reads every page's content.md, wraps it in a base HTML template, and writes static .html files to <code>output/artists/${currentArtist}/</code>. These are served directly by nginx — no server-side rendering at request time.</p>
-            <p>You can also create an <code>api.py</code> (Flask Blueprint) for custom backend endpoints. The Vibe Coder can write this for you. Routes register at <code>/api/artists/${currentArtist}/...</code>.</p>
+            <p>You can also create an <code>api.py</code> (Flask Blueprint) for custom backend endpoints. The Terminal Access can write this for you. Routes register at <code>/api/artists/${currentArtist}/...</code>.</p>
         `;
     }
     html += `</div>`;
@@ -6658,14 +7362,14 @@ function renderAbout() {
                 <span class="flow-you">Assets</span> — Your images, fonts, and files
                 <br><br>
                 <span class="flow-label">This dashboard</span>
-                <span class="flow-gab">Vibe Coder</span> — AI that makes changes for you
+                <span class="flow-gab">Terminal Access</span> — AI that makes changes for you
                 <br>
                 <span class="flow-gab">Manual Edit</span> — For when you want to get hands-on with the code
                 <br>
                 <span class="flow-gab">History</span> — Snapshots of your site you can roll back to
                 <br><br>
                 <span class="flow-label">How changes go live</span>
-                Make a change (Vibe Coder or Manual Edit)
+                Make a change (Terminal Access or Manual Edit)
                 <span class="flow-arrow">→</span> Click Save
                 <span class="flow-arrow">→</span> Site updates within seconds
             </div>
@@ -6683,7 +7387,7 @@ function renderAbout() {
                 <span class="flow-you">API</span> — Optional backend for dynamic features
                 <br><br>
                 <span class="flow-label">The dashboard (shared infrastructure)</span>
-                <span class="flow-gab">Vibe Coder</span> — AI that edits your site files
+                <span class="flow-gab">Terminal Access</span> — AI that edits your site files
                 <br>
                 <span class="flow-gab">Widgets</span> — Custom tools (e.g. booking manager)
                 <br>
@@ -6802,62 +7506,58 @@ function renderAbout() {
     }
     html += `</div>`;
 
-    // ── Vibe Coder ──
-    html += `<hr class="about-divider"><div class="about-section"><h3>The Vibe Coder</h3>`;
+    // ── Terminal Access ──
+    html += `<hr class="about-divider"><div class="about-section"><h3>The Terminal Access</h3>`;
     if (s) {
         html += `
-            <p>The Vibe Coder is an AI assistant that edits your site directly. Describe what you want and it does it — editing pages, creating new ones, changing layouts, updating the nav across the whole site, adding forms or galleries.</p>
-            <p>It works within <strong>your site's files only</strong> — it's sandboxed, so it can't see other people's sites or touch the dashboard infrastructure. Every new session auto-creates a snapshot in the <strong>History</strong> tab, so you can always roll back.</p>
+            <p>Terminal Access opens a shell for your site and starts Claude Code. A developer can log in with their own Claude Code subscription and edit pages, create new ones, change layouts, update the nav, add forms or galleries.</p>
+            <p>It starts inside <strong>your site's files only</strong> and is scoped to the selected artist. Every new session should begin from a snapshot in the <strong>History</strong> tab, so you can roll back.</p>
             <p>If it gets slow after a long conversation, hit <strong>Clear Memory</strong> to start fresh.</p>
         `;
     } else if (m) {
         html += `
-            <p>The Vibe Coder is Claude (an AI by Anthropic) running with file access to your site directory. It can read and write your pages, assets, config, and even create a custom <code>api.py</code> backend.</p>
-            <p>It's <strong>sandboxed</strong> to your artist directory — it literally cannot see or edit files outside <code>pages/artists/${currentArtist}/</code>. It also can't modify the dashboard, widgets, or shared infrastructure.</p>
-            <p>Sessions persist between messages but not forever. If you clear memory, it forgets the conversation but can still read your files to understand context.</p>
+            <p>Terminal Access is a tmux-backed shell that launches Claude Code in your site directory. It can read and write your pages, assets, config, and even create a custom <code>api.py</code> backend.</p>
+            <p>It's scoped to the selected artist directory and should not modify dashboard widgets or shared infrastructure.</p>
+            <p>Sessions persist in tmux. If Claude Code exits, the shell stays open so you can run <code>claude</code> again or complete login.</p>
         `;
     } else {
         html += `
             <div class="about-flow">
-                <span class="flow-label">Vibe Coder process lifecycle</span>
+                <span class="flow-label">Terminal Access process lifecycle</span>
                 <br>
-                User sends message
+                Browser opens Terminal Access
                 <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> POST /api/adze/claude-stream
+                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Socket.IO namespace /terminal
                 <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Flask spawns subprocess:
+                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Flask attaches to tmux:
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span class="flow-you">claude -p "prompt"</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;<span class="flow-you">tmux new-session -A -s adze-${currentArtist}</span>
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--output-format stream-json
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cwd: artists/${currentArtist}/
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--dangerously-skip-permissions
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;starts: claude --permission-mode acceptEdits
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--session-id {uuid} <em style="color:#666;">or</em> --resume {uuid}
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allowedTools: curated filesystem/shell list
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--system-prompt {dynamic prompt}
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;append-system-prompt: _shared/docs + artist config/pages
                 <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cwd: pages/artists/${currentArtist}/
+                &nbsp;&nbsp;<span class="flow-arrow">↓</span> xterm.js streams raw pty input/output
                 <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> stdout piped as SSE stream <span class="flow-arrow">→</span> browser
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Claude reads/writes files in artist dir
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Process exits, dashboard reloads pages/assets
+                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Claude Code or the shell reads/writes files in artist dir
             </div>
 
             <div class="about-flow">
                 <span class="flow-label">Session management</span>
                 <br>
-                Sessions stored in: <span class="flow-gab">_claude_sessions.json</span>
+                Sessions stored in: <span class="flow-gab">tmux session adze-${currentArtist}</span>
                 <br>
-                &nbsp;&nbsp;{ "${currentArtist}": "uuid-of-session" }
+                Multiple browser tabs can attach to the same artist shell.
                 <br><br>
-                First message <span class="flow-arrow">→</span> new session ID + system prompt
+                First tab <span class="flow-arrow">→</span> creates tmux session + launches Claude Code
                 <br>
-                Subsequent messages <span class="flow-arrow">→</span> --resume (keeps context)
+                Subsequent tabs <span class="flow-arrow">→</span> attach to that session
                 <br>
-                Clear Memory <span class="flow-arrow">→</span> deletes session, next message starts fresh
+                Clear <span class="flow-arrow">→</span> sends Claude Code's native /clear command
                 <br><br>
                 <span class="flow-label">System prompt (generated per-artist)</span>
                 <br>
@@ -6873,13 +7573,9 @@ function renderAbout() {
             <div class="about-flow">
                 <span class="flow-label">Sandboxing model</span>
                 <br>
-                <span style="color:var(--warn);font-weight:600;">Prompt-level, not OS-level.</span>
+                <span style="color:var(--warn);font-weight:600;">Directory-scoped workflow, not a hardened VM.</span>
                 <br><br>
-                The Claude process runs as the server user with full filesystem access.
-                <br>
-                The system prompt instructs it to stay within the artist directory.
-                <br>
-                Claude respects this reliably — but it's not a hard security boundary.
+                Terminal Access starts in the artist directory and Claude Code receives a curated allowedTools list.
                 <br><br>
                 What Claude <span class="flow-you">CAN</span> touch:
                 <br>
@@ -6891,7 +7587,7 @@ function renderAbout() {
                 <br>
                 &nbsp;&nbsp;✓ config.json (artist config)
                 <br><br>
-                What Claude is <span style="color:var(--danger);font-weight:600;">BLOCKED</span> from (prompt-enforced):
+                What Terminal Access should not touch:
                 <br>
                 &nbsp;&nbsp;✗ widgets/ (dashboard privileges)
                 <br>
@@ -6902,7 +7598,7 @@ function renderAbout() {
                 &nbsp;&nbsp;✗ system files, server config
             </div>
 
-            <p>The worst case from a broken Vibe Coder session is corrupted files within the artist directory — which only affects that artist's site. A snapshot restore (coming soon) will fix this. The server itself is never at risk.</p>
+            <p>The practical failure mode is corrupted files within the artist directory. Use History snapshots and targeted file reads before overwriting live work.</p>
         `;
     }
     html += `</div>`;
@@ -6912,11 +7608,11 @@ function renderAbout() {
     if (s) {
         html += `
             <p>Your site can have backend features — things like a booking form that saves enquiries, a print shop, or anything that needs to store and process data. The <strong>API</strong> tab shows what's currently set up.</p>
-            <p>The Vibe Coder can build custom backend endpoints for you. If you want a pre-built feature like bookings, text me — most take about 30 seconds to enable.</p>
+            <p>The Terminal Access can build custom backend endpoints for you. If you want a pre-built feature like bookings, text me — most take about 30 seconds to enable.</p>
         `;
     } else if (m) {
         html += `
-            <p>Your site can have a backend — an <code>api.py</code> file that defines custom endpoints. For example, a booking form on your site can POST to your own API, which saves the data to a JSON file. The Vibe Coder can create and edit this for you.</p>
+            <p>Your site can have a backend — an <code>api.py</code> file that defines custom endpoints. For example, a booking form on your site can POST to your own API, which saves the data to a JSON file. The Terminal Access can create and edit this for you.</p>
             <p>There's also a <strong>feature system</strong> — opt-in modules like bookings that are pre-built. These are enabled in your <code>config.json</code> and show up in the API tab. Text me to enable one.</p>
             <p>The API tab shows all endpoints available to your site, with friendly descriptions and a developer view for testing.</p>
         `;
@@ -6965,7 +7661,7 @@ function renderAbout() {
                 <br>
                 Routes at: <code>/api/artists/{slug}/bookings/*</code>
             </div>
-            <p>Data storage is JSON files — no database. Server restart required after api.py changes (features are also loaded at startup). The Vibe Coder can create both the backend and the frontend that calls it.</p>
+            <p>Data storage is JSON files — no database. Server restart required after api.py changes (features are also loaded at startup). The Terminal Access can create both the backend and the frontend that calls it.</p>
         `;
     }
     html += `</div>`;
@@ -6977,16 +7673,16 @@ function renderAbout() {
             <p>Widgets are custom tools that appear as extra tabs in this dashboard — like a "Manage Bookings" tab for viewing and responding to enquiries, or a gallery manager for drag-and-drop image ordering.</p>
             <p>Text me if you want one — they take about 30 seconds to wire up, especially if you've already got an API feature running.</p>
             <div class="about-callout">
-                <strong>Can the Vibe Coder make widgets?</strong> Not currently. Widgets run inside the dashboard with elevated access, so they're set up separately. This might change later. You <em>can</em> however build your own admin tools as a page on your actual site — the Vibe Coder can help with that.
+                <strong>Can the Terminal Access make widgets?</strong> Not currently. Widgets run inside the dashboard with elevated access, so they're set up separately. This might change later. You <em>can</em> however build your own admin tools as a page on your actual site — the Terminal Access can help with that.
             </div>
         `;
     } else if (m) {
         html += `
             <p>Widgets are JavaScript files in your <code>widgets/</code> folder. Each one gets its own tab in the dashboard and receives a <code>ctx</code> object with access to the dashboard API — authenticated fetch, page editing, asset management, etc.</p>
-            <p>They're powerful: a widget can read/write any of your pages, call your API endpoints, and render custom UI. That's why <strong>the Vibe Coder can't create them</strong> — widgets run with dashboard privileges, not site privileges.</p>
+            <p>They're powerful: a widget can read/write any of your pages, call your API endpoints, and render custom UI. That's why <strong>the Terminal Access can't create them</strong> — widgets run with dashboard privileges, not site privileges.</p>
             <p>Text me to set one up. If you already have an API, I can wire up a visual dashboard for it in about 30 seconds.</p>
             <div class="about-callout">
-                <strong>Want your own admin panel?</strong> You could also build a custom dashboard <em>inside your site itself</em> — just a page with a password form and JavaScript that calls your api.py endpoints. The Vibe Coder <em>can</em> help with that since it's just a regular page. It wouldn't have dashboard features, but it's fully under your control.
+                <strong>Want your own admin panel?</strong> You could also build a custom dashboard <em>inside your site itself</em> — just a page with a password form and JavaScript that calls your api.py endpoints. The Terminal Access <em>can</em> help with that since it's just a regular page. It wouldn't have dashboard features, but it's fully under your control.
             </div>
         `;
     } else {
@@ -7000,8 +7696,8 @@ function renderAbout() {
                 <li><code>ctx.token</code> — raw auth token</li>
                 <li><code>ctx.assetList</code>, <code>ctx.loadAssets()</code>, <code>ctx.toast()</code>, etc.</li>
             </ul>
-            <p>Because widgets have full dashboard API access (including destructive operations like <code>delete-page</code>), the Vibe Coder is blocked from creating them. The sandboxing boundary is: Vibe Coder can edit site files + api.py, but not widgets or dashboard infrastructure.</p>
-            <p>Alternative: build a self-contained admin page within the site. Just a regular page with client-side JS that calls your api.py endpoints directly, protected by a password you implement yourself. The Vibe Coder can build this.</p>
+            <p>Because widgets have full dashboard API access (including destructive operations like <code>delete-page</code>), the Terminal Access is blocked from creating them. The sandboxing boundary is: Terminal Access can edit site files + api.py, but not widgets or dashboard infrastructure.</p>
+            <p>Alternative: build a self-contained admin page within the site. Just a regular page with client-side JS that calls your api.py endpoints directly, protected by a password you implement yourself. The Terminal Access can build this.</p>
         `;
     }
     html += `</div>`;
@@ -7010,18 +7706,18 @@ function renderAbout() {
     html += `<hr class="about-divider"><div class="about-section"><h3>History &amp; snapshots</h3>`;
     if (s) {
         html += `
-            <p>The <strong>History</strong> tab keeps snapshots of your site — compressed backups of all your pages, config, and backend code. A snapshot is automatically created every time you start a new Vibe Coder session, so you can always roll back if something goes wrong.</p>
+            <p>The <strong>History</strong> tab keeps snapshots of your site — compressed backups of all your pages, config, and backend code. A snapshot is automatically created every time you start a new Terminal Access session, so you can always roll back if something goes wrong.</p>
             <p>You can also save manual snapshots anytime. Restoring a snapshot replaces your pages and code, but <strong>never touches your images or fonts</strong> — those are safe.</p>
         `;
     } else if (m) {
         html += `
             <p>Snapshots are compressed <code>.tar.gz</code> archives stored in a <code>.snapshots/</code> folder inside your site directory. They contain all your pages (content.md + config.json), your artist config, api.py, and any data files. Assets and widgets are excluded to keep them small.</p>
-            <p>Auto-snapshots are created before each new Vibe Coder session. Manual snapshots can be created from the History tab. Restoring a snapshot auto-saves the current state first, so you can always undo a restore. Max 30 snapshots are kept.</p>
+            <p>Auto-snapshots are created before each new Terminal Access session. Manual snapshots can be created from the History tab. Restoring a snapshot auto-saves the current state first, so you can always undo a restore. Max 30 snapshots are kept.</p>
         `;
     } else {
         html += `
             <p>Snapshots are <code>.tar.gz</code> files in <code>pages/artists/${currentArtist}/.snapshots/</code>. Created by tarring the artist directory excluding <code>assets/</code>, <code>widgets/</code>, <code>.snapshots/</code>, and <code>__pycache__/</code>.</p>
-            <p>Endpoints: <code>create-snapshot</code>, <code>list-snapshots</code>, <code>restore-snapshot</code>, <code>delete-snapshot</code>. Restore deletes all non-preserved files then extracts the tarball. Auto-snapshot fires in <code>claude-stream</code> when <code>session_exists</code> is false (new session). Capped at 30, oldest pruned.</p>
+            <p>Endpoints: <code>create-snapshot</code>, <code>list-snapshots</code>, <code>restore-snapshot</code>, <code>delete-snapshot</code>. Restore deletes all non-preserved files then extracts the tarball. Capped at 30, oldest pruned.</p>
         `;
     }
     html += `</div>`;
@@ -7038,7 +7734,7 @@ function renderAbout() {
 // Render about on first tab switch
 // (handled in switchTab)
 
-// ── Vibe Coder Suggestion Rotation ──
+// ── Terminal Access Suggestion Rotation ──
 const vcSuggestions = [
     'update the nav on all pages',
     'add a new gallery page',
@@ -7157,6 +7853,14 @@ async function sendClaudeMessage() {
 
     input.value = '';
 
+    // Terminal Access is now a live Claude Code shell. Keep the old prompt box
+    // useful by sending its text to xterm instead of the retired API-credit
+    // streaming endpoint.
+    if (typeof vcPasteIntoTerminal === 'function' && _vcXterm) {
+        vcPasteIntoTerminal(msg + '\n');
+        return;
+    }
+
     if (claudeIsStreaming) {
         claudeMessageQueue.push(msg);
         const queuedTurn = vcUserTurn(msg);
@@ -7197,7 +7901,7 @@ async function sendClaudeMessage() {
 
         if (!response.ok) {
             const errMsg = (response.status === 409)
-                ? "Vibe Coder is currently in use by another session. Try again when it's free."
+                ? "Terminal Access is currently in use by another session. Try again when it's free."
                 : 'Error: ' + response.statusText;
             vcRenderError(currentTurn, errMsg);
             claudeIsStreaming = false;
@@ -7354,15 +8058,15 @@ async function haltClaude() {
         document.getElementById('claudeHaltBtn').style.display = 'none';
         // Add a halted indicator in the chat
         claudeAppendLine('<em>Stopped.</em>', 'system');
-        toast('Vibe Coder stopped', 'info');
+        toast('Terminal Access stopped', 'info');
     } catch (e) {
         toast('Failed to stop: ' + e.message, 'error');
     }
 }
 
-// ── Vibe Coder v3: aider over xterm.js + Socket.IO pty bridge ────────────────
-// xterm.js renders the live aider session in the pane. The Flask /aider
-// namespace bridges a pty subprocess running aider per artist.
+// ── Terminal Access v3: Claude Code over xterm.js + Socket.IO pty bridge ────────────────
+// xterm.js renders the live Claude Code session in the pane. The Flask /terminal
+// namespace bridges a pty subprocess running Claude Code per artist.
 let _vcXterm = null;
 let _vcXtermFit = null;
 let _vcXtermSocket = null;
@@ -7376,23 +8080,23 @@ function _vcBootMsg(msg, isError) {
     }
 }
 
-// Send a /clear to the running aider session (its native command).
-function vcAiderClear() {
+// Send a /clear to the running Claude Code session (its native command).
+function vcTerminalClear() {
     if (!_vcXtermSocket || !_vcXtermSocket.connected) return;
-    _vcXtermSocket.emit('aider:input', { data: '/clear\n' });
+    _vcXtermSocket.emit('terminal:input', { data: '/clear\n' });
     if (_vcXterm) _vcXterm.focus();
 }
 
 // Asset-picker shortcut — opens the existing modal in "claude mode" so the
 // existing claudeInsertSelectedAssets path picks the chosen URLs and routes
 // through insertIntoClaudeInput (which we've redirected to the terminal).
-function vcInsertAssetIntoAider() {
+function vcInsertAssetIntoTerminal() {
     if (typeof openClaudeAssetModal === 'function') {
         openClaudeAssetModal();
     }
 }
 
-function vcInitAiderTerminal() {
+function vcInitTerminal() {
     if (_vcXterm) {
         // Already running — just refit on tab return
         try { _vcXtermFit && _vcXtermFit.fit(); } catch(e) {}
@@ -7401,7 +8105,7 @@ function vcInitAiderTerminal() {
     if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined' || typeof io === 'undefined') {
         // CDN scripts haven't loaded yet (deferred). Try again shortly.
         if (_vcXtermInitTries++ < 50) {
-            setTimeout(vcInitAiderTerminal, 200);
+            setTimeout(vcInitTerminal, 200);
             return;
         }
         const missing = [];
@@ -7409,7 +8113,7 @@ function vcInitAiderTerminal() {
         if (typeof FitAddon === 'undefined') missing.push('addon-fit');
         if (typeof io === 'undefined') missing.push('socket.io');
         _vcBootMsg('failed to load: ' + missing.join(', ') + ' — check network / CDN', true);
-        console.error('[vibe-coder] terminal init aborted, missing:', missing);
+        console.error('[terminal-access] terminal init aborted, missing:', missing);
         return;
     }
     const host = document.getElementById('vcXtermHost');
@@ -7418,7 +8122,7 @@ function vcInitAiderTerminal() {
         // Login not complete yet — try again when it is. currentToken can
         // legitimately be '' for cookie-session users; only artist matters.
         if (_vcXtermInitTries++ < 50) {
-            setTimeout(vcInitAiderTerminal, 200);
+            setTimeout(vcInitTerminal, 200);
         }
         return;
     }
@@ -7457,26 +8161,47 @@ function vcInitAiderTerminal() {
     });
     _vcXtermFit = new FitAddon.FitAddon();
     _vcXterm.loadAddon(_vcXtermFit);
+    // Clipboard: copy-on-selection + Cmd/Ctrl+Shift shortcuts. See Auto-Code init.
+    _vcXterm.onSelectionChange(() => {
+        const sel = _vcXterm.getSelection();
+        if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+    });
+    _vcXterm.attachCustomKeyEventHandler((e) => {
+        if (e.type !== 'keydown') return true;
+        const isCopy  = ((e.metaKey && !e.ctrlKey) || (e.ctrlKey && e.shiftKey)) && (e.key === 'C' || e.key === 'c');
+        const isPaste = ((e.metaKey && !e.ctrlKey) || (e.ctrlKey && e.shiftKey)) && (e.key === 'V' || e.key === 'v');
+        if (isCopy) {
+            const sel = _vcXterm.getSelection();
+            if (sel) navigator.clipboard.writeText(sel).catch(() => {});
+            e.preventDefault();
+            return false;
+        }
+        if (isPaste) {
+            navigator.clipboard.readText().then(txt => {
+                if (txt && _vcXtermSocket && _vcXtermSocket.connected) {
+                    _vcXtermSocket.emit('terminal:input', { data: txt });
+                }
+            }).catch(() => {});
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    });
     _vcXterm.open(host);
-    // Fit a few times across the next layout ticks. The toolbar below the
-    // terminal can settle into place after the first fit, leaving xterm
-    // measuring the wrong height and rendering rows past the visible
-    // bottom edge (visually: terminal "covered" by the toolbar). Repeat
-    // fits at 0/50/200ms catch every variant of late layout.
+    // Fit after each of the next two paint frames so we measure real layout,
+    // not the zero-height state that exists before the browser first renders.
     const safeFit = () => {
         if (!_vcXtermFit || !_vcXterm) return;
         try { _vcXtermFit.fit(); } catch(e) { return; }
         if (_vcXtermSocket && _vcXtermSocket.connected) {
-            _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+            _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
         }
     };
-    safeFit();
-    setTimeout(safeFit, 50);
-    setTimeout(safeFit, 200);
+    requestAnimationFrame(() => { safeFit(); requestAnimationFrame(safeFit); });
 
-    _vcXtermSocket = io('/aider', {
+    _vcXtermSocket = io('/terminal', {
         auth: { artist_slug: currentArtist, token: currentToken || '' },
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'],
         withCredentials: true,  // send adze_session cookie for cookie-auth fallback
     });
 
@@ -7486,22 +8211,22 @@ function vcInitAiderTerminal() {
     let _vcConnectErrors = 0;
     _vcXtermSocket.on('connect', () => {
         _vcConnectErrors = 0;
-        _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+        _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
     });
-    _vcXtermSocket.on('aider:output', (data) => {
+    _vcXtermSocket.on('terminal:output', (data) => {
         _vcXterm.write(data);
     });
-    _vcXtermSocket.on('aider:exit', () => {
-        _vcXterm.write('\r\n\x1b[33m[adze] aider session ended. Switch tabs and back to restart.\x1b[0m\r\n');
+    _vcXtermSocket.on('terminal:exit', () => {
+        _vcXterm.write('\r\n\x1b[33m[adze] Terminal session ended. Switch tabs and back to reattach.\x1b[0m\r\n');
     });
     _vcXtermSocket.on('disconnect', (reason) => {
         if (reason !== 'io client disconnect') {
-            console.warn('[vibe-coder] socket disconnect:', reason);
+            console.warn('[terminal-access] socket disconnect:', reason);
         }
     });
     _vcXtermSocket.on('connect_error', (err) => {
         _vcConnectErrors += 1;
-        console.warn('[vibe-coder] connect error:', err.message || err);
+        console.warn('[terminal-access] connect error:', err.message || err);
         if (_vcConnectErrors >= 5) {
             _vcXterm.write(`\r\n\x1b[31m[adze] persistent connect error: ${err.message || err}\x1b[0m\r\n`);
             _vcConnectErrors = 0;  // reset so we don't spam
@@ -7510,33 +8235,1087 @@ function vcInitAiderTerminal() {
 
     _vcXterm.onData((data) => {
         if (_vcXtermSocket && _vcXtermSocket.connected) {
-            _vcXtermSocket.emit('aider:input', { data });
+            _vcXtermSocket.emit('terminal:input', { data });
         }
     });
 
-    // Refit on container resize
+    // Refit on container resize. Observe both the xterm host and the outer
+    // editor pane — the tab-bar appearing after loadPages() only changes the
+    // outer pane's dimensions, not the absolutely-positioned host.
     if (typeof ResizeObserver !== 'undefined') {
-        const ro = new ResizeObserver(() => {
-            if (!_vcXtermFit || !_vcXterm) return;
-            try { _vcXtermFit.fit(); } catch(e) { return; }
-            if (_vcXtermSocket && _vcXtermSocket.connected) {
-                _vcXtermSocket.emit('aider:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
-            }
-        });
+        let _rafId = null;
+        const roCallback = () => {
+            // Debounce via rAF so we measure after layout settles
+            if (_rafId) cancelAnimationFrame(_rafId);
+            _rafId = requestAnimationFrame(() => {
+                _rafId = null;
+                if (!_vcXtermFit || !_vcXterm) return;
+                try { _vcXtermFit.fit(); } catch(e) { return; }
+                if (_vcXtermSocket && _vcXtermSocket.connected) {
+                    _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
+                }
+            });
+        };
+        const ro = new ResizeObserver(roCallback);
         ro.observe(host);
+        const editorPane = document.getElementById('claudeEditorPane');
+        if (editorPane) ro.observe(editorPane);
     }
 }
+
+// ── Auto-Code (opencode-serve chat client) ───────────────────────────────
+// Talks to /api/adze/autocode/* (Flask proxy → opencode serve in the
+// per-artist sandbox container). Mode is per-message — switching Normal
+// ↔ Fast just changes the model field on the next POST, no reconnect.
+const AutoCode = (() => {
+    const MODELS = {
+        standard:     { providerID: 'openrouter', modelID: 'anthropic/claude-haiku-4.5' },
+        standardplus: { providerID: 'openrouter', modelID: 'anthropic/claude-haiku-4.5:thinking' },
+        smart:        { providerID: 'openrouter', modelID: 'anthropic/claude-sonnet-4.5' },
+        smartplus:    { providerID: 'openrouter', modelID: 'anthropic/claude-sonnet-4.5:thinking' },
+    };
+    const MODE_BTN = {
+        standard: 'acModeStandard',
+        standardplus: 'acModeStandardPlus',
+        smart: 'acModeSmart',
+        smartplus: 'acModeSmartPlus',
+    };
+    const MODE_STORAGE_KEY = 'autocode-mode';
+    // Claude 4.5 family share a 200k context window; hard-code rather
+    // than thread it through every message.
+    const CONTEXT_LIMIT = 200000;
+    const TOOL_ICONS = {
+        read: 'ph-file-text', write: 'ph-pencil-simple', edit: 'ph-pencil-simple',
+        list: 'ph-folder', ls: 'ph-folder', glob: 'ph-folder',
+        bash: 'ph-terminal-window', shell: 'ph-terminal-window',
+        grep: 'ph-magnifying-glass', search: 'ph-magnifying-glass',
+        webfetch: 'ph-globe', webread: 'ph-globe', webSearch: 'ph-globe',
+        todowrite: 'ph-check-square', todoread: 'ph-list-checks',
+    };
+
+    // ── Per-tab state ─────────────────────────────────────────────────
+    //
+    // Each tab is its own conversation against opencode, optionally
+    // anchored to a `worktree` workspace. The default tab (tab 0) lives
+    // in the artist root on `main` — no auto-commit. Tabs 1+ are
+    // worktrees: opencode-managed dirs under ~/.local/share/opencode/...
+    // inside the sandbox, and we auto-commit per assistant turn.
+    //
+    // SSE is global (one stream per artist serve); the dispatcher routes
+    // events to the right tab by sessionID.
+
+    const tabs = new Map();              // tab.id → tab object
+    let activeTabId = null;
+    let nextLocalTabId = 0;
+    let mode = 'standardplus';
+    let es = null;
+    let esBackoff = 500;
+    let lastPreviewRefresh = 0;
+    let previewRefreshTimer = null;
+    let composerWired = false;
+    let tabsBootstrapped = false;
+    let statusTicker = null;
+    let externalDisabled = false;        // disable new tabs on remote artists
+
+    const $ = (id) => document.getElementById(id);
+
+    function makeTabState() {
+        return {
+            textParts: new Map(),
+            reasoningParts: new Map(),
+            toolParts: new Map(),
+            permCards: new Map(),
+            messageCost: new Map(),       // messageID → dollars
+            userMessageIds: new Set(),
+            activeTools: new Map(),
+            pendingQueue: [],
+            drainScheduled: false,
+            outputTokens: 0,
+            busyState: 'idle',
+            busySince: 0,
+            inputTokens: 0,
+            cachedTokens: 0,
+        };
+    }
+
+    function makeTab({ label, workspace }) {
+        const localId = String(++nextLocalTabId);
+        const pane = document.createElement('div');
+        pane.className = 'ai-messages ac-transcript ac-transcript-pane';
+        pane.dataset.tabId = localId;
+        const host = $('acTranscriptHost');
+        if (host) host.appendChild(pane);
+        return {
+            id: localId,
+            sessionId: null,
+            workspaceID: workspace?.id || null,
+            branch: workspace?.branch || 'main',
+            directory: workspace?.directory || null,
+            name: workspace?.name || label || 'main',
+            label: label || workspace?.name || 'main',
+            pane,
+            starting: false,
+            state: makeTabState(),
+        };
+    }
+
+    function activeTab() { return tabs.get(activeTabId); }
+
+    function tabBySessionId(sid) {
+        for (const t of tabs.values()) if (t.sessionId === sid) return t;
+        return null;
+    }
+
+    function isWorktreeTab(tab) {
+        return !!(tab && tab.workspaceID);
+    }
+
+    function switchTab(tabId) {
+        if (!tabs.has(tabId) || tabId === activeTabId) return;
+        const cur = activeTab();
+        if (cur && cur.pane) cur.pane.classList.remove('active');
+        activeTabId = tabId;
+        const nxt = activeTab();
+        if (nxt && nxt.pane) nxt.pane.classList.add('active');
+        renderTabStrip();
+        repaintStatus();
+        repaintContextBar();
+        scrollToEnd();
+    }
+
+    function renderTabStrip() {
+        const strip = $('acTabs');
+        if (!strip) return;
+        strip.innerHTML = '';
+        for (const t of tabs.values()) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ac-tab' + (t.id === activeTabId ? ' active' : '');
+            b.dataset.tabId = t.id;
+            const branch = t.branch || (isWorktreeTab(t) ? '(worktree)' : 'main');
+            b.innerHTML = `<span class="ac-tab-name"></span><span class="ac-tab-branch"></span>`;
+            b.querySelector('.ac-tab-name').textContent = t.label;
+            b.querySelector('.ac-tab-branch').textContent = branch;
+            b.addEventListener('click', (e) => {
+                if (e.target.closest('.ac-tab-close, .ac-tab-merge')) return;
+                switchTab(t.id);
+            });
+            if (isWorktreeTab(t)) {
+                const merge = document.createElement('button');
+                merge.className = 'ac-tab-merge';
+                merge.title = 'Merge this tab into main';
+                merge.innerHTML = '<i class="ph ph-git-merge"></i>';
+                merge.addEventListener('click', (e) => { e.stopPropagation(); mergeTab(t.id); });
+                b.appendChild(merge);
+
+                const x = document.createElement('button');
+                x.className = 'ac-tab-close';
+                x.title = 'Close tab (discards branch)';
+                x.textContent = '✕';
+                x.addEventListener('click', (e) => { e.stopPropagation(); closeTab(t.id); });
+                b.appendChild(x);
+            }
+            strip.appendChild(b);
+        }
+        if (!externalDisabled) {
+            const plus = document.createElement('button');
+            plus.type = 'button';
+            plus.className = 'ac-tab-new';
+            plus.title = 'New tab (creates a git worktree)';
+            plus.textContent = '+';
+            plus.addEventListener('click', newTab);
+            strip.appendChild(plus);
+        }
+    }
+
+    function setStatus(state, text, tab) {
+        tab = tab || activeTab();
+        if (!tab) return;
+        const wasBusy = tab.state.busyState === 'thinking' || tab.state.busyState === 'tool';
+        const isBusy = state === 'thinking' || state === 'tool';
+        tab.state.busyState = state;
+
+        if (isBusy) {
+            if (!wasBusy) {
+                tab.state.busySince = Date.now();
+                tab.state.outputTokens = 0;
+            }
+            if (tab === activeTab()) showThinking(tab);
+        } else if (tab === activeTab()) {
+            hideThinking(tab);
+        }
+
+        if (tab === activeTab()) {
+            const led = $('acStatusLed');
+            if (led) led.dataset.state = state;
+            const abort = $('acAbortBtn');
+            if (abort) abort.disabled = !isBusy;
+            if (!isBusy) {
+                const t = $('acStatusText');
+                if (t) t.textContent = text;
+                if (statusTicker) { clearInterval(statusTicker); statusTicker = null; }
+                return;
+            }
+            if (!wasBusy) {
+                const t = $('acStatusText');
+                if (t) t.textContent = text;
+            }
+            if (!statusTicker) statusTicker = setInterval(repaintStatus, 500);
+            repaintStatus();
+        }
+    }
+
+    function repaintStatus() {
+        const tab = activeTab();
+        if (!tab) return;
+        if (tab.state.busyState !== 'thinking' && tab.state.busyState !== 'tool') return;
+        const el = $('acStatusText');
+        if (!el) return;
+        const secs = Math.max(0, Math.floor((Date.now() - tab.state.busySince) / 1000));
+        let label;
+        if (tab.state.activeTools.size) {
+            const last = Array.from(tab.state.activeTools.values()).pop();
+            const arg = last.arg ? ` ${last.arg}` : '';
+            label = `${last.tool}${arg}`;
+        } else {
+            label = 'Thinking';
+        }
+        const tok = tab.state.outputTokens > 0 ? ` · ${tab.state.outputTokens} tok` : '';
+        el.textContent = `${label} · ${secs}s${tok}`;
+    }
+
+    function repaintContextBar() {
+        const tab = activeTab();
+        const fill = $('acContextFill');
+        const label = $('acContextLabel');
+        if (!fill || !label) return;
+        if (!tab) { fill.style.width = '0%'; label.textContent = ''; return; }
+        const used = (tab.state.inputTokens || 0)
+            + (tab.state.outputTokens || 0)
+            + (tab.state.cachedTokens || 0);
+        const pct = Math.min(100, (used / CONTEXT_LIMIT) * 100);
+        fill.style.width = pct.toFixed(1) + '%';
+        fill.dataset.warn = pct > 90 ? 'crit' : pct > 70 ? 'high' : '';
+        label.textContent = `${fmtTok(used)} / ${fmtTok(CONTEXT_LIMIT)}`;
+    }
+
+    function fmtTok(n) {
+        if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
+        return String(n);
+    }
+
+    function showThinking(tab) {
+        tab = tab || activeTab();
+        if (!tab || !tab.pane) return;
+        let el = tab.pane.querySelector(':scope > .ac-thinking');
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'ac-thinking';
+            el.innerHTML = '<span class="ac-thinking-dots"><span></span><span></span><span></span></span>';
+            tab.pane.appendChild(el);
+        } else {
+            tab.pane.appendChild(el);
+        }
+        scrollToEnd();
+    }
+
+    function hideThinking(tab) {
+        tab = tab || activeTab();
+        if (!tab || !tab.pane) return;
+        const el = tab.pane.querySelector(':scope > .ac-thinking');
+        if (el) el.remove();
+    }
+
+    async function apiFetchAC(path, opts = {}) {
+        const headers = {
+            'X-Artist-Slug': currentArtist || '',
+            'X-Admin-Token': currentToken || '',
+            ...(opts.headers || {}),
+        };
+        if (opts.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+        return fetch('/api/adze/autocode' + path, { ...opts, headers, credentials: 'same-origin' });
+    }
+
+    function escHtml(s) {
+        return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function renderMd(text) {
+        if (!text) return '';
+        try {
+            const html = window.marked ? marked.parse(text, { gfm: true, breaks: true }) : escHtml(text).replace(/\n/g, '<br>');
+            return window.DOMPurify ? DOMPurify.sanitize(html) : html;
+        } catch (e) {
+            return escHtml(text);
+        }
+    }
+
+    function scrollToEnd() {
+        const tab = activeTab();
+        if (tab && tab.pane) tab.pane.scrollTop = tab.pane.scrollHeight;
+    }
+
+    function ensureTextBubble(tab, partID) {
+        let el = tab.state.textParts.get(partID);
+        if (el) return el;
+        el = document.createElement('div');
+        el.className = 'ai-msg assistant';
+        el.dataset.partId = partID;
+        el._raw = '';
+        tab.pane.appendChild(el);
+        tab.state.textParts.set(partID, el);
+        if (tab === activeTab()) scrollToEnd();
+        return el;
+    }
+
+    function ensureReasoningCard(tab, partID) {
+        let el = tab.state.reasoningParts.get(partID);
+        if (el) return el;
+        el = document.createElement('div');
+        el.className = 'ac-tool ac-reasoning';
+        const head = document.createElement('div');
+        head.className = 'ac-tool-head';
+        head.innerHTML = `
+            <i class="ph ph-brain"></i>
+            <span class="ac-tool-name">Thinking</span>
+            <span class="ac-tool-arg"></span>
+            <span class="ac-tool-state">⋯</span>
+        `;
+        head.addEventListener('click', () => el.classList.toggle('open'));
+        const body = document.createElement('pre');
+        body.className = 'ac-tool-body';
+        el.appendChild(head);
+        el.appendChild(body);
+        el._raw = '';
+        el.classList.add('open');
+        tab.pane.appendChild(el);
+        tab.state.reasoningParts.set(partID, el);
+        if (tab === activeTab()) scrollToEnd();
+        return el;
+    }
+
+    function renderReasoningPart(tab, part) {
+        const el = ensureReasoningCard(tab, part.id);
+        const txt = part.text || '';
+        if (txt) {
+            el._raw = txt;
+            el.querySelector('.ac-tool-body').textContent = txt;
+        }
+        const status = part.state?.status;
+        const stEl = el.querySelector('.ac-tool-state');
+        if (status === 'completed') {
+            stEl.textContent = '✓';
+            stEl.className = 'ac-tool-state ok';
+            el.classList.remove('open');
+        }
+        if (tab === activeTab()) scrollToEnd();
+    }
+
+    function pickToolIcon(name) {
+        const key = (name || '').toLowerCase();
+        return TOOL_ICONS[key] || 'ph-command';
+    }
+
+    function summariseToolInput(input) {
+        if (!input || typeof input !== 'object') return '';
+        for (const k of ['path', 'file_path', 'filePath', 'file', 'pattern', 'command', 'cmd', 'query', 'url']) {
+            if (typeof input[k] === 'string' && input[k]) return input[k];
+        }
+        try { return JSON.stringify(input).slice(0, 80); } catch { return ''; }
+    }
+
+    function ensureToolCard(tab, part) {
+        let el = tab.state.toolParts.get(part.id);
+        if (!el) {
+            el = document.createElement('div');
+            el.className = 'ac-tool';
+            const head = document.createElement('div');
+            head.className = 'ac-tool-head';
+            head.innerHTML = `
+                <i class="ph ${pickToolIcon(part.tool)}"></i>
+                <span class="ac-tool-name"></span>
+                <span class="ac-tool-arg"></span>
+                <span class="ac-tool-state">…</span>
+            `;
+            head.addEventListener('click', () => el.classList.toggle('open'));
+            const body = document.createElement('pre');
+            body.className = 'ac-tool-body';
+            el.appendChild(head);
+            el.appendChild(body);
+            tab.pane.appendChild(el);
+            tab.state.toolParts.set(part.id, el);
+        }
+        return el;
+    }
+
+    function renderToolPart(tab, part) {
+        const el = ensureToolCard(tab, part);
+        const state = part.state || {};
+        const arg = summariseToolInput(state.input);
+        el.querySelector('.ac-tool-name').textContent = part.tool || 'tool';
+        el.querySelector('.ac-tool-arg').textContent = arg;
+        const stateEl = el.querySelector('.ac-tool-state');
+        const body = el.querySelector('.ac-tool-body');
+        switch (state.status) {
+            case 'completed':
+                stateEl.textContent = '✓';
+                stateEl.className = 'ac-tool-state ok';
+                if (state.output != null) {
+                    body.textContent = (typeof state.output === 'string')
+                        ? state.output.slice(0, 8000)
+                        : JSON.stringify(state.output, null, 2).slice(0, 8000);
+                }
+                el.classList.remove('open');
+                tab.state.activeTools.delete(part.id);
+                break;
+            case 'error':
+                stateEl.textContent = '✗';
+                stateEl.className = 'ac-tool-state err';
+                el.classList.add('open');
+                body.textContent = state.error || JSON.stringify(state, null, 2);
+                tab.state.activeTools.delete(part.id);
+                break;
+            case 'running':
+                stateEl.textContent = '⋯';
+                stateEl.className = 'ac-tool-state';
+                el.classList.add('open');
+                if (state.input) {
+                    try { body.textContent = JSON.stringify(state.input, null, 2); } catch {}
+                }
+                tab.state.activeTools.set(part.id, { tool: part.tool || 'tool', arg });
+                setStatus('tool', `${part.tool || 'tool'}${arg ? ' ' + arg : ''}`, tab);
+                break;
+            case 'pending':
+            default:
+                stateEl.textContent = '…';
+                stateEl.className = 'ac-tool-state';
+                tab.state.activeTools.set(part.id, { tool: part.tool || 'tool', arg });
+                if (tab === activeTab()) repaintStatus();
+        }
+        if (tab === activeTab()) scrollToEnd();
+    }
+
+    function renderPermissionAsked(tab, evt) {
+        const p = evt.properties || {};
+        if (!p.id) return;
+        if (tab.state.permCards.has(p.id)) return;
+        const el = document.createElement('div');
+        el.className = 'ac-perm';
+        const reason = p.permission || 'Allow this operation?';
+        const pat = (p.patterns && p.patterns.length) ? '\nPattern: ' + p.patterns.join(', ') : '';
+        const meta = p.metadata && Object.keys(p.metadata).length ? '\n' + JSON.stringify(p.metadata, null, 2) : '';
+        el.innerHTML = `
+            <div class="ac-perm-head"><i class="ph ph-shield-warning"></i> Permission requested</div>
+            <div class="ac-perm-body"></div>
+            <div class="ac-perm-actions">
+                <button class="ac-perm-ok">Allow once</button>
+                <button class="ac-perm-always">Always allow</button>
+                <button class="ac-perm-deny">Reject</button>
+            </div>`;
+        el.querySelector('.ac-perm-body').textContent = reason + pat + meta;
+        const reply = async (response) => {
+            try {
+                await apiFetchAC(`/session/${tab.sessionId}/permissions/${p.id}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ response }),
+                });
+                el.classList.add('resolved');
+            } catch (e) {
+                console.warn('[auto-code] permission reply failed:', e);
+            }
+        };
+        el.querySelector('.ac-perm-ok').addEventListener('click', () => reply('once'));
+        el.querySelector('.ac-perm-always').addEventListener('click', () => reply('always'));
+        el.querySelector('.ac-perm-deny').addEventListener('click', () => reply('reject'));
+        tab.pane.appendChild(el);
+        tab.state.permCards.set(p.id, el);
+        if (tab === activeTab()) scrollToEnd();
+    }
+
+    function resolvePermissionCard(tab, evt) {
+        const p = evt.properties || {};
+        const el = tab.state.permCards.get(p.id);
+        if (el) el.classList.add('resolved');
+    }
+
+    function schedulePreviewRefresh() {
+        const now = Date.now();
+        if (previewRefreshTimer) return;
+        const wait = Math.max(0, 750 - (now - lastPreviewRefresh));
+        previewRefreshTimer = setTimeout(() => {
+            previewRefreshTimer = null;
+            lastPreviewRefresh = Date.now();
+            // Remote (external Seed) artists: the preview iframe loads a real
+            // URL, so a plain reload re-renders the page server-side.
+            if (window.__adzeRemote && window.__adzeRemote.preview_url) {
+                const f = $('previewFrameAutocode');
+                if (f && f.src) f.src = f.src;
+                return;
+            }
+            // Local artists: the preview is a srcdoc built from page content on
+            // disk, so reloading the iframe alone shows nothing new. Re-fetch
+            // the active page and rebuild it. refreshPreview() also handles the
+            // case where Auto-Code deleted the page we were viewing.
+            refreshPreview(true);
+        }, wait);
+    }
+
+    function updateCostFromMessage(tab, info) {
+        if (!info || !info.id) return;
+        const cost = Number(info.cost) || 0;
+        tab.state.messageCost.set(info.id, cost);
+        // Global cost = sum across all tabs.
+        let total = 0;
+        for (const t of tabs.values()) {
+            for (const v of t.state.messageCost.values()) total += v;
+        }
+        const el = $('acCostValue');
+        if (el) el.textContent = '$' + total.toFixed(4);
+
+        const tokens = info.tokens || {};
+        const out = Number(tokens.output) || 0;
+        if (out > tab.state.outputTokens) tab.state.outputTokens = out;
+        if (typeof tokens.input === 'number') tab.state.inputTokens = tokens.input;
+        const cacheRead = Number(tokens.cache?.read) || Number(tokens.cacheRead) || 0;
+        if (cacheRead) tab.state.cachedTokens = cacheRead;
+        if (tab === activeTab()) { repaintStatus(); repaintContextBar(); }
+    }
+
+    function dispatch(evt) {
+        const props = evt.properties || {};
+        if (evt.type === 'sync' || /\.\d+$/.test(evt.type || '')) return;
+        if (evt.type === 'server.connected' || evt.type === 'server.heartbeat') return;
+
+        // Route by sessionID where available; otherwise fall back to the
+        // active tab (covers server-level/global events).
+        const sid = props.sessionID || props.part?.sessionID || props.info?.sessionID;
+        const tab = (sid && tabBySessionId(sid)) || activeTab();
+        if (!tab) return;
+
+        switch (evt.type) {
+            case 'message.part.delta': {
+                if (tab.state.userMessageIds.has(props.messageID)) return;
+                if (props.field === 'text' && props.partID && props.delta) {
+                    if (tab.state.reasoningParts.has(props.partID)) {
+                        const el = tab.state.reasoningParts.get(props.partID);
+                        el._raw = (el._raw || '') + props.delta;
+                        el.querySelector('.ac-tool-body').textContent = el._raw;
+                    } else {
+                        const el = ensureTextBubble(tab, props.partID);
+                        el._raw = (el._raw || '') + props.delta;
+                        el.innerHTML = renderMd(el._raw);
+                    }
+                    if (tab.state.busyState !== 'tool') setStatus('thinking', 'Thinking', tab);
+                    if (tab === activeTab()) scrollToEnd();
+                }
+                return;
+            }
+
+            case 'message.part.updated': {
+                const part = props.part || {};
+                if (tab.state.userMessageIds.has(part.messageID)) return;
+                if (part.type === 'reasoning' && part.id) {
+                    renderReasoningPart(tab, part);
+                } else if (part.type === 'text' && part.id) {
+                    const el = ensureTextBubble(tab, part.id);
+                    if (typeof part.text === 'string' && part.text) {
+                        el._raw = part.text;
+                        el.innerHTML = renderMd(el._raw);
+                    }
+                    if (tab === activeTab()) scrollToEnd();
+                } else if (part.type === 'tool' && part.id) {
+                    renderToolPart(tab, part);
+                }
+                return;
+            }
+
+            case 'message.part.removed': {
+                if (props.partID) {
+                    tab.state.textParts.get(props.partID)?.remove();
+                    tab.state.textParts.delete(props.partID);
+                    tab.state.toolParts.get(props.partID)?.remove();
+                    tab.state.toolParts.delete(props.partID);
+                }
+                return;
+            }
+
+            case 'message.updated': {
+                const info = props.info;
+                if (!info) return;
+                if (info.role === 'user' && info.id) tab.state.userMessageIds.add(info.id);
+                else if (info.role === 'assistant') updateCostFromMessage(tab, info);
+                if (info.error) {
+                    const err = info.error;
+                    const msg = err.data?.message || err.message || err.name || 'upstream error';
+                    setStatus('error', err.name || 'error', tab);
+                    appendSystem(tab, msg);
+                }
+                return;
+            }
+
+            case 'session.status': {
+                const t = props.status?.type;
+                if (t === 'busy') setStatus('thinking', 'Thinking', tab);
+                else if (t === 'idle') setStatus('idle', 'idle', tab);
+                else if (t === 'error') setStatus('error', 'error', tab);
+                return;
+            }
+
+            case 'session.idle':
+                tab.state.activeTools.clear();
+                setStatus('idle', 'idle', tab);
+                // Catch-all preview refresh at end of turn. file.edited covers
+                // tool-based edits, but a `bash rm`/`mv` deletion emits no such
+                // event — refresh here so the preview (and a now-deleted active
+                // page) gets reconciled once the turn settles.
+                if (!isWorktreeTab(tab)) schedulePreviewRefresh();
+                // Auto-commit a worktree tab after each turn so the branch
+                // carries usable history for merge/rollback.
+                if (isWorktreeTab(tab) && tab.directory) {
+                    apiFetchAC(`/tab/${tab.workspaceID}/commit`, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            directory: tab.directory,
+                            message: `adze: ${tab.label} turn`,
+                        }),
+                    }).catch(() => {});
+                }
+                return;
+
+            case 'session.diff':
+                if (props.diff && props.diff.length && !isWorktreeTab(tab)) {
+                    // Only refresh the preview from main-branch edits;
+                    // worktree changes don't affect the live preview.
+                    schedulePreviewRefresh();
+                }
+                return;
+
+            case 'session.error':
+                setStatus('error', props.error?.name || 'session.error', tab);
+                return;
+
+            case 'permission.asked':   return renderPermissionAsked(tab, evt);
+            case 'permission.replied': return resolvePermissionCard(tab, evt);
+            case 'file.edited':
+                if (!isWorktreeTab(tab)) schedulePreviewRefresh();
+                return;
+        }
+    }
+
+    function openEventStream() {
+        if (es) { try { es.close(); } catch {} }
+        const _esUrl = '/api/adze/autocode/event'
+            + (currentArtist ? `?slug=${encodeURIComponent(currentArtist)}` : '');
+        es = new EventSource(_esUrl, { withCredentials: true });
+        es.onopen = () => { esBackoff = 500; };
+        es.onmessage = (ev) => {
+            let evt;
+            try { evt = JSON.parse(ev.data); }
+            catch (e) { return; }
+            try { dispatch(evt); }
+            catch (e) { console.warn('[auto-code] dispatch threw:', e, evt); }
+        };
+        es.onerror = () => {
+            try { es.close(); } catch {}
+            es = null;
+            setTimeout(openEventStream, Math.min((esBackoff *= 1.7) | 0, 15000));
+        };
+    }
+
+    // ── Default-session persistence across page reloads ───────────────
+    // The default tab's conversation lives server-side in opencode, but the
+    // browser used to forget its session id on every refresh and spawn a
+    // fresh one — orphaning the prior chat. We stash the id per artist and,
+    // on load, reattach to it if the serve still knows it.
+    const _acSessionKey = () => currentArtist ? `adze-ac-session:${currentArtist}` : null;
+    function rememberDefaultSession(tab) {
+        const key = _acSessionKey();
+        if (!key || tab.workspaceID || !tab.sessionId) return;   // default tab only
+        try { localStorage.setItem(key, tab.sessionId); } catch (e) {}
+    }
+    async function reattachDefaultSession(tab) {
+        const key = _acSessionKey();
+        if (!key) return false;
+        let saved;
+        try { saved = localStorage.getItem(key); } catch (e) { return false; }
+        if (!saved) return false;
+        try {
+            const r = await apiFetchAC('/session');   // list known sessions
+            if (!r.ok) return false;
+            const list = await r.json().catch(() => null);
+            const sessions = Array.isArray(list) ? list : (list?.sessions || []);
+            const found = sessions.some(s => (s.id || s.sessionID) === saved);
+            if (!found) { try { localStorage.removeItem(key); } catch (e) {} return false; }
+            tab.sessionId = saved;
+            if (!es) openEventStream();
+            setStatus('idle', 'idle', tab);
+            // Try to load and replay the stored messages before the system note.
+            try {
+                const sr = await apiFetchAC(`/session/${saved}`);
+                if (sr.ok) {
+                    const sdata = await sr.json().catch(() => null);
+                    const msgs = sdata?.messages || sdata?.Messages || [];
+                    let rendered = 0;
+                    for (const msg of msgs) {
+                        const role = msg.role || msg.Role || '';
+                        const parts = msg.parts || msg.Parts || [];
+                        if (role === 'user') {
+                            const txt = parts.filter(p => p.type === 'text').map(p => p.text || '').join('');
+                            if (txt) { appendUserBubble(tab, txt); rendered++; }
+                        } else if (role === 'assistant') {
+                            for (const p of parts) {
+                                if (p.type === 'text' && p.text) {
+                                    const el = ensureTextBubble(tab, p.id || ('hist-' + rendered + '-' + parts.indexOf(p)));
+                                    el._raw = p.text;
+                                    el.innerHTML = renderMd(p.text);
+                                    rendered++;
+                                }
+                            }
+                        }
+                    }
+                    if (rendered > 0) {
+                        appendSystem(tab, '— above: previous session —');
+                        return true;
+                    }
+                }
+            } catch (_) {}
+            appendSystem(tab, 'Reattached to your previous session — the assistant still has the full conversation in context. (Earlier messages aren\'t re-shown above yet.)');
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async function initDefaultTab() {
+        // Create the default tab object up-front so the UI has somewhere
+        // to render even before opencode finishes starting.
+        if (tabs.size) return activeTab();
+        const tab = makeTab({ label: 'main', workspace: null });
+        tabs.set(tab.id, tab);
+        activeTabId = tab.id;
+        tab.pane.classList.add('active');
+        renderTabStrip();
+        repaintContextBar();
+        // Try to pick up where we left off; only create a new session if the
+        // old one is gone (e.g. the sandbox was rebuilt).
+        const reattached = await reattachDefaultSession(tab);
+        if (!reattached) await ensureSession(tab);
+        return tab;
+    }
+
+    async function ensureSession(tab) {
+        if (tab.sessionId || tab.starting) return tab.sessionId;
+        tab.starting = true;
+        setStatus('connecting', tab === activeTab() ? 'starting opencode serve…' : 'starting…', tab);
+        try {
+            const body = tab.workspaceID ? { workspaceID: tab.workspaceID } : {};
+            const r = await apiFetchAC('/session', { method: 'POST', body: JSON.stringify(body) });
+            if (!r.ok) {
+                const txt = await r.text();
+                setStatus('error', `couldn't start (${r.status})`, tab);
+                appendSystem(tab, txt);
+                return null;
+            }
+            const j = await r.json();
+            tab.sessionId = j.id || j.sessionID;
+            rememberDefaultSession(tab);
+            if (!es) openEventStream();
+            setStatus('idle', 'idle', tab);
+            return tab.sessionId;
+        } catch (e) {
+            setStatus('error', String(e.message || e), tab);
+            return null;
+        } finally {
+            tab.starting = false;
+        }
+    }
+
+    async function newTab() {
+        if (externalDisabled) return;
+        const btn = document.querySelector('.ac-tab-new');
+        if (btn) btn.disabled = true;
+        try {
+            const r = await apiFetchAC('/tab', { method: 'POST', body: '{}' });
+            if (!r.ok) {
+                const txt = await r.text();
+                appendSystem(activeTab(), `New tab failed: ${txt}`);
+                return;
+            }
+            const ws = await r.json();
+            const tab = makeTab({ label: ws.name || `tab ${tabs.size + 1}`, workspace: ws });
+            tabs.set(tab.id, tab);
+            switchTab(tab.id);
+            await ensureSession(tab);
+        } catch (e) {
+            appendSystem(activeTab(), `New tab error: ${e.message || e}`);
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function closeTab(tabId) {
+        const tab = tabs.get(tabId);
+        if (!tab || !isWorktreeTab(tab)) return;
+        // Best-effort: kill the session, drop the workspace, drop the DOM.
+        if (tab.sessionId) {
+            try { await apiFetchAC(`/session/${tab.sessionId}`, { method: 'DELETE' }); } catch {}
+        }
+        try { await apiFetchAC(`/tab/${tab.workspaceID}`, { method: 'DELETE' }); } catch {}
+        if (tab.pane) tab.pane.remove();
+        tabs.delete(tabId);
+        if (activeTabId === tabId) {
+            const next = tabs.keys().next().value;
+            activeTabId = null;
+            if (next) switchTab(next);
+        }
+        renderTabStrip();
+    }
+
+    async function mergeTab(tabId) {
+        const tab = tabs.get(tabId);
+        if (!tab || !isWorktreeTab(tab)) return;
+        if (!tab.branch) { appendSystem(tab, 'No branch attached to this tab.'); return; }
+        if (!confirm(`Merge tab "${tab.label}" (${tab.branch}) into main? Preview will rebuild.`)) return;
+        try {
+            const r = await apiFetchAC(`/tab/${tab.workspaceID}/merge`, {
+                method: 'POST',
+                body: JSON.stringify({ branch: tab.branch }),
+            });
+            const j = await r.json().catch(() => ({}));
+            if (!j.ok) {
+                appendSystem(tab, 'Merge conflict:\n' + (j.conflicts || []).join('\n'));
+                return;
+            }
+            appendSystem(tab, `Merged into main (${(j.sha || '').slice(0, 7)}). Closing tab.`);
+            schedulePreviewRefresh();
+            await closeTab(tabId);
+        } catch (e) {
+            appendSystem(tab, `Merge failed: ${e.message || e}`);
+        }
+    }
+
+    function appendSystem(tab, text) {
+        if (!tab || !tab.pane) return;
+        const el = document.createElement('div');
+        el.className = 'ai-msg system';
+        el.textContent = text;
+        tab.pane.appendChild(el);
+        if (tab === activeTab()) scrollToEnd();
+    }
+
+    function appendUserBubble(tab, text, opts = {}) {
+        if (!tab || !tab.pane) return null;
+        const el = document.createElement('div');
+        el.className = 'ai-msg user' + (opts.queued ? ' queued' : '');
+        el.textContent = text;
+        tab.pane.appendChild(el);
+        if (tab === activeTab()) scrollToEnd();
+        return el;
+    }
+
+    async function send() {
+        const ta = $('acInput');
+        const text = (ta && ta.value || '').trim();
+        if (!text) return;
+        ta.value = '';
+        ta.style.height = 'auto';
+
+        let tab = activeTab();
+        if (!tab) tab = await initDefaultTab();
+        if (!tab) return;
+
+        const isBusy = tab.state.busyState === 'thinking' || tab.state.busyState === 'tool';
+        const model = MODELS[mode];
+
+        if (isBusy || tab.state.pendingQueue.length) {
+            const el = appendUserBubble(tab, text, { queued: true });
+            tab.state.pendingQueue.push({ text, model, el });
+            updateQueuedHint(tab);
+            return;
+        }
+        if (!tab.sessionId) await ensureSession(tab);
+        if (!tab.sessionId) return;
+        appendUserBubble(tab, text);
+        await _runTurn(tab, text, model);
+        drainQueue(tab);
+    }
+
+    function updateQueuedHint(tab) {
+        const queued = tab.state.pendingQueue.map(q => q.el).filter(Boolean);
+        queued.forEach((el, i) => { el.dataset.queuedIndex = String(i + 1); });
+    }
+
+    async function _runTurn(tab, text, model) {
+        if (!tab.sessionId) await ensureSession(tab);
+        if (!tab.sessionId) return;
+        setStatus('thinking', 'Thinking', tab);
+        try {
+            const r = await apiFetchAC(`/session/${tab.sessionId}/message`, {
+                method: 'POST',
+                body: JSON.stringify({ parts: [{ type: 'text', text }], model }),
+            });
+            if (!r.ok) {
+                const txt = await r.text();
+                setStatus('error', `send failed (${r.status})`, tab);
+                appendSystem(tab, txt);
+                return;
+            }
+            const j = await r.json().catch(() => ({}));
+            if (j && j.info) {
+                updateCostFromMessage(tab, j.info);
+                if (j.info.role === 'user' && j.info.id) tab.state.userMessageIds.add(j.info.id);
+                const err = j.info.error;
+                if (err) {
+                    const msg = err.data?.message || err.message || err.name || 'upstream error';
+                    setStatus('error', err.name || 'error', tab);
+                    appendSystem(tab, msg);
+                }
+            }
+            if (j && Array.isArray(j.parts)) {
+                for (const p of j.parts) {
+                    if (!p || !p.id) continue;
+                    if (p.type === 'reasoning') renderReasoningPart(tab, p);
+                    else if (p.type === 'text' && typeof p.text === 'string' && p.text) {
+                        const el = ensureTextBubble(tab, p.id);
+                        el._raw = p.text;
+                        el.innerHTML = renderMd(el._raw);
+                    } else if (p.type === 'tool') renderToolPart(tab, p);
+                }
+                if (tab === activeTab()) scrollToEnd();
+            }
+            if (tab.state.busyState !== 'idle') setStatus('idle', 'idle', tab);
+        } catch (e) {
+            setStatus('error', String(e.message || e), tab);
+        }
+    }
+
+    async function drainQueue(tab) {
+        if (tab.state.drainScheduled) return;
+        tab.state.drainScheduled = true;
+        try {
+            while (tab.state.pendingQueue.length) {
+                const next = tab.state.pendingQueue.shift();
+                if (next.el) next.el.classList.remove('queued');
+                updateQueuedHint(tab);
+                await _runTurn(tab, next.text, next.model);
+            }
+        } finally {
+            tab.state.drainScheduled = false;
+        }
+    }
+
+    async function abort() {
+        const tab = activeTab();
+        if (!tab || !tab.sessionId) return;
+        tab.state.pendingQueue.forEach(q => { if (q.el) q.el.remove(); });
+        tab.state.pendingQueue.length = 0;
+        try {
+            await apiFetchAC(`/session/${tab.sessionId}/abort`, { method: 'POST', body: '{}' });
+            setStatus('idle', 'idle', tab);
+        } catch (e) { /* swallow */ }
+    }
+
+    async function restart() {
+        // Restart the active tab only: blow away its session, clear DOM,
+        // get a new session in the same workspace.
+        const tab = activeTab();
+        if (!tab) return;
+        const oldId = tab.sessionId;
+        tab.sessionId = null;
+        tab.state = makeTabState();
+        if (tab.pane) tab.pane.innerHTML = '';
+        setStatus('connecting', 'restarting…', tab);
+        // Refresh global cost from remaining tabs.
+        let total = 0;
+        for (const t of tabs.values()) for (const v of t.state.messageCost.values()) total += v;
+        const cv = $('acCostValue');
+        if (cv) cv.textContent = '$' + total.toFixed(4);
+        repaintContextBar();
+        if (oldId) {
+            try { await apiFetchAC(`/session/${oldId}`, { method: 'DELETE' }); } catch {}
+        }
+        await ensureSession(tab);
+    }
+
+    function setMode(next) {
+        if (!MODELS[next]) return;
+        mode = next;
+        for (const k of Object.keys(MODE_BTN)) {
+            const b = document.getElementById(MODE_BTN[k]);
+            if (b) b.classList.toggle('active', k === mode);
+        }
+        const label = $('acModelLabel');
+        if (label) label.textContent = MODELS[mode].modelID;
+        try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch {}
+    }
+
+    function wireComposer() {
+        if (composerWired) return;
+        const ta = $('acInput');
+        if (!ta) return;
+        composerWired = true;
+        ta.addEventListener('input', () => {
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 240) + 'px';
+        });
+        ta.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+                e.preventDefault();
+                send();
+            }
+        });
+    }
+
+    function detectExternalArtist() {
+        // The dashboard sets a global marker when the artist is external.
+        // If unset, we assume local. Backend will reject /tab anyway, but
+        // hiding the + button keeps the UI honest.
+        try {
+            externalDisabled = !!window.__adzeRemote;
+        } catch { externalDisabled = false; }
+    }
+
+    function activate() {
+        wireComposer();
+        // Mode selector is hidden for now — pin to the default (standardplus =
+        // anthropic/claude-haiku-4.5:thinking) and ignore any previously saved
+        // mode. Re-enable the block below when the selector returns.
+        // try {
+        //     const saved = localStorage.getItem(MODE_STORAGE_KEY);
+        //     if (saved && MODELS[saved] && saved !== mode) setMode(saved);
+        // } catch {}
+        try {
+            if (localStorage.getItem('autocode-note-dismissed') === '1') {
+                const n = $('acEmptyNote');
+                if (n) n.classList.add('dismissed');
+            }
+        } catch {}
+        detectExternalArtist();
+        if (!tabsBootstrapped) {
+            tabsBootstrapped = true;
+            initDefaultTab();
+        }
+    }
+
+    function dismissNote() {
+        const n = $('acEmptyNote');
+        if (n) n.classList.add('dismissed');
+        try { localStorage.setItem('autocode-note-dismissed', '1'); } catch {}
+    }
+
+    return { init: activate, send, abort, restart, setMode, dismissNote, newTab };
+})();
 
 // Buttons that paste into the running terminal (Asset modal callback etc.).
 function vcPasteIntoTerminal(text) {
     if (!_vcXterm) return;
     if (_vcXtermSocket && _vcXtermSocket.connected) {
-        _vcXtermSocket.emit('aider:input', { data: text });
+        _vcXtermSocket.emit('terminal:input', { data: text });
     }
     _vcXterm.focus();
 }
 
-// ── Vibe Coder v2: cost meter, slash + @ popover, diff cards ─────────────────
+// ── Terminal Access v2: cost meter, slash + @ popover, diff cards ─────────────────
 let claudeCost = 0;
 let claudeTokens = 0;
 const VIBE_CONTEXT_TOKENS = 1_000_000;  // Gemini 2.5 Flash 1M context
@@ -7739,19 +9518,19 @@ function slashCopy() {
         if (el.classList.contains('user-input')) {
             lines.push('### You\n\n' + el.textContent.replace(/^❯\s*/, ''));
         } else if (el.classList.contains('result-text')) {
-            lines.push('### Vibe Coder\n\n' + el.textContent);
+            lines.push('### Terminal Access\n\n' + el.textContent);
         } else if (el.classList.contains('tool-use')) {
             const header = el.querySelector('.tool-header')?.textContent.trim() || 'Tool';
             const args = el.querySelector('.tool-args')?.textContent.trim() || '';
             lines.push('> _' + header + (args ? ' — ' + args : '') + '_');
         }
     });
-    const md = `# Vibe Coder conversation\n\n_${currentArtist} · ${new Date().toISOString()}_\n\n` + lines.join('\n\n');
+    const md = `# Terminal Access conversation\n\n_${currentArtist} · ${new Date().toISOString()}_\n\n` + lines.join('\n\n');
     const blob = new Blob([md], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `vibe-coder-${currentArtist}-${new Date().toISOString().slice(0,10)}.md`;
+    a.download = `terminal-access-${currentArtist}-${new Date().toISOString().slice(0,10)}.md`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -7761,7 +9540,7 @@ function slashCopy() {
 function slashHelp() {
     document.getElementById('claudeInput').value = '';
     const html = `<div style="line-height:1.7;">
-        <div style="font-weight:600;color:var(--accent);margin-bottom:6px;">Vibe Coder shortcuts</div>
+        <div style="font-weight:600;color:var(--accent);margin-bottom:6px;">Terminal Access shortcuts</div>
         <div><b>/clear</b> · clear memory</div>
         <div><b>/snapshot</b> · save a restore point</div>
         <div><b>/restore</b> · browse snapshots</div>
@@ -7963,7 +9742,7 @@ function vcRenderError(turn, msg) {
         const div = document.createElement('div');
         div.className = 'vc-turn assistant';
         div.innerHTML = `
-            <div class="vc-turn-head"><span class="vc-who">Vibe Coder</span><span class="vc-meta">${escHtml(vcTimeStamp())}</span></div>
+            <div class="vc-turn-head"><span class="vc-who">Terminal Access</span><span class="vc-meta">${escHtml(vcTimeStamp())}</span></div>
             <div class="vc-turn-body"><div class="vc-error">${escHtml(msg)}</div></div>
         `;
         out.appendChild(div);
@@ -8009,11 +9788,11 @@ function vcAddTurnFooter(turn, data, timings) {
     foot.innerHTML = parts.join('');
     turn.el.appendChild(foot);
 }
-// ── /Vibe Coder v2 ────────────────────────────────────────────────────────────
+// ── /Terminal Access v2 ────────────────────────────────────────────────────────────
 
 async function resetClaudeSession() {
     if (claudeIsStreaming) return;
-    if (!confirm('Clear memory and start fresh?\n\nThis wipes the conversation so the Vibe Coder forgets everything from this session. It can also speed things up if responses have gotten slow.')) return;
+    if (!confirm('Clear memory and start fresh?\n\nThis wipes the conversation so the Terminal Access forgets everything from this session. It can also speed things up if responses have gotten slow.')) return;
     try {
         await apiFetch('/api/adze/claude-reset', { method: 'POST' });
         document.getElementById('claudeOutput').innerHTML = '';
@@ -8021,18 +9800,18 @@ async function resetClaudeSession() {
         claudeFirstMessage = true;
         const output = document.getElementById('claudeOutput');
         output.innerHTML = `<div class="claude-term-welcome" id="vcWelcome">
-            <h2>Vibe Coder</h2>
+            <h2>Terminal Access</h2>
             <p class="vc-line1">Session reset. Start a fresh conversation.</p>
             <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
         </div>`;
         startVcSuggestionRotation();
-        toast('Vibe Coder session reset', 'info');
+        toast('Terminal Access session reset', 'info');
     } catch (e) {
         toast('Failed to reset: ' + e.message, 'error');
     }
 }
 
-// ── Vibe Coder text size (accessibility) ──
+// ── Terminal Access text size (accessibility) ──
 const VC_FS_STEPS = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2];
 function vcFontSizeApply(scale) {
     const term = document.getElementById('claudeTerminal');
@@ -8404,16 +10183,16 @@ insertAssetToken = function(url) {
 };
 
 function insertIntoClaudeInput(token) {
-    // Route to the live aider terminal if it's connected. Tokens arrive
+    // Route to the live Claude Code terminal if it's connected. Tokens arrive
     // here from the Pointer ("[Point: ...]") and Asset ("[Asset: ...]")
-    // helpers; aider doesn't understand the bracket wrapping, so strip
+    // helpers; Claude Code doesn't understand the bracket wrapping, so strip
     // it and just inject the inner path/selector.
     const stripped = token
         .replace(/\[Point:\s*([^\]]+?)(?:\s+at\s+\([^)]+\))?\]/g, (_, sel) => sel.trim())
         .replace(/\[Asset:\s*([^\]]+)\]/g, (_, p) => p.trim());
 
     if (_vcXterm && _vcXtermSocket && _vcXtermSocket.connected) {
-        _vcXtermSocket.emit('aider:input', { data: stripped + ' ' });
+        _vcXtermSocket.emit('terminal:input', { data: stripped + ' ' });
         _vcXterm.focus();
         return;
     }
@@ -8438,10 +10217,171 @@ hideModal = function(id) {
     if (id === 'aiAssetModal') {
         window._claudeAssetMode = false;
         window._claudeSelectedAssets.clear();
-        updateClaudeAssetDoneBtn();
+        if (typeof updateClaudeAssetDoneBtn === 'function') updateClaudeAssetDoneBtn();
+        window._acAssetMode = false;
+        if (window._acSelectedAssets) window._acSelectedAssets.clear();
+        if (typeof updateAcAssetDoneBtn === 'function') updateAcAssetDoneBtn();
     }
     _originalHideModal(id);
 };
+
+
+// ── Auto-Code: Pointer + Asset insertion ─────────────────────────────────
+// Parallel to the Terminal-tab pointer/asset helpers above; targets the
+// Auto-Code preview iframe + composer textarea instead.
+
+let _acPointerActive = false;
+
+function insertIntoAcInput(token) {
+    // The Auto-Code chat is a plain LLM — keep the [Point: ...] / [Asset: ...]
+    // wrapping so Zee sees a readable reference (system prompt explains them).
+    const input = document.getElementById('acInput');
+    if (!input) return;
+    const pos = (typeof input.selectionStart === 'number') ? input.selectionStart : input.value.length;
+    const before = input.value.slice(0, pos);
+    const after = input.value.slice(pos);
+    const needSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n');
+    const needSpaceAfter = after.length > 0 && !after.startsWith(' ') && !after.startsWith('\n');
+    input.value = before + (needSpaceBefore ? ' ' : '') + token + (needSpaceAfter ? ' ' : '') + after;
+    input.focus();
+    const newPos = pos + (needSpaceBefore ? 1 : 0) + token.length + (needSpaceAfter ? 1 : 0);
+    try { input.setSelectionRange(newPos, newPos); } catch {}
+    // Trigger autosize.
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 240) + 'px';
+}
+
+function getAcIframeElementAt(clientX, clientY) {
+    const iframe = document.getElementById('previewFrameAutocode');
+    if (!iframe || !iframe.contentDocument) return null;
+    const iframeRect = iframe.getBoundingClientRect();
+    const x = clientX - iframeRect.left;
+    const y = clientY - iframeRect.top;
+    if (x < 0 || y < 0 || x > iframeRect.width || y > iframeRect.height) return null;
+    const el = iframe.contentDocument.elementFromPoint(x, y);
+    if (!el || el === iframe.contentDocument.documentElement || el === iframe.contentDocument.body) return null;
+    return { element: el, iframeX: Math.round(x), iframeY: Math.round(y), iframeRect };
+}
+
+function acPointerHover(e) {
+    const info = getAcIframeElementAt(e.clientX, e.clientY);
+    const highlight = document.getElementById('acPointerHighlight');
+    const label = document.getElementById('acPointerLabel');
+    const iframe = document.getElementById('previewFrameAutocode');
+    if (!info) { highlight.style.display = 'none'; label.style.display = 'none'; return; }
+
+    const elRect = info.element.getBoundingClientRect();
+    const iframeRect = iframe.getBoundingClientRect();
+    const paneRect = iframe.parentElement.getBoundingClientRect();
+    const hLeft = iframeRect.left - paneRect.left + elRect.left;
+    const hTop = iframeRect.top - paneRect.top + elRect.top;
+
+    highlight.style.display = 'block';
+    highlight.style.left = hLeft + 'px';
+    highlight.style.top = hTop + 'px';
+    highlight.style.width = elRect.width + 'px';
+    highlight.style.height = elRect.height + 'px';
+
+    const desc = describeElement(info.element);
+    label.textContent = desc;
+    label.style.display = 'block';
+    label.style.left = hLeft + 'px';
+    label.style.top = (hTop - 20 < 0 ? hTop + elRect.height + 4 : hTop - 20) + 'px';
+}
+
+function acPointerClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const info = getAcIframeElementAt(e.clientX, e.clientY);
+    if (!info) return;
+    const desc = describeElement(info.element);
+    insertIntoAcInput(`[Point: ${desc} at (${info.iframeX}, ${info.iframeY})]`);
+    toggleAcPointer();
+}
+
+function toggleAcPointer() {
+    _acPointerActive = !_acPointerActive;
+    const overlay = document.getElementById('acPointerOverlay');
+    const btn = document.getElementById('acPointerBtn');
+    const highlight = document.getElementById('acPointerHighlight');
+    const label = document.getElementById('acPointerLabel');
+    if (!overlay) return;
+    if (_acPointerActive) {
+        overlay.classList.add('active');
+        btn.classList.add('active');
+        overlay.onmousemove = acPointerHover;
+        overlay.onmouseout = () => { highlight.style.display = 'none'; label.style.display = 'none'; };
+        overlay.onclick = acPointerClick;
+    } else {
+        overlay.classList.remove('active');
+        btn.classList.remove('active');
+        highlight.style.display = 'none';
+        label.style.display = 'none';
+        overlay.onmousemove = null;
+        overlay.onclick = null;
+        overlay.onmouseout = null;
+    }
+}
+
+// ── Auto-Code asset picker (reuses aiAssetModal in multi-select mode) ──
+window._acAssetMode = false;
+window._acSelectedAssets = new Set();
+
+function openAcAssetModal() {
+    const search = document.getElementById('aiAssetSearch');
+    if (search) search.value = '';
+    window._acAssetMode = true;
+    window._acSelectedAssets.clear();
+    if (typeof populateAiAssetGrid === 'function') populateAiAssetGrid(assetList);
+    updateAcAssetDoneBtn();
+    showModal('aiAssetModal');
+}
+
+function updateAcAssetDoneBtn() {
+    let btn = document.getElementById('acAssetDoneBtn');
+    if (!window._acAssetMode) { if (btn) btn.style.display = 'none'; return; }
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'acAssetDoneBtn';
+        btn.style.cssText = 'margin-right:auto;';
+        btn.onclick = acInsertSelectedAssets;
+        document.querySelector('#aiAssetModal .modal-actions').prepend(btn);
+    }
+    const count = window._acSelectedAssets.size;
+    btn.textContent = count ? `Insert ${count} asset${count > 1 ? 's' : ''}` : 'Select assets...';
+    btn.disabled = count === 0;
+    btn.style.display = '';
+}
+
+function acInsertSelectedAssets() {
+    const tokens = [...window._acSelectedAssets].map(url => `[Asset: ${url}]`).join(' ');
+    if (tokens) insertIntoAcInput(tokens);
+    window._acAssetMode = false;
+    window._acSelectedAssets.clear();
+    hideModal('aiAssetModal');
+}
+
+// Tap into the existing asset-grid click path so the same modal serves both
+// Terminal and Auto-Code multi-select modes. The Claude override above
+// already wraps insertAssetToken; we wrap once more for the Auto-Code mode.
+(function wrapInsertAssetTokenForAutoCode() {
+    if (typeof insertAssetToken !== 'function') return;
+    const prev = insertAssetToken;
+    insertAssetToken = function(url) {
+        if (window._acAssetMode) {
+            if (window._acSelectedAssets.has(url)) window._acSelectedAssets.delete(url);
+            else window._acSelectedAssets.add(url);
+            document.querySelectorAll('#aiAssetGrid .ai-asset-card').forEach(card => {
+                if (card._assetUrl === url) {
+                    card.classList.toggle('selected', window._acSelectedAssets.has(url));
+                }
+            });
+            updateAcAssetDoneBtn();
+            return;
+        }
+        prev(url);
+    };
+})();
 </script>
 </body>
 </html>

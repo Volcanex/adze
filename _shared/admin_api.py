@@ -75,10 +75,23 @@ def _rate_limit(scope, max_requests, window_seconds):
 # Add parent directory to path to import auth
 sys.path.insert(0, str(Path(__file__).parent))
 from auth import require_artist_auth, get_authenticated_artist, get_all_artists
+import asset_meta
 from db import insert_pageview, query_analytics, upsert_session, query_sessions, migrate_json_to_sqlite
-import vibe_agent
 
 bp = Blueprint('artist_admin', __name__, url_prefix='/api/adze')
+
+
+# Fish images for the admin pipeline grid. Sourced from artists/sandbox/assets/images/
+# (Gabriel's own uploads). Public — no auth — they're just decorative PNGs.
+@bp.route('/admin-fish/<name>')
+def _admin_fish(name):
+    safe = secure_filename(name)
+    if not safe or not safe.lower().endswith('.png'):
+        abort(404)
+    p = Path('artists/sandbox/assets/images') / safe
+    if not p.exists():
+        abort(404)
+    return send_file(str(p), mimetype='image/png', max_age=3600)
 
 
 @bp.after_request
@@ -104,14 +117,42 @@ def _log_api_request(response):
 
 def _require_super_admin():
     """Abort 401 unless the request carries a valid super-admin token (cookie or header)."""
-    from auth import DEFAULT_ADMIN_TOKEN
+    from auth import is_admin_token
     token = request.headers.get('X-Admin-Token', '')
-    if token and DEFAULT_ADMIN_TOKEN and token == DEFAULT_ADMIN_TOKEN:
+    if is_admin_token(token):
         return
     cookie = request.cookies.get('adze_admin_session', '')
-    if cookie and DEFAULT_ADMIN_TOKEN and cookie == DEFAULT_ADMIN_TOKEN:
+    if is_admin_token(cookie):
         return
+    artist_cookie = request.cookies.get('adze_session', '')
+    if artist_cookie and ':' in artist_cookie:
+        _, _, artist_token = artist_cookie.partition(':')
+        if is_admin_token(artist_token):
+            return
     abort(401, description='Super-admin auth required')
+
+
+def _current_workspaces():
+    """List of workspaces the current admin can see. Falls back to [lastplace]
+    if no identity resolved (shouldn't happen post-auth, but safe)."""
+    from auth import current_admin_identity, DEFAULT_WORKSPACE
+    ident = current_admin_identity()
+    if ident:
+        return ident['workspaces']
+    return [DEFAULT_WORKSPACE]
+
+
+def _is_super():
+    """True if the current admin identity has the super flag."""
+    from auth import current_admin_identity
+    ident = current_admin_identity()
+    return bool(ident and ident.get('super'))
+
+
+def _artist_workspace(cfg):
+    """Resolve an artist config's workspace tag. Defaults to lastplace."""
+    from auth import DEFAULT_WORKSPACE
+    return (cfg.get('workspace') or DEFAULT_WORKSPACE).strip().lower()
 
 
 # ── Storage cache (avoid hammering du for every request) ──────────────────────
@@ -340,6 +381,18 @@ def beacon():
 
 # ── Dashboard ──────────────────────────────────────────────────────────────
 
+@bp.route('/home')
+def serve_home():
+    """Serve the Adze landing page."""
+    home_path = Path(__file__).parent / 'home.html'
+    if not home_path.exists():
+        return 'Home not found', 404
+    return home_path.read_text(encoding='utf-8'), 200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+    }
+
+
 @bp.route('/dashboard')
 def dashboard():
     """Serve the admin dashboard HTML, injecting server-side secrets."""
@@ -363,8 +416,8 @@ def verify_admin():
     _rate_limit('login', 10, 60)
     data = request.get_json() or {}
     token = data.get('token', '').strip()
-    from auth import DEFAULT_ADMIN_TOKEN
-    if not token or not DEFAULT_ADMIN_TOKEN or token != DEFAULT_ADMIN_TOKEN:
+    from auth import is_admin_token
+    if not is_admin_token(token):
         return jsonify({'error': 'Invalid token'}), 401
     return jsonify({'ok': True})
 
@@ -380,9 +433,9 @@ def create_artist():
     data = request.get_json() or {}
 
     # Super-admin auth
-    from auth import DEFAULT_ADMIN_TOKEN
+    from auth import is_admin_token
     admin_token = data.get('admin_token', '').strip()
-    if not admin_token or not DEFAULT_ADMIN_TOKEN or admin_token != DEFAULT_ADMIN_TOKEN:
+    if not is_admin_token(admin_token):
         return jsonify({'error': 'Invalid admin token'}), 401
 
     name = data.get('name', '').strip()
@@ -429,6 +482,15 @@ def create_artist():
     (artist_dir / 'assets' / 'fonts').mkdir(parents=True)
     (artist_dir / 'assets' / 'images').mkdir(parents=True)
 
+    # Workspace tag — defaults to lastplace; clamped to the caller's
+    # visible workspaces so Clive can't accidentally create a personal artist.
+    from auth import DEFAULT_WORKSPACE, ALL_WORKSPACES
+    ws = (data.get('workspace') or DEFAULT_WORKSPACE).strip().lower()
+    if ws not in ALL_WORKSPACES:
+        ws = DEFAULT_WORKSPACE
+    if ws not in _current_workspaces():
+        ws = DEFAULT_WORKSPACE
+
     # Write config.json
     config = {
         'name': name,
@@ -437,6 +499,7 @@ def create_artist():
         'admin_token': artist_token,
         'description': data.get('description', ''),
         'contact_email': data.get('contact_email', ''),
+        'workspace': ws,
     }
     (artist_dir / 'config.json').write_text(
         json.dumps(config, indent=4) + '\n', encoding='utf-8'
@@ -461,6 +524,14 @@ def create_artist():
     except Exception:
         pass  # Non-fatal — user can click Save later
 
+    # Slack: fire-and-forget. Provisions a channel + pinned message if the
+    # artist's workspace has Slack configured. Never blocks creation.
+    try:
+        from integrations.slack import ensure_artist_channel
+        ensure_artist_channel(slug)
+    except Exception as e:
+        _api_log.warning(f'slack provisioning failed for {slug}: {e}')
+
     return jsonify({
         'ok': True,
         'slug': slug,
@@ -484,7 +555,7 @@ def login():
     token = data.get('token', '').strip()
     if not slug or not token:
         return jsonify({'error': 'slug and token required'}), 400
-    from auth import verify_artist_token, get_artist_config
+    from auth import verify_artist_token, get_artist_config, is_admin_token
     if not verify_artist_token(slug, token):
         return jsonify({'error': 'Invalid credentials'}), 401
     # Scaffold from template if artist has no pages yet
@@ -503,6 +574,7 @@ def login():
         'ok': True,
         'slug': slug,
         'name': config.get('display_name') or config.get('name') or slug,
+        'is_admin': is_admin_token(token),
         'config': {k: v for k, v in config.items() if k != 'admin_token'}
     }))
     # httpOnly — not accessible via JS (XSS protection)
@@ -532,12 +604,17 @@ def whoami():
     slug = get_authenticated_artist()
     if not slug:
         return jsonify({'ok': False}), 401
-    from auth import get_artist_config
+    from auth import get_artist_config, is_admin_token
     config = get_artist_config(slug) or {}
+    header_token = request.headers.get('X-Admin-Token', '')
+    admin_cookie = request.cookies.get('adze_admin_session', '')
+    session_cookie = request.cookies.get('adze_session', '')
+    session_token = session_cookie.partition(':')[2] if ':' in session_cookie else ''
     return jsonify({
         'ok': True,
         'slug': slug,
         'name': config.get('display_name') or config.get('name') or slug,
+        'is_admin': is_admin_token(header_token) or is_admin_token(admin_cookie) or is_admin_token(session_token),
         'config': {k: v for k, v in config.items() if k != 'admin_token'}
     })
 
@@ -614,8 +691,15 @@ def get_dashboard_theme():
 # ── Super-Admin Dashboard ─────────────────────────────────────────────────────
 
 @bp.route('/admin')
-def serve_admin():
-    """Serve the super-admin dashboard HTML."""
+@bp.route('/admin/artist/<slug>')
+@bp.route('/admin/artist')
+def serve_admin(slug=None):
+    """Serve the super-admin dashboard HTML.
+
+    The same SPA shell is returned for /admin, /admin/artist, and
+    /admin/artist/<slug> so the client-side router can resolve the URL on
+    refresh / direct link. Slug is read by JS from window.location.pathname.
+    """
     admin_path = Path(__file__).parent / 'admin.html'
     if not admin_path.exists():
         return 'Admin dashboard not found', 404
@@ -627,25 +711,122 @@ def serve_admin():
 
 @bp.route('/admin/login', methods=['POST'])
 def admin_login():
-    """Validate super-admin token and set persistent cookie."""
+    """Validate admin credentials and set persistent cookie.
+
+    Accepts {username, password} (preferred) or legacy {token}.
+    The cookie value is the identity's password — get_identity_by_token()
+    resolves it back to the identity on subsequent requests.
+    """
     _rate_limit('login', 10, 60)
     data = request.get_json() or {}
-    token = data.get('token', '').strip()
-    from auth import DEFAULT_ADMIN_TOKEN
-    if not token or not DEFAULT_ADMIN_TOKEN or token != DEFAULT_ADMIN_TOKEN:
-        return jsonify({'error': 'Invalid token'}), 401
+    from auth import verify_admin_credentials, get_identity_by_token
+
+    username = (data.get('username') or '').strip()
+    password = (data.get('password') or data.get('token') or '').strip()
+
+    ident = None
+    if username:
+        ident = verify_admin_credentials(username, password)
+    if not ident:
+        # Legacy: token-only login. Password alone must uniquely match.
+        ident = get_identity_by_token(password)
+
+    if not ident:
+        return jsonify({'error': 'Invalid credentials'}), 401
+
     is_https = request.headers.get('X-Forwarded-Proto') == 'https'
-    resp = make_response(jsonify({'ok': True}))
-    resp.set_cookie('adze_admin_session', token,
+    resp = make_response(jsonify({
+        'ok': True,
+        'name': ident['name'],
+        'username': ident['username'],
+        'workspaces': ident['workspaces'],
+        'super': ident.get('super', False),
+    }))
+    resp.set_cookie('adze_admin_session', ident['password'],
                     httponly=True, samesite='Lax', secure=is_https,
                     max_age=7 * 24 * 3600, path='/')
     return resp
+
+
+@bp.route('/admin/integrations/slack/provision/<slug>', methods=['POST'])
+def admin_slack_provision(slug):
+    """Provision (or refresh) a single artist's Slack channel + pin."""
+    _require_super_admin()
+    if not _valid_slug(slug):
+        return jsonify({'error': 'invalid slug'}), 400
+    cfg_path = Path('artists') / slug / 'config.json'
+    if not cfg_path.exists():
+        return jsonify({'error': 'artist not found'}), 404
+    cfg = json.loads(cfg_path.read_text())
+    if _artist_workspace(cfg) not in _current_workspaces():
+        return jsonify({'error': 'not visible'}), 404
+    from integrations.slack import ensure_artist_channel
+    return jsonify(ensure_artist_channel(slug))
+
+
+@bp.route('/admin/integrations/slack/backfill', methods=['POST'])
+def admin_slack_backfill():
+    """Walk every visible artist whose workspace has Slack and provision
+    a channel for them. Idempotent — artists with an existing channel just
+    get their pinned message refreshed."""
+    _require_super_admin()
+    from integrations.slack import ensure_artist_channel
+    visible_ws = set(_current_workspaces())
+    results = []
+    artists_dir = Path('artists')
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_') or item.name == 'example-artist':
+            continue
+        cfg_path = item / 'config.json'
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            continue
+        if _artist_workspace(cfg) not in visible_ws:
+            continue
+        if cfg.get('is_stub'):
+            continue  # lead-only entries don't get a channel
+        res = ensure_artist_channel(item.name)
+        results.append({'slug': item.name, **res})
+    ok = sum(1 for r in results if r.get('ok'))
+    return jsonify({'ok': True, 'provisioned': ok, 'total': len(results), 'results': results})
+
+
+@bp.route('/admin/nav')
+def admin_nav():
+    """Return tab + widget nav entries the current identity can see.
+    Front-end uses this to hide/show tabs and render the Integrations list."""
+    _require_super_admin()
+    from widgets._registry import visible_tabs, visible_widgets
+    ws = _current_workspaces()
+    return jsonify({
+        'tabs': visible_tabs(ws),
+        'widgets': visible_widgets(ws),
+    })
+
+
+@bp.route('/admin/whoami')
+def admin_whoami():
+    """Return the current admin identity (name, workspaces, super)."""
+    from auth import current_admin_identity
+    ident = current_admin_identity()
+    if not ident:
+        return jsonify({'error': 'Not authenticated'}), 401
+    return jsonify({
+        'name': ident['name'],
+        'username': ident['username'],
+        'workspaces': ident['workspaces'],
+        'super': ident.get('super', False),
+    })
 
 
 @bp.route('/admin/artists')
 def admin_artists():
     """List all artists with metadata."""
     _require_super_admin()
+    visible_ws = set(_current_workspaces())
     artists_dir = Path('artists')
     result = []
     for item in sorted(artists_dir.iterdir()):
@@ -658,6 +839,13 @@ def admin_artists():
             cfg = json.loads(cfg_path.read_text())
         except Exception:
             cfg = {}
+        if _artist_workspace(cfg) not in visible_ws:
+            continue
+        if cfg.get('is_stub'):
+            # Lead-only entries don't represent a hosted site; skip them here so
+            # the Artists table stays focused on actual hosted artists. They're
+            # still visible in the pipeline grid.
+            continue
         # Count pages
         pages = [d.name for d in item.iterdir()
                  if d.is_dir() and (d / 'content.md').exists()
@@ -697,6 +885,7 @@ def admin_artists():
             'last_login': cfg.get('last_login'),
             'last_login_ip': cfg.get('last_login_ip', ''),
             'admin_token': cfg.get('admin_token', ''),
+            'workspace': _artist_workspace(cfg),
         })
     return jsonify({'artists': result})
 
@@ -969,6 +1158,388 @@ def admin_status():
     return jsonify(status)
 
 
+# ── Studio data (hours log + leads CRM) ──────────────────────────────────────
+
+_STUDIO_DATA_DIR = Path(__file__).parent.parent / 'data'
+_STUDIO_DATA_DIR.mkdir(exist_ok=True)
+_HOURS_FILE = _STUDIO_DATA_DIR / 'hours.json'
+_LEADS_FILE = _STUDIO_DATA_DIR / 'leads.json'  # legacy; preserved for the table sub-view
+_PINNED_ORDER_FILE = _STUDIO_DATA_DIR / 'pinned_order.json'
+
+
+def _read_studio_json(path):
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding='utf-8'))
+        except Exception:
+            pass
+    return []
+
+
+def _write_studio_json(path, data):
+    path.write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
+
+
+@bp.route('/admin/hours')
+def admin_hours_list():
+    _require_super_admin()
+    return jsonify({'entries': _read_studio_json(_HOURS_FILE)})
+
+
+@bp.route('/admin/hours', methods=['POST'])
+def admin_hours_create():
+    _require_super_admin()
+    import uuid
+    data = request.get_json() or {}
+    entry = {
+        'id': str(uuid.uuid4()),
+        'date': data.get('date', ''),
+        'person': data.get('person', ''),
+        'scope': data.get('scope', ''),
+        'description': data.get('description', ''),
+        'hours': float(data.get('hours', 0)),
+        'created_at': int(_time.time()),
+    }
+    entries = _read_studio_json(_HOURS_FILE)
+    entries.append(entry)
+    _write_studio_json(_HOURS_FILE, entries)
+    return jsonify({'entry': entry}), 201
+
+
+@bp.route('/admin/hours/<entry_id>', methods=['PUT', 'PATCH'])
+def admin_hours_update(entry_id):
+    _require_super_admin()
+    data = request.get_json() or {}
+    entries = _read_studio_json(_HOURS_FILE)
+    updated = None
+    for e in entries:
+        if e.get('id') == entry_id:
+            # id and created_at are immutable; everything else is editable.
+            for field in ('date', 'person', 'scope', 'description'):
+                if field in data:
+                    e[field] = data[field]
+            if 'hours' in data:
+                e['hours'] = float(data['hours'] or 0)
+            e['updated_at'] = int(_time.time())
+            updated = e
+            break
+    if updated is None:
+        return jsonify({'error': 'Entry not found'}), 404
+    _write_studio_json(_HOURS_FILE, entries)
+    return jsonify({'entry': updated})
+
+
+@bp.route('/admin/hours/<entry_id>', methods=['DELETE'])
+def admin_hours_delete(entry_id):
+    _require_super_admin()
+    entries = _read_studio_json(_HOURS_FILE)
+    entries = [e for e in entries if e.get('id') != entry_id]
+    _write_studio_json(_HOURS_FILE, entries)
+    return jsonify({'ok': True})
+
+
+@bp.route('/admin/leads')
+def admin_leads_list():
+    _require_super_admin()
+    from auth import DEFAULT_WORKSPACE
+    visible_ws = set(_current_workspaces())
+    leads = _read_studio_json(_LEADS_FILE)
+    filtered = [l for l in leads
+                if (l.get('workspace') or DEFAULT_WORKSPACE) in visible_ws]
+    return jsonify({'leads': filtered})
+
+
+@bp.route('/admin/leads', methods=['POST'])
+def admin_leads_create():
+    _require_super_admin()
+    from auth import DEFAULT_WORKSPACE, ALL_WORKSPACES
+    import uuid
+    data = request.get_json() or {}
+    now = int(_time.time())
+    ws = (data.get('workspace') or DEFAULT_WORKSPACE).strip().lower()
+    if ws not in ALL_WORKSPACES:
+        ws = DEFAULT_WORKSPACE
+    # Non-super users can only create within their own visible workspaces.
+    if ws not in _current_workspaces():
+        ws = DEFAULT_WORKSPACE
+    lead = {
+        'id': str(uuid.uuid4()),
+        'client': data.get('client', ''),
+        'active': bool(data.get('active', True)),
+        'contact': data.get('contact', ''),
+        'stage': data.get('stage'),
+        'contacted': bool(data.get('contacted', False)),
+        'fish_size': data.get('fish_size'),
+        'instagram': data.get('instagram', ''),
+        'work': data.get('work', ''),
+        'clive_hours': float(data.get('clive_hours', 0)),
+        'gabe_hours': float(data.get('gabe_hours', 0)),
+        'discount': data.get('discount', ''),
+        'notes': data.get('notes', ''),
+        'workspace': ws,
+        'created_at': now,
+        'updated_at': now,
+    }
+    leads = _read_studio_json(_LEADS_FILE)
+    leads.append(lead)
+    _write_studio_json(_LEADS_FILE, leads)
+    return jsonify({'lead': lead}), 201
+
+
+@bp.route('/admin/leads/<lead_id>', methods=['PUT'])
+def admin_leads_update(lead_id):
+    _require_super_admin()
+    from auth import DEFAULT_WORKSPACE, ALL_WORKSPACES
+    data = request.get_json() or {}
+    leads = _read_studio_json(_LEADS_FILE)
+    visible_ws = _current_workspaces()
+    for lead in leads:
+        if lead.get('id') == lead_id:
+            current_ws = lead.get('workspace') or DEFAULT_WORKSPACE
+            if current_ws not in visible_ws:
+                return jsonify({'error': 'Not found'}), 404
+            # Re-scoping: only super admins can change a lead's workspace.
+            if 'workspace' in data and _is_super():
+                new_ws = (data['workspace'] or DEFAULT_WORKSPACE).strip().lower()
+                if new_ws in ALL_WORKSPACES:
+                    lead['workspace'] = new_ws
+            lead['client']      = data.get('client', lead.get('client', ''))
+            lead['active']      = bool(data.get('active', lead.get('active', True)))
+            lead['contact']     = data.get('contact', lead.get('contact', ''))
+            lead['stage']       = data.get('stage', lead.get('stage'))
+            lead['contacted']   = bool(data.get('contacted', lead.get('contacted', False)))
+            lead['fish_size']   = data.get('fish_size', lead.get('fish_size'))
+            lead['instagram']   = data.get('instagram', lead.get('instagram', ''))
+            lead['work']        = data.get('work', lead.get('work', ''))
+            lead['clive_hours'] = float(data.get('clive_hours', lead.get('clive_hours', 0)))
+            lead['gabe_hours']  = float(data.get('gabe_hours', lead.get('gabe_hours', 0)))
+            lead['discount']    = data.get('discount', lead.get('discount', ''))
+            lead['notes']       = data.get('notes', lead.get('notes', ''))
+            lead['updated_at']  = int(_time.time())
+            _write_studio_json(_LEADS_FILE, leads)
+            return jsonify({'lead': lead})
+    return jsonify({'error': 'Lead not found'}), 404
+
+
+@bp.route('/admin/leads/<lead_id>', methods=['DELETE'])
+def admin_leads_delete(lead_id):
+    _require_super_admin()
+    leads = _read_studio_json(_LEADS_FILE)
+    leads = [l for l in leads if l.get('id') != lead_id]
+    _write_studio_json(_LEADS_FILE, leads)
+    return jsonify({'ok': True})
+
+
+# ── Pipeline (merged artists + leads) ────────────────────────────────────────
+# Cards represent artists. An artist with no `lead` block in config.json is
+# implicitly XS — Minnow. Hours roll up by matching scope=lead:<original_id> or
+# scope=artist:<slug> in hours.json.
+
+def _hours_rollup_by_scope():
+    """Return {scope_key: total_hours} so the pipeline endpoint can attach
+    hours-this-month to each artist card."""
+    entries = _read_studio_json(_HOURS_FILE)
+    rollup = {}
+    month_start = _time.strftime('%Y-%m-01', _time.gmtime())
+    for e in entries:
+        if (e.get('date') or '') < month_start:
+            continue
+        scope = e.get('scope') or ''
+        rollup[scope] = rollup.get(scope, 0) + float(e.get('hours') or 0)
+    return rollup
+
+
+@bp.route('/admin/pipeline')
+def admin_pipeline():
+    """Unified Artists & Leads view. One card per artist; lead block embedded
+    alongside the same rollups the Artists table shows (pages, storage, 30d
+    views, last login, hours)."""
+    _require_super_admin()
+    visible_ws = set(_current_workspaces())
+    artists_dir = Path('artists')
+    hours_by_scope = _hours_rollup_by_scope()
+    cards = []
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_') or item.name == 'example-artist':
+            continue
+        cfg_path = item / 'config.json'
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            continue
+        if _artist_workspace(cfg) not in visible_ws:
+            continue
+        slug = item.name
+        lead = cfg.get('lead') or {}
+        # Hours: try lead's original_lead_id first (legacy hours rows reference
+        # lead:<uuid>), then artist:<slug>.
+        hrs = 0.0
+        if lead.get('original_lead_id'):
+            hrs += hours_by_scope.get(f"lead:{lead['original_lead_id']}", 0)
+        hrs += hours_by_scope.get(f"artist:{slug}", 0)
+        # Pages, storage, views, last login — same as /admin/artists.
+        pages = [d.name for d in item.iterdir()
+                 if d.is_dir() and (d / 'content.md').exists()
+                 and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')]
+        views_30d = 0
+        views_series = []  # daily counts for last 30 days, oldest → newest
+        try:
+            db_path = item / 'data.db'
+            if db_path.exists():
+                import sqlite3
+                conn = sqlite3.connect(str(db_path), timeout=2)
+                now = int(_time.time())
+                cutoff = now - 30 * 86400
+                row = conn.execute('SELECT COUNT(*) FROM pageviews WHERE ts > ?', (cutoff,)).fetchone()
+                views_30d = row[0] if row else 0
+                # Bucket by day for a sparkline.
+                rows = conn.execute(
+                    "SELECT CAST((? - ts) / 86400 AS INT) AS d_ago, COUNT(*) "
+                    "FROM pageviews WHERE ts > ? GROUP BY d_ago",
+                    (now, cutoff),
+                ).fetchall()
+                buckets = [0] * 30
+                for d_ago, count in rows:
+                    if 0 <= d_ago < 30:
+                        buckets[29 - d_ago] = count
+                views_series = buckets
+                conn.close()
+        except Exception:
+            pass
+        domain = cfg.get('domain', '')
+        domain_live = bool(domain) and Path(f'nginx/sites-available/{domain}').exists()
+        cards.append({
+            'slug': slug,
+            'name': cfg.get('name') or slug,
+            'domain': domain,
+            'domain_live': domain_live,
+            'description': cfg.get('description', ''),
+            'contact_email': cfg.get('contact_email', ''),
+            'admin_token': cfg.get('admin_token', ''),
+            'is_stub': bool(cfg.get('is_stub')),  # lead-only; no real hosted site
+            'page_count': len(pages),
+            'storage_bytes': _get_artist_storage(slug),
+            'views_30d': views_30d,
+            'views_series': views_series,
+            'last_login': cfg.get('last_login'),
+            'has_lead': bool(lead),
+            'lead': lead or None,
+            'fish_size': (lead.get('fish_size') if lead else None) or 'xs',
+            'stage': (lead.get('stage') if lead else None),
+            'active': bool(lead.get('active')) if lead else False,
+            'hours_this_month': round(hrs, 2),
+            'updated_at': lead.get('updated_at') if lead else None,
+            'workspace': _artist_workspace(cfg),
+            'figma_url': cfg.get('figma_url', ''),
+            'slack_channel_id': cfg.get('slack_channel_id', ''),
+        })
+    return jsonify({
+        'cards': cards,
+        'pinned_order': _read_studio_json(_PINNED_ORDER_FILE) or [],
+    })
+
+
+@bp.route('/admin/artists/<slug>', methods=['PATCH'])
+def admin_artist_patch(slug):
+    """Update an artist's core fields (name, domain, description, contact_email).
+    Lead block is updated separately via /admin/artists/<slug>/lead."""
+    _require_super_admin()
+    if not _valid_slug(slug):
+        return jsonify({'error': 'invalid slug'}), 400
+    cfg_path = Path('artists') / slug / 'config.json'
+    if not cfg_path.exists():
+        return jsonify({'error': 'artist not found'}), 404
+    cfg = json.loads(cfg_path.read_text())
+    data = request.get_json() or {}
+    # Workspace gate: caller must currently see this artist.
+    if _artist_workspace(cfg) not in _current_workspaces():
+        return jsonify({'error': 'artist not found'}), 404
+    # Snapshot fields whose changes trigger noisy Slack updates.
+    _before = {f: cfg.get(f, '') for f in ('domain', 'figma_url')}
+    for field in ('name', 'domain', 'description', 'contact_email', 'figma_url'):
+        if field in data:
+            cfg[field] = (data[field] or '').strip()
+    # Re-scoping: only super admins may move an artist between workspaces.
+    if 'workspace' in data and _is_super():
+        from auth import ALL_WORKSPACES, DEFAULT_WORKSPACE
+        new_ws = (data['workspace'] or DEFAULT_WORKSPACE).strip().lower()
+        if new_ws in ALL_WORKSPACES:
+            cfg['workspace'] = new_ws
+    if 'is_stub' in data:
+        if data['is_stub']:
+            cfg['is_stub'] = True
+        else:
+            cfg.pop('is_stub', None)
+    cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+    # If this artist has a Slack channel, refresh the pinned message and
+    # post noisy bare-URL announcements for any tracked field that changed
+    # (Figma/domain unfurl with previews). Fire-and-forget.
+    if cfg.get('slack_channel_id'):
+        try:
+            from integrations.slack import refresh_pinned, post_field_update
+            refresh_pinned(slug)
+            for f, before in _before.items():
+                after = cfg.get(f, '')
+                if after and after != before:
+                    post_field_update(slug, f, after)
+        except Exception as e:
+            _api_log.warning(f'slack pin refresh failed for {slug}: {e}')
+    return jsonify({'artist': {k: cfg.get(k, '') for k in ('name', 'slug', 'domain', 'description', 'contact_email', 'figma_url')}})
+
+
+@bp.route('/admin/artists/<slug>/lead', methods=['PUT', 'DELETE'])
+def admin_artist_lead_update(slug):
+    """Write or clear the lead block on an artist's config.json."""
+    _require_super_admin()
+    if not _valid_slug(slug):
+        return jsonify({'error': 'invalid slug'}), 400
+    cfg_path = Path('artists') / slug / 'config.json'
+    if not cfg_path.exists():
+        return jsonify({'error': 'artist not found'}), 404
+    cfg = json.loads(cfg_path.read_text())
+    if request.method == 'DELETE':
+        cfg.pop('lead', None)
+        cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+        return jsonify({'ok': True})
+    data = request.get_json() or {}
+    existing = cfg.get('lead') or {}
+    block = {
+        'active': bool(data.get('active', existing.get('active', True))),
+        'contact': data.get('contact', existing.get('contact', '')) or '',
+        'stage': data.get('stage', existing.get('stage')) or None,
+        'fish_size': data.get('fish_size', existing.get('fish_size')) or None,
+        'instagram': data.get('instagram', existing.get('instagram', '')) or '',
+        'work': data.get('work', existing.get('work', '')) or '',
+        'discount': data.get('discount', existing.get('discount', '')) or '',
+        'notes': data.get('notes', existing.get('notes', '')) or '',
+        'clive_hours': float(data.get('clive_hours', existing.get('clive_hours', 0)) or 0),
+        'gabe_hours': float(data.get('gabe_hours', existing.get('gabe_hours', 0)) or 0),
+        'contacted': bool(data.get('contacted', existing.get('contacted', False))),
+        'original_lead_id': existing.get('original_lead_id'),
+        'created_at': existing.get('created_at') or int(_time.time()),
+        'updated_at': int(_time.time()),
+    }
+    cfg['lead'] = block
+    cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+    return jsonify({'lead': block})
+
+
+@bp.route('/admin/pipeline/order', methods=['GET', 'PUT'])
+def admin_pipeline_order():
+    """Persist the user's manual card ordering. Body: {order: [slug, ...]}."""
+    _require_super_admin()
+    if request.method == 'GET':
+        return jsonify({'order': _read_studio_json(_PINNED_ORDER_FILE) or []})
+    data = request.get_json() or {}
+    order = data.get('order', [])
+    if not isinstance(order, list):
+        return jsonify({'error': 'order must be a list'}), 400
+    _write_studio_json(_PINNED_ORDER_FILE, [str(s) for s in order])
+    return jsonify({'ok': True, 'order': order})
+
+
 # ── Docs ──────────────────────────────────────────────────────────────────────
 
 @bp.route('/docs')
@@ -979,10 +1550,10 @@ def serve_docs(doc_path=None):
     Requires login (artist or super-admin).
     """
     # Auth gate: require either super-admin or artist session
-    from auth import DEFAULT_ADMIN_TOKEN, verify_artist_token
+    from auth import is_admin_token, verify_artist_token
     admin_cookie = request.cookies.get('adze_admin_session', '')
     artist_cookie = request.cookies.get('adze_session', '')
-    has_admin = admin_cookie and DEFAULT_ADMIN_TOKEN and admin_cookie == DEFAULT_ADMIN_TOKEN
+    has_admin = is_admin_token(admin_cookie)
     has_artist = False
     if artist_cookie and ':' in artist_cookie:
         s, _, t = artist_cookie.partition(':')
@@ -1067,7 +1638,7 @@ body:JSON.stringify({token:document.getElementById('pw').value})});if(r.ok){loca
                     items = ''.join(f'<li>{l.strip().lstrip("-* ").strip()}</li>' for l in lines if l.strip())
                     out_parts.append(f'<ul>{items}</ul>')
                 elif all(_re.match(r'^\d+\.', l.strip()) for l in lines if l.strip()):
-                    items = ''.join(f'<li>{_re.sub(r"^\d+\.\s*","",l.strip())}</li>' for l in lines if l.strip())
+                    items = ''.join('<li>' + _re.sub(r'^\d+\.\s*', '', l.strip()) + '</li>' for l in lines if l.strip())
                     out_parts.append(f'<ol>{items}</ol>')
                 else:
                     out_parts.append(f'<p>{p}</p>')
@@ -1427,12 +1998,18 @@ def edit_page():
             content_file = page_path / 'content.md'
             with open(content_file, 'w', encoding='utf-8') as f:
                 f.write(data['content'])
+            # Flask runs as root; Auto-Code/Terminal sandboxes run as uid 1000.
+            # Match host uid 1000 so the sandbox can rewrite this file later.
+            try: os.chown(content_file, 1000, 1000)
+            except OSError: pass
 
         # Update config.json if provided
         if 'config' in data:
             config_file = page_path / 'config.json'
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(data['config'], f, indent=4, ensure_ascii=False)
+            try: os.chown(config_file, 1000, 1000)
+            except OSError: pass
 
         # Trigger compile to regenerate static files
         compile_ok = True
@@ -1723,6 +2300,68 @@ def create_page():
         return jsonify({'error': f'Error creating page: {str(e)}'}), 500
 
 
+@bp.route('/create-nested-page', methods=['POST'])
+def create_nested_page():
+    """
+    Create a new page nested under a parent page directory (e.g. works/wondering-women).
+    Body: {parent_slug, child_slug, title, content?, config?, description?}
+    Each segment is validated separately so the existing _valid_slug rule still applies.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    parent_slug = data.get('parent_slug', '')
+    child_slug = data.get('child_slug', '')
+    title = data.get('title', '')
+
+    if not (parent_slug and child_slug and title):
+        return jsonify({'error': 'parent_slug, child_slug and title required'}), 400
+    if not _valid_slug(parent_slug) or not _valid_slug(child_slug):
+        return jsonify({'error': 'Invalid slug'}), 400
+
+    artist_dir = get_artist_path(artist_slug)
+    parent_path = artist_dir / parent_slug
+    if not parent_path.is_dir():
+        return jsonify({'error': f'Parent page "{parent_slug}" not found'}), 404
+
+    page_path = parent_path / child_slug
+    if page_path.exists():
+        return jsonify({'error': 'Page already exists'}), 400
+
+    try:
+        page_path.mkdir(parents=True, exist_ok=True)
+
+        default_config = {
+            'title': title,
+            'slug': f'artists/{artist_slug}/{parent_slug}/{child_slug}',
+            'description': data.get('description', ''),
+            'categories': data.get('categories', []),
+        }
+        if 'config' in data and isinstance(data['config'], dict):
+            default_config.update(data['config'])
+
+        (page_path / 'config.json').write_text(
+            json.dumps(default_config, indent=4, ensure_ascii=False), encoding='utf-8')
+
+        content = data.get('content', '<html>\n<h1>New Page</h1>\n</html>')
+        (page_path / 'content.md').write_text(content, encoding='utf-8')
+
+        compile_script = Path.cwd() / 'compile.py'
+        if compile_script.exists():
+            import subprocess
+            subprocess.run(['python3', str(compile_script), '--artist', artist_slug], check=False)
+
+        return jsonify({
+            'success': True,
+            'page_slug': f'{parent_slug}/{child_slug}',
+            'path': str(page_path.relative_to('.')),
+        })
+    except IOError as e:
+        return jsonify({'error': f'Error creating page: {str(e)}'}), 500
+
+
 # ── Upload File ────────────────────────────────────────────────────────────
 
 @bp.route('/upload-file', methods=['POST'])
@@ -1775,10 +2414,18 @@ def upload_file():
         file.save(str(file_path))
 
         # Also copy to output directory so nginx can serve it immediately
-        rel_path = str(file_path.relative_to(get_artist_path(artist_slug) / 'assets'))
+        rel_path = str(file_path.relative_to(get_artist_path(artist_slug) / 'assets')).replace('\\', '/')
         output_path = Path('output/artists') / artist_slug / 'assets' / rel_path
         output_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(file_path), str(output_path))
+
+        # Record metadata (optional `tags` form field, comma-separated).
+        raw_tags = request.form.get('tags', '')
+        tags = [t.strip() for t in raw_tags.split(',') if t.strip()][:32] if raw_tags else []
+        asset_meta.update_for(artist_slug, rel_path,
+                              tags=tags or None,
+                              uploaded_by='admin',
+                              uploaded_at=int(_time.time()))
 
         return jsonify({
             'success': True,
@@ -1789,6 +2436,25 @@ def upload_file():
 
     except IOError as e:
         return jsonify({'error': f'Error uploading file: {str(e)}'}), 500
+
+
+@bp.route('/add-link', methods=['POST'])
+def add_link_asset():
+    """Save a link as an asset (metadata-only, no file on disk).
+    Body: {url, notes?}. Title auto-fetched best-effort.
+    Headers: X-Artist-Slug, X-Admin-Token."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+    data = request.get_json() or {}
+    url = _normalize_url(data.get('url'))
+    if not url:
+        return jsonify({'error': 'A URL is required'}), 400
+    notes = (data.get('notes') or '')[:2000]
+    title = _fetch_link_title(url)
+    entry = asset_meta.add_link(artist_slug, url, title=title,
+                                notes=notes or None, uploaded_by='admin')
+    return jsonify({'success': True, 'item': entry})
 
 
 # ── Delete Page ────────────────────────────────────────────────────────────
@@ -1854,22 +2520,643 @@ def list_assets():
     if not assets_dir.exists():
         return jsonify({'artist': artist_slug, 'assets': []})
 
+    meta_files = asset_meta.load_meta(artist_slug).get('files', {})
     assets = []
     for asset_file in assets_dir.rglob('*'):
-        if asset_file.is_file():
+        if asset_file.is_file() and asset_file.name != 'assets.meta.json':
             relative = asset_file.relative_to(assets_dir)
+            rel_str = str(relative).replace('\\', '/')
             ext = asset_file.suffix.lower()
             is_image = ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg')
+            entry = meta_files.get(rel_str, {})
+            labels = entry.get('labels') or entry.get('tags') or []
             assets.append({
                 'filename': asset_file.name,
-                'path': str(relative),
-                'url': f'../assets/{relative}',
+                'path': rel_str,
+                'url': f'../assets/{rel_str}',
                 'size': asset_file.stat().st_size,
-                'is_image': is_image
+                'is_image': is_image,
+                'labels': labels,
+                'tags': labels,  # back-compat
+                'uploaded_by': entry.get('uploaded_by'),
+                'uploaded_at': entry.get('uploaded_at'),
+                'notes': entry.get('notes', ''),
             })
 
     assets.sort(key=lambda a: a['filename'])
-    return jsonify({'artist': artist_slug, 'assets': assets})
+
+    # Link assets — metadata-only, no file on disk.
+    links = []
+    for ln in asset_meta.links_for(artist_slug):
+        links.append({
+            'filename': ln.get('title') or ln.get('url'),
+            'path': ln['path'],
+            'kind': 'link',
+            'url': ln.get('url'),
+            'size': 0,
+            'is_image': False,
+            'labels': ln.get('labels') or [],
+            'tags': ln.get('labels') or [],  # back-compat
+            'uploaded_by': ln.get('uploaded_by'),
+            'uploaded_at': ln.get('uploaded_at'),
+            'notes': ln.get('notes', ''),
+        })
+
+    return jsonify({
+        'artist': artist_slug,
+        'assets': links + assets,
+        'labels': asset_meta.all_labels(artist_slug),
+        'known_tags': asset_meta.all_tags(artist_slug),  # back-compat
+    })
+
+
+# ── Asset metadata (admin) ─────────────────────────────────────────────────
+
+# ── Intake token (magic-link upload portal) ────────────────────────────────
+
+def _read_artist_config(slug):
+    cfg_path = get_artist_path(slug) / 'config.json'
+    if not cfg_path.exists():
+        abort(404, description='Artist not found')
+    return cfg_path, json.loads(cfg_path.read_text())
+
+
+def _write_artist_config(cfg_path, cfg):
+    cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+
+
+@bp.route('/admin/artists/<slug>/intake-token', methods=['GET', 'POST', 'DELETE'])
+def admin_intake_token(slug):
+    """GET: return the current token (mint one lazily if missing).
+    POST: rotate (mint a new one, invalidating any link with the old).
+    DELETE: clear the token so the link stops working."""
+    from auth import is_admin_token
+    import secrets
+    token = request.headers.get('X-Admin-Token', '')
+    if not is_admin_token(token):
+        abort(403)
+    cfg_path, cfg = _read_artist_config(slug)
+    changed = False
+    if request.method == 'DELETE':
+        if cfg.pop('intake_token', None) is not None:
+            changed = True
+        _write_artist_config(cfg_path, cfg)
+    else:
+        if request.method == 'POST' or not cfg.get('intake_token'):
+            cfg['intake_token'] = secrets.token_urlsafe(24)
+            _write_artist_config(cfg_path, cfg)
+            changed = True
+    # Keep the artist's pinned Slack message in sync — the intake link is one
+    # of the standard fields it surfaces.
+    if changed and cfg.get('slack_channel_id'):
+        try:
+            from integrations.slack import refresh_pinned
+            refresh_pinned(slug)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                'slack refresh_pinned failed for %s', slug, exc_info=True)
+    if request.method == 'DELETE':
+        return jsonify({'success': True, 'token': None})
+    return jsonify({
+        'success': True,
+        'token': cfg['intake_token'],
+        'url': f'/intake/{slug}/{cfg["intake_token"]}',
+    })
+
+
+def _intake_validate(slug, token):
+    """Constant-time compare token against the artist's stored intake_token.
+    Returns (cfg, artist_dir) or aborts."""
+    import hmac
+    cfg_path, cfg = _read_artist_config(slug)
+    stored = cfg.get('intake_token') or ''
+    if not stored or not hmac.compare_digest(stored, token):
+        abort(403, description='Invalid intake link')
+    return cfg, get_artist_path(slug)
+
+
+# Public portal HTML — token-gated, no admin auth.
+@bp.route('/intake/<slug>/<token>')
+def intake_portal(slug, token):
+    cfg, _ = _intake_validate(slug, token)
+    portal_path = Path(__file__).parent / 'intake.html'
+    if not portal_path.exists():
+        return 'Portal not found', 404
+    html = portal_path.read_text(encoding='utf-8')
+    html = (html
+            .replace('{{ARTIST_NAME}}', cfg.get('name') or slug)
+            .replace('{{ARTIST_SLUG}}', slug)
+            .replace('{{INTAKE_TOKEN}}', token))
+    return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
+
+
+# Allowed intake MIME types — narrower than the admin's allowlist; artists
+# send finished work, not source code.
+_INTAKE_ALLOWED_EXT = {
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'heic', 'tiff', 'bmp',
+    'mp4', 'mov', 'webm',
+    'mp3', 'wav', 'm4a', 'aac', 'flac',
+    'pdf',
+}
+_INTAKE_MAX_BYTES = 200 * 1024 * 1024   # 200 MB per file
+_INTAKE_MAX_TOTAL = 5 * 1024 * 1024 * 1024  # 5 GB per artist via intake
+
+
+def _normalize_url(raw):
+    """Trim and ensure a scheme. Bare 'example.com/x' becomes https://….
+    Returns '' if there's nothing usable."""
+    url = (raw or '').strip()
+    if not url:
+        return ''
+    if not re.match(r'^[a-zA-Z][a-zA-Z0-9+.\-]*://', url):
+        url = 'https://' + url
+    return url[:2000]
+
+
+def _url_is_public(url):
+    """SSRF guard for the optional title-fetch: http(s) only, and every
+    resolved address must be public. We still *store* any URL — this only
+    gates whether the server makes an outbound request to it."""
+    from urllib.parse import urlparse
+    import ipaddress
+    try:
+        p = urlparse(url)
+    except ValueError:
+        return False
+    if p.scheme not in ('http', 'https') or not p.hostname:
+        return False
+    try:
+        infos = socket.getaddrinfo(p.hostname, None)
+    except socket.gaierror:
+        return False
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            return False
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
+def _fetch_link_title(url):
+    """Best-effort fetch of a page's <title>. Returns None on any failure
+    (timeout, non-HTML, private address, parse miss). Never raises."""
+    if not _url_is_public(url):
+        return None
+    try:
+        import urllib.request
+        import html as _html
+        req = urllib.request.Request(
+            url, headers={'User-Agent': 'Mozilla/5.0 (compatible; AdzeIntake/1.0)'})
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            ctype = (resp.headers.get('Content-Type') or '').lower()
+            if ctype and 'html' not in ctype:
+                return None
+            raw = resp.read(200_000).decode('utf-8', 'ignore')
+        m = re.search(r'<title[^>]*>(.*?)</title>', raw, re.IGNORECASE | re.DOTALL)
+        if m:
+            title = _html.unescape(m.group(1)).strip()
+            return title[:300] or None
+    except Exception:
+        return None
+    return None
+
+
+def _intake_total_bytes(artist_dir):
+    intake_root = artist_dir / 'assets' / 'intake'
+    if not intake_root.exists():
+        return 0
+    return sum(f.stat().st_size for f in intake_root.rglob('*') if f.is_file())
+
+
+@bp.route('/intake/<slug>/<token>/assets', methods=['GET'])
+def intake_list_assets(slug, token):
+    """List what's been uploaded via this token. Public, but token-gated."""
+    cfg, artist_dir = _intake_validate(slug, token)
+    meta_files = asset_meta.load_meta(slug).get('files', {})
+    intake_dir = artist_dir / 'assets' / 'intake'
+    items = []
+    if intake_dir.exists():
+        for p in intake_dir.rglob('*'):
+            if p.is_file():
+                rel = str(p.relative_to(artist_dir / 'assets')).replace('\\', '/')
+                ext = p.suffix.lower()
+                is_image = ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.heic')
+                entry = meta_files.get(rel, {})
+                labels = entry.get('labels') or entry.get('tags') or []
+                items.append({
+                    'filename': p.name,
+                    'path': rel,
+                    'url': f'/intake/{slug}/{token}/file/{rel}',
+                    'size': p.stat().st_size,
+                    'is_image': is_image,
+                    'labels': labels,
+                    'tags': labels,  # back-compat
+                    'notes': entry.get('notes', ''),
+                    'uploaded_at': entry.get('uploaded_at'),
+                })
+    # Link assets — metadata-only entries, no file on disk.
+    for ln in asset_meta.links_for(slug):
+        items.append({
+            'filename': ln.get('title') or ln.get('url'),
+            'path': ln['path'],
+            'kind': 'link',
+            'url': ln.get('url'),
+            'size': 0,
+            'is_image': False,
+            'labels': ln.get('labels') or [],
+            'tags': ln.get('labels') or [],  # back-compat
+            'notes': ln.get('notes', ''),
+            'uploaded_at': ln.get('uploaded_at'),
+        })
+    items.sort(key=lambda a: -(a.get('uploaded_at') or 0))
+    return jsonify({
+        'artist_name': cfg.get('name') or slug,
+        'artist_slug': slug,
+        'items': items,
+        'labels': asset_meta.all_labels(slug),
+        'known_tags': asset_meta.all_tags(slug),  # back-compat
+    })
+
+
+@bp.route('/intake/<slug>/<token>/file/<path:rel>')
+def intake_serve_file(slug, token, rel):
+    """Serve a file the artist uploaded so they can preview it back."""
+    _, artist_dir = _intake_validate(slug, token)
+    target = (artist_dir / 'assets' / rel).resolve()
+    assets_root = (artist_dir / 'assets').resolve()
+    if not str(target).startswith(str(assets_root)) or not target.is_file():
+        abort(404)
+    return send_file(str(target))
+
+
+@bp.route('/intake/<slug>/<token>/upload', methods=['POST'])
+def intake_upload(slug, token):
+    """Accept a file from the artist's intake portal."""
+    cfg, artist_dir = _intake_validate(slug, token)
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in _INTAKE_ALLOWED_EXT:
+        return jsonify({'error': f'File type .{ext} not accepted via intake'}), 400
+
+    # Check size after save (Werkzeug doesn't reliably expose content length
+    # for multipart parts until consumed).
+    if _intake_total_bytes(artist_dir) >= _INTAKE_MAX_TOTAL:
+        return jsonify({'error': 'Intake storage cap reached. Contact your admin.'}), 413
+
+    intake_dir = artist_dir / 'assets' / 'intake'
+    intake_dir.mkdir(parents=True, exist_ok=True)
+
+    # UUID-prefixed filename to prevent collisions and to make filenames opaque.
+    import secrets as _sec
+    safe_base = secure_filename(f.filename) or f'upload.{ext}'
+    final_name = f'{_sec.token_hex(4)}_{safe_base}'
+    target = intake_dir / final_name
+    f.save(str(target))
+
+    if target.stat().st_size > _INTAKE_MAX_BYTES:
+        target.unlink(missing_ok=True)
+        return jsonify({'error': f'File exceeds {_INTAKE_MAX_BYTES // (1024*1024)} MB limit'}), 413
+
+    rel_path = f'intake/{final_name}'
+    # Mirror to output so nginx can serve the file as part of the live site.
+    # This is best-effort: if the output dir is unwritable from the container
+    # (host-owned), we still keep the canonical copy under artists/<slug>/assets.
+    try:
+        out = Path('output/artists') / slug / 'assets' / rel_path
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(str(target), str(out))
+    except (OSError, PermissionError) as err:
+        logging.warning('Intake output mirror failed for %s: %s', rel_path, err)
+
+    raw_tags = request.form.get('tags', '')
+    tags = [t.strip() for t in raw_tags.split(',') if t.strip()][:32] if raw_tags else []
+    notes = (request.form.get('notes') or '')[:2000]
+    asset_meta.update_for(slug, rel_path,
+                          tags=tags or None,
+                          uploaded_by=f'intake:{slug}',
+                          uploaded_at=int(_time.time()),
+                          notes=notes or None)
+
+    return jsonify({
+        'success': True,
+        'filename': final_name,
+        'path': rel_path,
+        'size': target.stat().st_size,
+    })
+
+
+@bp.route('/intake/<slug>/<token>/link', methods=['POST'])
+def intake_add_link(slug, token):
+    """Save a link as an asset from the intake portal. Body: {url, notes?}.
+    Title is auto-fetched best-effort; the artist can relabel/rename later."""
+    _intake_validate(slug, token)
+    data = request.get_json() or {}
+    url = _normalize_url(data.get('url'))
+    if not url:
+        return jsonify({'error': 'A URL is required'}), 400
+    notes = (data.get('notes') or '')[:2000]
+    title = _fetch_link_title(url)
+    entry = asset_meta.add_link(slug, url, title=title, notes=notes or None,
+                                uploaded_by=f'intake:{slug}')
+    return jsonify({'success': True, 'item': entry})
+
+
+@bp.route('/intake/<slug>/<token>/file/<path:rel>', methods=['DELETE'])
+def intake_delete_file(slug, token, rel):
+    """Remove a file the artist uploaded via the intake portal. Restricted to
+    files under `assets/intake/` (or `link:` metadata-only entries) — the
+    portal can't touch anything else."""
+    _, artist_dir = _intake_validate(slug, token)
+    if asset_meta.is_link_key(rel):
+        asset_meta.delete_for(slug, rel)
+        return jsonify({'success': True})
+    if not rel.startswith('intake/'):
+        return jsonify({'error': 'Only intake/ files can be removed via this endpoint'}), 400
+    base = (artist_dir / 'assets').resolve()
+    target = (base / rel).resolve()
+    if not str(target).startswith(str(base)) or not target.is_file():
+        return jsonify({'error': 'File not found'}), 404
+    target.unlink()
+    # Also remove the mirror in output/ if present (best-effort).
+    out = Path('output/artists') / slug / 'assets' / rel
+    try:
+        if out.is_file():
+            out.unlink()
+    except OSError:
+        pass
+    asset_meta.delete_for(slug, rel)
+    return jsonify({'success': True})
+
+
+@bp.route('/intake/<slug>/<token>/labels', methods=['GET', 'POST'])
+def intake_labels(slug, token):
+    """GET: list labels with colors + counts.
+    POST: create or upsert a label {name, color?}."""
+    _intake_validate(slug, token)
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        try:
+            lbl = asset_meta.create_label(slug, data.get('name'), data.get('color'))
+        except ValueError as err:
+            return jsonify({'error': str(err)}), 400
+        return jsonify({'success': True, 'label': lbl})
+    return jsonify({'labels': asset_meta.all_labels(slug)})
+
+
+@bp.route('/intake/<slug>/<token>/labels/<name>', methods=['DELETE'])
+def intake_delete_label(slug, token, name):
+    _intake_validate(slug, token)
+    asset_meta.delete_label(slug, name)
+    return jsonify({'success': True})
+
+
+@bp.route('/intake/<slug>/<token>/apply-labels', methods=['POST'])
+def intake_apply_labels(slug, token):
+    """Bulk add/remove a label on many files. Body:
+        {paths: [...], label: "Sculpture", on: true|false (default true)}.
+    Files must be under intake/ for safety."""
+    _intake_validate(slug, token)
+    data = request.get_json() or {}
+    label = (data.get('label') or '').strip()
+    paths = [p for p in (data.get('paths') or [])
+             if str(p).startswith('intake/') or asset_meta.is_link_key(p)]
+    on = data.get('on', True)
+    if not label or not paths:
+        return jsonify({'error': 'label and at least one intake/ path required'}), 400
+    asset_meta.toggle_labels(slug, paths, label, on=on)
+    return jsonify({'success': True, 'count': len(paths)})
+
+
+@bp.route('/intake/<slug>/<token>/meta', methods=['PATCH'])
+def intake_update_meta(slug, token):
+    """Update tags/notes on an existing intake upload. Only files under
+    `assets/intake/` are touchable via this endpoint."""
+    _intake_validate(slug, token)
+    data = request.get_json() or {}
+    rel = (data.get('path') or '').strip()
+    if not rel.startswith('intake/') and not asset_meta.is_link_key(rel):
+        return jsonify({'error': 'Can only update intake uploads'}), 400
+    fields = {}
+    if 'tags' in data:
+        tags = data.get('tags') or []
+        fields['tags'] = [str(t).strip() for t in tags if str(t).strip()][:32]
+    if 'notes' in data:
+        fields['notes'] = (data.get('notes') or '')[:2000]
+    asset_meta.update_for(slug, rel, **fields)
+    return jsonify({'success': True})
+
+
+def _check_label_access(slug):
+    """Either super-admin or the artist's own per-artist token.
+    Returns True or aborts 403."""
+    from auth import is_admin_token, get_artist_config
+    token = request.headers.get('X-Admin-Token', '')
+    if is_admin_token(token):
+        return True
+    cfg = get_artist_config(slug) if slug else None
+    if cfg and cfg.get('admin_token') == token:
+        return True
+    abort(403)
+
+
+@bp.route('/admin/artists/<slug>/labels', methods=['GET', 'POST'])
+def admin_labels(slug):
+    """GET: list labels with colors + counts. POST: create/upsert {name, color?}.
+    Allows either super-admin or the artist's own token, so the artist
+    dashboard and admin both call this."""
+    _check_label_access(slug)
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        try:
+            lbl = asset_meta.create_label(slug, data.get('name'), data.get('color'))
+        except ValueError as err:
+            return jsonify({'error': str(err)}), 400
+        return jsonify({'success': True, 'label': lbl})
+    return jsonify({'labels': asset_meta.all_labels(slug)})
+
+
+@bp.route('/admin/artists/<slug>/labels/<name>', methods=['DELETE'])
+def admin_delete_label(slug, name):
+    _check_label_access(slug)
+    asset_meta.delete_label(slug, name)
+    return jsonify({'success': True})
+
+
+@bp.route('/admin/artists/<slug>/apply-labels', methods=['POST'])
+def admin_apply_labels(slug):
+    """Bulk add/remove a label on many files. Body:
+        {paths: [...], label: "Name", on: true|false}.
+    Unlike the intake variant, admin can label any file under the artist's
+    assets dir, not just intake/."""
+    _check_label_access(slug)
+    data = request.get_json() or {}
+    label = (data.get('label') or '').strip()
+    paths = list(data.get('paths') or [])
+    on = data.get('on', True)
+    if not label or not paths:
+        return jsonify({'error': 'label and at least one path required'}), 400
+    asset_meta.toggle_labels(slug, paths, label, on=on)
+    return jsonify({'success': True, 'count': len(paths)})
+
+
+@bp.route('/asset-thumb/<slug>/<path:rel>')
+def admin_asset_thumb(slug, rel):
+    """Serve a raw asset file to the admin/dashboard UI.
+
+    Auth: admin token (header X-Admin-Token, query ?t=, or adze_admin_session
+    cookie), OR the artist's own session (adze_session cookie or
+    X-Artist-Slug + X-Admin-Token with the artist's token).  The URL slug
+    must match the authenticated artist."""
+    from auth import is_admin_token, get_authenticated_artist
+    # Admin path: explicit token in header / query / old admin_session cookie.
+    token = (request.headers.get('X-Admin-Token', '')
+             or request.cookies.get('admin_session', '')
+             or request.cookies.get('adze_admin_session', '')
+             or request.args.get('t', ''))
+    authed = is_admin_token(token)
+    if not authed:
+        # Artist path: the authenticated artist must own this slug.
+        authed_slug = get_authenticated_artist()
+        authed = (authed_slug == slug)
+    if not authed:
+        abort(403)
+    base = get_artist_path(slug) / 'assets'
+    target = (base / rel).resolve()
+    if not str(target).startswith(str(base.resolve())) or not target.is_file():
+        abort(404)
+    return send_file(str(target), max_age=300)
+
+
+@bp.route('/admin/artists/<slug>/asset-meta', methods=['PATCH'])
+def admin_set_asset_meta(slug):
+    """Update metadata for a single asset. Body: {path, tags?, notes?}."""
+    from auth import is_admin_token
+    token = request.headers.get('X-Admin-Token', '')
+    if not is_admin_token(token):
+        abort(403)
+    data = request.get_json() or {}
+    rel = (data.get('path') or '').strip()
+    if not rel:
+        return jsonify({'error': 'path required'}), 400
+    fields = {}
+    if 'tags' in data:
+        tags = data.get('tags') or []
+        if not isinstance(tags, list):
+            return jsonify({'error': 'tags must be a list'}), 400
+        fields['tags'] = [str(t).strip() for t in tags if str(t).strip()][:32]
+    if 'notes' in data:
+        fields['notes'] = (data.get('notes') or '')[:2000]
+    asset_meta.update_for(slug, rel, **fields)
+    return jsonify({'success': True})
+
+
+@bp.route('/download-assets', methods=['POST'])
+def download_assets():
+    """Stream a zip of the requested asset paths. Body: {paths:[...]}.
+    Single file → served as-is; multiple files → zipped in memory."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    paths = data.get('paths', [])
+    if not paths:
+        return jsonify({'error': 'No paths provided'}), 400
+
+    artist_path = get_artist_path(artist_slug)
+    assets_dir = artist_path / 'assets'
+    assets_root = assets_dir.resolve()
+
+    # Resolve + safety-check every path before opening the response.
+    files = []
+    for p in paths:
+        try:
+            target = (assets_dir / p).resolve()
+            target.relative_to(assets_root)
+        except (ValueError, Exception):
+            continue
+        if target.is_file():
+            files.append((p, target))
+
+    if not files:
+        return jsonify({'error': 'No valid files found'}), 404
+
+    # Single file → direct download, original filename.
+    if len(files) == 1:
+        p, target = files[0]
+        return send_file(str(target), as_attachment=True, download_name=target.name)
+
+    # Multiple → in-memory zip.
+    import io, zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for rel, target in files:
+            zf.write(str(target), arcname=rel)
+    buf.seek(0)
+    ts = _time.strftime('%Y%m%d-%H%M%S')
+    return send_file(
+        buf, mimetype='application/zip', as_attachment=True,
+        download_name=f'{artist_slug}-assets-{ts}.zip',
+    )
+
+
+@bp.route('/rename-asset', methods=['POST'])
+def rename_asset():
+    """
+    Rename a single asset within its current directory.
+    Body: { "path": "subdir/old.jpg", "new_name": "new.jpg" }
+    new_name is a basename only — directory is preserved.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data = request.get_json() or {}
+    path = (data.get('path') or '').strip()
+    new_name = (data.get('new_name') or '').strip()
+    if not path or not new_name:
+        return jsonify({'error': 'path and new_name required'}), 400
+    if '/' in new_name or '\\' in new_name or new_name in ('.', '..'):
+        return jsonify({'error': 'new_name must be a bare filename'}), 400
+
+    artist_path = get_artist_path(artist_slug)
+    assets_root = (artist_path / 'assets').resolve()
+
+    try:
+        src = (assets_root / path).resolve()
+        src.relative_to(assets_root)
+    except (ValueError, Exception):
+        return jsonify({'error': 'invalid path'}), 400
+    if not src.is_file():
+        return jsonify({'error': 'not found'}), 404
+
+    dst = src.parent / new_name
+    if dst.exists():
+        return jsonify({'error': 'a file with that name already exists'}), 409
+
+    src.rename(dst)
+    new_rel = str(dst.relative_to(assets_root))
+
+    # Move the output mirror too, so nginx serves the renamed file.
+    try:
+        out_dir = Path('output/artists') / artist_slug / 'assets'
+        out_src = out_dir / path
+        out_dst = out_dir / new_rel
+        if out_src.is_file():
+            out_dst.parent.mkdir(parents=True, exist_ok=True)
+            out_src.rename(out_dst)
+    except OSError:
+        pass
+
+    asset_meta.rename_for(artist_slug, path, new_rel)
+    return jsonify({'old_path': path, 'new_path': new_rel, 'filename': new_name})
 
 
 @bp.route('/delete-assets', methods=['POST'])
@@ -1892,6 +3179,11 @@ def delete_assets():
     deleted, errors = [], []
 
     for p in paths:
+        # Link assets are metadata-only — no file to unlink.
+        if asset_meta.is_link_key(p):
+            asset_meta.delete_for(artist_slug, p)
+            deleted.append(p)
+            continue
         # Prevent path traversal
         try:
             target = (assets_dir / p).resolve()
@@ -1901,6 +3193,14 @@ def delete_assets():
             continue
         if target.exists() and target.is_file():
             target.unlink()
+            # Best-effort: also remove the output mirror so nginx stops serving it.
+            try:
+                out = Path('output/artists') / artist_slug / 'assets' / p
+                if out.is_file():
+                    out.unlink()
+            except OSError:
+                pass
+            asset_meta.delete_for(artist_slug, p)
             deleted.append(p)
         else:
             errors.append(f'{p}: not found')
@@ -2185,10 +3485,10 @@ def update_domain():
 NGINX_TEMPLATE = """server {{
     server_name {domain} www.{domain};
 
-    root /home/gabriel/adze/output/{slug};
+    root /home/gabriel/adze/output/artists/{slug};
 
     location /assets/ {{
-        alias /home/gabriel/adze/output/{slug}/assets/;
+        alias /home/gabriel/adze/output/artists/{slug}/assets/;
         expires 24h;
         add_header Cache-Control "public, max-age=86400";
     }}
@@ -3260,8 +4560,8 @@ def get_widget():
 
 # ── Domain Check ──────────────────────────────────────────────────────────
 
-SERVER_IPV4 = '151.226.233.153'
-SERVER_IPV6 = '2a06:5902:39c1:9900:92a9:f065:784e:2260'
+SERVER_IPV4 = '178.104.233.5'  # adze.studio A record — the host artists must point their A record at
+SERVER_IPV6 = '2a01:4f8:1c18:33e9::1'  # host IPv6 (adze.studio publishes no AAAA; kept for match-only)
 
 @bp.route('/check-domain', methods=['GET'])
 def check_domain():
@@ -4582,7 +5882,7 @@ def list_orders():
             stripe_section = f'''
 
 # ── Stripe Checkout (auto-scaffolded by Adze Studio) ─────────────────────
-# Customise this! The Vibe Coder can modify the webhook handler,
+# Customise this! The Terminal Access can modify the webhook handler,
 # add email notifications, inventory tracking, etc.
 
 @bp.route('/create-checkout', methods=['POST'])
@@ -4738,9 +6038,9 @@ _claude_processes = {}  # artist_slug -> subprocess.Popen
 # Per-artist streaming lock: prevents two users from running Claude simultaneously
 _claude_streaming = {}  # artist_slug -> { 'since': timestamp, 'prompt': str }
 
-# Per-artist Vibe Coder tab presence. Tabs heartbeat; a "take over" moves every
-# other known tab_id into a `kicked` set so their next heartbeat returns
-# `kicked: true` and the client shows a "reload to continue" overlay.
+# Per-artist Terminal Access tab presence. Tabs heartbeat; a "take over"
+# marks the caller as the primary tab but does not kick other tabs because
+# Terminal Access is a shared tmux session.
 # SSH / direct filesystem edits are invisible here by design.
 _vibe_presence = {}       # artist_slug -> {'epoch': int, 'tabs': {tab_id: last_seen_ts}, 'kicked': {tab_id: kicked_at_ts}}
 _vibe_presence_lock = _threading.Lock()
@@ -4762,10 +6062,10 @@ def _vibe_slot_locked(artist_slug):
 @bp.route('/vibe-presence/heartbeat', methods=['POST'])
 def vibe_presence_heartbeat():
     """
-    Heartbeat for a Vibe Coder browser tab.
+    Heartbeat for a Terminal Access browser tab.
     Body: {tab_id}
     Returns: {ok, epoch, kicked, others: [{idle_s}]}
-    `kicked` is true when another tab has taken over since this one last heartbeat.
+    `kicked` is kept for old clients but is always false.
     """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
@@ -4778,8 +6078,7 @@ def vibe_presence_heartbeat():
     with _vibe_presence_lock:
         slot = _vibe_slot_locked(artist_slug)
         _vibe_prune_locked(slot)
-        if tab_id in slot['kicked']:
-            return jsonify({'ok': True, 'epoch': slot['epoch'], 'kicked': True, 'others': []})
+        slot['kicked'].pop(tab_id, None)
         slot['tabs'][tab_id] = now
         others = [
             {'idle_s': round(now - ts, 1)}
@@ -4797,8 +6096,9 @@ def vibe_presence_heartbeat():
 @bp.route('/vibe-presence/takeover', methods=['POST'])
 def vibe_presence_takeover():
     """
-    Bump the epoch, mark the caller as the sole live tab, and move every other
-    currently-known tab_id into `kicked` so their next heartbeat sees it.
+    Bump the epoch and mark the caller as the primary live tab. Other tabs
+    are left connected; they can continue watching or typing into the same
+    tmux session.
     Body: {tab_id}
     Returns: {ok, epoch}
     """
@@ -4813,9 +6113,6 @@ def vibe_presence_takeover():
     with _vibe_presence_lock:
         slot = _vibe_slot_locked(artist_slug)
         _vibe_prune_locked(slot)
-        for tid in slot['tabs']:
-            if tid != tab_id:
-                slot['kicked'][tid] = now
         slot['epoch'] += 1
         slot['tabs'] = {tab_id: now}
         # If the caller was previously kicked (shouldn't normally happen but be safe), clear it.
@@ -4867,7 +6164,7 @@ def _build_external_system_prompt(artist_slug):
     client_brief = manifest.get('client_brief') or ''
     client_block = f'\nAbout the user: {client_brief}\n' if client_brief else '\n'
 
-    return f"""You are the Vibe Coder for an external Seed deployment.
+    return f"""You are the Terminal Access for an external Seed deployment.
 
 Repo location: {host}:{path}. Treat it as your working directory; all
 filesystem and shell tools are scoped to it transparently.
@@ -4891,7 +6188,7 @@ in those areas.
 
 def _get_artist_system_prompt(artist_slug):
     """
-    Build the system prompt for the Vibe Coder.
+    Build the system prompt for the Terminal Access.
     Static foundation = docs/*.md files (single source of truth).
     Runtime context = artist-specific data appended at the end.
 
@@ -5008,95 +6305,19 @@ Page slugs must always start with "artists/{artist_slug}/" — never bare slugs.
 
 @bp.route('/claude-stream', methods=['POST'])
 def claude_stream():
-    """Stream Vibe Coder events via SSE. Requires auth.
+    """Retired API-credit Terminal Access endpoint.
 
-    Implementation: in-process agent loop in vibe_agent.run_turn() routing
-    OpenRouter -> Gemini Flash. The legacy `claude` CLI subprocess
-    implementation is preserved at /claude-stream-legacy for one-deploy
-    rollback safety; remove after the new path has been validated in prod.
+    Terminal Access now runs Claude Code directly through the Socket.IO pty
+    bridge, so this endpoint intentionally refuses requests instead of burning
+    OpenRouter/API credits.
     """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
-
-    data = request.get_json() or {}
-    prompt = (data.get('prompt') or '').strip()
-    if not prompt:
-        return jsonify({'error': 'Prompt required'}), 400
-
-    if not os.getenv('OPENROUTER_API_KEY'):
-        return jsonify({
-            'error': 'OPENROUTER_API_KEY is not set on the server. '
-                     'Add it to .env and restart adze-flask.'
-        }), 500
-
-    _vibe_log.info(f'[{artist_slug}] ── PROMPT ── {prompt}')
-
-    # Per-artist mutex (shared with the legacy path — they edit the same files,
-    # so only one can run at a time per artist).
-    active = _claude_streaming.get(artist_slug)
-    if active and time.time() - active.get('since', 0) < 600:
-        return jsonify({
-            'error': 'Vibe Coder is busy',
-            'busy': True,
-            'since': active['since'],
-        }), 409
-    _claude_streaming[artist_slug] = {'since': time.time(), 'prompt': prompt[:100]}
-
-    artist_path = get_artist_path(artist_slug)
-    artist_root = (Path.cwd() / artist_path).resolve()
-
-    # Auto-snapshot before the FIRST turn of a new session.
-    # Skipped for external (remote) artists — Seed has git, the local artist
-    # dir is just a shell pointing at an SSH target.
-    session_file = _VIBE_SESSIONS_DIR / f'{artist_slug}.json'
-    is_new_session = not session_file.exists()
-    import external_artist as _ext
-    if is_new_session and not _ext.is_remote(artist_slug):
-        try:
-            ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
-            snap_path = artist_path / '.snapshots' / f'{ts}_auto-before-vibe-coder.tar.gz'
-            _write_artist_tarball(artist_path, snap_path)
-            user_snaps = sorted(
-                (s for s in snap_path.parent.glob('*.tar.gz') if s.name != AUTOSAVE_FILENAME),
-                reverse=True,
-            )
-            for old in user_snaps[SNAPSHOT_KEEP:]:
-                old.unlink()
-        except Exception:
-            pass  # Don't block the turn if snapshotting fails
-
-    system_prompt = _get_artist_system_prompt(artist_slug)
-    _vibe_log.info(f'[{artist_slug}] ── START (vibe_agent, model={vibe_agent.DEFAULT_MODEL}) ──')
-
-    def generate():
-        try:
-            for event in vibe_agent.run_turn(
-                artist_root=artist_root,
-                sessions_dir=_VIBE_SESSIONS_DIR,
-                session_id=artist_slug,
-                prompt=prompt,
-                system_prompt=system_prompt,
-                log=_vibe_log,
-                artist_slug=artist_slug,
-            ):
-                yield f"data: {json.dumps(event)}\n\n"
-            yield 'data: {"type": "stream_end"}\n\n'
-        except Exception as e:
-            _vibe_log.exception(f'[{artist_slug}] vibe_agent crashed')
-            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
-        finally:
-            _claude_streaming.pop(artist_slug, None)
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'X-Accel-Buffering': 'no',
-        }
-    )
+    return jsonify({
+        'error': 'The API-credit Terminal Access has been retired. Use Terminal Access.',
+        'terminal_access': True,
+    }), 410
 
 
 @bp.route('/list-vibe-files', methods=['GET'])
@@ -5127,46 +6348,26 @@ def list_vibe_files():
 
 @bp.route('/vibe/reset', methods=['POST'])
 def vibe_reset():
-    """Clear the artist's vibe-coder conversation. Snapshots first."""
+    """Retired Terminal Access reset endpoint kept for old clients."""
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
-
-    # Refuse mid-stream — would corrupt the conversation file
-    active = _claude_streaming.get(artist_slug)
-    if active and time.time() - active.get('since', 0) < 600:
-        return jsonify({'error': 'Cannot reset while a turn is in flight', 'busy': True}), 409
-
-    artist_path = get_artist_path(artist_slug)
-    try:
-        ts = _time.strftime('%Y-%m-%dT%H-%M-%S', _time.gmtime())
-        snap_path = artist_path / '.snapshots' / f'{ts}_auto-before-vibe-reset.tar.gz'
-        _write_artist_tarball(artist_path, snap_path)
-        user_snaps = sorted(
-            (s for s in snap_path.parent.glob('*.tar.gz') if s.name != AUTOSAVE_FILENAME),
-            reverse=True,
-        )
-        for old in user_snaps[SNAPSHOT_KEEP:]:
-            old.unlink()
-    except Exception:
-        pass
-
-    cleared = vibe_agent.clear_session(_VIBE_SESSIONS_DIR, artist_slug)
-    _vibe_log.info(f'[{artist_slug}] ── RESET (cleared={cleared}) ──')
-    return jsonify({'ok': True, 'cleared': cleared})
+    return jsonify({
+        'ok': True,
+        'message': 'Terminal Access uses the live Claude Code terminal. Use /clear there if needed.',
+    })
 
 
 @bp.route('/claude-stream-legacy', methods=['POST'])
 def claude_stream_legacy():
-    """LEGACY: Claude CLI subprocess implementation. Kept for one-deploy rollback.
-
-    Flip dashboard.html's fetch URL back to this if the new vibe_agent path
-    misbehaves. Remove after the new path is validated in prod (>= one week
-    of clean traffic, no rollback events in vibe.log).
-    """
+    """Retired prompt-mode Claude subprocess endpoint."""
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
+    return jsonify({
+        'error': 'Prompt-mode Claude streaming has been retired. Use Terminal Access.',
+        'terminal_access': True,
+    }), 410
 
     data = request.get_json()
     prompt = data.get('prompt', '').strip()
@@ -5182,7 +6383,7 @@ def claude_stream_legacy():
         proc = _claude_processes.get(artist_slug)
         if proc and proc.poll() is None:
             return jsonify({
-                'error': 'Vibe Coder is busy',
+                'error': 'Terminal Access is busy',
                 'busy': True,
                 'since': active['since'],
             }), 409
@@ -5204,7 +6405,7 @@ def claude_stream_legacy():
         _claude_sessions[artist_slug] = session_id
         _save_claude_sessions(_claude_sessions)
 
-        # Auto-snapshot before new Vibe Coder session
+        # Auto-snapshot before new Terminal Access session
         try:
             import tarfile, time as _time
             snap_dir = artist_path / '.snapshots'
@@ -5583,12 +6784,7 @@ def list_endpoints():
 
 @bp.route('/claude-reset', methods=['POST'])
 def claude_reset():
-    """Reset the Vibe Coder conversation for the artist. Requires auth.
-
-    Clears state for both the new vibe_agent path and the legacy claude CLI
-    path, so this works regardless of which backend the dashboard is hitting.
-    The frontend button at dashboard.html line 861 calls this.
-    """
+    """Reset retired prompt-mode state for the artist. Requires auth."""
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
@@ -5598,21 +6794,48 @@ def claude_reset():
     if active and time.time() - active.get('since', 0) < 600:
         return jsonify({'error': 'Cannot reset while a turn is in flight', 'busy': True}), 409
 
-    # Legacy: drop the resume token
     legacy_cleared = artist_slug in _claude_sessions
     _claude_sessions.pop(artist_slug, None)
     _save_claude_sessions(_claude_sessions)
 
-    # New: drop the vibe_agent conversation file
-    new_cleared = vibe_agent.clear_session(_VIBE_SESSIONS_DIR, artist_slug)
-
-    _vibe_log.info(
-        f'[{artist_slug}] ── RESET (legacy={legacy_cleared}, vibe_agent={new_cleared}) ──'
-    )
+    _vibe_log.info(f'[{artist_slug}] ── RESET (legacy={legacy_cleared}) ──')
     return jsonify({
         'ok': True,
-        'message': 'Session reset. Next message will start a fresh conversation.',
+        'message': 'Old prompt-mode session reset. Terminal Access uses the live Claude Code terminal.',
     })
+
+
+@bp.route('/openrouter-usage', methods=['GET'])
+def openrouter_usage():
+    """Report OpenRouter total spend (USD) for the configured API key.
+
+    Used by the Auto-Code cost meter — the dashboard snapshots `usage`
+    when a session connects and shows the delta since.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    key = os.environ.get('OPENROUTER_API_KEY', '')
+    if not key:
+        return jsonify({'error': 'OPENROUTER_API_KEY not configured'}), 503
+
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            'https://openrouter.ai/api/v1/auth/key',
+            headers={'Authorization': f'Bearer {key}'},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            payload = json.loads(resp.read().decode('utf-8'))
+        data = payload.get('data', {}) if isinstance(payload, dict) else {}
+        return jsonify({
+            'usage': float(data.get('usage') or 0.0),
+            'limit': data.get('limit'),
+            'label': data.get('label'),
+        })
+    except Exception as exc:
+        return jsonify({'error': f'OpenRouter lookup failed: {exc}'}), 502
 
 
 @bp.route('/claude-halt', methods=['POST'])
@@ -5632,7 +6855,7 @@ def claude_halt():
             proc.kill()
         _claude_processes.pop(artist_slug, None)
         _claude_streaming.pop(artist_slug, None)
-        return jsonify({'ok': True, 'message': 'Vibe Coder stopped.'})
+        return jsonify({'ok': True, 'message': 'Terminal Access stopped.'})
     else:
         _claude_processes.pop(artist_slug, None)
         _claude_streaming.pop(artist_slug, None)
