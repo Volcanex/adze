@@ -67,11 +67,13 @@ hand-edit between the markers.
 | Path | Summary |
 |------|---------|
 | `_shared/CLAUDE.md` | Shared — Flask code, docs, widgets, and themes |
+| `_shared/dashboard-themes/CLAUDE.md` | dashboard-themes/ — admin dashboard color themes |
 | `_shared/features/CLAUDE.md` | Features — Site-wide capability modules |
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
 | `artists/CLAUDE.md` | Artists — coordination with Terminal Access |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
+| `shared/CLAUDE.md` | shared/ — legacy stub, do not use |
 
-_Auto-compiled 2026-05-15 05:20 UTC — 6 doc(s) found._
+_Auto-compiled 2026-06-03 23:50 UTC — 8 doc(s) found._
 <!-- DOCS:END -->
