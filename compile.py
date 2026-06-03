@@ -10,6 +10,9 @@ import sys
 import json
 import re
 import shutil
+import base64
+import hashlib
+from urllib.parse import quote
 from pathlib import Path
 from datetime import datetime
 
@@ -30,12 +33,21 @@ class AdzeCompiler:
         ]
 
     def get_page_dirs(self, artist_dir):
-        """Get all page directories for an artist (dirs with content.md + config.json)."""
+        """Get all page directories for an artist (dirs with content.md + config.json).
+        Recurses into subdirectories so works/<slug>/ and exhibitions/<slug>/ detail
+        pages compile alongside their parent listing pages."""
+        skip = {'assets', 'widgets', '__pycache__', '.snapshots', 'backups'}
         pages = []
-        for d in sorted(artist_dir.iterdir()):
-            if d.is_dir() and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups'):
-                if (d / 'content.md').exists() and (d / 'config.json').exists():
-                    pages.append(d)
+
+        def walk(d):
+            for child in sorted(d.iterdir()):
+                if not child.is_dir() or child.name in skip:
+                    continue
+                if (child / 'content.md').exists() and (child / 'config.json').exists():
+                    pages.append(child)
+                walk(child)
+
+        walk(artist_dir)
         return pages
 
     def parse_content(self, page_dir):
@@ -75,17 +87,35 @@ class AdzeCompiler:
             return 0
 
         if dst.exists():
-            shutil.rmtree(dst)
+            try:
+                shutil.rmtree(dst)
+            except (PermissionError, OSError):
+                pass  # output/ may be host-owned; overwrite in place instead
         dst.mkdir(parents=True, exist_ok=True)
+
+        # Files that live in assets/ but are never served
+        _SKIP_NAMES = {'assets.meta.json'}
 
         count = 0
         for f in src.rglob('*'):
-            if f.is_file():
-                rel = f.relative_to(src)
-                out = dst / rel
-                out.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(f, out)
-                count += 1
+            if not f.is_file():
+                continue
+            rel = f.relative_to(src)
+            # Skip hidden dirs (.thumbs etc) and internal metadata files
+            if any(part.startswith('.') for part in rel.parts):
+                continue
+            if f.name in _SKIP_NAMES:
+                continue
+            out = dst / rel
+            out.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                shutil.copyfile(f, out)
+            except (PermissionError, OSError):
+                try:
+                    out.write_bytes(f.read_bytes())
+                except (PermissionError, OSError):
+                    pass  # file exists in output and is host-owned; already served, skip
+            count += 1
         return count
 
     def _build_schema_blocks(self, artist_config, page_config):
@@ -110,25 +140,164 @@ class AdzeCompiler:
             out.append(f'\n    <script type="application/ld+json">{payload}</script>')
         return ''.join(out)
 
+    def _inject_image_pipeline(self, html, artist_slug, artist_config, up_prefix):
+        """Rewrite <img> tags with data-thumb and inject pipeline script. No-op if feature not configured."""
+        pipeline_cfg = (artist_config.get('features') or {}).get('image_pipeline')
+        if not pipeline_cfg:
+            return html
+
+        thumbs_base = self.artists_dir / artist_slug / 'assets' / '.thumbs'
+        assets_prefix = up_prefix + 'assets/'
+
+        mode = pipeline_cfg.get('mode', 'halftone')
+        is_dither = (mode == 'dither')
+
+        def _make_data_uri(thumb_path):
+            """Read thumb, optionally quantise to indexed PNG for dither mode, return data URI."""
+            if is_dither:
+                try:
+                    from PIL import Image
+                    import io as _io
+                    depth      = int(pipeline_cfg.get('colorDepth', 4))
+                    n_colors   = 2 ** depth
+                    grayscale  = pipeline_cfg.get('paletteType') == 'grayscale'
+                    use_dither = pipeline_cfg.get('ditherAlgo', 'floyd-steinberg') != 'none'
+                    dither_val = 1 if use_dither else 0  # PIL: 1=Floydsteinberg, 0=none
+                    with Image.open(thumb_path) as img:
+                        if grayscale:
+                            img = img.convert('L').convert('RGB')
+                        else:
+                            img = img.convert('RGB')
+                        quantised = img.quantize(colors=n_colors, dither=dither_val)
+                    buf = _io.BytesIO()
+                    quantised.save(buf, 'PNG', optimize=True)
+                    b64 = base64.b64encode(buf.getvalue()).decode()
+                    return 'data:image/png;base64,' + b64
+                except Exception:
+                    pass  # fall through to raw WebP
+            b64 = base64.b64encode(thumb_path.read_bytes()).decode()
+            return 'data:image/webp;base64,' + b64
+
+        def _add_thumb(m):
+            tag = m.group(0)
+            if 'data-thumb' in tag:
+                return tag
+            src_m = re.search(r'\bsrc=["\']([^"\']+)["\']', tag)
+            if not src_m:
+                return tag
+            src = src_m.group(1)
+            if not src.startswith(assets_prefix):
+                return tag
+            rel = src[len(assets_prefix):]
+            for candidate in [
+                thumbs_base / (rel + '.webp'),
+                thumbs_base / (Path(rel).with_suffix('.webp')),
+            ]:
+                if candidate.exists():
+                    try:
+                        data_uri = _make_data_uri(candidate)
+                        close = '/>' if tag.endswith('/>') else '>'
+                        return tag[:-len(close)] + ' data-thumb="' + data_uri + '"' + close
+                    except Exception:
+                        pass
+            return tag
+
+        html = re.sub(r'<img\b[^>]*>', _add_thumb, html)
+
+        pipeline_js_path = self.shared_dir / 'features' / 'image-pipeline.js'
+        if not pipeline_js_path.exists():
+            return html
+
+        # Build a thumbMap covering ALL asset images so dynamically created
+        # <img> elements (galleries, lightboxes) can also get the pipeline effect.
+        # Keys are asset-relative stem without extension, e.g. 'images/foo'
+        # so they match regardless of what extension the JS uses in img.src.
+        thumb_map = {}
+        if thumbs_base.exists():
+            for tf in sorted(thumbs_base.rglob('*.webp')):
+                stem = str(tf.relative_to(thumbs_base).with_suffix(''))
+                try:
+                    thumb_map[stem] = _make_data_uri(tf)
+                except Exception:
+                    pass
+
+        inject_cfg = dict(pipeline_cfg)
+        if thumb_map:
+            inject_cfg['thumbMap'] = thumb_map
+
+        pipeline_js  = pipeline_js_path.read_text(encoding='utf-8')
+        config_json  = json.dumps(inject_cfg, ensure_ascii=False, separators=(',', ':'))
+        script_block = (
+            '<script>window.__imagePipeline=' + config_json + ';</script>\n'
+            '<script>' + pipeline_js + '</script>\n'
+        )
+        html = html.replace('</body>', script_block + '</body>')
+        return html
+
+    @staticmethod
+    def _hsl_hex(h, s, l):
+        """HSL (h 0-360, s/l 0-100) -> #RRGGBB. Mirrors the dashboard's JS
+        implementation so the live favicon matches the dashboard preview."""
+        s /= 100.0
+        l /= 100.0
+        a = s * min(l, 1 - l)
+        def f(n):
+            k = (n + h / 30.0) % 12
+            return l - a * max(-1, min(k - 3, min(9 - k, 1)))
+        def to_hex(x):
+            return format(round(255 * x), '02x')
+        return '#' + to_hex(f(0)) + to_hex(f(8)) + to_hex(f(4))
+
+    def _favicon_dot_color(self, slug, explicit=None):
+        """Return the dot colour: an explicit dashboard-set value, or a stable
+        colour derived from the slug (djb2 hash -> hue). Must stay in sync with
+        dotColorForSlug() in dashboard.html."""
+        if explicit:
+            return explicit
+        h = 5381
+        for ch in slug:
+            h = (h * 33 + ord(ch)) & 0xFFFFFFFF
+        return self._hsl_hex(h % 360, 65, 60)
+
+    @staticmethod
+    def _favicon_dot_link(color):
+        """A filled-circle SVG favicon as an inline data URI (no asset needed)."""
+        svg = (
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
+            f"<circle cx='16' cy='16' r='12' fill='{color}'/></svg>"
+        )
+        return ('<link rel="icon" type="image/svg+xml" '
+                f'href="data:image/svg+xml,{quote(svg, safe="")}">')
+
     def compile_page(self, artist_slug, page_dir):
         """Compile a single page into output/{slug}/{page}/index.html."""
         config = json.loads((page_dir / 'config.json').read_text(encoding='utf-8'))
         html_content, css_content, meta_tags = self.parse_content(page_dir)
-        page_name = page_dir.name
+        artist_root = self.artists_dir / artist_slug
+        page_rel = page_dir.relative_to(artist_root)
+        page_name = str(page_rel)
+        depth = len(page_rel.parts)
+        up_prefix = '../' * depth
 
         meta_section = f"\n    {meta_tags}" if meta_tags else ""
 
-        # Check for artist-specific favicon
-        favicon_link = '<link rel="icon" href="../assets/favicon.png">'
+        # Favicon resolution:
+        #   1. explicit image asset (`favicon` in config) — depth-aware path
+        #   2. otherwise a coloured-dot SVG so the tab icon is never empty.
+        #      Colour comes from `favicon_color` (set via the dashboard) or,
+        #      failing that, a stable colour derived from the artist slug.
         artist_config = {}
         artist_config_file = self.artists_dir / artist_slug / 'config.json'
         if artist_config_file.exists():
             try:
                 artist_config = json.loads(artist_config_file.read_text(encoding='utf-8'))
-                if artist_config.get('favicon'):
-                    favicon_link = f'<link rel="icon" href="../assets/{artist_config["favicon"]}">'
             except:
                 pass
+        if artist_config.get('favicon'):
+            favicon_link = f'<link rel="icon" href="{up_prefix}assets/{artist_config["favicon"]}">'
+        else:
+            color = self._favicon_dot_color(artist_slug, artist_config.get('favicon_color'))
+            favicon_link = self._favicon_dot_link(color)
 
         schema_blocks = self._build_schema_blocks(artist_config, config)
 
@@ -146,8 +315,11 @@ class AdzeCompiler:
 </body>
 </html>"""
 
+        # Feature injection (opt-in, no-op if not configured)
+        full_html = self._inject_image_pipeline(full_html, artist_slug, artist_config, up_prefix)
+
         # Write to output/artists/{slug}/{page}/index.html (matches URL structure)
-        out_dir = self.output_dir / 'artists' / artist_slug / page_name
+        out_dir = self.output_dir / 'artists' / artist_slug / page_rel
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / 'index.html').write_text(full_html, encoding='utf-8')
 

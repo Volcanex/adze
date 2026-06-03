@@ -6,5 +6,8 @@
     "description": "The Honey Tree Wholefoods \u2014 independent organic shop, 68 Heaton Road, Newcastle upon Tyne",
     "contact_email": "thehoneytreeshopteam@gmail.com",
     "last_login": 1776964497,
-    "last_login_ip": "151.226.233.153"
+    "last_login_ip": "151.226.233.153",
+    "slack_channel_id": "C0B6EQDJRH9",
+    "slack_pinned_ts": "1779930852.398499",
+    "slack_announced": true
 }

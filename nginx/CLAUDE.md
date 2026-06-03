@@ -15,12 +15,18 @@ template. Each config typically:
 
 ## Adding a new artist domain
 
-1. Copy an existing config and edit the `server_name`, root path, and
-   asset alias.
-2. `sudo nginx -t` to validate.
-3. `sudo systemctl reload nginx` to apply.
-4. If this is a new TLS cert, run the cert issuance step (see
-   `init-certs.sh` in the repo root for the Certbot bootstrap).
+1. Write the config to `nginx/sites-available/<domain>` (copy an existing
+   file and edit `server_name`, root path, and asset alias).
+2. Symlink it into sites-enabled:
+   `sudo ln -sf /home/gabriel/adze/nginx/sites-available/<domain> /etc/nginx/sites-enabled/<domain>`
+3. `sudo nginx -t` to validate.
+4. `sudo systemctl reload nginx` to apply (HTTP only at this point).
+5. Issue the TLS cert — certbot rewrites the config to add HTTPS + redirect:
+   `sudo certbot --nginx -d <domain> -d www.<domain>`
+6. `sudo docker restart adze-flask` so Flask picks up the new artist config.
+
+Note: `init-certs.sh` in the repo root is for `adze.studio` only (old
+Docker-based certbot flow) — don't use it for artist domains.
 
 ## Bind-mounted into the container
 

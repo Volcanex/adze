@@ -32,7 +32,7 @@
     --bg: #f5f3ee;
     --ink: #111;
     --muted: #6a6660;
-    --accent: #b84a39;
+    --accent: #3a3a38;
     --paper: #ece8df;
 }
 
@@ -49,7 +49,6 @@ body {
 }
 body.lightbox-open { overflow: hidden; }
 
-/* ── Loader (covers initial font + image loading) ── */
 #loader {
     position: fixed;
     inset: 0;
@@ -91,17 +90,6 @@ body::before {
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size: 256px 256px;
 }
-
-#bg-flowers {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-    display: block;
-}
-.hero, .flurry, .foot { position: relative; z-index: 1; }
 
 .topbar {
     position: fixed;
@@ -222,13 +210,6 @@ body::before {
     color: var(--muted);
     animation: heroIn 1.1s cubic-bezier(.2,.8,.2,1) .45s both;
 }
-.hero .tag .dot {
-    display: inline-block; width: 4px; height: 4px;
-    border-radius: 50%; background: var(--accent);
-    margin: 0 10px; vertical-align: middle;
-    animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.4); } }
 @keyframes heroIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
 .hero .scroll-hint {
@@ -244,6 +225,39 @@ body::before {
 }
 @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: .7; transform: translate(-50%, 0); } }
 @keyframes bob { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+
+/* ── Catalog nav ── */
+.catalog-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    border-bottom: 1px solid rgba(17,17,17,0.09);
+    display: flex;
+    padding: 0 28px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.catalog-nav::-webkit-scrollbar { display: none; }
+.cat-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-bottom: 1.5px solid transparent;
+    margin-bottom: -1px;
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: color .2s, border-color .2s;
+    white-space: nowrap;
+}
+.cat-btn:hover { color: var(--ink); }
+.cat-btn.active { color: var(--ink); border-bottom-color: var(--ink); }
 
 /* ── Flurry / masonry gallery ── */
 .flurry {
@@ -268,19 +282,19 @@ body::before {
     background: var(--paper);
     border-radius: 2px;
     opacity: 0;
-    transform: translateY(22px) rotate(var(--rot, 0deg));
+    transform: translateY(22px);
     transition: opacity .9s ease, transform .9s cubic-bezier(.2,.8,.2,1), box-shadow .4s ease;
     will-change: transform, opacity;
     box-shadow: 0 2px 8px rgba(0,0,0,0);
 }
 .photo.in {
     opacity: 1;
-    transform: translateY(0) rotate(var(--rot, 0deg));
+    transform: translateY(0);
 }
 .photo:hover {
     z-index: 5;
     box-shadow: 0 16px 40px rgba(0,0,0,0.22);
-    transform: translateY(-4px) rotate(var(--rot, 0deg)) scale(1.015);
+    transform: translateY(-4px) scale(1.015);
 }
 .photo img {
     width: 100%;
@@ -302,7 +316,6 @@ body::before {
 }
 .photo:hover::after { opacity: 1; transform: translate(0, 0); }
 
-/* Width-only sizing — heights follow each image's natural aspect ratio so nothing gets cropped. */
 .photo.small  { width: 72%; }
 .photo.medium { width: 88%; }
 .photo.large  { width: 100%; }
@@ -402,10 +415,9 @@ body::before {
 </style>
 <html>
 <div id="loader" aria-hidden="true"><div class="spinner"></div></div>
-<canvas id="bg-flowers" aria-hidden="true"></canvas>
 
 <div class="topbar">
-    <span></span>
+    <a class="brand" href="../home/">nina serebrennikova</a>
     <nav>
         <a href="../about/">About</a>
     </nav>
@@ -422,6 +434,8 @@ body::before {
     </div>
     <div class="scroll-hint">Scroll</div>
 </section>
+
+<nav class="catalog-nav" id="catalog-nav" aria-label="Catalog filter"></nav>
 
 <section class="flurry" id="flurry"></section>
 
@@ -446,10 +460,9 @@ body::before {
 </script>
 
 <script>
-// ── Loader gate: fade page in only when fonts + scatter photos + atlas ready ──
 (function() {
-    const MIN_VISIBLE = 700; // ms — show the spinner briefly even on cached loads
-    const HARD_TIMEOUT = 6000; // ms — don't let a slow asset hold the page forever
+    const MIN_VISIBLE = 700;
+    const HARD_TIMEOUT = 6000;
     const start = performance.now();
 
     function imgDone(img) {
@@ -467,7 +480,6 @@ body::before {
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-        // Scatter images are built by the next IIFE — wait a tick for them to attach.
         Promise.resolve().then(() => {
             const scatterImgs = Array.from(document.querySelectorAll('.scatter img'));
             const fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
@@ -480,178 +492,9 @@ body::before {
     });
 })();
 
-// ── Flower background: sprites sliced from flowers.png atlas ──
-(function() {
-    const canvas = document.getElementById('bg-flowers');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let W = 0, H = 0, dpr = 1;
-
-    function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        W = window.innerWidth;
-        H = window.innerHeight;
-        canvas.width = W * dpr;
-        canvas.height = H * dpr;
-        canvas.style.width = W + 'px';
-        canvas.style.height = H + 'px';
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    // Atlas: uniform 12 × 7 grid, no gap, no shave.
-    const COLS = 12, ROWS = 7;
-    const atlas = new Image();
-    atlas.src = '../assets/images/flowers2.png';
-    let atlasCanvas = null;
-    const TILES = [];
-    let atlasReady = false;
-
-    atlas.addEventListener('load', () => {
-        const off = document.createElement('canvas');
-        off.width = atlas.naturalWidth;
-        off.height = atlas.naturalHeight;
-        const octx = off.getContext('2d');
-        octx.drawImage(atlas, 0, 0);
-        // Chroma-key: drop near-white pixels with a soft anti-aliased edge.
-        const img = octx.getImageData(0, 0, off.width, off.height);
-        const d = img.data;
-        for (let i = 0; i < d.length; i += 4) {
-            const r = d[i], g = d[i+1], b = d[i+2];
-            const m = Math.min(r, g, b);
-            if (m >= 228) {
-                d[i+3] = 0;
-            } else if (m >= 185) {
-                const t = (m - 185) / 43;
-                d[i+3] = Math.round(d[i+3] * (1 - t));
-            }
-        }
-        octx.putImageData(img, 0, 0);
-        atlasCanvas = off;
-
-        const cw = atlas.naturalWidth / COLS;
-        const ch = atlas.naturalHeight / ROWS;
-        for (let r = 0; r < ROWS; r++) {
-            for (let c = 0; c < COLS; c++) {
-                TILES.push({ sx: c * cw, sy: r * ch, sw: cw, sh: ch });
-            }
-        }
-        atlasReady = true;
-    });
-
-    const rand = (a, b) => a + Math.random() * (b - a);
-    const pickTile = () => TILES[Math.floor(Math.random() * TILES.length)];
-    function easeOutBack(t) { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }
-
-    // ── Petal: sprite falling with sway + rotation, with gentle repulsion from each other & the mouse ──
-    class Petal {
-        constructor(y) {
-            this.x = rand(-20, W + 20);
-            this.y = y !== undefined ? y : rand(-160, -40);
-            this.size = rand(70, 150);
-            this.tile = pickTile();
-            this.vx = rand(-0.25, 0.25);
-            this.vy = rand(0.35, 0.85);
-            this.rotation = rand(0, Math.PI * 2);
-            this.rotSpeed = rand(-0.01, 0.01);
-            this.swayPhase = rand(0, Math.PI * 2);
-            this.swayAmp = rand(0.3, 0.9);
-            this.swayFreq = rand(0.0008, 0.0016);
-            this.ox = 0; this.oy = 0; // repulsion offset — accumulates, decays
-            this.life = 0;
-        }
-        update(dt) {
-            this.life += dt;
-            // Decay repulsion offset toward zero
-            this.ox *= 0.92;
-            this.oy *= 0.92;
-            this.y += this.vy * (dt / 16) + this.oy * (dt / 16) * 0.4;
-            this.x += (this.vx + Math.sin(this.life * this.swayFreq + this.swayPhase) * this.swayAmp) * (dt / 16) + this.ox * (dt / 16) * 0.4;
-            this.rotation += this.rotSpeed * (dt / 16);
-            this.done = this.y > H + 120 || this.x < -160 || this.x > W + 160;
-        }
-        draw(ctx) {
-            if (!this.tile || !atlasCanvas) return;
-            const aspect = this.tile.sh / this.tile.sw;
-            const w = this.size, h = w * aspect;
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.rotation);
-            ctx.drawImage(atlasCanvas, this.tile.sx, this.tile.sy, this.tile.sw, this.tile.sh, -w/2, -h/2, w, h);
-            ctx.restore();
-        }
-    }
-
-    const petals = [];
-    const MAX_PETALS = 16;
-    let lastSpawn = 0, lastTime = performance.now();
-    let visible = !document.hidden;
-    let mouseX = -1e6, mouseY = -1e6;
-
-    document.addEventListener('visibilitychange', () => { visible = !document.hidden; lastTime = performance.now(); });
-    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; }, { passive: true });
-    window.addEventListener('mouseleave', () => { mouseX = -1e6; mouseY = -1e6; });
-
-    atlas.addEventListener('load', () => {
-        for (let i = 0; i < 6; i++) petals.push(new Petal(rand(-H * 0.3, H)));
-    });
-
-    // Apply pairwise repulsion + mouse repulsion. O(n^2) is fine for ~16 petals.
-    function applyRepulsion() {
-        const MIN_DIST = 120;            // petals push away when centers are closer than this
-        const MOUSE_RADIUS = 180;         // mouse influence radius
-        const MOUSE_STRENGTH = 2.2;
-        for (let i = 0; i < petals.length; i++) {
-            const a = petals[i];
-            // Mouse
-            if (mouseX > -1e5) {
-                const dx = a.x - mouseX, dy = a.y - mouseY;
-                const d2 = dx * dx + dy * dy;
-                if (d2 < MOUSE_RADIUS * MOUSE_RADIUS && d2 > 1) {
-                    const d = Math.sqrt(d2);
-                    const f = (1 - d / MOUSE_RADIUS) * MOUSE_STRENGTH;
-                    a.ox += (dx / d) * f;
-                    a.oy += (dy / d) * f;
-                }
-            }
-            // Petal pairs
-            for (let j = i + 1; j < petals.length; j++) {
-                const b = petals[j];
-                const dx = a.x - b.x, dy = a.y - b.y;
-                const d2 = dx * dx + dy * dy;
-                if (d2 < MIN_DIST * MIN_DIST && d2 > 1) {
-                    const d = Math.sqrt(d2);
-                    const f = (1 - d / MIN_DIST) * 0.35;
-                    const fx = (dx / d) * f, fy = (dy / d) * f;
-                    a.ox += fx; a.oy += fy;
-                    b.ox -= fx; b.oy -= fy;
-                }
-            }
-        }
-    }
-
-    function loop(now) {
-        requestAnimationFrame(loop);
-        if (!visible || !atlasReady) { lastTime = now; return; }
-        const dt = Math.min(60, now - lastTime); lastTime = now;
-        if (now - lastSpawn > rand(900, 1800) && petals.length < MAX_PETALS) {
-            petals.push(new Petal()); lastSpawn = now;
-        }
-        applyRepulsion();
-        ctx.clearRect(0, 0, W, H);
-        for (let i = petals.length - 1; i >= 0; i--) {
-            petals[i].update(dt); petals[i].draw(ctx);
-            if (petals[i].done) petals.splice(i, 1);
-        }
-    }
-    requestAnimationFrame((t) => { lastTime = t; loop(t); });
-})();
-
 (function() {
     const data = JSON.parse(document.getElementById('photo-data').textContent);
 
-    // Deterministic shuffle from a seed so rebuilds are stable but feel random.
     function mulberry32(a) {
         return function() {
             let t = a += 0x6D2B79F5;
@@ -667,10 +510,32 @@ body::before {
         [photos[i], photos[j]] = [photos[j], photos[i]];
     }
 
+    // ── Catalog nav ──
+    const nav = document.getElementById('catalog-nav');
+    const seenCats = new Set();
+    const orderedCats = [];
+    data.forEach(p => {
+        if (p.caption && !seenCats.has(p.caption)) {
+            seenCats.add(p.caption);
+            orderedCats.push(p.caption);
+        }
+    });
+    let activeCat = '';
+
+    ['All', ...orderedCats].forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'cat-btn' + (cat === 'All' ? ' active' : '');
+        btn.textContent = cat;
+        btn.dataset.cat = cat === 'All' ? '' : cat;
+        btn.addEventListener('click', () => {
+            activeCat = btn.dataset.cat;
+            nav.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b === btn));
+            filterGallery();
+        });
+        nav.appendChild(btn);
+    });
+
     // ── Scattered hero photos ──
-    // Preset positions (%), sizes (vmin), rotations — gives a composed-but-organic look.
-    // Name sits centered; these orbit it. Tweak freely.
-    // Height is driven by the image's natural aspect ratio (no cropping); only width is set.
     const SCATTER = [
         { top: '5%',   left: '2%',   w: '22vmin', r: -5, d: 0.0,  fy: -8 },
         { top: '3%',   left: '28%',  w: '15vmin', r: 3,  d: 0.18, fy: -5 },
@@ -684,11 +549,8 @@ body::before {
     ];
 
     const scatter = document.getElementById('scatter');
-    // Pick the first N from the shuffled deck so it feels fresh each session;
-    // shuffled order itself is deterministic (seeded) so refreshes look stable.
-    const scatterPicks = data.slice(); // use unshuffled data for scatter
-    // Use a different rand seed so scatter != flurry ordering
     const rand2 = mulberry32(88);
+    const scatterPicks = data.slice();
     for (let i = scatterPicks.length - 1; i > 0; i--) {
         const j = Math.floor(rand2() * (i + 1));
         [scatterPicks[i], scatterPicks[j]] = [scatterPicks[j], scatterPicks[i]];
@@ -711,39 +573,37 @@ body::before {
         const url = '../assets/' + p.src.split('/').map(encodeURIComponent).join('/');
         const ws = p.w || '', hs = p.h || '';
         tile.innerHTML = `<img ${ws?`width="${ws}" `:''}${hs?`height="${hs}" `:''}src="${url}" alt="${p.location || ''}">`;
-        tile.addEventListener('click', () => {
-            const idx = photos.findIndex(q => q.src === p.src);
-            if (idx >= 0) openLightbox(idx);
-        });
+        tile.addEventListener('click', () => openLightbox(p));
         scatter.appendChild(tile);
     });
 
+    // ── Gallery ──
     const flurry = document.getElementById('flurry');
     const sizes = ['large', 'medium', 'large', 'small', 'large', 'medium', 'large', 'medium', 'large', 'small'];
 
     photos.forEach((p, i) => {
         const tile = document.createElement('div');
-        const size = sizes[i % sizes.length];
-        tile.className = 'photo ' + size;
+        tile.className = 'photo ' + sizes[i % sizes.length];
         tile.dataset.idx = String(i);
-        // Micro-random rotation for that hand-placed collage feel
-        const rot = (rand() * 2 - 1) * 1.2; // ±1.2deg
-        tile.style.setProperty('--rot', rot.toFixed(2) + 'deg');
-        // Reserve space based on natural aspect ratio so images don't knock neighbours around as they load.
+        tile.dataset.cat = p.caption || '';
         if (p.w && p.h) tile.style.aspectRatio = `${p.w} / ${p.h}`;
         const url = '../assets/' + p.src.split('/').map(encodeURIComponent).join('/');
         const w = p.w || '', h = p.h || '';
         tile.innerHTML = `<img loading="lazy" ${w?`width="${w}" `:''}${h?`height="${h}" `:''}src="${url}" alt="${p.location || ''}">`;
-        tile.addEventListener('click', () => openLightbox(i));
+        tile.addEventListener('click', () => openLightbox(p));
         flurry.appendChild(tile);
     });
 
-    // Stagger the entrance as tiles scroll into view
+    function filterGallery() {
+        Array.from(flurry.querySelectorAll('.photo')).forEach(el => {
+            el.style.display = (!activeCat || el.dataset.cat === activeCat) ? '' : 'none';
+        });
+    }
+
     const io = new IntersectionObserver((entries) => {
         entries.forEach(e => {
             if (e.isIntersecting) {
                 const idx = parseInt(e.target.dataset.idx, 10) || 0;
-                // Small per-tile delay for the "flurry" reveal
                 e.target.style.transitionDelay = ((idx % 6) * 60) + 'ms';
                 e.target.classList.add('in');
                 io.unobserve(e.target);
@@ -760,15 +620,22 @@ body::before {
     const lbCounter = document.getElementById('lb-counter');
     let lbIdx = 0;
 
-    function openLightbox(i) {
-        lbIdx = i;
+    function visibleList() {
+        return activeCat ? photos.filter(p => p.caption === activeCat) : photos;
+    }
+
+    function openLightbox(photo) {
+        const vis = visibleList();
+        const idx = vis.indexOf(photo);
+        lbIdx = idx >= 0 ? idx : 0;
         showLightbox();
         lb.classList.add('open');
         lb.setAttribute('aria-hidden', 'false');
         document.body.classList.add('lightbox-open');
     }
     function showLightbox() {
-        const p = photos[lbIdx];
+        const vis = visibleList();
+        const p = vis[lbIdx];
         if (!p) return;
         lbImg.src = '../assets/' + p.src.split('/').map(encodeURIComponent).join('/');
         lbImg.alt = p.location;
@@ -777,15 +644,15 @@ body::before {
         if (p.year) subParts.push(p.year);
         if (p.caption) subParts.push(p.caption);
         lbSub.textContent = subParts.join('  ·  ');
-        lbCounter.textContent = `${lbIdx + 1} / ${photos.length}`;
+        lbCounter.textContent = `${lbIdx + 1} / ${vis.length}`;
     }
     function closeLightbox() {
         lb.classList.remove('open');
         lb.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('lightbox-open');
     }
-    function next() { lbIdx = (lbIdx + 1) % photos.length; showLightbox(); }
-    function prev() { lbIdx = (lbIdx - 1 + photos.length) % photos.length; showLightbox(); }
+    function next() { const vis = visibleList(); lbIdx = (lbIdx + 1) % vis.length; showLightbox(); }
+    function prev() { const vis = visibleList(); lbIdx = (lbIdx - 1 + vis.length) % vis.length; showLightbox(); }
 
     lb.querySelector('.lb-close').addEventListener('click', closeLightbox);
     lb.querySelector('.lb-next').addEventListener('click', next);

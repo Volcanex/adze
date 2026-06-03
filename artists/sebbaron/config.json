@@ -4,5 +4,8 @@
     "domain": "sebbaron.com",
     "admin_token": "seb123",
     "description": "",
-    "contact_email": ""
+    "contact_email": "",
+    "slack_channel_id": "C0B6HPZTA13",
+    "slack_pinned_ts": "1779930850.259509",
+    "slack_announced": true
 }

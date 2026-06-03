@@ -8,6 +8,30 @@ Bundle exported from claude.ai/design and dropped here as the source of truth fo
 - `chats/chat1.md` — the conversation that produced the design language. Useful for understanding *why* a choice was made (e.g. why the wordmark is upright bold instead of italic — see "Looks better sharper and cleaner").
 - `README.md` — the upstream handoff README.
 
+## ⚠ Chrome moved to the "mono" direction (2026-06-03)
+
+The live chrome (`portal.html`, `admin.html`, `dashboard.html`) has been migrated
+off the original Cardo-serif-italic identity to a **mono / technical** direction
+("Alt 2"). The `project/Adze Design Language.html` export here still documents the
+**old** Cardo look and is now behind — treat it as historical until re-exported.
+
+What changed in all three `:root` blocks:
+- `--heading-font: 'JetBrains Mono', 'Monaco', 'Menlo', monospace` (was `'Cardo', Georgia, serif`)
+- `--mono` now leads with `'JetBrains Mono'`
+- `--radius: 4px` (was 6px admin/dashboard, 8px portal)
+- All heading `font-style: italic` removed → upright; section headers are uppercase + tracked
+- Wordmark lockup is `[Adze]` (accent-coloured brackets)
+- Font imports add `JetBrains+Mono:wght@400;500;700`
+
+Comparison mockups live in `static/design-language-*.html` and are linked from the
+admin **Extras** tab:
+- `design-language.html` — live reference (now reflects mono, parses chrome CSS)
+- `design-language-1-legacy.html` — **frozen** Cardo-italic archive (static on purpose)
+- `design-language-2-mono.html` — the adopted direction
+- `design-language-3-clean.html` / `-4-editorial.html` — unused explorations
+
+Tabs and toasts were left untouched (still "preserved by user request", below).
+
 ## How it relates to the live code
 
 The design language was distilled **from** `_shared/portal.html` and `_shared/admin.html`, then refined. So the live files mostly already match canon. The three live files each carry their own copy of the tokens (`:root` and `[data-theme="dark"]` blocks) — keep them in sync with this file. Each `:root` block has a comment pointing back here.

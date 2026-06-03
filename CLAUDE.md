@@ -3,10 +3,12 @@
 Multi-tenant artist site hosting. Each artist gets a directory under `artists/<slug>/` containing `config.json` and per-page subdirectories with a `content.md`. `compile.py` turns those into static HTML under `static/artists/<slug>/`. Flask serves them via domain-based routing keyed off `config.json`'s `domain` field.
 
 ## Runtime
-- Docker container `adze-flask` on `127.0.0.1:5001` (host nginx fronts it)
-- `flask_server.py`, `compile.py`, `_shared/`, `artists/`, `static/`, `output/`, `nginx/sites-available/` are bind-mounted into the container — host edits take effect after `docker restart adze-flask`
-- Recompile a single artist: `python3 compile.py --artist <slug>` (run on host)
-- `restart.sh` in the repo is stale; do **not** use it. Use `docker restart adze-flask`.
+- Docker container `adze-flask` on `127.0.0.1:5001` (host nginx fronts it).
+- `flask_server.py`, `compile.py`, `_shared/`, `artists/`, `static/`, `output/`, `nginx/sites-available/` are bind-mounted into the container — host edits take effect after restart.
+- Recompile a single artist: `python3 compile.py --artist <slug>` (run on host).
+- **On this Hetzner host, `gabriel` is not in the `docker` group**, so docker commands need sudo: `sudo docker restart adze-flask`. The container's PID-1 surfaces on the host `ps` as a root-owned `python3 flask_server.py` — that's normal, not a separate bare-host process. Don't `kill` it from the host; use `sudo docker restart adze-flask`.
+- `restart.sh` in the repo is stale; do **not** use it (no `venv/` exists here either).
+- Studio admin state lives under `data/` (`hours.json`, `leads.json`, `pinned_order.json`, `todos.json`), bind-mounted via `./data:/app/data` (docker-compose.yml) — so it persists across both `docker restart` and `docker compose down/up`. Each blob is read/written through `_read_studio_json`/`_write_studio_json` in `admin_api.py`; super-admin only.
 
 ## Layout
 - `artists/<slug>/config.json` — `name`, `slug`, `domain`, `admin_token`
@@ -20,8 +22,8 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 - Default: domain-based — `_get_artist_by_domain(host)` matches `config.json`'s `domain`
 - `/preview/<slug>/` — same-origin route for cross-site iframe embeds (added for lastplacesite case studies)
 
-## Self-documenting docs (Claude only)
-Whenever you discover something non-obvious about a subdirectory — an unusual convention, a compile gotcha, a deployment quirk, a "future-Claude should know" detail — create or update a `CLAUDE.md` in that directory. These are for future Claude sessions; humans don't read them, so keep them terse and operational. Add a one-line entry to the index below so they remain discoverable from here.
+## Self-documenting agent docs
+Whenever you discover something non-obvious about a subdirectory — an unusual convention, a compile gotcha, a deployment quirk, a "future-agent should know" detail — create or update a `CLAUDE.md` in that directory. Run `scripts/sync-agent-docs.sh` so a sibling `AGENTS.md` symlink exists beside it. `AGENTS.md` must point at `CLAUDE.md`, so edits through either filename update the same file. Add a one-line entry to the index below so they remain discoverable from here.
 
 If something in this file becomes wrong, fix it.
 
@@ -34,10 +36,9 @@ config skeleton, the per-deployment SSH key (`ssh_key`, gitignored),
 and the manifest cache. Bootstrap a new one with
 `scripts/add-external-artist.sh <slug> <host> <remote-path>`.
 
-Filesystem ops route through `_shared/remote_fs.py`; the Vibe Coder
-operates the same way for both kinds of artist (the `_Root` abstraction
-in `_shared/vibe_agent.py` hides the difference). The dashboard auto-
-detects external artists via `/api/adze/external-manifest` and
+Filesystem ops route through `_shared/remote_fs.py`. Terminal Access opens a
+per-artist shell/Claude Code tmux session rooted at the artist directory.
+The dashboard auto-detects external artists via `/api/adze/external-manifest` and
 applies a stripped-down tab list + points the preview iframe at the
 manifest's `preview_url`.
 
@@ -47,14 +48,14 @@ in Seed's `core/api/admin.py`). Adze External bypasses Seed's web admin
 entirely — it operates at the filesystem layer. Don't add Seed admin
 gates expecting them to apply to external Adze sessions.
 
-## ⚠ Concurrent edits with the in-browser vibe coder
-The dashboard ships a vibe coder that another Claude (or the user) uses to edit `artists/<slug>/` files live. **Both you and the vibe coder write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
+## ⚠ Concurrent edits with Terminal Access
+The dashboard ships Terminal Access that another developer/Claude Code session can use to edit `artists/<slug>/` files live. **Both you and Terminal Access write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
 
 ```
-tail -300 logs/vibe.log | grep "\[<slug>\]"
+tmux ls | grep "adze-<slug>"
 ```
 
-If you see recent activity, read the live `content.md` first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
+If there is a live terminal session, read the live files first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
 
 ### Index
 
@@ -67,10 +68,10 @@ hand-edit between the markers.
 |------|---------|
 | `_shared/CLAUDE.md` | Shared — Flask code, docs, widgets, and themes |
 | `_shared/features/CLAUDE.md` | Features — Site-wide capability modules |
-| `_shared/widgets/CLAUDE.md` | Widgets — Dashboard-privileged Flask blueprints |
-| `artists/CLAUDE.md` | Artists — coordination with the in-browser vibe coder |
+| `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
+| `artists/CLAUDE.md` | Artists — coordination with Terminal Access |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-04-28 09:10 UTC — 6 doc(s) found._
+_Auto-compiled 2026-05-15 05:20 UTC — 6 doc(s) found._
 <!-- DOCS:END -->

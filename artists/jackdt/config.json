@@ -1,10 +1,15 @@
 {
-    "name": "Jack",
+    "name": "Jack Dennison-Thompson",
     "slug": "jackdt",
     "domain": "jackdt.com",
     "admin_token": "jack123",
-    "description": "",
+    "description": "Journalism portfolio",
     "contact_email": "",
     "last_login": 1776864761,
-    "last_login_ip": "113.185.85.55"
+    "last_login_ip": "113.185.85.55",
+    "slack_channel_id": "C0B7FEC5LHE",
+    "slack_pinned_ts": "1779930838.530469",
+    "slack_announced": true,
+    "intake_token": "vCXRfGPWVqL3gDox_V1VXUl-uyAV19eH",
+    "figma_url": ""
 }

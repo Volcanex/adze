@@ -1,0 +1,8 @@
+{
+    "name": "image-pipeline",
+    "description": "Texture-based speed rendering — configure how images load on your site. Halftone, duotone, dither, and more.",
+    "icon": "image",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "category": "performance"
+}

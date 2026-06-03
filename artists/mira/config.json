@@ -6,5 +6,26 @@
     "description": "mira \u2014 music, art, animation",
     "contact_email": "",
     "last_login": 1776981298,
-    "last_login_ip": "157.131.71.199"
+    "last_login_ip": "157.131.71.199",
+    "lead": {
+        "active": false,
+        "contact": "",
+        "stage": "1",
+        "fish_size": "xs",
+        "instagram": "",
+        "work": "Artist portfolio site",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": true,
+        "original_lead_id": "37fbe8d2-9319-494e-b47e-0cfa22f7d75e",
+        "created_at": 1779808047,
+        "updated_at": 1780320451
+    },
+    "slack_channel_id": "C0B65MPAZSB",
+    "slack_pinned_ts": "1779930844.289219",
+    "slack_announced": true,
+    "intake_token": "ql12tvWrwxbsiXVXyCMADoYuogmrRFFh",
+    "figma_url": ""
 }

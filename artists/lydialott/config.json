@@ -5,12 +5,12 @@
     "admin_token": "loudhive",
     "description": "",
     "contact_email": "",
-    "last_login": 1780395736,
-    "last_login_ip": "178.104.233.5",
+    "last_login": 1780398861,
+    "last_login_ip": "172.18.0.1",
     "lead": {
         "active": true,
         "contact": "Self",
-        "stage": "3",
+        "stage": "4",
         "fish_size": "s",
         "instagram": "lydialottart",
         "work": "",
@@ -21,12 +21,25 @@
         "contacted": true,
         "original_lead_id": "0ee184a1-a4c4-4c77-a03c-36482daf3f57",
         "created_at": 1778224727,
-        "updated_at": 1779932545
+        "updated_at": 1780484238
     },
     "intake_token": "i1xgpwuEIACP5jmLd2NFdQDamFr6KrOA",
     "slack_channel_id": "C0B65MNNLCX",
     "slack_pinned_ts": "1779930842.287419",
     "slack_announced": true,
     "figma_url": "https://www.figma.com/design/sbYgD4hwEeuLyZVut9Bv16/Lydia-Portfolio?node-id=0-1&t=NUAy4Ad00uwhm1q8-1",
-    "slack_figma_msg_ts": "1779932544.910159"
+    "slack_figma_msg_ts": "1779932544.910159",
+    "favicon": "favicon.svg",
+    "platform_widgets": [
+        "image-pipeline"
+    ],
+    "features": {
+        "image_pipeline": {
+            "mode": "dither",
+            "colorDepth": "4",
+            "paletteType": "auto",
+            "ditherAlgo": "floyd-steinberg",
+            "blockSize": 2
+        }
+    }
 }

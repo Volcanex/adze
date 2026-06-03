@@ -162,6 +162,7 @@ img {
     top: 0;
     height: 100%;
     z-index: 50;
+    pointer-events: none; /* decorative frame must never capture scroll/clicks */
 }
 
 .border-right {
@@ -170,6 +171,7 @@ img {
     top: 0;
     height: 100%;
     z-index: 1;
+    pointer-events: none;
 }
 
 .border-bottom {

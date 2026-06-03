@@ -1,0 +1,56 @@
+@font-face {
+    font-family: 'Cormorant';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: fallback;
+    src: url('../assets/fonts/Cormorant-Regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cormorant';
+    font-style: italic;
+    font-weight: 300 700;
+    font-display: fallback;
+    src: url('../assets/fonts/Cormorant-Italic.woff2') format('woff2');
+}
+
+:root {
+    /* ── Colours ── */
+    --primary: #100f0c;
+    --accent: #7a8a6e;
+    --accent-hover: #5d7050;
+    --bg: #f8f5ef;
+    --border: #e5e0d8;
+    --text-muted: #45433d;
+    --text-light: #9a958c;
+
+    /* ── Fonts ── */
+    --text-font: 'Cormorant', Georgia, serif;
+    --heading-font: 'Cormorant', Georgia, serif;
+
+    /* ── Body Text ── */
+    --body-size: 1.05rem;
+    --body-weight: 400;
+    --body-line-height: 1.7;
+
+    /* ── Headings ── */
+    --h1-size: 2.4rem;
+    --h1-weight: 400;
+    --h2-size: 1.6rem;
+    --h2-weight: 400;
+    --h3-size: 1.2rem;
+    --h3-weight: 600;
+    --heading-line-height: 1.4;
+
+    /* ── Spacing & Layout ── */
+    --content-max-width: 640px;
+    --sidebar-width: 260px;
+    --page-padding: 48px;
+    --section-gap: 28px;
+    --border-radius: 8px;
+
+    /* ── Nav ── */
+    --nav-size: 14px;
+    --nav-weight: 400;
+    --site-name-size: 18px;
+    --site-name-weight: 600;
+}

@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Send your work — Adze</title>
+<link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+<style>
+    /* Adze design language — see design-language/project/Adze Design Language.html.
+       This is a portal surface: warm paper, italic Cardo display, Inter UI,
+       Monaco mono eyebrows, single editorial-blue accent. */
+    :root {
+        --accent: #1C4F82;
+        --accent-soft: #6b8cae;
+        --accent-hover: #163f68;
+        --accent-text: #ffffff;
+        --danger: #c0392b;
+        --success: #4a9a6a;
+        --bg: #f5f2ed;
+        --bg2: #ebe7e0;
+        --surface: #ffffff;
+        --surface2: #f0ede7;
+        --border: #ddd8cf;
+        --text: #2a2a28;
+        --text2: #6b6860;
+        --radius: 8px;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        --mono: 'Monaco','Menlo','Courier New',monospace;
+        --heading-font: 'Cardo', Georgia, serif;
+        --body-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 0; background: var(--bg); color: var(--text);
+        font: 14px/1.6 var(--body-font);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 24px 80px; }
+    header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    h1 {
+        margin: 0 0 8px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 700; font-size: 34px; line-height: 1.15; letter-spacing: -0.005em;
+        color: var(--text);
+    }
+    .subtitle {
+        color: var(--text2); margin: 0; font-family: var(--mono);
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .intro {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 16px 18px; margin-bottom: 22px; font-size: 13px; color: var(--text2);
+        box-shadow: var(--shadow-sm);
+    }
+    .intro strong { color: var(--text); }
+
+    .drop {
+        display: block;
+        border: 1.5px dashed var(--border); border-radius: var(--radius);
+        background: var(--surface);
+        padding: 40px 20px; text-align: center;
+        transition: border-color 0.15s, background 0.15s;
+        cursor: pointer;
+    }
+    .drop:hover, .drop.is-over { border-color: var(--accent-soft); background: var(--surface2); }
+    .drop i { font-size: 34px; color: var(--accent-soft); display: block; margin-bottom: 10px; }
+    .drop p { margin: 4px 0; font-size: 14px; color: var(--text2); }
+    .drop strong { color: var(--text); font-weight: 600; }
+    .drop input[type=file] { display: none; }
+    .pick-row { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
+    /* Adze buttons — soft-blue secondary actions, see design language .btn-soft / .btn-ghost */
+    .pick-btn {
+        padding: 8px 16px; border-radius: var(--radius); cursor: pointer;
+        font-family: var(--body-font); font-size: 13px; font-weight: 600; line-height: 1;
+        background: transparent; border: 1px solid var(--border); color: var(--text2);
+        display: inline-flex; align-items: center; gap: 7px;
+        transition: all 0.2s;
+    }
+    .pick-btn i { font-size: 15px; line-height: 1; display: block; }
+    .pick-btn:hover { background: var(--bg2); color: var(--text); border-color: var(--text2); }
+
+    /* Add-a-link row */
+    .link-add {
+        display: flex; align-items: center; gap: 10px;
+        margin-top: 10px; padding: 6px 6px 6px 14px;
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+    }
+    .link-add i { font-size: 18px; color: var(--accent-soft); flex-shrink: 0; }
+    .link-add input {
+        flex: 1; border: 0; background: transparent; font-size: 13px;
+        font-family: var(--body-font); color: var(--text); outline: none; min-width: 0;
+    }
+    .link-add button {
+        padding: 8px 16px; border: 0; border-radius: var(--radius);
+        font-family: var(--body-font); font-size: 13px; font-weight: 600;
+        background: var(--accent); color: var(--accent-text); cursor: pointer; flex-shrink: 0;
+        transition: background 0.2s;
+    }
+    .link-add button:hover { background: var(--accent-hover); }
+    .link-add button:disabled { opacity: 0.5; cursor: default; }
+
+    .card-open {
+        position: absolute; top: 8px; left: 8px; z-index: 3;
+        width: 24px; height: 24px; border-radius: 50%;
+        background: rgba(0,0,0,0.55); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; opacity: 0; transition: opacity 0.12s, background 0.12s;
+        font-size: 13px; text-decoration: none;
+    }
+    .card:hover .card-open { opacity: 1; }
+    .card-open:hover { background: var(--accent); }
+
+    /* Label bar — Adze: warm surface2 tray, mono eyebrow, soft colour chips */
+    .labels-bar {
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        padding: 12px 14px; background: var(--surface2);
+        border: 1px solid var(--border); border-radius: var(--radius);
+        margin-top: 18px;
+    }
+    .labels-bar-title {
+        font-family: var(--mono); font-size: 11px; color: var(--text2);
+        text-transform: uppercase; letter-spacing: 0.06em; margin-right: 6px;
+    }
+    .label-pill {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 5px 6px 5px 12px; border-radius: 999px; font-size: 12px;
+        color: #fff; font-weight: 500; cursor: pointer;
+        box-shadow: var(--shadow-sm);
+        outline: 2px solid transparent; outline-offset: 1px;
+        transition: transform 0.12s, box-shadow 0.12s, outline-color 0.12s;
+        user-select: none;
+    }
+    .label-pill:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .label-pill.is-filter { outline-color: var(--text); }
+    .label-pill .count {
+        font-family: var(--mono); font-size: 10px; line-height: 1;
+        background: rgba(255,255,255,0.22); padding: 3px 7px; border-radius: 999px;
+    }
+    .label-pill .x {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 17px; height: 17px; border-radius: 50%;
+        background: rgba(0,0,0,0.2); color: #fff; font-size: 10px;
+        opacity: 0; transition: opacity 0.12s, background 0.12s;
+    }
+    .label-pill:hover .x { opacity: 1; }
+    .label-pill .x:hover { background: rgba(0,0,0,0.42); }
+    .label-add {
+        padding: 6px 13px; border-radius: 999px;
+        font-family: var(--body-font); font-size: 12px; font-weight: 500;
+        background: transparent; border: 1px dashed var(--border); color: var(--text2);
+        cursor: pointer; transition: all 0.15s;
+    }
+    .label-add:hover { color: var(--accent); border-color: var(--accent-soft); border-style: solid; background: var(--surface); }
+
+    .select-bar {
+        margin-top: 12px; padding: 10px 14px;
+        background: var(--text); color: var(--bg); border-radius: var(--radius);
+        display: none; align-items: center; gap: 12px; font-size: 13px;
+    }
+    .select-bar.is-active { display: flex; }
+    .select-bar .count { font-weight: 600; }
+    .select-bar .hint { color: rgba(255,255,255,0.7); font-size: 11px; }
+    .select-bar button {
+        background: var(--bg); color: var(--text); padding: 6px 12px; border: 0;
+        border-radius: 5px; font-size: 12px; cursor: pointer;
+    }
+
+    .progress { margin-top: 18px; display: none; }
+    .progress.is-active { display: block; }
+    .bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.15s; }
+    .progress-text { font-size: 12px; color: var(--text2); margin-top: 6px; }
+
+    h2 { font-family: var(--mono); font-size: 11px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin: 32px 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+    .card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        overflow: hidden; display: flex; flex-direction: column;
+        position: relative; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+    .card.is-selected { border-color: var(--text); box-shadow: 0 0 0 3px rgba(0,0,0,0.08); }
+    .card-check {
+        position: absolute; top: 8px; left: 8px; z-index: 2;
+        width: 22px; height: 22px; border-radius: 50%;
+        background: var(--surface); border: 2px solid var(--border);
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.12s;
+        font-size: 14px; color: var(--text);
+    }
+    .card:hover .card-check, .card.is-selected .card-check { opacity: 1; }
+    .card.is-selected .card-check { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .card-remove {
+        position: absolute; top: 8px; right: 8px; z-index: 3;
+        width: 24px; height: 24px; border-radius: 50%;
+        background: rgba(0,0,0,0.55); color: #fff; border: 0;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; opacity: 0; transition: opacity 0.12s, background 0.12s;
+        font-size: 14px;
+    }
+    .card:hover .card-remove { opacity: 1; }
+    .card-remove:hover { background: var(--danger); }
+
+    /* Sticker stack — labels rendered as paper stickers on the thumb. */
+    .sticker-stack {
+        position: absolute; top: 6px; right: 6px; z-index: 1;
+        display: flex; flex-direction: column; gap: 4px; align-items: flex-end;
+        pointer-events: none;
+    }
+    .sticker {
+        padding: 3px 9px; border-radius: 999px;
+        font-size: 10px; font-weight: 600; color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.18);
+        white-space: nowrap; max-width: 140px;
+        overflow: hidden; text-overflow: ellipsis;
+        transform-origin: center;
+    }
+    @keyframes sticker-pop {
+        0%   { transform: scale(0)   rotate(-25deg); opacity: 0; }
+        60%  { transform: scale(1.18) rotate(8deg);  opacity: 1; }
+        100% { transform: scale(1)   rotate(var(--rot, -4deg)); opacity: 1; }
+    }
+    .sticker.is-new { animation: sticker-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+    .thumb {
+        aspect-ratio: 1 / 1; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center;
+        overflow: hidden; color: var(--text2); font-size: 30px; gap: 4px;
+    }
+    .thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .thumb .ext { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-body { padding: 10px 12px; }
+    .card-name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+    .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .card-tag { font-size: 10px; background: var(--surface2); padding: 2px 6px; border-radius: 999px; color: var(--text); }
+
+    .empty { color: var(--text2); font-style: italic; font-size: 13px; padding: 12px 0; }
+    .toast {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 6px;
+        font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .toast.is-visible { opacity: 1; }
+    .toast.is-error { background: var(--danger); }
+
+    footer { margin-top: 48px; color: var(--text2); font-size: 11px; text-align: center; }
+
+    /* Welcome + editor login card — the page's display moment */
+    .welcome {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 26px 24px 22px; margin-bottom: 22px;
+        box-shadow: var(--shadow-sm);
+        border-left: 3px solid var(--accent-soft);
+    }
+    .welcome h2 {
+        margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 700; font-size: 24px; line-height: 1.15; letter-spacing: -0.005em;
+        color: var(--text); text-transform: none;
+    }
+    .welcome p { margin: 0 0 18px; font-size: 13.5px; color: var(--text2); line-height: 1.6; max-width: 56ch; }
+    .welcome p strong { color: var(--text); font-weight: 600; }
+    .login-block {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px;
+        padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .creds { display: flex; gap: 22px; flex-wrap: wrap; flex: 1; min-width: 0; }
+    .cred-field { min-width: 0; }
+    .cred-label {
+        font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text2); margin-bottom: 5px;
+    }
+    .cred-value {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: var(--mono); font-size: 13px; color: var(--text);
+        background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+        padding: 7px 10px; max-width: 280px;
+    }
+    .cred-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cred-copy {
+        border: 0; background: transparent; color: var(--text2); cursor: pointer;
+        padding: 2px; font-size: 15px; line-height: 1; flex-shrink: 0;
+        transition: color 0.15s;
+    }
+    .cred-copy:hover { color: var(--accent); }
+    /* Primary CTA — design language .btn */
+    .login-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 11px 20px; border: 0; border-radius: var(--radius);
+        background: var(--accent); color: var(--accent-text);
+        font-family: var(--body-font); font-size: 14px; font-weight: 600; line-height: 1;
+        cursor: pointer; white-space: nowrap; transition: background 0.2s;
+    }
+    .login-btn i { font-size: 16px; line-height: 1; display: block; }
+    .login-btn:hover { background: var(--accent-hover); }
+    .login-btn:disabled { opacity: 0.6; cursor: default; }
+    .login-btn i.ph-circle-notch { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <h1>Send your work to {{ARTIST_NAME}}</h1>
+        <p class="subtitle">Adze · Artist intake portal</p>
+    </header>
+
+    <div class="welcome" id="welcome">
+        <h2>Welcome to the Adze Studio</h2>
+        <p>Built by Gabriel for friends and the clients of <strong>LastPlace</strong>.
+           This portal is your way in — drop work below, or sign into the editor to
+           shape your site directly.</p>
+        <div class="login-block">
+            <div class="creds">
+                <div class="cred-field">
+                    <div class="cred-label">Your site</div>
+                    <div class="cred-value">
+                        <span id="credSlug"></span>
+                        <button class="cred-copy" title="Copy" onclick="copyCred('credSlug')"><i class="ph ph-copy"></i></button>
+                    </div>
+                </div>
+                <div class="cred-field">
+                    <div class="cred-label">Login token</div>
+                    <div class="cred-value">
+                        <span id="credToken"></span>
+                        <button class="cred-copy" title="Copy" onclick="copyCred('credToken')"><i class="ph ph-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button class="login-btn" id="loginBtn" onclick="loginToEditor()">
+                <i class="ph ph-pencil-simple"></i> Open the editor
+            </button>
+        </div>
+    </div>
+
+    <div class="intro">
+        Drop images, videos, audio, or PDFs below — or paste a <strong>link</strong> to anything
+        online (an Instagram post, a Vimeo video, a Drive folder). Add labels to describe each
+        piece — e.g. <strong>sculpture</strong>, <strong>2024</strong>, <strong>commission</strong>.
+        You don't need an account; this link is your access. Everything you add goes
+        straight to your admin's library.
+    </div>
+
+    <div class="drop" id="drop">
+        <input type="file" id="file" multiple>
+        <input type="file" id="folder" webkitdirectory directory multiple>
+        <i class="ph ph-upload-simple"></i>
+        <p><strong>Drag files or a folder here</strong>, or paste (Ctrl+V)</p>
+        <p style="font-size:12px">Images, video, audio, PDF — or a <strong>.zip</strong>. Folders keep their structure · up to 1 GB each</p>
+        <div class="pick-row">
+            <button type="button" class="pick-btn" id="pickFiles"><i class="ph ph-file"></i> Choose files</button>
+            <button type="button" class="pick-btn" id="pickFolder"><i class="ph ph-folder"></i> Choose a folder</button>
+        </div>
+    </div>
+
+    <div class="link-add">
+        <i class="ph ph-link"></i>
+        <input type="url" id="linkInput" placeholder="…or paste a link — Instagram, Vimeo, a Drive folder, anything"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addLink();}">
+        <button id="linkBtn" onclick="addLink()">Add link</button>
+    </div>
+
+    <div class="labels-bar">
+        <span class="labels-bar-title">Labels</span>
+        <div id="labelsList" style="display:contents"></div>
+        <button class="label-add" onclick="createLabel()">+ New label</button>
+    </div>
+
+    <div class="select-bar" id="selectBar">
+        <span class="count" id="selectCount">0 selected</span>
+        <span class="hint">Click a label above to apply it to the selected files.</span>
+        <button onclick="clearSelection()">Clear</button>
+    </div>
+
+    <div class="progress" id="progress">
+        <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+        <div class="progress-text" id="progressText"></div>
+    </div>
+
+    <h2>What you've uploaded</h2>
+    <div id="items"><div class="empty">Nothing yet.</div></div>
+
+    <footer>Powered by Adze · This link is private to you.</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/api/adze/asset-tree.js"></script>
+<script>
+const ARTIST_SLUG = '{{ARTIST_SLUG}}';
+const INTAKE_TOKEN = '{{INTAKE_TOKEN}}';
+const ADMIN_TOKEN = '{{ADMIN_TOKEN}}';
+const API_BASE = `/api/adze/intake/${ARTIST_SLUG}/${INTAKE_TOKEN}`;
+
+AssetTree.injectCSS();
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('file');
+const folderInput = document.getElementById('folder');
+const progress = document.getElementById('progress');
+const barFill = document.getElementById('barFill');
+const progressText = document.getElementById('progressText');
+const itemsEl = document.getElementById('items');
+const labelsListEl = document.getElementById('labelsList');
+const selectBar = document.getElementById('selectBar');
+const selectCount = document.getElementById('selectCount');
+const toastEl = document.getElementById('toast');
+
+const selected = new Set();          // selected file paths
+let labelsCache = [];                // [{name, color, count}]
+let filterLabel = null;              // optional label filter
+let lastItems = [];                  // currently-rendered items
+let cwd = '';                        // current folder ('' = root)
+const pendingPopPaths = new Set();   // paths that should animate next render
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmtSize = b => b > 1024*1024 ? (b/1024/1024).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB';
+
+function toast(msg, isErr) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('is-error', !!isErr);
+    toastEl.classList.add('is-visible');
+    setTimeout(() => toastEl.classList.remove('is-visible'), 2400);
+}
+
+// Drag-drop UX — folder-aware (a dropped folder keeps its tree).
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => {
+    ev.preventDefault(); drop.classList.add('is-over');
+}));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => {
+    ev.preventDefault(); drop.classList.remove('is-over');
+}));
+drop.addEventListener('drop', async ev => {
+    const entries = await AssetTree.filesFromDataTransfer(ev.dataTransfer);
+    if (entries.length) uploadEntries(entries);
+});
+document.addEventListener('paste', ev => {
+    const files = Array.from(ev.clipboardData?.files || []).filter(f => f.type.startsWith('image/'));
+    if (files.length) { ev.preventDefault(); uploadEntries(files.map(f => ({ file: f, relPath: f.name }))); }
+});
+document.getElementById('pickFiles').addEventListener('click', () => fileInput.click());
+document.getElementById('pickFolder').addEventListener('click', () => folderInput.click());
+fileInput.addEventListener('change', () => {
+    const entries = AssetTree.filesFromInput(fileInput);
+    if (entries.length) uploadEntries(entries);
+    fileInput.value = '';
+});
+folderInput.addEventListener('change', () => {
+    const entries = AssetTree.filesFromInput(folderInput);
+    if (entries.length) uploadEntries(entries);
+    folderInput.value = '';
+});
+
+async function uploadEntries(entries) {
+    if (!entries.length) return;
+    progress.classList.add('is-active');
+    const res = await AssetTree.upload(entries, { url: `${API_BASE}/upload` },
+        (done, total, name) => {
+            progressText.textContent = name
+                ? `Uploading ${name}… (${Math.min(done + 1, total)}/${total})`
+                : 'Finishing…';
+            barFill.style.width = ((done / total) * 100) + '%';
+        });
+    barFill.style.width = '100%';
+    progressText.textContent = res.failed
+        ? `Done — ${res.done - res.failed} uploaded, ${res.failed} failed.`
+        : `Done — ${res.done} item${res.done===1?'':'s'} uploaded.`;
+    res.errors.slice(0, 4).forEach(e => toast(e, true));
+    toast(res.failed ? 'Some uploads failed' : 'Upload complete', !!res.failed);
+    setTimeout(() => progress.classList.remove('is-active'), 2000);
+    loadItems();
+}
+
+function intakeGoToFolder(path) { cwd = path; renderItems(); }
+
+async function addLink() {
+    const inp = document.getElementById('linkInput');
+    const btn = document.getElementById('linkBtn');
+    const url = inp.value.trim();
+    if (!url) { inp.focus(); return; }
+    btn.disabled = true; btn.textContent = 'Adding…';
+    try {
+        const r = await fetch(`${API_BASE}/link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url }),
+        });
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${r.status}`);
+        }
+        inp.value = '';
+        toast('Link added');
+        await loadItems();
+    } catch (err) {
+        toast(err.message, true);
+    } finally {
+        btn.disabled = false; btn.textContent = 'Add link';
+    }
+}
+
+function hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); }
+    catch (e) { return url; }
+}
+
+async function loadItems() {
+    try {
+        const r = await fetch(`${API_BASE}/assets`);
+        if (!r.ok) throw new Error('Could not load items');
+        const data = await r.json();
+        labelsCache = data.labels || [];
+        renderLabels();
+        lastItems = data.items || [];
+        renderItems();
+    } catch (err) {
+        itemsEl.innerHTML = `<div class="empty">Couldn't load uploads — ${esc(err.message)}</div>`;
+    }
+}
+
+function colorFor(name) {
+    return (labelsCache.find(l => l.name === name) || {}).color || '#888';
+}
+
+function renderLabels() {
+    const action = selected.size
+        ? `apply to ${selected.size} selected file${selected.size===1?'':'s'}`
+        : 'filter the view';
+    labelsListEl.innerHTML = labelsCache.map(l => {
+        const escName = esc(l.name).replace(/'/g, "\\'");
+        return `<span class="label-pill ${l.name === filterLabel ? 'is-filter' : ''}"
+                      style="background:${esc(l.color)}"
+                      onclick="onLabelClick('${escName}', event)"
+                      title="Click to ${esc(action)}">
+            ${esc(l.name)}
+            <span class="count">${l.count}</span>
+            <span class="x" onclick="event.stopPropagation();deleteLabel('${escName}')" title="Delete label"><i class="ph ph-x"></i></span>
+        </span>`;
+    }).join('');
+}
+
+async function createLabel() {
+    const name = prompt('Label name (e.g. Sculpture, Commission, 2024):');
+    if (!name || !name.trim()) return;
+    const r = await fetch(`${API_BASE}/labels`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() })
+    });
+    if (!r.ok) { toast('Could not create label', true); return; }
+    await loadItems();
+}
+
+async function onLabelClick(name, ev) {
+    // If files are selected → apply (or remove) the label to all of them.
+    if (selected.size) {
+        const paths = Array.from(selected);
+        // Decide on/off: if every selected already has this label, toggle off.
+        const allHave = paths.every(p => (lastItems.find(i => i.path === p)?.labels || []).includes(name));
+        const on = !allHave;
+        if (on) paths.forEach(p => pendingPopPaths.add(p));
+        const r = await fetch(`${API_BASE}/apply-labels`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths, label: name, on })
+        });
+        if (!r.ok) { toast('Could not apply label', true); return; }
+        toast(on ? `Labelled ${paths.length} as "${name}"` : `Removed "${name}" from ${paths.length}`);
+        await loadItems();
+        // Keep selection so they can keep stacking labels.
+        return;
+    }
+    // No selection → toggle a filter on the view.
+    filterLabel = (filterLabel === name) ? null : name;
+    renderLabels();
+    renderItems();
+}
+
+async function deleteLabel(name) {
+    if (!confirm(`Delete label "${name}"? It'll be removed from every file.`)) return;
+    const r = await fetch(`${API_BASE}/labels/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (r.ok) { toast(`Deleted "${name}"`); await loadItems(); }
+    else toast('Delete failed', true);
+}
+
+function toggleSelect(path) {
+    if (selected.has(path)) selected.delete(path);
+    else selected.add(path);
+    selectCount.textContent = `${selected.size} selected`;
+    selectBar.classList.toggle('is-active', selected.size > 0);
+    renderItems();
+    renderLabels();
+}
+
+function clearSelection() {
+    selected.clear();
+    selectBar.classList.remove('is-active');
+    renderItems();
+    renderLabels();
+}
+
+function renderItems() {
+    const base = filterLabel
+        ? lastItems.filter(i => (i.labels || []).includes(filterLabel))
+        : lastItems;
+    if (!base.length) {
+        itemsEl.innerHTML = filterLabel
+            ? `<div class="empty">No uploads labelled "${esc(filterLabel)}" yet.</div>`
+            : '<div class="empty">Nothing yet — drop your first file above.</div>';
+        return;
+    }
+    // A label filter searches across all folders, so flatten to root then.
+    const { folders, files } = filterLabel
+        ? { folders: [], files: base }
+        : AssetTree.level(base, cwd);
+    const crumb = filterLabel ? '' : AssetTree.crumbHTML(cwd, 'intakeGoToFolder');
+    const folderHTML = folders.map(f => AssetTree.folderTileHTML(f, 'intakeGoToFolder')).join('');
+    const fileHTML = files.map(fileCardHTML).join('');
+    if (!folderHTML && !fileHTML) {
+        itemsEl.innerHTML = crumb + '<div class="empty">This folder is empty.</div>';
+        return;
+    }
+    itemsEl.innerHTML = crumb + `<div class="grid">${folderHTML}${fileHTML}</div>`;
+    // One animation pass — clear the pending set.
+    pendingPopPaths.clear();
+}
+
+function fileCardHTML(it) {
+        const isLink = it.kind === 'link';
+        const ext = (it.filename.split('.').pop() || '').toLowerCase();
+        // Browsers can't render HEIC — show an icon tile instead of a broken
+        // image. (HEIC is allowed for upload; we just don't pretend to preview.)
+        const browserRenderable = it.is_image && ext !== 'heic' && ext !== 'tiff' && ext !== 'bmp';
+        const iconMap = { pdf:'ph-file-pdf', mp4:'ph-file-video', mov:'ph-file-video', webm:'ph-file-video', mp3:'ph-file-audio', wav:'ph-file-audio', m4a:'ph-file-audio', aac:'ph-file-audio', flac:'ph-file-audio', heic:'ph-image', tiff:'ph-image', bmp:'ph-image' };
+        const icon = iconMap[ext] || 'ph-file';
+        const thumb = isLink
+            ? `<i class="ph ph-link"></i><div class="ext">link</div>`
+            : browserRenderable
+            ? `<img src="${esc(it.url)}" alt="${esc(it.filename)}" loading="lazy" onerror="thumbFallback(this,'${icon}','${esc(ext || 'file')}')">`
+            : `<i class="ph ${icon}"></i><div class="ext">${esc(ext || 'file')}</div>`;
+        const metaText = isLink ? hostOf(it.url) : fmtSize(it.size);
+        const openBtn = isLink
+            ? `<a class="card-open" href="${esc(it.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open link"><i class="ph ph-arrow-square-out"></i></a>`
+            : '';
+        const labels = it.labels || [];
+        const isPopping = pendingPopPaths.has(it.path);
+        const stickers = labels.map((name, i) => {
+            const rot = ((i * 7) % 12) - 5;
+            const pop = isPopping ? ' is-new' : '';
+            return `<span class="sticker${pop}" style="background:${esc(colorFor(name))}; --rot:${rot}deg; transform: rotate(${rot}deg)">${esc(name)}</span>`;
+        }).join('');
+        const isSel = selected.has(it.path);
+        const escPath = esc(it.path).replace(/'/g, "\\'");
+        return `
+        <div class="card ${isSel?'is-selected':''}" onclick="toggleSelect('${escPath}')">
+            ${openBtn}
+            <button class="card-remove" onclick="event.stopPropagation();removeFile('${escPath}','${esc(it.filename).replace(/'/g,"\\'")}')" title="Remove this item"><i class="ph ph-trash"></i></button>
+            <div class="card-check">${isSel ? '<i class="ph ph-check"></i>' : ''}</div>
+            <div class="sticker-stack">${stickers}</div>
+            <div class="thumb">${thumb}</div>
+            <div class="card-body">
+                <div class="card-name" title="${esc(it.filename)}">${esc(it.filename)}</div>
+                <div class="card-meta">${esc(metaText)}</div>
+            </div>
+        </div>`;
+}
+
+function thumbFallback(img, icon, ext) {
+    const parent = img.parentNode;
+    if (!parent) return;
+    parent.innerHTML = `<i class="ph ${icon}"></i><div class="ext">${esc(ext)}</div>`;
+}
+
+async function removeFile(path, filename) {
+    if (!confirm(`Remove "${filename}" from your uploads? This can't be undone.`)) return;
+    const r = await fetch(`${API_BASE}/file/${path.split('/').map(encodeURIComponent).join('/')}`,
+        { method: 'DELETE' });
+    if (!r.ok) { toast('Could not remove file', true); return; }
+    selected.delete(path);
+    selectBar.classList.toggle('is-active', selected.size > 0);
+    selectCount.textContent = `${selected.size} selected`;
+    toast(`Removed "${filename}"`);
+    await loadItems();
+}
+
+// ── Welcome card: editor login ──
+document.getElementById('credSlug').textContent = ARTIST_SLUG;
+document.getElementById('credToken').textContent = ADMIN_TOKEN;
+// No token configured for this artist → hide the login affordance entirely.
+if (!ADMIN_TOKEN) document.querySelector('.login-block').style.display = 'none';
+
+function copyCred(id) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard?.writeText(text).then(
+        () => toast('Copied'),
+        () => toast('Could not copy', true));
+}
+
+async function loginToEditor() {
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch"></i> Signing in…';
+    try {
+        // Sets the adze_session cookie; the dashboard's whoami auto-login then
+        // picks it up on the next page load — so this signs them straight in.
+        const r = await fetch('/api/adze/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: ARTIST_SLUG, token: ADMIN_TOKEN }),
+        });
+        if (!r.ok) throw new Error('Login failed');
+        window.location.href = `/api/adze/dashboard?slug=${encodeURIComponent(ARTIST_SLUG)}`;
+    } catch (err) {
+        toast(err.message || 'Could not sign in', true);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Open the editor';
+    }
+}
+
+loadItems();
+</script>
+</body>
+</html>

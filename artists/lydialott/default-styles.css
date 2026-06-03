@@ -9,9 +9,32 @@
     --text-light: #9a958c;
 
     /* ── Fonts ── */
-    --text-font: 'Inter', sans-serif;
-    --heading-font: 'Cardo', serif;
+    --display: 'jaf-lapture-display', 'Lapture Display', Georgia, serif;
+    --caption: 'Garamond ATF Text', 'Cardo', Georgia, serif;
+    --text-font: var(--caption);
+    --heading-font: var(--display);
+    --lapture-display: 'jaf-lapture-display', serif;
+    --lapture-condensed: 'jaf-lapture-condensed', sans-serif;
 
+    /* ── Site palette (from Works) ── */
+    --ink: #280900;
+    --link: #0800FF;
+}
+
+body {
+    font-family: var(--caption);
+    color: var(--ink);
+}
+
+h1, h2, h3, h4, h5, h6,
+nav, .display {
+    font-family: var(--display);
+    font-weight: 400;
+}
+
+a { color: var(--link); }
+
+:root {
     /* ── Body Text ── */
     --body-size: 1.05rem;
     --body-weight: 400;

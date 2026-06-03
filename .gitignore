@@ -9,8 +9,14 @@ artists/*/assets/
 # Artist snapshots
 artists/*/.snapshots/
 
+# Per-artist git repo used by Auto-Coder tabs/worktrees. Files in
+# artists/<slug>/ are still tracked by the outer adze repo; the nested
+# .git only carries the inner history opencode uses for tab isolation.
+artists/*/.git/
+
 # Runtime data
 data/
+uploads/
 logs/
 artists/*/analytics.json
 artists/*/analytics.json.bak

@@ -334,6 +334,12 @@ p { text-wrap: pretty; }
 }
 .tile:hover .tile-frame.placeholder .ph-cta { opacity: 1; transform: translateY(0); }
 
+/* Recent work section disabled — live iframe previews weren't up to standard.
+   Markup, CSS and JS are kept in place as dummy code so it can be re-enabled
+   later by removing this block and the `if (false)` guard in the JS below. */
+.work { display: none; }
+.nav a[href="#work"] { display: none; }
+
 /* The carousel slot is just an empty paper rectangle. The live iframe lives
    in a fixed-position container at body level (see below) and is positioned
    to overlay this slot — that way it escapes the carousel's transformed
@@ -566,6 +572,20 @@ img.studio-portrait {
     border-bottom: var(--hair) solid var(--primary);
     padding-bottom: 4px;
 }
+.contact a.whatsapp {
+    display: inline-block;
+    margin-top: 28px;
+    margin-left: 0;
+    font-family: 'Cormorant', serif;
+    font-style: italic;
+    font-size: clamp(22px, 3.8vw, 56px);
+    line-height: 0.9;
+    color: var(--accent);
+    border-bottom: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
+    padding-bottom: 6px;
+}
+.contact a.whatsapp:hover { opacity: 0.7; }
+.contact-body { display: flex; flex-direction: column; align-items: flex-end; }
 
 /* --- FOOTER --- */
 .footer {
@@ -617,7 +637,7 @@ img.studio-portrait {
     <nav class="nav">
         <a href="#work">Work</a>
         <a href="#studio">About</a>
-        <a href="#contact">Contact</a>
+        <a href="../contact/">Contact</a>
     </nav>
 </header>
 
@@ -722,6 +742,7 @@ img.studio-portrait {
             <h2>Tell us about <em>your site</em>.</h2>
             <p class="pt-block" style="margin-top:28px; color: var(--ink-soft);">Send us a sentence about your practice and a link to your work, we'll get back to you within a week.</p>
             <a class="email" href="mailto:hello@lastplace.co.uk">hello@lastplace.co.uk</a>
+            <a class="whatsapp" href="https://wa.me/447341316804" target="_blank" rel="noopener">WhatsApp&nbsp;&nbsp;+44 7341 316804</a>
         </div>
     </section>
 
@@ -1010,7 +1031,8 @@ function hidePanel() {
 const BAR_H = 60;
 
 // Build a live container per case that has a real same-origin embed URL.
-for (const slug in CASES) {
+// Disabled — see `.work { display: none }` note above. Kept as dummy code.
+if (false) for (const slug in CASES) {
     const c = CASES[slug];
     if (c.embed && c.embed.includes('/preview/')) buildLiveContainer(slug, c.embed, c.name);
 }

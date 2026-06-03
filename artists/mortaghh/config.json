@@ -4,5 +4,8 @@
     "domain": "mortaghh.com",
     "admin_token": "morty123",
     "description": "",
-    "contact_email": ""
+    "contact_email": "",
+    "slack_channel_id": "C0B6QPVSHN0",
+    "slack_pinned_ts": "1779930845.341459",
+    "slack_announced": true
 }

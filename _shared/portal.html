@@ -6,7 +6,7 @@
     <title>Site Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
     <style>
         :root {
             /* Tokens — canonical source: /design-language/project/Adze Design Language.html — keep in sync */
@@ -24,9 +24,9 @@
             --text2: #6b6860;
             --success: #4a9a6a;
             --warn: #c8a840;
-            --radius: 8px;
-            --mono: 'Monaco', 'Menlo', 'Courier New', monospace;
-            --heading-font: 'Cardo', Georgia, serif;
+            --radius: 4px;
+            --mono: 'JetBrains Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+            --heading-font: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
             --body-font: 'Inter', -apple-system, sans-serif;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
@@ -77,9 +77,9 @@
         .header-left { display: flex; align-items: center; gap: 16px; }
         .header-left h1 {
             font-family: var(--heading-font);
-            font-weight: 400;
-            font-style: italic;
-            font-size: 20px;
+            font-weight: 700;
+            font-size: 19px;
+            letter-spacing: -0.02em;
         }
         .header-left .site-link {
             font-size: 12px;
@@ -360,9 +360,10 @@
         /* ── Artist Sites Section ── */
         .section-title {
             font-family: var(--heading-font);
-            font-style: italic;
-            font-weight: 400;
-            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 14px;
             margin: 32px 0 16px;
             padding-bottom: 8px;
             border-bottom: 1px solid var(--border);
@@ -503,7 +504,7 @@
     <!-- Login Screen -->
     <div id="loginScreen" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
         <div style="background:var(--surface); padding:40px; border-radius:var(--radius); box-shadow:var(--shadow-md); border:1px solid var(--border); max-width:360px; width:100%;">
-            <h2 style="font-family:var(--heading-font); font-weight:400; font-style:italic; margin-bottom:20px; text-align:center;">Site Management</h2>
+            <h2 style="font-family:var(--heading-font); font-weight:700; text-transform:uppercase; letter-spacing:0.08em; font-size:15px; margin-bottom:20px; text-align:center;">Site Management</h2>
             <input type="password" id="loginPassword" placeholder="Admin password" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface2); color:var(--text); font-size:14px; font-family:var(--body-font); outline:none; margin-bottom:12px;"
                 onkeydown="if(event.key==='Enter') portalLogin()">
             <button onclick="portalLogin()" style="width:100%;">Sign In</button>

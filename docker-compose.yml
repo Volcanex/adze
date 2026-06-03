@@ -16,13 +16,24 @@ services:
       - ./output:/app/output
       - ./static:/app/static
       - ./logs:/app/logs
+      - ./data:/app/data          # hours.json, leads.json, future admin state
+      - ./uploads:/app/uploads    # admin-uploaded assets (images, files)
       - ./_vibe_sessions:/app/_vibe_sessions  # vibe_agent conversation history
       - ./nginx/sites-available:/app/nginx/sites-available
       - claude_auth:/root/.claude
+      # Lets the terminal bridge create per-artist sandbox containers.
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DEV_ADMIN_TOKEN=${DEV_ADMIN_TOKEN}
+      - DEV_ADMIN_TOKENS_EXTRA=${DEV_ADMIN_TOKENS_EXTRA}
+      - GABRIEL_PASSWORD=${GABRIEL_PASSWORD}
+      - ADMIN_IDENTITIES_JSON=${ADMIN_IDENTITIES_JSON}
+      - LASTPLACE_SLACK_TOKEN=${LASTPLACE_SLACK_TOKEN}
+      - LASTPLACE_SLACK_URL=${LASTPLACE_SLACK_URL}
+      - ADZE_ADMIN_BASE_URL=${ADZE_ADMIN_BASE_URL:-https://adze.studio}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - ADZE_HOST_ROOT=/home/gabriel/adze
 
 
 volumes:

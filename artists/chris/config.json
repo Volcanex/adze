@@ -5,6 +5,10 @@
     "admin_token": "longdoor",
     "description": "Authentic wild sauna experiences across Ireland",
     "contact_email": "info@wildsaunas.ie",
-    "last_login": 1776936296,
-    "last_login_ip": "159.26.106.82"
+    "last_login": 1777355694,
+    "last_login_ip": "79.127.146.25",
+    "slack_channel_id": "C0B6P0V1S9X",
+    "slack_pinned_ts": "1779930833.348689",
+    "slack_announced": true,
+    "figma_url": ""
 }

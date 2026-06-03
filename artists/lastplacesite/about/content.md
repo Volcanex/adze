@@ -127,7 +127,7 @@ h1 em { color: var(--accent); font-style: italic; }
     <nav class="nav">
         <a href="../home/#work">Work</a>
         <a href="./">Studio</a>
-        <a href="../home/#contact">Contact</a>
+        <a href="../contact/">Contact</a>
     </nav>
 </header>
 

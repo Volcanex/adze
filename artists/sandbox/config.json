@@ -1,0 +1,29 @@
+{
+    "name": "sandbox",
+    "slug": "sandbox",
+    "domain": "sandbox.com",
+    "admin_token": "loudfern",
+    "description": "SANDBOX",
+    "contact_email": "",
+    "lead": {
+        "active": false,
+        "contact": "",
+        "stage": "1",
+        "fish_size": "xs",
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1779888769,
+        "updated_at": 1780320457
+    },
+    "intake_token": "KAeMgetIxwRsR5DFF44smsWhYydhIIw3",
+    "slack_channel_id": "C0B6HQ0BHJ9",
+    "slack_pinned_ts": "1779930849.297109",
+    "slack_announced": true,
+    "figma_url": ""
+}

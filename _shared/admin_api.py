@@ -76,6 +76,7 @@ def _rate_limit(scope, max_requests, window_seconds):
 sys.path.insert(0, str(Path(__file__).parent))
 from auth import require_artist_auth, get_authenticated_artist, get_all_artists
 import asset_meta
+import asset_store
 from db import insert_pageview, query_analytics, upsert_session, query_sessions, migrate_json_to_sqlite
 
 bp = Blueprint('artist_admin', __name__, url_prefix='/api/adze')
@@ -381,13 +382,39 @@ def beacon():
 
 # ── Dashboard ──────────────────────────────────────────────────────────────
 
+def _hosted_site_count():
+    """Count real artist sites (same filter the dashboard uses): a directory
+    under artists/ with a config.json, excluding _-prefixed dirs, the example,
+    and lead-only stubs."""
+    count = 0
+    artists_dir = Path('artists')
+    if not artists_dir.exists():
+        return 0
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_') or item.name == 'example-artist':
+            continue
+        cfg_path = item / 'config.json'
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            continue
+        if cfg.get('is_stub'):
+            continue
+        count += 1
+    return count
+
+
 @bp.route('/home')
 def serve_home():
     """Serve the Adze landing page."""
     home_path = Path(__file__).parent / 'home.html'
     if not home_path.exists():
         return 'Home not found', 404
-    return home_path.read_text(encoding='utf-8'), 200, {
+    html = home_path.read_text(encoding='utf-8')
+    html = html.replace('__SITE_COUNT__', str(_hosted_site_count()))
+    return html, 200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
     }
@@ -709,6 +736,20 @@ def serve_admin(slug=None):
     }
 
 
+@bp.route('/asset-tree.js')
+def asset_tree_js():
+    """Serve the shared asset-tree helper used by both the admin dashboard and
+    the intake portal. Served under /api/adze/ so it is always same-origin with
+    whichever page loads it."""
+    js_path = Path(__file__).parent / 'asset_tree.js'
+    if not js_path.exists():
+        return 'not found', 404
+    return js_path.read_text(encoding='utf-8'), 200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'no-cache',
+    }
+
+
 @bp.route('/admin/login', methods=['POST'])
 def admin_login():
     """Validate admin credentials and set persistent cookie.
@@ -922,19 +963,13 @@ def admin_artist_widgets(slug):
     platform = [{'name': w['name'], 'tier': 'platform'}
                 for w in _scan_widgets(platform_dir, 'platform')]
 
-    # T3 community-installed widgets (live in artist's widgets dir with forked_from=community)
-    artist_widgets_dir = artist_path / 'widgets'
-    community = [{'name': w['name'], 'tier': 'community'}
-                 for w in _scan_widgets(artist_widgets_dir, 'artist')
-                 if w.get('forked_from') == 'community']
-
     # T1 hardcoded dashboard tabs — IDs match data-tab in dashboard.html
     core = [{'name': n, 'tier': 'core'} for n in [
         'edit', 'claude', 'styles', 'assets', 'snapshots', 'domain', 'api',
-        'fonts', 'export', 'share', 'analytics', 'marketplace', 'about',
+        'fonts', 'export', 'share', 'analytics', 'extensions', 'about',
     ]]
 
-    return jsonify({'widgets': core + platform + community})
+    return jsonify({'widgets': core + platform})
 
 
 @bp.route('/admin/artists/<slug>/dashboard-config', methods=['GET'])
@@ -1165,6 +1200,7 @@ _STUDIO_DATA_DIR.mkdir(exist_ok=True)
 _HOURS_FILE = _STUDIO_DATA_DIR / 'hours.json'
 _LEADS_FILE = _STUDIO_DATA_DIR / 'leads.json'  # legacy; preserved for the table sub-view
 _PINNED_ORDER_FILE = _STUDIO_DATA_DIR / 'pinned_order.json'
+_TODOS_FILE = _STUDIO_DATA_DIR / 'todos.json'
 
 
 def _read_studio_json(path):
@@ -1235,6 +1271,95 @@ def admin_hours_delete(entry_id):
     entries = _read_studio_json(_HOURS_FILE)
     entries = [e for e in entries if e.get('id') != entry_id]
     _write_studio_json(_HOURS_FILE, entries)
+    return jsonify({'ok': True})
+
+
+# ── To-dos ──────────────────────────────────────────────────────────────────
+# Studio-wide quick to-do list. Each item may optionally reference an artist by
+# slug. Persisted to data/todos.json alongside hours/leads. Super-admin only.
+
+def _todo_artist_valid(slug):
+    """An artist reference is valid only if that artist dir exists; '' = none."""
+    if not slug:
+        return True
+    return _valid_slug(slug) and (Path('artists') / slug / 'config.json').exists()
+
+
+@bp.route('/admin/todos')
+def admin_todos_list():
+    _require_super_admin()
+    return jsonify({'todos': _read_studio_json(_TODOS_FILE)})
+
+
+@bp.route('/admin/todos', methods=['POST'])
+def admin_todos_create():
+    _require_super_admin()
+    import uuid
+    data = request.get_json() or {}
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'error': 'text is required'}), 400
+    artist = (data.get('artist') or '').strip()
+    if not _todo_artist_valid(artist):
+        artist = ''
+    now = int(_time.time())
+    todo = {
+        'id': str(uuid.uuid4()),
+        'text': text,
+        'artist': artist,
+        'due': (data.get('due') or '').strip(),
+        'done': bool(data.get('done', False)),
+        'created_at': now,
+        'updated_at': now,
+        'done_at': now if data.get('done') else None,
+    }
+    todos = _read_studio_json(_TODOS_FILE)
+    todos.insert(0, todo)
+    _write_studio_json(_TODOS_FILE, todos)
+    return jsonify({'todo': todo}), 201
+
+
+@bp.route('/admin/todos/<todo_id>', methods=['PUT', 'PATCH'])
+def admin_todos_update(todo_id):
+    _require_super_admin()
+    data = request.get_json() or {}
+    todos = _read_studio_json(_TODOS_FILE)
+    updated = None
+    for t in todos:
+        if t.get('id') != todo_id:
+            continue
+        if 'text' in data:
+            text = (data.get('text') or '').strip()
+            if text:
+                t['text'] = text
+        if 'artist' in data:
+            artist = (data.get('artist') or '').strip()
+            t['artist'] = artist if _todo_artist_valid(artist) else ''
+        if 'due' in data:
+            t['due'] = (data.get('due') or '').strip()
+        if 'done' in data:
+            done = bool(data['done'])
+            # Only stamp done_at on a transition into done.
+            if done and not t.get('done'):
+                t['done_at'] = int(_time.time())
+            elif not done:
+                t['done_at'] = None
+            t['done'] = done
+        t['updated_at'] = int(_time.time())
+        updated = t
+        break
+    if updated is None:
+        return jsonify({'error': 'Todo not found'}), 404
+    _write_studio_json(_TODOS_FILE, todos)
+    return jsonify({'todo': updated})
+
+
+@bp.route('/admin/todos/<todo_id>', methods=['DELETE'])
+def admin_todos_delete(todo_id):
+    _require_super_admin()
+    todos = _read_studio_json(_TODOS_FILE)
+    todos = [t for t in todos if t.get('id') != todo_id]
+    _write_studio_json(_TODOS_FILE, todos)
     return jsonify({'ok': True})
 
 
@@ -2368,11 +2493,17 @@ def create_nested_page():
 def upload_file():
     """
     Upload a file to an artist's assets directory.
-    Form data: file, page_slug (optional)
+    Form data:
+        file       — the upload (required)
+        page_slug  — optional; targets pages/<slug>/<page>/assets/ instead
+        rel_path   — optional; preserve a folder path under assets/ (e.g. from
+                     a folder picker's webkitRelativePath). Disables type-based
+                     auto-routing — the file lands exactly where rel_path says.
+        extract    — optional; if truthy and the upload is a .zip, unpack it
+                     preserving its internal folder tree (into rel_path's dir,
+                     or assets root). The archive itself is not kept.
+        tags       — optional comma-separated labels (single-file path only).
     Headers: X-Artist-Slug, X-Admin-Token
-
-    If page_slug is provided, uploads to pages/artists/{artist}/page_slug/assets/
-    Otherwise uploads to pages/artists/{artist}/assets/
     """
     artist_slug = get_authenticated_artist()
 
@@ -2390,12 +2521,57 @@ def upload_file():
     if not allowed_file(file.filename):
         return jsonify({'error': 'File type not allowed'}), 400
 
+    page_slug = request.form.get('page_slug')
+    rel_path = request.form.get('rel_path')
+    want_extract = request.form.get('extract') in ('1', 'true', 'on', 'yes')
+    is_zip = file.filename.lower().endswith('.zip')
+
     try:
+        # ── Zip upload → extract preserving folder tree ──────────────────────
+        # Only for the default assets dir (not page-scoped uploads). Members are
+        # vetted against the same denylist as direct uploads.
+        if is_zip and want_extract and not page_slug:
+            dest_prefix = asset_store.safe_rel(rel_path) or ''
+            tmp = asset_store.save_temp_upload(file)
+            try:
+                summary = asset_store.extract_zip(
+                    artist_slug, tmp,
+                    dest_prefix=dest_prefix,
+                    is_allowed=lambda ext: ext not in BLOCKED_EXTENSIONS,
+                    uploaded_by='admin',
+                )
+            except Exception as e:  # noqa: BLE001 — never bare-500 on a bad upload
+                logging.exception('zip extract failed')
+                return jsonify({'error': f'Could not read that zip: {e}'}), 400
+            finally:
+                Path(tmp).unlink(missing_ok=True)
+            if summary.get('error'):
+                return jsonify({'error': summary['error']}), 400
+            return jsonify({
+                'success': True,
+                'extracted': len(summary['stored']),
+                'skipped': len(summary['skipped']),
+                'truncated': summary['truncated'],
+                'paths': summary['stored'],
+            })
+
         filename = secure_filename(file.filename)
-        page_slug = request.form.get('page_slug')
         ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
 
-        # Determine upload directory
+        # ── Folder upload (rel_path given) → preserve structure, no routing ──
+        if rel_path and not page_slug:
+            clean = asset_store.store_fileobj(artist_slug, rel_path, file,
+                                              uploaded_by='admin')
+            if not clean:
+                return jsonify({'error': 'Invalid path'}), 400
+            return jsonify({
+                'success': True,
+                'filename': clean.rsplit('/', 1)[-1],
+                'path': clean,
+                'url': f'../assets/{clean}',
+            })
+
+        # ── Single file → existing type-based auto-routing ───────────────────
         if page_slug:
             upload_dir = get_page_path(artist_slug, page_slug) / 'assets'
         else:
@@ -2413,11 +2589,17 @@ def upload_file():
         file_path = upload_dir / filename
         file.save(str(file_path))
 
-        # Also copy to output directory so nginx can serve it immediately
+        # Also copy to output directory so nginx can serve it immediately.
+        # Best-effort: some artists' output/ tree is host-owned (compiled on the
+        # host) and unwritable from the container — the canonical copy under
+        # artists/<slug>/assets still stands, so don't 500 on a mirror failure.
         rel_path = str(file_path.relative_to(get_artist_path(artist_slug) / 'assets')).replace('\\', '/')
-        output_path = Path('output/artists') / artist_slug / 'assets' / rel_path
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(str(file_path), str(output_path))
+        try:
+            output_path = Path('output/artists') / artist_slug / 'assets' / rel_path
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(file_path), str(output_path))
+        except (OSError, PermissionError) as err:
+            logging.warning('upload output mirror failed for %s: %s', rel_path, err)
 
         # Record metadata (optional `tags` form field, comma-separated).
         raw_tags = request.form.get('tags', '')
@@ -2523,25 +2705,28 @@ def list_assets():
     meta_files = asset_meta.load_meta(artist_slug).get('files', {})
     assets = []
     for asset_file in assets_dir.rglob('*'):
-        if asset_file.is_file() and asset_file.name != 'assets.meta.json':
-            relative = asset_file.relative_to(assets_dir)
-            rel_str = str(relative).replace('\\', '/')
-            ext = asset_file.suffix.lower()
-            is_image = ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg')
-            entry = meta_files.get(rel_str, {})
-            labels = entry.get('labels') or entry.get('tags') or []
-            assets.append({
-                'filename': asset_file.name,
-                'path': rel_str,
-                'url': f'../assets/{rel_str}',
-                'size': asset_file.stat().st_size,
-                'is_image': is_image,
-                'labels': labels,
-                'tags': labels,  # back-compat
-                'uploaded_by': entry.get('uploaded_by'),
-                'uploaded_at': entry.get('uploaded_at'),
-                'notes': entry.get('notes', ''),
-            })
+        if not asset_file.is_file() or asset_file.name == 'assets.meta.json':
+            continue
+        relative = asset_file.relative_to(assets_dir)
+        if any(part.startswith('.') for part in relative.parts):
+            continue
+        rel_str = str(relative).replace('\\', '/')
+        ext = asset_file.suffix.lower()
+        is_image = ext in ('.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg')
+        entry = meta_files.get(rel_str, {})
+        labels = entry.get('labels') or entry.get('tags') or []
+        assets.append({
+            'filename': asset_file.name,
+            'path': rel_str,
+            'url': f'../assets/{rel_str}',
+            'size': asset_file.stat().st_size,
+            'is_image': is_image,
+            'labels': labels,
+            'tags': labels,  # back-compat
+            'uploaded_by': entry.get('uploaded_by'),
+            'uploaded_at': entry.get('uploaded_at'),
+            'notes': entry.get('notes', ''),
+        })
 
     assets.sort(key=lambda a: a['filename'])
 
@@ -2643,10 +2828,15 @@ def intake_portal(slug, token):
     if not portal_path.exists():
         return 'Portal not found', 404
     html = portal_path.read_text(encoding='utf-8')
+    # The intake link doubles as the artist's onboarding link: it exposes
+    # their editor login (admin_token) so they can sign straight into the
+    # dashboard. Anyone holding the intake link already has write access to
+    # the artist's library, so this widens that same trust boundary by design.
     html = (html
             .replace('{{ARTIST_NAME}}', cfg.get('name') or slug)
             .replace('{{ARTIST_SLUG}}', slug)
-            .replace('{{INTAKE_TOKEN}}', token))
+            .replace('{{INTAKE_TOKEN}}', token)
+            .replace('{{ADMIN_TOKEN}}', cfg.get('admin_token') or ''))
     return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
 
 
@@ -2658,8 +2848,8 @@ _INTAKE_ALLOWED_EXT = {
     'mp3', 'wav', 'm4a', 'aac', 'flac',
     'pdf',
 }
-_INTAKE_MAX_BYTES = 200 * 1024 * 1024   # 200 MB per file
-_INTAKE_MAX_TOTAL = 5 * 1024 * 1024 * 1024  # 5 GB per artist via intake
+_INTAKE_MAX_BYTES = 1024 * 1024 * 1024   # 1 GB per file (zips/folders can be large)
+_INTAKE_MAX_TOTAL = 20 * 1024 * 1024 * 1024  # 20 GB per artist via intake
 
 
 def _normalize_url(raw):
@@ -2794,7 +2984,17 @@ def intake_serve_file(slug, token, rel):
 
 @bp.route('/intake/<slug>/<token>/upload', methods=['POST'])
 def intake_upload(slug, token):
-    """Accept a file from the artist's intake portal."""
+    """Accept a file from the artist's intake portal.
+
+    Beyond single files, supports:
+      - `rel_path` form field — preserve a folder path (from a folder picker);
+        the file lands under `intake/<rel_path>` keeping the structure.
+      - a `.zip` upload — unpacked under `intake/<zip-name>/` preserving its
+        internal folder tree. Members are vetted against the same intake
+        allowlist; the archive itself is discarded.
+    Everything stays under `intake/` so the portal's delete/label boundary
+    (which only touches `intake/` paths) still holds.
+    """
     cfg, artist_dir = _intake_validate(slug, token)
     if 'file' not in request.files:
         return jsonify({'error': 'No file provided'}), 400
@@ -2802,16 +3002,66 @@ def intake_upload(slug, token):
     if not f.filename:
         return jsonify({'error': 'No file selected'}), 400
     ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
-    if ext not in _INTAKE_ALLOWED_EXT:
+    is_zip = ext == 'zip'
+    if not is_zip and ext not in _INTAKE_ALLOWED_EXT:
         return jsonify({'error': f'File type .{ext} not accepted via intake'}), 400
 
     # Check size after save (Werkzeug doesn't reliably expose content length
     # for multipart parts until consumed).
-    if _intake_total_bytes(artist_dir) >= _INTAKE_MAX_TOTAL:
+    used = _intake_total_bytes(artist_dir)
+    if used >= _INTAKE_MAX_TOTAL:
         return jsonify({'error': 'Intake storage cap reached. Contact your admin.'}), 413
 
     intake_dir = artist_dir / 'assets' / 'intake'
     intake_dir.mkdir(parents=True, exist_ok=True)
+    rel_path_field = request.form.get('rel_path')
+
+    # ── Zip upload → extract under intake/<zip-name>/ preserving the tree ────
+    if is_zip:
+        stem = secure_filename(f.filename.rsplit('.', 1)[0]) or 'archive'
+        sub = asset_store.safe_rel(rel_path_field) if rel_path_field else stem
+        dest_prefix = f'intake/{sub or stem}'
+        tmp = asset_store.save_temp_upload(f)
+        try:
+            summary = asset_store.extract_zip(
+                slug, tmp,
+                dest_prefix=dest_prefix,
+                is_allowed=lambda e: e in _INTAKE_ALLOWED_EXT,
+                uploaded_by=f'intake:{slug}',
+                max_total_bytes=_INTAKE_MAX_TOTAL - used,
+            )
+        except Exception as e:  # noqa: BLE001 — bad upload is a 400, not a 500
+            logging.exception('intake zip extract failed')
+            return jsonify({'error': f'Could not read that zip: {e}'}), 400
+        finally:
+            Path(tmp).unlink(missing_ok=True)
+        if summary.get('error'):
+            return jsonify({'error': summary['error']}), 400
+        if not summary['stored']:
+            return jsonify({'error': 'Nothing usable in that zip (only allowed '
+                                     'media types are kept).'}), 400
+        return jsonify({
+            'success': True,
+            'extracted': len(summary['stored']),
+            'skipped': len(summary['skipped']),
+            'truncated': summary['truncated'],
+            'paths': summary['stored'],
+        })
+
+    # ── Folder upload (rel_path given) → preserve structure under intake/ ────
+    if rel_path_field:
+        clean = asset_store.store_fileobj(
+            slug, f'intake/{rel_path_field}', f,
+            uploaded_by=f'intake:{slug}')
+        if not clean:
+            return jsonify({'error': 'Invalid path'}), 400
+        target = artist_dir / 'assets' / clean
+        if target.stat().st_size > _INTAKE_MAX_BYTES:
+            target.unlink(missing_ok=True)
+            asset_meta.delete_for(slug, clean)
+            return jsonify({'error': f'File exceeds {_INTAKE_MAX_BYTES // (1024*1024)} MB limit'}), 413
+        return jsonify({'success': True, 'filename': clean.rsplit('/', 1)[-1],
+                        'path': clean, 'size': target.stat().st_size})
 
     # UUID-prefixed filename to prevent collisions and to make filenames opaque.
     import secrets as _sec
@@ -3623,7 +3873,7 @@ def update_site_config():
             config = json.load(f)
 
         # Only allow safe fields to be updated
-        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon', 'schema']
+        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon', 'favicon_color', 'schema']
         for key in allowed:
             if key in new_config:
                 config[key] = new_config[key]
@@ -3634,6 +3884,83 @@ def update_site_config():
         return jsonify({'success': True})
     except (json.JSONDecodeError, IOError) as e:
         return jsonify({'error': f'Error updating config: {str(e)}'}), 500
+
+
+# ── Feature config ────────────────────────────────────────────────────────
+
+@bp.route('/save-feature', methods=['POST'])
+def save_feature():
+    """
+    Save per-artist feature config and trigger a recompile.
+    Body: { "feature": "image_pipeline", "config": {...} | null }
+    Passing null disables the feature.
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    data        = request.get_json() or {}
+    feature     = (data.get('feature') or '').strip().replace('-', '_')
+    feature_cfg = data.get('config')   # None = disable
+
+    if not feature:
+        return jsonify({'error': 'feature name required'}), 400
+
+    config_file = get_artist_path(artist_slug) / 'config.json'
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        features = config.setdefault('features', {})
+        if feature_cfg is None:
+            features.pop(feature, None)
+        else:
+            features[feature] = feature_cfg
+        if not features:
+            config.pop('features', None)
+        with open(config_file, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': str(e)}), 500
+
+    # Recompile so the injected script + data-thumb attrs take effect
+    compile_ok, compile_error = True, None
+    compile_script = Path.cwd() / 'compile.py'
+    if compile_script.exists():
+        result = subprocess.run(
+            ['python3', str(compile_script), '--artist', artist_slug],
+            capture_output=True, text=True, timeout=120
+        )
+        compile_ok    = result.returncode == 0
+        compile_error = (result.stderr or result.stdout or '').strip() if not compile_ok else None
+
+    return jsonify({'ok': True, 'compile_ok': compile_ok, 'compile_error': compile_error})
+
+
+@bp.route('/generate-thumbs', methods=['POST'])
+def generate_thumbs():
+    """Backfill .thumbs/ for all images already in this artist's assets/."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    from asset_store import _generate_thumb, assets_dir, _THUMB_IMAGE_EXTS
+    root = assets_dir(artist_slug)
+    if not root.exists():
+        return jsonify({'ok': True, 'generated': 0})
+
+    generated, skipped = 0, 0
+    for f in root.rglob('*'):
+        if not f.is_file():
+            continue
+        if any(part.startswith('.') for part in f.relative_to(root).parts):
+            continue
+        if f.suffix.lower().lstrip('.') in _THUMB_IMAGE_EXTS:
+            try:
+                _generate_thumb(f, root)
+                generated += 1
+            except Exception:
+                skipped += 1
+    return jsonify({'ok': True, 'generated': generated, 'skipped': skipped})
 
 
 # ── Google Fonts ──────────────────────────────────────────────────────────
@@ -4026,7 +4353,6 @@ def list_widgets():
     """
     List all widgets for an artist across tiers.
     Tier 2 (platform): from _shared/widgets/, filtered by artist config platform_widgets list.
-    Tier 3 (community): installed community widgets, stored in artist widgets dir with forked_from=community.
     Tier 4 (artist/custom): from artists/{slug}/widgets/ — forked or custom-built.
     Headers: X-Artist-Slug, X-Admin-Token
     """
@@ -4053,13 +4379,11 @@ def list_widgets():
     platform_widgets = [w for w in all_platform
                         if w['name'] in enabled_platform and w['name'] not in hidden_widgets]
 
-    # Tier 4: artist custom/forked widgets (all loaded); T3 community installs also land here.
-    # Admin can hide T3 community installs via hidden_widgets; T4 customs are always on.
+    # Tier 4: artist custom/forked widgets
     artist_dir = get_artist_path(artist_slug) / 'widgets'
-    artist_widgets = [w for w in _scan_widgets(artist_dir, 'artist')
-                      if not (w.get('forked_from') == 'community' and w['name'] in hidden_widgets)]
+    artist_widgets = _scan_widgets(artist_dir, 'artist')
 
-    # Also return available (not yet enabled) platform widgets for marketplace
+    # Also return available (not yet enabled) platform widgets for extensions tab
     available_platform = [w for w in all_platform if w['name'] not in enabled_platform]
 
     return jsonify({
@@ -4069,17 +4393,13 @@ def list_widgets():
     })
 
 
-@bp.route('/list-marketplace', methods=['GET'])
-def list_marketplace():
-    """
-    List all widgets available in the marketplace.
-    Includes: platform widgets not yet enabled + artist widgets marked as marketplace=true.
-    """
+@bp.route('/list-extensions', methods=['GET'])
+def list_extensions():
+    """List all T2 platform widgets, marking which are installed for this artist."""
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401, description='Authentication required')
 
-    # Artist's current config
     config_file = get_artist_path(artist_slug) / 'config.json'
     enabled_platform = []
     if config_file.exists():
@@ -4090,52 +4410,19 @@ def list_marketplace():
         except (json.JSONDecodeError, IOError):
             pass
 
-    # Only platform widgets explicitly marked marketplace:true are publicly listed.
-    # Bespoke platform widgets (marketplace:false, the default) are only visible to
-    # artists Gabriel has manually provisioned them for.
     platform_dir = Path(__file__).parent / 'widgets'
-    platform_widgets = [w for w in _scan_widgets(platform_dir, 'platform') if w.get('marketplace')]
+    platform_widgets = _scan_widgets(platform_dir, 'platform')
     for w in platform_widgets:
         w['installed'] = w['name'] in enabled_platform
 
-    # Scan all artists for shared (marketplace=true) tier 3 widgets
-    community_widgets = []
-    artists_root = Path('artists')
-    installed_artist_widgets = set()
-    artist_widget_dir = get_artist_path(artist_slug) / 'widgets'
-    if artist_widget_dir.exists():
-        for f in artist_widget_dir.iterdir():
-            if f.is_file() and f.suffix == '.js':
-                installed_artist_widgets.add(f.stem)
-            elif f.is_dir() and (f / 'widget.js').exists():
-                installed_artist_widgets.add(f.name)
-
-    if artists_root.exists():
-        for artist_dir in sorted(artists_root.iterdir()):
-            if not artist_dir.is_dir() or artist_dir.name.startswith('_'):
-                continue
-            widgets_dir = artist_dir / 'widgets'
-            shared = _scan_widgets(widgets_dir, 'community')
-            for w in shared:
-                if w.get('marketplace'):
-                    w['source_artist'] = artist_dir.name
-                    w['installed'] = w['name'] in installed_artist_widgets
-                    # Don't show artist their own widgets in marketplace
-                    if artist_dir.name != artist_slug:
-                        community_widgets.append(w)
-
-    return jsonify({
-        'platform': platform_widgets,
-        'community': community_widgets
-    })
+    return jsonify({'platform': platform_widgets})
 
 
 @bp.route('/install-widget', methods=['POST'])
 def install_widget():
     """
-    Install a widget. For platform widgets: adds to config platform_widgets list.
-    For community widgets: copies the JS file to the artist's widgets directory.
-    Body: { "name": "widget-name", "tier": "platform"|"community", "source_artist": "slug" }
+    Install a T2 platform widget — adds it to the artist's config platform_widgets list.
+    Body: { "name": "widget-name", "tier": "platform" }
     """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
@@ -4143,76 +4430,39 @@ def install_widget():
 
     data = request.get_json() or {}
     name = data.get('name', '').strip()
-    tier = data.get('tier', '')
 
     if not name:
         return jsonify({'error': 'Widget name required'}), 400
 
-    if tier == 'platform':
-        # Verify the platform widget exists
-        platform_dir = Path(__file__).parent / 'widgets'
-        found = False
-        for f in platform_dir.iterdir():
-            if (f.is_file() and f.suffix == '.js' and f.stem == name) or \
-               (f.is_dir() and f.name == name and (f / 'widget.js').exists()):
-                found = True
-                break
-        if not found:
-            return jsonify({'error': 'Platform widget not found'}), 404
+    platform_dir = Path(__file__).parent / 'widgets'
+    found = any(
+        (f.is_file() and f.suffix == '.js' and f.stem == name) or
+        (f.is_dir() and f.name == name and (f / 'widget.js').exists())
+        for f in platform_dir.iterdir()
+    )
+    if not found:
+        return jsonify({'error': 'Platform widget not found'}), 404
 
-        # Add to artist's config
-        config_file = get_artist_path(artist_slug) / 'config.json'
-        try:
-            with open(config_file, 'r') as f:
-                config = json.load(f)
-            pw = config.get('platform_widgets', [])
-            if name not in pw:
-                pw.append(name)
-                config['platform_widgets'] = pw
-                with open(config_file, 'w') as f:
-                    json.dump(config, f, indent=4)
-            return jsonify({'ok': True, 'action': 'enabled'})
-        except (json.JSONDecodeError, IOError) as e:
-            return jsonify({'error': str(e)}), 500
-
-    elif tier == 'community':
-        source_artist = data.get('source_artist', '').strip()
-        if not source_artist:
-            return jsonify({'error': 'source_artist required for community widgets'}), 400
-
-        # Find source widget
-        source_dir = Path(f'artists/{source_artist}/widgets')
-        source_file = source_dir / (name + '.js')
-        source_dir_fmt = source_dir / name / 'widget.js'
-
-        dest_dir = get_artist_path(artist_slug) / 'widgets'
-        dest_dir.mkdir(parents=True, exist_ok=True)
-
-        if source_file.exists():
-            shutil.copy2(source_file, dest_dir / (name + '.js'))
-            # Also copy manifest if exists
-            manifest = source_dir / name / 'widget.json'
-            if manifest.exists():
-                (dest_dir / name).mkdir(exist_ok=True)
-                shutil.copy2(manifest, dest_dir / name / 'widget.json')
-            return jsonify({'ok': True, 'action': 'copied'})
-        elif source_dir_fmt.exists():
-            dest_widget_dir = dest_dir / name
-            if dest_widget_dir.exists():
-                shutil.rmtree(dest_widget_dir)
-            shutil.copytree(source_dir / name, dest_widget_dir)
-            return jsonify({'ok': True, 'action': 'copied'})
-        else:
-            return jsonify({'error': 'Source widget not found'}), 404
-
-    return jsonify({'error': 'Invalid tier'}), 400
+    config_file = get_artist_path(artist_slug) / 'config.json'
+    try:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+        pw = config.get('platform_widgets', [])
+        if name not in pw:
+            pw.append(name)
+            config['platform_widgets'] = pw
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=4)
+        return jsonify({'ok': True, 'action': 'enabled'})
+    except (json.JSONDecodeError, IOError) as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/uninstall-widget', methods=['POST'])
 def uninstall_widget():
     """
-    Uninstall a widget. Platform: removes from config. Artist/community: deletes file.
-    Body: { "name": "widget-name", "tier": "platform"|"artist"|"community" }
+    Uninstall a widget. Platform: removes from config. Artist: deletes file.
+    Body: { "name": "widget-name", "tier": "platform"|"artist" }
     """
     artist_slug = get_authenticated_artist()
     if not artist_slug:
@@ -4240,7 +4490,7 @@ def uninstall_widget():
         except (json.JSONDecodeError, IOError) as e:
             return jsonify({'error': str(e)}), 500
 
-    elif tier in ('artist', 'community'):
+    elif tier == 'artist':
         widgets_dir = get_artist_path(artist_slug) / 'widgets'
         # Try file first, then directory
         js_file = widgets_dir / (name + '.js')
@@ -4336,46 +4586,6 @@ def new_widget():
 
     return jsonify({'ok': True, 'name': slug_name, 'filename': slug_name + '.js'})
 
-
-@bp.route('/share-widget', methods=['POST'])
-def share_widget():
-    """
-    Toggle marketplace sharing for a Tier 4 (custom) widget — publishing it to Tier 3 (community).
-    Shared widgets appear in the community marketplace and can be installed by other artists.
-    Body: { "name": "widget-name", "shared": true|false }
-    """
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401, description='Authentication required')
-
-    data = request.get_json() or {}
-    name = secure_filename((data.get('name', '') or '').strip())
-    shared = bool(data.get('shared', True))
-    stem = name[:-3] if name.endswith('.js') else name
-
-    if not stem:
-        return jsonify({'error': 'Widget name required'}), 400
-
-    widgets_dir = get_artist_path(artist_slug) / 'widgets'
-    if not (widgets_dir / (stem + '.js')).exists():
-        return jsonify({'error': 'Widget not found'}), 404
-
-    manifest_path = widgets_dir / (stem + '.manifest.json')
-    manifest = {}
-    if manifest_path.exists():
-        try:
-            with open(manifest_path) as f:
-                manifest = json.load(f)
-        except (json.JSONDecodeError, IOError):
-            pass
-
-    manifest.update({'name': stem, 'marketplace': shared})
-    manifest.setdefault('version', '1.0')
-
-    with open(manifest_path, 'w') as f:
-        json.dump(manifest, f, indent=2)
-
-    return jsonify({'ok': True, 'shared': shared})
 
 
 @bp.route('/fork-widget', methods=['POST'])
@@ -5153,124 +5363,6 @@ def youtube_verify():
     env_path.write_text('\n'.join(lines) + '\n')
 
     return jsonify({'success': True, 'channel_name': channel_name})
-
-
-# ── Beehiiv Integration ───────────────────────────────────────────────────
-
-@bp.route('/beehiiv-stats', methods=['GET'])
-def beehiiv_stats():
-    """Proxy Beehiiv API v2 — reads BEEHIIV_API_KEY + BEEHIIV_PUBLICATION_ID from .env."""
-    import urllib.request
-
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401)
-
-    env    = _read_env(artist_slug)
-    api_key = env.get('BEEHIIV_API_KEY', '')
-    pub_id  = env.get('BEEHIIV_PUBLICATION_ID', '')
-
-    if not api_key or not pub_id:
-        return jsonify({'configured': False})
-
-    def bh_get(path):
-        url = f'https://api.beehiiv.com/v2{path}'
-        req = urllib.request.Request(url, headers={'Authorization': f'Bearer {api_key}'})
-        try:
-            with urllib.request.urlopen(req, timeout=8) as r:
-                return json.loads(r.read()), None
-        except urllib.error.HTTPError as e:
-            return None, f'HTTP {e.code}: {e.reason}'
-        except Exception as e:
-            return None, str(e)
-
-    # Publication details
-    pub_data, err = bh_get(f'/publications/{pub_id}')
-    if err:
-        return jsonify({'configured': True, 'error': err})
-
-    pub = pub_data.get('data', {})
-
-    # Recent posts (last 8)
-    posts_data, _ = bh_get(f'/publications/{pub_id}/posts?limit=8&status=confirmed&order_by=publish_date&direction=desc')
-    posts = []
-    for p in (posts_data or {}).get('data', []):
-        posts.append({
-            'id':         p.get('id', ''),
-            'title':      p.get('subject', p.get('title', 'Untitled')),
-            'subtitle':   p.get('subtitle', ''),
-            'published':  p.get('publish_date', ''),
-            'status':     p.get('status', ''),
-            'web_url':    p.get('web_url', ''),
-            'stats': {
-                'recipients':   p.get('stats', {}).get('recipients', 0),
-                'opens':        p.get('stats', {}).get('unique_opens', 0),
-                'clicks':       p.get('stats', {}).get('unique_clicks', 0),
-                'open_rate':    round(p.get('stats', {}).get('open_rate', 0) * 100, 1),
-                'click_rate':   round(p.get('stats', {}).get('click_rate', 0) * 100, 1),
-            }
-        })
-
-    # Subscriber stats
-    subs_data, _ = bh_get(f'/publications/{pub_id}/subscriptions?limit=1&status=active')
-    total_subs = (subs_data or {}).get('total_results', pub.get('stats', {}).get('total_active_subscriptions', 0))
-
-    return jsonify({
-        'configured':    True,
-        'name':          pub.get('name', ''),
-        'description':   pub.get('description', ''),
-        'web_url':       pub.get('web_url', ''),
-        'subscribers':   total_subs,
-        'posts':         posts,
-    })
-
-
-@bp.route('/beehiiv-verify', methods=['POST'])
-def beehiiv_verify():
-    """Verify Beehiiv credentials and save to .env."""
-    import urllib.request
-
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401)
-
-    data    = request.get_json(silent=True) or {}
-    api_key = data.get('api_key', '').strip()
-    pub_id  = data.get('publication_id', '').strip()
-
-    if not api_key or not pub_id:
-        return jsonify({'error': 'api_key and publication_id are required'}), 400
-
-    url = f'https://api.beehiiv.com/v2/publications/{pub_id}'
-    req = urllib.request.Request(url, headers={'Authorization': f'Bearer {api_key}'})
-    try:
-        with urllib.request.urlopen(req, timeout=8) as r:
-            result = json.loads(r.read())
-    except urllib.error.HTTPError as e:
-        if e.code == 401:
-            return jsonify({'error': 'Invalid API key'}), 400
-        if e.code == 404:
-            return jsonify({'error': 'Publication not found. Check your Publication ID.'}), 400
-        return jsonify({'error': f'Beehiiv error: HTTP {e.code}'}), 400
-    except Exception as e:
-        return jsonify({'error': f'Could not reach Beehiiv: {e}'}), 502
-
-    pub_name = result.get('data', {}).get('name', 'Your publication')
-
-    env_path = get_artist_path(artist_slug) / '.env'
-    lines    = env_path.read_text().splitlines() if env_path.exists() else []
-    for key, val in [('BEEHIIV_API_KEY', api_key), ('BEEHIIV_PUBLICATION_ID', pub_id)]:
-        replaced = False
-        for i, line in enumerate(lines):
-            if line.startswith(f'{key}='):
-                lines[i] = f'{key}={val}'
-                replaced = True
-                break
-        if not replaced:
-            lines.append(f'{key}={val}')
-    env_path.write_text('\n'.join(lines) + '\n')
-
-    return jsonify({'success': True, 'publication_name': pub_name})
 
 
 # ── Vimeo Integration ─────────────────────────────────────────────────────
@@ -6249,7 +6341,7 @@ def _get_artist_system_prompt(artist_slug):
                 pass
             widget_blocks.append(f'### {name} (T2 platform)\n{desc}')
 
-    # T3/T4: artist's own widgets directory
+    # T4: artist's own widgets directory
     artist_widgets_dir = artist_path / 'widgets'
     if artist_widgets_dir.exists():
         for item in sorted(artist_widgets_dir.iterdir()):
@@ -6273,7 +6365,7 @@ def _get_artist_system_prompt(artist_slug):
                     m = json.loads(meta_path.read_text())
                     desc = m.get('description', '')
                     if m.get('forked_from'):
-                        tier = 'T3 community'
+                        tier = 'T4 forked'
                 except Exception:
                     pass
                 widget_blocks.append(f'### {wname} ({tier})\n{desc}')

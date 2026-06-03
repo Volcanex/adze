@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adze — Design Language · Alt 3 · Clean Sans</title>
+<link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+<script>if(localStorage.getItem('dl-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Same palette as canon. Swiss/minimal: ONE typeface (Inter) doing
+   everything via weight + size contrast. Near-square 2px radius,
+   generous whitespace, mono reserved strictly for code. No serif. */
+:root {
+    --accent:#1C4F82; --accent-soft:#6b8cae; --accent-hover:#163f68; --accent-text:#fff;
+    --bg:#f5f2ed; --bg2:#ebe7e0; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf;
+    --text:#2a2a28; --text2:#5a5750; --success:#4a9a6a; --warn:#c8a840; --danger:#c0392b;
+    --radius:2px; --mono:'JetBrains Mono','Monaco','Menlo',monospace; --body-font:'Inter',-apple-system,sans-serif;
+}
+html[data-theme="dark"] {
+    --accent:#99cdff; --accent-soft:#7ea3c4; --accent-hover:#b8ddff; --accent-text:#1a1a1e;
+    --bg:#1a1a1e; --bg2:#222226; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44;
+    --text:#e8e6e0; --text2:#aaa79e; --success:#6dca8a; --warn:#e0c060; --danger:#e74c3c;
+}
+
+body { font-family: var(--body-font); background: var(--bg); color: var(--text); transition: background .3s, color .3s; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 28px 120px; }
+
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 28px; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand h1 { font-weight: 800; font-size: 20px; letter-spacing: -0.04em; }
+.brand .sub { font-size: 12px; color: var(--text2); font-weight: 400; }
+
+.hero { max-width: 1040px; margin: 0 auto 40px; padding: 0 28px; }
+.hero .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--accent); font-weight: 600; }
+.hero p { font-size: 14px; color: var(--text2); max-width: 70ch; margin-top: 10px; font-weight: 400; }
+
+.section { margin-bottom: 56px; }
+.h { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.note { font-size: 12px; color: var(--text2); margin: -8px 0 20px; max-width: 72ch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.sw { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sw .chip { height: 46px; }
+.sw .meta { padding: 7px 9px; font-size: 11px; }
+.sw .meta .name { font-weight: 600; }
+.sw .meta .val { color: var(--text2); font-family: var(--mono); font-size: 10px; }
+
+.type-row { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.type-row .lbl { font-size: 11px; color: var(--text2); width: 150px; flex-shrink: 0; }
+.t-display { font-weight: 800; font-size: 34px; letter-spacing: -0.04em; }
+.t-h { font-weight: 600; font-size: 20px; letter-spacing: -0.02em; }
+.t-light { font-weight: 300; font-size: 22px; letter-spacing: -0.02em; }
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { font-family: var(--body-font); font-size: 13px; font-weight: 600; padding: 9px 17px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; transition: all .15s; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); }
+.tab { font-size: 13px; font-weight: 500; padding: 11px 1px; color: var(--text2); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.pill { font-size: 11px; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+    background: var(--bg2); color: var(--text2); display: inline-flex; align-items: center; gap: 5px; }
+.pill-ok { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+
+.sample { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sample-bar { font-family: var(--mono); font-size: 10px; color: var(--text2); padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.sample-body { padding: 56px 40px; background: var(--surface); }
+.sample-body .artist-name { font-weight: 800; font-size: 46px; letter-spacing: -0.045em; line-height: 1.02; }
+.sample-body .artist-role { font-weight: 400; font-size: 15px; color: var(--text2); margin-top: 12px; }
+.sample-body .artist-bio { font-weight: 300; font-size: 17px; color: var(--text); max-width: 52ch; margin-top: 26px; line-height: 1.65; }
+
+.theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 7px 12px; font-size: 12px;
+    font-weight: 500; border-radius: var(--radius); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: var(--body-font); }
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+.nav { display: flex; gap: 16px; }
+.nav a { font-size: 12px; color: var(--text2); text-decoration: none; font-weight: 500; }
+.nav a:hover { color: var(--accent); }
+.nav a.cur { color: var(--text); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <h1>Adze</h1>
+    <span class="sub">alt 3 — clean sans / swiss</span>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()"><i class="ph ph-moon"></i><span id="themeLbl">Dark</span></button>
+</div>
+
+<div class="hero">
+  <div class="kicker">Direction B · one typeface, weight does the work</div>
+  <p>Inter everywhere — <strong>800</strong> for display, <strong>300</strong> for large body, mono reserved strictly for code paths.
+     Near-square 2px radius, more breathing room, hairline dividers under each heading. The most neutral, contemporary, "design-studio" feel of the three.</p>
+  <div class="nav" style="margin-top:16px">
+    <a href="/static/design-language.html">Current</a>
+    <a href="/static/design-language-2-mono.html">Alt 2 · Mono</a>
+    <a class="cur" href="/static/design-language-3-clean.html">Alt 3 · Clean Sans</a>
+    <a href="/static/design-language-4-editorial.html">Alt 4 · Editorial</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="section">
+    <div class="h">Wordmark</div>
+    <p class="note">Heavy upright Inter, tight tracking. No ornament — the weight is the identity.</p>
+    <div class="card row" style="gap:44px;align-items:baseline">
+      <span style="font-weight:800;font-size:44px;letter-spacing:-0.045em">Adze</span>
+      <span style="font-weight:600;font-size:26px;letter-spacing:-0.03em">Adze</span>
+      <span style="font-weight:300;font-size:26px;letter-spacing:-0.02em">Adze</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Colour tokens</div>
+    <p class="note">Unchanged from canon — toggle top-right to compare light/dark.</p>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <section class="section">
+    <div class="h">Type</div>
+    <p class="note">A single family, Inter, across the whole range.</p>
+    <div class="card">
+      <div class="type-row"><span class="lbl">display 34 / 800</span><span class="t-display">Lydia Lott</span></div>
+      <div class="type-row"><span class="lbl">heading 20 / 600</span><span class="t-h">Studio dashboard</span></div>
+      <div class="type-row"><span class="lbl">light 22 / 300</span><span class="t-light">Recent work &amp; commissions</span></div>
+      <div class="type-row"><span class="lbl">body 14 / 400</span><span style="font-size:14px">The quick brown fox edits an artist page.</span></div>
+      <div class="type-row"><span class="lbl">mono 11 (code only)</span><span style="font-family:var(--mono);font-size:11px">artists/lydialott/config.json</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Components</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:24px">
+      <div class="row">
+        <button class="btn btn-primary"><i class="ph ph-rocket-launch"></i> Publish</button>
+        <button class="btn">Ghost</button>
+        <button class="btn btn-danger">Delete</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active">Overview</div><div class="tab">Artists</div><div class="tab">Leads</div><div class="tab">Extras</div>
+      </div>
+      <div class="row">
+        <span class="pill pill-ok"><i class="ph ph-check-circle"></i> Live</span>
+        <span class="pill">Draft</span>
+        <span class="pill"><i class="ph ph-globe"></i> lydialott.com</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Public site — feel</div>
+    <div class="sample">
+      <div class="sample-bar">lydialott.com</div>
+      <div class="sample-body">
+        <div class="artist-name">Lydia Lott</div>
+        <div class="artist-role">Painter · London</div>
+        <p class="artist-bio">Working between figurative oil and large-format charcoal. Recent shows at the Approach and Hales Gallery. Commissions open through the studio.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const SWATCH_TOKENS = ['--accent','--accent-soft','--accent-hover','--bg','--bg2','--surface','--surface2','--border','--text','--text2','--success','--warn','--danger'];
+function isDark(){return document.documentElement.getAttribute('data-theme')==='dark';}
+function renderSwatches(){
+  const cs=getComputedStyle(document.documentElement);
+  document.getElementById('swatches').innerHTML=SWATCH_TOKENS.map(t=>{
+    const v=cs.getPropertyValue(t).trim()||'—';
+    return `<div class="sw"><div class="chip" style="background:${v}"></div><div class="meta"><div class="name">${t}</div><div class="val">${v}</div></div></div>`;
+  }).join('');
+}
+function toggleTheme(){
+  if(isDark()){document.documentElement.removeAttribute('data-theme');localStorage.setItem('dl-theme','light');}
+  else{document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('dl-theme','dark');}
+  document.getElementById('themeLbl').textContent=isDark()?'Light':'Dark';
+  renderSwatches();
+}
+document.getElementById('themeLbl').textContent=isDark()?'Dark':'Light';
+renderSwatches();
+</script>
+</body>
+</html>

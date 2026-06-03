@@ -1,0 +1,30 @@
+{
+    "name": "Alfie Bruce",
+    "slug": "alfiebruce",
+    "domain": "",
+    "admin_token": "23-0y2tu830",
+    "description": "",
+    "contact_email": "",
+    "lead": {
+        "active": false,
+        "contact": "Whatsapp",
+        "stage": "1",
+        "fish_size": "s",
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "Going to meet in a pub in Newcastle weekend of 29th-ish, and discuss. May want something slightly more complex.",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": true,
+        "original_lead_id": "94a24aec-b093-4047-bad0-a26780e1ca61",
+        "created_at": 1779807288,
+        "updated_at": 1780484266
+    },
+    "slack_channel_id": "C0B6M5XTS1G",
+    "slack_pinned_ts": "1779930830.254669",
+    "slack_announced": true,
+    "intake_token": "9GQBk-EnJOEGOQkNDwbkT4ZlpeEOuM8T",
+    "figma_url": "",
+    "is_stub": true
+}

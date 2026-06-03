@@ -25,7 +25,7 @@ html, body {
     min-height: 100%;
     height: auto;
     overflow-x: hidden;
-    overscroll-behavior: none;
+    overflow-y: auto;
 }
 
 html {
@@ -93,35 +93,14 @@ img {
     overflow-y: auto;
     z-index: 100;
     box-shadow: 5px 0 15px rgba(0,0,0,0.7);
-    transform: translateX(-105%);
-    transition: transform 0.3s ease;
+    /* Menu is permanently visible on desktop (collapses into the
+       stacked layout below 768px via the mobile media query). */
 }
 
+/* The hamburger trigger is only relevant on mobile, where the sidebar
+   stacks; on desktop the menu is always out, so hide it. */
 .sidebar-trigger {
-    position: fixed;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 28px;
-    height: 70px;
-    background: linear-gradient(180deg, #1a0000 0%, #330000 100%);
-    border: 2px solid #660000;
-    border-left: none;
-    color: #ffff00;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-family: 'Cardinal', serif;
-    z-index: 99;
-    cursor: pointer;
-    box-shadow: 3px 0 8px rgba(0,0,0,0.5);
-}
-
-.sidebar-trigger:hover ~ .gothic-sidebar,
-.gothic-sidebar:hover,
-.gothic-sidebar:focus-within {
-    transform: translateX(0);
+    display: none;
 }
 
 .sidebar-logo {
@@ -187,7 +166,7 @@ img {
 
 .main-content-1996 {
     max-width: 1100px;
-    margin: 0 auto;
+    margin: 0 auto 0 240px;   /* offset clears the fixed 200px sidebar */
     padding: 40px 80px;
     position: relative;
     z-index: 2;
@@ -248,6 +227,7 @@ img {
     top: 0;
     height: 100%;
     z-index: 50;
+    pointer-events: none; /* decorative frame must never capture scroll/clicks */
 }
 
 .border-right {
@@ -256,6 +236,7 @@ img {
     top: 0;
     height: 100%;
     z-index: 1;
+    pointer-events: none;
 }
 
 .border-bottom {
@@ -305,9 +286,15 @@ b {
 /* Mobile responsiveness */
 @media (max-width: 768px) {
     body {
-        display: flex;
-        flex-direction: column; /* Ensure content stacks correctly */
         padding-bottom: 0;
+    }
+
+    /* The nav + content live inside .site-container, so the flex
+       column (and the order swap below) must be applied here — not on
+       body — for "content first, menu below" to actually take effect. */
+    .site-container {
+        display: flex;
+        flex-direction: column;
     }
 
     .gothic-sidebar {

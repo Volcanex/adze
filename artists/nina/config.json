@@ -7,5 +7,8 @@
     "description": "",
     "contact_email": "",
     "last_login": 1776577139,
-    "last_login_ip": "14.187.181.30"
+    "last_login_ip": "14.187.181.30",
+    "slack_channel_id": "C0B7FECQWGY",
+    "slack_pinned_ts": "1779930846.379859",
+    "slack_announced": true
 }

@@ -1,144 +1,139 @@
 <style>
-@font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 300 900;
-    font-display: fallback;
-    src: url('../assets/fonts/Inter-Variable.woff2') format('woff2');
-}
-@font-face {
-    font-family: 'Cardo';
-    font-style: normal;
-    font-weight: 400;
-    font-display: fallback;
-    src: url('../assets/fonts/Cardo-Regular.woff2') format('woff2');
-}
-@font-face {
-    font-family: 'Cardo';
-    font-style: italic;
-    font-weight: 400;
-    font-display: fallback;
-    src: url('../assets/fonts/Cardo-Italic.woff2') format('woff2');
-}
-@font-face {
-    font-family: 'Cardo';
-    font-style: normal;
-    font-weight: 700;
-    font-display: fallback;
-    src: url('../assets/fonts/Cardo-Bold.woff2') format('woff2');
+/* About — built to the Figma spec (1920×1080).
+   Everything is Lapture Display 30px/43px. Lapture isn't actually loaded on
+   the site, so var(--display) resolves to Georgia (same as the Works page).
+   If Lydia has an Adobe/Lapture kit, add its <link> site-wide for the real face. */
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #000;
+  font-family: var(--display, 'jaf-lapture-display', 'Lapture Display', Georgia, serif);
+  font-weight: 400;
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-    font-family: var(--text-font);
-    color: var(--primary);
-    background: var(--bg);
-    line-height: var(--body-line-height);
-    font-size: var(--body-size);
-    font-weight: var(--body-weight);
-    min-height: 100vh;
-    display: flex;
-    opacity: 0;
-    animation: pageIn 1s ease-out forwards;
+.about {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    pointer-events: none;
-    z-index: 9999;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
+/* ── Top nav: All Work · Lydia Lott · Info ── */
+.ab-nav {
+  display: flex;
+  align-items: baseline;
+  padding: clamp(18px, 1.4vw, 27px) 5.3vw;
+  font-size: clamp(18px, 1.5625vw, 30px);   /* match Home/Works title size */
+  line-height: 1.43;
+}
+.ab-nav a { text-decoration: none; color: #000; white-space: nowrap; }
+.ab-nav a:hover { color: #0800FF; }
+.ab-brand {
+  color: #0800FF !important;
+  margin-left: clamp(28px, 19vw, 400px);   /* sits left-of-centre, per mockup */
+}
+.ab-info { margin-left: auto; }            /* pushed to the right edge */
+
+/* ── Main: text column (left) + portrait (right) ── */
+.ab-main {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 48%) 1fr;
+  column-gap: 5vw;
+  align-items: start;
+  padding: 0 5.3vw clamp(40px, 5vw, 80px);
 }
 
-@keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideRight { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
-
-h1, h2, h3 { font-family: var(--heading-font); color: var(--primary); line-height: var(--heading-line-height); }
-h1 { font-size: var(--h1-size); font-weight: var(--h1-weight); }
-h2 { font-size: var(--h2-size); font-weight: var(--h2-weight); }
-h3 { font-size: var(--h3-size); font-weight: var(--h3-weight); }
-a { color: var(--primary); text-decoration: none; transition: color 0.4s ease; }
-a:hover { color: var(--accent); }
-
-.sidebar {
-    width: var(--sidebar-width); min-width: var(--sidebar-width); min-height: 100vh;
-    padding: var(--page-padding) 36px; display: flex; flex-direction: column; gap: var(--section-gap);
-    animation: slideRight 0.8s ease-out 0.1s both;
-}
-.site-name { font-family: var(--text-font); font-weight: var(--site-name-weight); font-size: var(--site-name-size); display: block; letter-spacing: 0.2px; transition: color 0.4s ease; }
-.site-name:hover { color: var(--accent); }
-
-.nav-links { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.nav-links a { font-size: var(--nav-size); font-weight: var(--nav-weight); display: block; transition: color 0.3s ease, padding-left 0.3s ease; }
-.nav-links a:hover { color: var(--accent); padding-left: 6px; }
-
-.social-links { display: flex; gap: 16px; margin-top: auto; }
-.social-links a { font-size: 12px; color: var(--text-light); letter-spacing: 0.5px; transition: color 0.4s ease; }
-.social-links a:hover { color: var(--accent); }
-
-.menu-toggle { display: none; background: none; border: none; cursor: pointer; width: 28px; height: 20px; position: relative; z-index: 1001; }
-.menu-toggle span { display: block; width: 100%; height: 1.5px; background: var(--primary); position: absolute; left: 0; transition: transform 0.35s ease, opacity 0.25s ease; }
-.menu-toggle span:nth-child(1) { top: 4px; }
-.menu-toggle span:nth-child(2) { bottom: 4px; }
-.menu-toggle.active span:nth-child(1) { top: 50%; transform: translateY(-50%) rotate(45deg); }
-.menu-toggle.active span:nth-child(2) { bottom: auto; top: 50%; transform: translateY(-50%) rotate(-45deg); }
-.mobile-header { display: none; }
-
-@media (max-width: 768px) {
-    body { flex-direction: column; font-size: 14px; }
-    .mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; position: sticky; top: 0; background: var(--bg); z-index: 1000; border-bottom: 1px solid var(--border); }
-    .mobile-header .site-name { font-size: 16px; animation: none; }
-    .menu-toggle { display: block; }
-    .sidebar { width: 100%; min-width: 100%; min-height: 0; padding: 0 20px; gap: 16px; overflow: hidden; display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.45s ease; }
-    .sidebar.open { grid-template-rows: 1fr; border-bottom: 1px solid var(--border); }
-    .sidebar > .sidebar-inner { overflow: hidden; }
-    .sidebar .site-name { display: none; }
-    .sidebar .nav-links { padding-top: 16px; flex-direction: column; gap: 8px; }
-    .sidebar .nav-links a { font-size: 12px; }
-    .sidebar .social-links { padding-bottom: 20px; margin-top: 8px; }
+.ab-text {
+  position: relative;
+  z-index: 1;
+  padding-top: clamp(56px, 30vh, 320px);   /* large top whitespace ~y420/1080 */
+  font-size: 14pt;                          /* match the Works page category text */
+  line-height: 1.43;
+  max-width: 921px;
 }
 
-.main-content {
-    flex: 1; padding: var(--page-padding) 60px; max-width: var(--content-max-width);
-    animation: pageIn 1s ease-out 0.3s both;
-}
-.main-content h1 { font-style: italic; font-weight: var(--h1-weight); font-size: var(--h1-size); margin-bottom: 24px; }
-.main-content p { color: var(--text-muted); margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
-.main-content a { color: var(--accent); }
 
-@media (max-width: 768px) {
-    .main-content { padding: 32px 20px; }
-    .main-content h1 { font-size: 1.5rem; }
+
+.ab-text p { margin: 0 0 1.43em; }
+
+.ab-contact { margin: 0; }
+.ab-contact .ab-line { display: block; }
+.ab-contact a { color: #000; text-decoration: none; }
+.ab-contact a:hover { color: #0800FF; }
+
+/* ── Portrait ── */
+.ab-figure {
+  margin: clamp(40px, 9vh, 111px) 0 0;
+  align-self: stretch;
+}
+.ab-figure img {
+  display: block;
+  width: 100%;
+  height: clamp(360px, 80vh, 935px);
+  object-fit: cover;
+  background: #f0ede8;
+}
+
+/* ── Mobile ── */
+@media (max-width: 760px) {
+  .ab-nav {
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    font-size: 20px;
+  }
+  .ab-brand { margin-left: 0; }
+  .ab-info { margin-left: auto; }
+  .ab-main {
+    grid-template-columns: 1fr;
+    row-gap: 28px;
+  }
+  .ab-text {
+    padding-top: 36px;
+    font-size: 14pt;
+    order: 2;
+  }
+  .ab-text::before { top: calc(36px + 1.5em); height: 170px; }
+  .ab-figure { order: 1; margin-top: 12px; }
+  .ab-figure img { height: 62vh; }
 }
 </style>
+
 <html>
-<div class="mobile-header">
-    <a href="../home/" class="site-name">lydialott</a>
-    <button class="menu-toggle" onclick="this.classList.toggle('active'); document.querySelector('.sidebar').classList.toggle('open');" aria-label="Menu">
-        <span></span>
-        <span></span>
-    </button>
-</div>
+<div class="about" translate="no">
 
-<div class="sidebar">
-    <div class="sidebar-inner">
-    <a href="../home/" class="site-name">lydialott</a>
-    <ul class="nav-links">
-        <li><a href="../about/">About</a></li>
-    </ul>
-    <div class="social-links">
-        <a href="#">Instagram</a>
-    </div>
-    </div>
-</div>
+  <nav class="ab-nav">
+    <a href="../works/">All Work</a>
+    <a class="ab-brand" href="../home/">Lydia Lott</a>
+    <a class="ab-info" href="../about/">Info</a>
+  </nav>
 
-<main class="main-content">
-    <h1>About</h1>
-    <p>Bio coming soon.</p>
-</main>
+  <main class="ab-main">
+    <div class="ab-text">
+      <p>Lydia Lott's practice explores the relationship between public and private selves, drawing on R.D. Laing's concept of the divided self. Through painting, textiles, and image-making, they investigate the spaces where interior life becomes visible and the boundaries between what is concealed and what is revealed begin to dissolve.</p>
+
+      <p>Lott explores intimate subjects and domestic spaces: beds, bedrooms, naked bodies, family archives, and moments of emotional exposure. These motifs function as sites where vulnerability can emerge beyond performance. Rather than treating privacy as something to be protected, they are interested in what happens when private experience enters the public realm and becomes available to collective recognition.</p>
+
+      <p>Underlying much of their work is a distinction between being seen and being displayed. They explores forms of nakedness, confession, and self-disclosure that resist spectacle, instead proposing visibility as a mode of connection. Figures are often presented in states of openness and exposure, not as objects to be consumed, but as subjects with complex inner lives.</p>
+
+      <p>Material process plays an important role in this investigation. Whether through the visible ground of a painting or the tactile surface of tufted textiles, Lott allows traces of making to remain present. These gestures of incompleteness and exposure mirror the psychological concerns of the work itself. Ultimately, their practice asks what it might mean to inhabit public space without relinquishing intimacy, and to be encountered fully rather than merely looked at.</p>
+
+      <p class="ab-contact">
+        <span class="ab-line">Contact</span>
+        <span class="ab-line">Lydia Lott</span>
+        <a class="ab-line" href="tel:+447580248924">07580 248924</a>
+        <a class="ab-line" href="mailto:lelott2@gmail.com">lelott2@gmail.com</a>
+        <a class="ab-line" href="https://instagram.com/lydialottart" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </div>
+
+    <!-- Studio portrait of Lydia with her textile works. -->
+    <figure class="ab-figure">
+      <img src="../assets/images/lydia-portrait.png" alt="Lydia Lott in her studio">
+    </figure>
+  </main>
+
+</div>
 </html>

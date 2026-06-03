@@ -5,5 +5,10 @@
     "admin_token": "dunmca",
     "description": "",
     "contact_email": "",
-    "features": ["bookings"]
+    "features": [
+        "bookings"
+    ],
+    "slack_channel_id": "C0B6P0Y5EJD",
+    "slack_pinned_ts": "1779930835.465359",
+    "slack_announced": true
 }

@@ -1,10 +1,17 @@
 <style>
 @font-face {
+    font-family: 'Bebas Neue';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/bebas-neue-400.ttf') format('truetype');
+}
+@font-face {
     font-family: 'Barlow';
     font-style: normal;
-    font-weight: 200;
+    font-weight: 400;
     font-display: fallback;
-    src: url('../assets/fonts/barlow-200.ttf') format('truetype');
+    src: url('../assets/fonts/barlow-400.ttf') format('truetype');
 }
 @font-face {
     font-family: 'Barlow';
@@ -13,424 +20,274 @@
     font-display: fallback;
     src: url('../assets/fonts/barlow-700.ttf') format('truetype');
 }
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 200;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-200.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: italic;
+    font-weight: 200;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-200-italic.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Cardo';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cardo';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Bold.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cardo';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Italic.woff2') format('woff2');
+}
 
 :root {
-    --primary: #000000;
-    --accent: #6495ED;
-    --accent-hover: #FFB6C1;
-    --bg: #ffffff;
-    --bg-alt: #f0f0f0;
-    --border: #000000;
-    --text-muted: #333333;
-    --pink: #FFB6C1;
-    --blue: #6495ED;
-    --text-font: 'Barlow', sans-serif;
-    --heading-font: 'Barlow', sans-serif;
+    --blue: #1a35ff;
+    --blue-deep: #0a1ea8;
+    --ink: #0b0d1a;
+    --bg: #f4f3ee;
+    --paper: #fbfaf6;
+    --muted: #4a4d5c;
+    --display: 'Bebas Neue', 'Barlow', sans-serif;
+    --body: 'Barlow', sans-serif;
+    --serif: 'Cardo', Georgia, 'Times New Roman', serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 
 body {
-    font-family: var(--text-font);
-    color: var(--primary);
+    font-family: var(--body);
+    color: var(--ink);
     background: var(--bg);
     line-height: 1.5;
-    font-size: 1rem;
     font-weight: 400;
-    min-height: 100vh;
-    display: flex;
+    overflow-x: hidden;
     opacity: 0;
-    animation: pageIn 0.3s ease-out forwards;
-    position: relative;
+    animation: pageIn 0.6s ease-out forwards;
 }
-
-body::after {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 200px;
-    width: 4px;
-    height: 100vh;
-    background: #000;
-    z-index: 100;
-}
-
 @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes glitch {
-    0%, 100% { transform: translate(0); }
-    20% { transform: translate(-2px, 2px); }
-    40% { transform: translate(-2px, -2px); }
-    60% { transform: translate(2px, 2px); }
-    80% { transform: translate(2px, -2px); }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Slim masthead (top-left name + right-side vertical nav) ── */
+.masthead {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 18px 32px;
+    background: rgba(244, 243, 238, 0.82);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid rgba(11, 13, 26, 0.08);
 }
-
-h1, h2, h3, h4, h5, h6 {
-    font-family: var(--heading-font);
-    color: var(--primary);
-    line-height: 1.4;
+.brand {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(20px, 2.4vw, 32px);
+    letter-spacing: 0.06em;
+    line-height: 0.9;
+    color: var(--blue);
+    text-transform: uppercase;
+    white-space: nowrap;
 }
-
-a { color: var(--primary); text-decoration: none; transition: color 0.4s ease; }
-a:hover { color: var(--accent); }
-
-/* ── Sidebar ── */
-.sidebar {
-    width: 200px;
-    min-width: 200px;
-    min-height: 100vh;
-    padding: 40px 30px;
+.top-nav {
     display: flex;
     flex-direction: column;
-    gap: 40px;
-    background: #000;
-    color: #fff;
-    border-right: 4px solid #000;
-    position: relative;
-    z-index: 10;
-}
-
-.site-name {
-    font-family: var(--heading-font);
-    font-weight: 900;
-    font-size: 24px;
-    color: #fff;
-    text-decoration: none;
-    display: block;
-    letter-spacing: -1px;
-    text-transform: uppercase;
-    transition: all 0.1s ease;
-    border: 3px solid #fff;
-    padding: 10px;
-    text-align: center;
-}
-.site-name:hover {
-    background: var(--accent);
-    color: #000;
-    border-color: var(--accent);
-}
-
-/* ── Navigation ── */
-.nav-links {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-.nav-links a {
-    font-size: 16px;
-    font-weight: 700;
-    display: block;
-    transition: all 0.1s ease;
-    padding: 12px 0;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: -0.5px;
-    border-bottom: 2px solid #333;
-}
-.nav-links a:hover {
-    background: var(--accent);
-    color: #000;
-    padding-left: 10px;
-    border-bottom-color: var(--accent);
-}
-
-.social-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    margin-top: auto;
-}
-.social-links a {
-    font-size: 14px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -0.5px;
-    transition: all 0.1s ease;
-    text-transform: uppercase;
-    padding: 12px 0;
-    border-bottom: 2px solid #333;
-}
-.social-links a:hover {
-    background: var(--pink);
-    color: #000;
-    padding-left: 10px;
-}
-
-/* ── Mobile ── */
-.menu-toggle {
-    display: none;
-    background: none;
-    border: none;
-    cursor: pointer;
-    width: 28px;
-    height: 20px;
-    position: relative;
-    z-index: 1001;
-}
-.menu-toggle span {
-    display: block;
-    width: 100%;
-    height: 1.5px;
-    background: var(--primary);
-    position: absolute;
-    left: 0;
-    transition: transform 0.35s ease, opacity 0.25s ease;
-}
-.menu-toggle span:nth-child(1) { top: 4px; }
-.menu-toggle span:nth-child(2) { bottom: 4px; }
-.menu-toggle.active span:nth-child(1) { top: 50%; transform: translateY(-50%) rotate(45deg); }
-.menu-toggle.active span:nth-child(2) { bottom: auto; top: 50%; transform: translateY(-50%) rotate(-45deg); }
-
-.mobile-header { display: none; }
-
-@media (max-width: 768px) {
-    body { flex-direction: column; font-size: 14px; }
-    body::after { display: none; }
-
-    .mobile-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 16px;
-        position: sticky;
-        top: 0;
-        background: #000;
-        z-index: 1000;
-        border-bottom: 1px solid #000;
-    }
-    .mobile-header .site-name {
-        font-size: 13px;
-        line-height: 1;
-        animation: none;
-        padding: 5px 8px;
-        border-width: 2px;
-    }
-    .menu-toggle { display: block; height: 14px; width: 22px; align-self: center; }
-    .menu-toggle span { background: #fff; }
-    .menu-toggle span:nth-child(1) { top: 2px; }
-    .menu-toggle span:nth-child(2) { bottom: 2px; }
-
-    .sidebar {
-        width: 100%; min-width: 100%; min-height: 0;
-        padding: 0 20px;
-        gap: 0;
-        overflow: hidden;
-        display: grid;
-        grid-template-rows: 0fr;
-        transition: grid-template-rows 0.45s ease;
-        border: none;
-        box-shadow: none;
-    }
-    .sidebar.open { grid-template-rows: 1fr; }
-    .sidebar > .sidebar-inner { overflow: hidden; padding: 10px 0; }
-    .sidebar .site-name { display: none; }
-    .sidebar .nav-links { flex-direction: column; gap: 0; }
-    .sidebar .nav-links a {
-        font-size: 13px;
-        padding: 8px 0;
-        border-bottom-width: 1px;
-    }
-    .sidebar .social-links { margin-top: 0; padding-bottom: 4px; }
-    .sidebar .social-links a {
-        font-size: 13px;
-        padding: 8px 0;
-        border-bottom-width: 1px;
-        letter-spacing: -0.5px;
-    }
-    .sidebar .social-links a:hover {
-        background: var(--accent);
-        border-bottom-color: var(--accent);
-    }
-}
-
-/* ── Main Content ── */
-.main-content {
-    flex: 1;
-    padding: 80px 60px;
-    max-width: 900px;
-    animation: pageIn 1s ease-out 0.3s both;
-}
-.main-content h1 {
-    font-style: normal;
-    font-weight: 900;
-    font-size: 3rem;
-    margin-bottom: 24px;
-    letter-spacing: -2px;
-    text-transform: uppercase;
-}
-.main-content h2 {
-    font-style: normal;
-    font-weight: 900;
-    font-size: 2rem;
-    margin-top: 48px;
-    margin-bottom: 20px;
-    letter-spacing: -1px;
-    text-transform: uppercase;
-}
-.main-content p {
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    font-size: 16px;
-    line-height: 1.6;
-}
-.main-content a {
-    color: var(--accent);
-    font-weight: 700;
-    text-decoration: underline;
-}
-.main-content ul {
-    color: var(--text-muted);
-    margin-bottom: 16px;
-    font-size: 16px;
-    line-height: 1.8;
-    margin-left: 20px;
-}
-.main-content li {
-    margin-bottom: 8px;
-}
-
-.bio-intro {
-    font-size: 16px;
-    line-height: 1.6;
-    margin-bottom: 20px;
-}
-
-.music-player {
-    margin-top: 24px;
-    padding: 24px;
-    background: #fff;
-    border: 4px solid #000;
-    border-radius: 0;
-}
-
-.track {
-    padding: 16px 0;
-    border-bottom: 3px solid #000;
-    cursor: pointer;
-    transition: all 0.1s ease;
-}
-.track:last-child { border-bottom: none; }
-.track:hover {
-    padding-left: 8px;
-    border-bottom-color: var(--accent);
-}
-
-.track-title {
-    font-family: var(--heading-font);
-    font-size: 18px;
-    font-weight: 900;
-    color: var(--primary);
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: -0.5px;
-}
-
-.track-meta {
-    font-size: 14px;
-    color: var(--text-muted);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.waveform {
-    margin-top: 12px;
-    height: 60px;
-    display: flex;
+    gap: 14px;
     align-items: flex-end;
-    gap: 2px;
-    opacity: 1;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
 }
-
-.waveform-bar {
-    flex: 1;
-    background: var(--accent);
-    border-radius: 0;
-    transition: all 0.1s ease;
+.top-nav a { position: relative; }
+.top-nav a.active { color: var(--blue); }
+.top-nav a::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: -4px;
+    width: 0; height: 2px;
+    background: var(--blue);
+    transition: width 0.25s ease;
 }
+.top-nav a:hover::after, .top-nav a.active::after { width: 100%; }
 
-.track:hover .waveform-bar {
-    opacity: 1;
+/* ── Article body ── */
+.wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(120px, 18vh, 200px) 32px 120px;
 }
-
-.platform-note {
-    margin-top: 48px;
-    padding: 24px 28px;
-    background: #fff;
-    border: 4px solid #000;
-    border-radius: 0;
-    font-size: 14px;
-    line-height: 1.7;
-    color: var(--text-muted);
+.eyebrow {
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 22px;
 }
+h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    color: var(--blue);
+    line-height: 0.84;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    font-size: clamp(58px, 12vw, 150px);
+    margin-bottom: 40px;
+    /* blue text with a faint texture overlay clipped to the glyphs */
+    background-image:
+        linear-gradient(rgba(26, 53, 255, 0.65), rgba(26, 53, 255, 0.65)),
+        url('../assets/intake/91aafc78_5.jpeg');
+    background-size: cover, 200px auto;
+    background-position: center;
+    background-repeat: no-repeat, repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 0.9;
+    letter-spacing: 0.015em;
+    text-transform: uppercase;
+    font-size: clamp(28px, 4vw, 46px);
+    margin: 56px 0 24px;
+}
+p {
+    font-family: var(--body);
+    font-weight: 200;
+    font-size: clamp(17px, 1.55vw, 20px);
+    line-height: 1.78;
+    color: #24272f;
+    margin-bottom: 22px;
+    max-width: 66ch;
+}
+p strong { color: var(--ink); font-weight: 700; }
+p a { color: var(--blue); font-weight: 700; border-bottom: 2px solid rgba(26,53,255,0.3); }
+p a:hover { border-bottom-color: var(--blue); }
 
-.platform-note strong {
-    color: var(--primary);
-    font-weight: 900;
+/* standfirst — larger serif italic, classic feature opener */
+.lede {
+    font-family: var(--body);
+    font-weight: 200;
+    font-style: italic;
+    font-size: clamp(21px, 2.2vw, 28px);
+    color: var(--ink);
+    line-height: 1.5;
+    max-width: 60ch;
+}
+.lede strong { font-style: normal; }
+
+ul.exp {
+    list-style: none;
+    margin-top: 8px;
+}
+ul.exp li {
+    font-family: var(--body);
+    font-weight: 200;
+    font-size: clamp(17px, 1.55vw, 20px);
+    line-height: 1.5;
+    color: #24272f;
+    padding: 18px 0;
+    border-top: 1px solid rgba(11,13,26,0.12);
+}
+ul.exp li strong { color: var(--ink); font-weight: 700; }
+
+.foot {
+    text-align: center;
+    padding: 60px 32px;
+    background: var(--ink);
+    color: rgba(255,255,255,0.6);
+    font-family: var(--body);
+    font-size: 12px;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
 }
+.foot a { color: var(--blue); }
+.foot a:hover { color: #fff; }
 
-@media (max-width: 768px) {
-    .main-content { padding: 32px 20px; }
-    .main-content h1 { font-size: 1.8rem; }
-    .main-content h2 { font-size: 1.5rem; margin-top: 36px; }
-    .music-player { padding: 16px; }
-    .waveform { height: 50px; }
+/* texture on the remaining blue text — same treatment, clipped to glyphs */
+.brand,
+.top-nav a.active,
+.eyebrow,
+p a,
+.foot a {
+    background-image:
+        linear-gradient(rgba(26, 53, 255, 0.65), rgba(26, 53, 255, 0.65)),
+        url('../assets/intake/91aafc78_5.jpeg');
+    background-size: cover, 200px auto;
+    background-position: center;
+    background-repeat: no-repeat, repeat;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
+.foot a:hover { -webkit-text-fill-color: #fff; }
+
+@media (max-width: 640px) {
+    .masthead { padding: 14px 18px; }
+    .top-nav { gap: 14px; font-size: 10px; letter-spacing: 0.12em; }
+    .wrap { padding: 110px 22px 80px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
 
 <html>
-<div class="mobile-header">
-    <a href="../home/" class="site-name">KESKESAY</a>
-    <button class="menu-toggle" onclick="this.classList.toggle('active'); document.querySelector('.sidebar').classList.toggle('open');" aria-label="Menu">
-        <span></span>
-        <span></span>
-    </button>
-</div>
+<header class="masthead">
+    <a href="../home/" class="brand">Jack Dennison Thompson</a>
+    <nav class="top-nav">
+        <a href="../about/" class="active">About</a>
+        <a href="../music/">Music</a>
+        <a href="../writing/">Writing</a>
+    </nav>
+</header>
 
-<div class="sidebar">
-    <div class="sidebar-inner">
-    <a href="../home/" class="site-name">KESKESAY</a>
+<article class="wrap">
+    <div class="eyebrow">About</div>
+    <h1>About<br>Jack</h1>
 
-    <ul class="nav-links">
-        <li><a href="../about/">About</a></li>
-        <li><a href="../music/">Music</a></li>
-        <li><a href="../writing/">Writing</a></li>
+    <p class="lede"><strong>MA Magazine Journalism student at City, University of London</strong>, with a passion for storytelling across music, culture, and current affairs.</p>
+
+    <p>I have hands-on experience at <a href="https://maghrebi.org" target="_blank">maghrebi.org</a>, where I reported on North African current events under award-winning journalist Martin Jay, and through music journalism for The Indiependent and Folk and Honey, where I wrote reviews, features and interviews.</p>
+
+    <p>My work spans news reporting, cultural features, and music journalism — from covering political developments to profiling emerging artists. I'm particularly interested in stories that sit at the intersection of culture, politics, and community.</p>
+
+    <h2>Experience</h2>
+    <ul class="exp">
+        <li><strong>Contributing Writer</strong> &mdash; Clash Music Group</li>
+        <li><strong>Deputy Multimedia Editor</strong> &mdash; GTFO Magazine</li>
+        <li><strong>News Intern</strong> &mdash; Campaign UK</li>
+        <li><strong>Contributor</strong> &mdash; Maghrebi.org, Folk &amp; Honey, The Indiependent</li>
     </ul>
+</article>
 
-    <div class="social-links">
-        <a href="#">Instagram</a>
-    </div>
-    </div>
-</div>
-
-<main class="main-content">
-    <h1>Jack Dennison-Thompson</h1>
-
-    <div class="bio-intro">
-        <p><strong>MA Magazine Journalism student at City, University of London</strong>, with a passion for storytelling across music, culture, and current affairs.</p>
-
-        <p>I have hands-on experience at <a href="https://maghrebi.org" target="_blank">maghrebi.org</a>, where I reported on North African current events under award-winning journalist Martin Jay, and through music journalism for The Indiependent and Folk and Honey, where I wrote reviews, features and interviews.</p>
-
-        <p>My work spans news reporting, cultural features, and music journalism—from covering political developments to profiling emerging artists. I'm particularly interested in stories that sit at the intersection of culture, politics, and community.</p>
-
-        <p>Beyond writing, I bring multimedia skills from producing content for my YouTube channel and radio show, alongside proficiency in Adobe Creative Suite, Ableton, and WordPress.</p>
-    </div>
-
-    <h2>Experience Highlights</h2>
-    <ul>
-        <li><strong>Contributing Writer</strong> at Clash Music Group (2026-Present)</li>
-        <li><strong>Deputy Multi Media Editor</strong> at GTFO Magazine</li>
-        <li><strong>News Intern</strong> at Campaign UK</li>
-        <li>Contributor to Maghrebi.org, Folk and Honey, The Indiependent</li>
-    </ul>
-
-    <div class="platform-note">
-        <strong>This site is an example of what you can build on this platform.</strong>
-        <br><br>
-        You can create portfolio sites, journalism hubs, music showcases, or custom tools—all hosted for free on Gabriel's servers. The only cost? A custom domain, if you want one.
-        <br><br>
-        We could pull data directly from your SoundCloud API, create custom audio players with real waveforms, integrate your latest articles, or build any interactive tool you need. The possibilities are endless.
-    </div>
-</main>
+<footer class="foot">
+    <a href="mailto:">Email Jack &rarr;</a>
+</footer>
 </html>

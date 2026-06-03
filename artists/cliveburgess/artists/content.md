@@ -301,8 +301,8 @@ a:hover { opacity: 0.85; }
 <header class="header">
     <a href="../home/" class="logo">Erlabrunn</a>
     <nav class="nav">
-        <a href="../lastplace/">Last Place</a>
         <a href="../shoulder/">Shoulder</a>
+        <a href="../lastplace/">Last Place</a>
         <a href="../artists/">Artists</a>
     </nav>
 </header>

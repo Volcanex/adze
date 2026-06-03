@@ -1,0 +1,179 @@
+FROM python:3.12-slim
+
+WORKDIR /workspace
+
+# Developer terminal image. Keep this deliberately separate from the Flask app
+# image so Terminal Access does not contain a copied snapshot of all Adze code.
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    git \
+    lsof \
+    nodejs \
+    npm \
+    procps \
+    ripgrep \
+    tmux \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g @anthropic-ai/claude-code@2.0.37 opencode-ai@1.14.48
+
+RUN useradd -u 1000 -m -s /bin/bash adze \
+    && mkdir -p /home/adze/.claude /home/adze/.config/opencode \
+    && chown -R adze:adze /home/adze
+
+# opencode.json is written at launch time by /usr/local/bin/adze-autocode-serve
+# (auto_code_proxy.py mints OPENCODE_SERVER_PASSWORD per-spawn and passes it
+# alongside OPENROUTER_API_KEY into `docker exec`).
+RUN chown -R adze:adze /home/adze/.config
+
+RUN <<'EOF'
+set -e
+mkdir -p /usr/local/share/adze-terminal
+
+cat > /usr/local/share/adze-terminal/bashrc <<'BASHRC'
+export HOME=/home/adze
+export SHELL=/bin/bash
+export ADZE_WORKSPACE=/workspace
+export PS1='adze@\h:\w$ '
+
+adze_inside_workspace() {
+    local target
+    target="$(realpath -m -- "$1" 2>/dev/null)" || return 1
+    case "$target" in
+        "$ADZE_WORKSPACE"|"$ADZE_WORKSPACE"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+cd() {
+    local dest="${1:-$ADZE_WORKSPACE}"
+    local target
+    if [[ "$dest" == /* ]]; then
+        target="$(realpath -m -- "$dest" 2>/dev/null)" || {
+            printf '\033[31m[adze] Cannot resolve path: %s\033[0m\n' "$dest"
+            return 1
+        }
+    else
+        target="$(realpath -m -- "$PWD/$dest" 2>/dev/null)" || {
+            printf '\033[31m[adze] Cannot resolve path: %s\033[0m\n' "$dest"
+            return 1
+        }
+    fi
+    if ! adze_inside_workspace "$target"; then
+        printf '\033[31m[adze] Terminal Access is pinned to /workspace\033[0m\n'
+        return 1
+    fi
+    builtin cd "$target"
+}
+
+pushd() {
+    printf '\033[31m[adze] pushd is disabled. Use cd inside /workspace.\033[0m\n'
+    return 1
+}
+
+popd() {
+    printf '\033[31m[adze] popd is disabled. Use cd inside /workspace.\033[0m\n'
+    return 1
+}
+
+adze_prompt_guard() {
+    if ! adze_inside_workspace "$PWD"; then
+        printf '\033[31m[adze] Returned to /workspace\033[0m\n'
+        builtin cd "$ADZE_WORKSPACE" 2>/dev/null || true
+    fi
+}
+
+export PROMPT_COMMAND="adze_prompt_guard${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+
+builtin cd "$ADZE_WORKSPACE" 2>/dev/null || true
+
+if [[ -z "${ADZE_WELCOME_SHOWN:-}" ]]; then
+    export ADZE_WELCOME_SHOWN=1
+    printf '\033[36m[adze] Terminal Access sandbox: %s\033[0m\n' "${ADZE_ARTIST_SLUG:-artist} (/workspace)"
+    printf '\033[90m[adze] Only this artist directory is mounted at /workspace.\033[0m\n'
+    printf '\033[90m[adze] Type claude when you want to start Claude Code.\033[0m\n'
+fi
+BASHRC
+
+cat > /usr/local/bin/adze-shell <<'SCRIPT'
+#!/usr/bin/env bash
+export HOME=/home/adze
+export SHELL=/bin/bash
+export ADZE_WORKSPACE=/workspace
+exec bash --rcfile /usr/local/share/adze-terminal/bashrc -i
+SCRIPT
+
+# Auto-Code (chat UI) — launches `opencode serve` headless. Replaces the
+# TUI-in-xterm path; the Flask side reverse-proxies its HTTP+SSE under
+# /api/adze/autocode/*. Model selection is per-message from the dashboard,
+# so opencode.json carries no model field — just provider auth.
+cat > /usr/local/bin/adze-autocode-serve <<'SCRIPT'
+#!/usr/bin/env bash
+set -e
+export HOME=/home/adze SHELL=/bin/bash ADZE_WORKSPACE=/workspace
+cd "$ADZE_WORKSPACE" 2>/dev/null || true
+
+: "${ADZE_AUTOCODE_PORT:=4096}"
+: "${OPENCODE_SERVER_PASSWORD:?must be set}"
+: "${OPENROUTER_API_KEY:?must be set}"
+
+mkdir -p "$HOME/.config/opencode"
+# The :thinking aliases mirror the dashboard's MODE_MODELS table. opencode
+# resolves a request's modelID against this provider.models map; without
+# the aliases below, ":thinking" suffixed IDs raise ProviderModelNotFound.
+# Each alias points at the base OpenRouter model ID and flips opencode's
+# `reasoning` flag on, while forwarding OpenRouter's `reasoning` body
+# field via providerOptions so the upstream actually runs in extended
+# thinking mode (max_tokens chosen high enough to be useful, low enough
+# not to dominate the output budget).
+cat > "$HOME/.config/opencode/opencode.json" <<JSON
+{
+  "\$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "openrouter": {
+      "options": {
+        "apiKey": "{env:OPENROUTER_API_KEY}"
+      },
+      "models": {
+        "anthropic/claude-haiku-4.5:thinking": {
+          "id": "anthropic/claude-haiku-4.5",
+          "name": "Claude Haiku 4.5 (thinking)",
+          "reasoning": true,
+          "options": {
+            "openrouter": {
+              "reasoning": { "max_tokens": 8000 }
+            }
+          }
+        },
+        "anthropic/claude-sonnet-4.5:thinking": {
+          "id": "anthropic/claude-sonnet-4.5",
+          "name": "Claude Sonnet 4.5 (thinking)",
+          "reasoning": true,
+          "options": {
+            "openrouter": {
+              "reasoning": { "max_tokens": 12000 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+JSON
+
+# docker exec -d swallows stdout; log to file so failures are forensic-able.
+exec opencode serve --hostname 0.0.0.0 --port "$ADZE_AUTOCODE_PORT" \
+    >> "$HOME/.config/opencode/serve.log" 2>&1
+SCRIPT
+
+chmod 0644 /usr/local/share/adze-terminal/bashrc
+chmod 0755 /usr/local/bin/adze-shell /usr/local/bin/adze-autocode-serve
+EOF
+
+USER adze
+ENV HOME=/home/adze
+ENV SHELL=/bin/bash
+
+CMD ["sleep", "infinity"]

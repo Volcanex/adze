@@ -1,0 +1,27 @@
+{
+    "name": "Jeweller?",
+    "slug": "jeweller",
+    "domain": "",
+    "admin_token": "F7vsr9daIb8",
+    "description": "",
+    "contact_email": "",
+    "lead": {
+        "active": false,
+        "contact": "Engus, SLMS",
+        "stage": null,
+        "fish_size": "m",
+        "instagram": "",
+        "work": "Re-do",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": "4f3d633f-b420-425c-87ce-eeb1aca53733",
+        "created_at": 1778224727,
+        "updated_at": 1780484283
+    },
+    "is_stub": true,
+    "intake_token": "aCJrZEv8tjM5ZvMhE8zgvKqYVz9m02Cv",
+    "figma_url": ""
+}

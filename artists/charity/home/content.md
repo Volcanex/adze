@@ -1,0 +1,3 @@
+# Charity?
+
+Placeholder home page.

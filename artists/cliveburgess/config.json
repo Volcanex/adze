@@ -7,6 +7,27 @@
     "description": "Independent publishing house and creative studio.",
     "contact_email": "contact@erlabrunn.org.uk",
     "platform_widgets": [],
-    "last_login": 1776888922,
-    "last_login_ip": "81.157.75.88"
+    "last_login": 1778785973,
+    "last_login_ip": "14.187.203.12",
+    "slack_channel_id": "C0B6P0Y5M41",
+    "slack_pinned_ts": "1779930834.410019",
+    "slack_announced": true,
+    "figma_url": "",
+    "lead": {
+        "active": false,
+        "contact": "",
+        "stage": "6",
+        "fish_size": null,
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1779960834,
+        "updated_at": 1779960834
+    },
+    "favicon": "favicon.svg"
 }

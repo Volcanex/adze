@@ -6,6 +6,27 @@
     "admin_token": "adele",
     "description": "Dark Arts & Photography - Digital Necropolis",
     "contact_email": "fallenangelselvatica@gmail.com",
-    "last_login": 1776861762,
-    "last_login_ip": "113.185.85.55"
+    "last_login": 1780486857,
+    "last_login_ip": "148.252.140.145",
+    "slack_channel_id": "C0B6K3TR822",
+    "slack_pinned_ts": "1779930843.390129",
+    "slack_announced": true,
+    "intake_token": "PUSSRrgX2XaMTnvs2ALKBtjIaRMPyyMl",
+    "figma_url": "",
+    "lead": {
+        "active": false,
+        "contact": "",
+        "stage": "4",
+        "fish_size": null,
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1780484261,
+        "updated_at": 1780484261
+    }
 }

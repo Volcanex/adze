@@ -5,6 +5,27 @@
     "admin_token": "grandstar",
     "description": "Websites for artists, musicians, and cultural projects. Made once, made properly.",
     "contact_email": "hello@lastplace.co.uk",
-    "last_login": 1776964529,
-    "last_login_ip": "159.26.106.74"
+    "last_login": 1777777885,
+    "last_login_ip": "109.144.219.45",
+    "slack_channel_id": "C0B6K3TJ478",
+    "slack_pinned_ts": "1779930841.288789",
+    "slack_announced": true,
+    "intake_token": "flqkYRQL1_PLD79LyFcXYhYdSZa55Gcs",
+    "figma_url": "",
+    "lead": {
+        "active": false,
+        "contact": "",
+        "stage": "6",
+        "fish_size": null,
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1780484254,
+        "updated_at": 1780484254
+    }
 }

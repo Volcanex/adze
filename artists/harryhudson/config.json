@@ -4,5 +4,8 @@
     "domain": "harryhudson.com",
     "admin_token": "harry123",
     "description": "",
-    "contact_email": ""
+    "contact_email": "",
+    "slack_channel_id": "C0B6P0YKBK3",
+    "slack_pinned_ts": "1779930837.575519",
+    "slack_announced": true
 }

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adze — Design Language · Alt 4 · Editorial</title>
+<link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+<script>if(localStorage.getItem('dl-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Same palette as canon. The MIDDLE GROUND: keeps a serif for warmth,
+   but UPRIGHT (never italic) and on a sharper, higher-contrast face
+   (Fraunces) instead of Cardo. Kills the "cursive" read while keeping
+   editorial character. Inter for UI, mono for code. Canon 8px radius. */
+:root {
+    --accent:#1C4F82; --accent-soft:#6b8cae; --accent-hover:#163f68; --accent-text:#fff;
+    --bg:#f5f2ed; --bg2:#ebe7e0; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf;
+    --text:#2a2a28; --text2:#5a5750; --success:#4a9a6a; --warn:#c8a840; --danger:#c0392b;
+    --radius:8px; --mono:'JetBrains Mono','Monaco','Menlo',monospace; --body-font:'Inter',-apple-system,sans-serif;
+    --heading-font:'Fraunces',Georgia,serif;
+}
+html[data-theme="dark"] {
+    --accent:#99cdff; --accent-soft:#7ea3c4; --accent-hover:#b8ddff; --accent-text:#1a1a1e;
+    --bg:#1a1a1e; --bg2:#222226; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44;
+    --text:#e8e6e0; --text2:#aaa79e; --success:#6dca8a; --warn:#e0c060; --danger:#e74c3c;
+}
+
+body { font-family: var(--body-font); background: var(--bg); color: var(--text); transition: background .3s, color .3s; line-height: 1.55; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 28px 120px; }
+
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.brand { display: flex; align-items: baseline; gap: 13px; }
+.brand h1 { font-family: var(--heading-font); font-weight: 600; font-style: normal; font-size: 23px; letter-spacing: -0.01em; }
+.brand .sub { font-size: 12px; color: var(--text2); }
+
+.hero { max-width: 1040px; margin: 0 auto 38px; padding: 0 28px; }
+.hero .kicker { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); font-weight: 600; }
+.hero p { font-size: 14px; color: var(--text2); max-width: 70ch; margin-top: 10px; }
+
+.section { margin-bottom: 52px; }
+.h { font-family: var(--heading-font); font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+.note { font-size: 12px; color: var(--text2); margin-bottom: 18px; max-width: 72ch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.sw { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sw .chip { height: 46px; }
+.sw .meta { padding: 7px 9px; font-size: 11px; }
+.sw .meta .name { font-family: var(--mono); font-size: 10px; }
+.sw .meta .val { color: var(--text2); font-family: var(--mono); font-size: 10px; }
+
+.type-row { display: flex; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.type-row .lbl { font-size: 10px; color: var(--text2); font-family: var(--mono); width: 150px; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.t-display { font-family: var(--heading-font); font-weight: 600; font-size: 34px; letter-spacing: -0.01em; }
+.t-h { font-family: var(--heading-font); font-weight: 500; font-size: 22px; }
+.t-h2 { font-family: var(--heading-font); font-weight: 400; font-size: 22px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.btn { font-family: var(--body-font); font-size: 13px; font-weight: 600; padding: 9px 17px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; transition: all .15s; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--border); }
+.tab { font-size: 13px; font-weight: 500; padding: 11px 1px; color: var(--text2); cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.active { color: var(--text); border-bottom-color: var(--accent); }
+.pill { font-size: 11px; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+    background: var(--bg2); color: var(--text2); display: inline-flex; align-items: center; gap: 5px; }
+.pill-ok { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); }
+
+.sample { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.sample-bar { font-family: var(--mono); font-size: 10px; color: var(--text2); padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.sample-body { padding: 52px 40px; background: var(--surface); }
+.sample-body .artist-name { font-family: var(--heading-font); font-weight: 600; font-size: 48px; letter-spacing: -0.015em; line-height: 1.05; }
+.sample-body .artist-role { font-size: 14px; color: var(--text2); margin-top: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.sample-body .artist-bio { font-size: 16px; color: var(--text); max-width: 54ch; margin-top: 24px; line-height: 1.7; }
+
+.theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 7px 12px; font-size: 12px;
+    border-radius: var(--radius); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; font-family: var(--body-font); }
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+.nav { display: flex; gap: 16px; }
+.nav a { font-size: 12px; color: var(--text2); text-decoration: none; }
+.nav a:hover { color: var(--accent); }
+.nav a.cur { color: var(--text); font-weight: 700; }
+.cmp { display:flex; gap:34px; flex-wrap:wrap; align-items:baseline; }
+.cmp .was { font-family:'Cardo',Georgia,serif; font-style:italic; font-size:30px; color:var(--text2); }
+.cmp .now { font-family:var(--heading-font); font-weight:600; font-size:30px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <h1>Adze</h1>
+    <span class="sub">alt 4 — editorial (upright serif)</span>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()"><i class="ph ph-moon"></i><span id="themeLbl">Dark</span></button>
+</div>
+
+<div class="hero">
+  <div class="kicker">Direction C · the middle ground</div>
+  <p>Keeps a serif for warmth and editorial character — but <strong>upright, never italic</strong>, on the sharper, higher-contrast
+     <strong>Fraunces</strong> instead of Cardo. Same 8px radius as canon. This removes the "cursive" read while staying closest to the
+     current identity — the smallest jump if you like the serif but not the slant.</p>
+  <div class="nav" style="margin-top:16px">
+    <a href="/static/design-language.html">Current</a>
+    <a href="/static/design-language-2-mono.html">Alt 2 · Mono</a>
+    <a href="/static/design-language-3-clean.html">Alt 3 · Clean Sans</a>
+    <a class="cur" href="/static/design-language-4-editorial.html">Alt 4 · Editorial</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section class="section">
+    <div class="h">The one change</div>
+    <p class="note">Current cursive (Cardo italic) → upright Fraunces. Same word, side by side:</p>
+    <div class="card cmp">
+      <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:8px">was</div><span class="was">Lydia Lott</span></div>
+      <div><div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:8px">now</div><span class="now">Lydia Lott</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Colour tokens</div>
+    <p class="note">Unchanged from canon — toggle top-right to compare light/dark.</p>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <section class="section">
+    <div class="h">Type</div>
+    <p class="note">Headings: <span style="font-family:var(--heading-font);font-weight:600">Fraunces</span> upright. Body: Inter. Code: mono.</p>
+    <div class="card">
+      <div class="type-row"><span class="lbl">display 34 / 600</span><span class="t-display">Lydia Lott</span></div>
+      <div class="type-row"><span class="lbl">heading 22 / 500</span><span class="t-h">Studio dashboard</span></div>
+      <div class="type-row"><span class="lbl">heading 22 / 400</span><span class="t-h2">Recent work</span></div>
+      <div class="type-row"><span class="lbl">body 14 (Inter)</span><span style="font-size:14px">The quick brown fox edits an artist page.</span></div>
+      <div class="type-row"><span class="lbl">mono 11</span><span style="font-family:var(--mono);font-size:11px">artists/lydialott/config.json</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Components</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:24px">
+      <div class="row">
+        <button class="btn btn-primary"><i class="ph ph-rocket-launch"></i> Publish</button>
+        <button class="btn">Ghost</button>
+        <button class="btn btn-danger">Delete</button>
+      </div>
+      <div class="tabs">
+        <div class="tab active">Overview</div><div class="tab">Artists</div><div class="tab">Leads</div><div class="tab">Extras</div>
+      </div>
+      <div class="row">
+        <span class="pill pill-ok"><i class="ph ph-check-circle"></i> Live</span>
+        <span class="pill">Draft</span>
+        <span class="pill"><i class="ph ph-globe"></i> lydialott.com</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Public site — feel</div>
+    <div class="sample">
+      <div class="sample-bar">lydialott.com</div>
+      <div class="sample-body">
+        <div class="artist-name">Lydia Lott</div>
+        <div class="artist-role">Painter · London</div>
+        <p class="artist-bio">Working between figurative oil and large-format charcoal. Recent shows at the Approach and Hales Gallery. Commissions open through the studio.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const SWATCH_TOKENS = ['--accent','--accent-soft','--accent-hover','--bg','--bg2','--surface','--surface2','--border','--text','--text2','--success','--warn','--danger'];
+function isDark(){return document.documentElement.getAttribute('data-theme')==='dark';}
+function renderSwatches(){
+  const cs=getComputedStyle(document.documentElement);
+  document.getElementById('swatches').innerHTML=SWATCH_TOKENS.map(t=>{
+    const v=cs.getPropertyValue(t).trim()||'—';
+    return `<div class="sw"><div class="chip" style="background:${v}"></div><div class="meta"><div class="name">${t}</div><div class="val">${v}</div></div></div>`;
+  }).join('');
+}
+function toggleTheme(){
+  if(isDark()){document.documentElement.removeAttribute('data-theme');localStorage.setItem('dl-theme','light');}
+  else{document.documentElement.setAttribute('data-theme','dark');localStorage.setItem('dl-theme','dark');}
+  document.getElementById('themeLbl').textContent=isDark()?'Light':'Dark';
+  renderSwatches();
+}
+document.getElementById('themeLbl').textContent=isDark()?'Dark':'Light';
+renderSwatches();
+</script>
+</body>
+</html>

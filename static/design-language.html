@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Adze — Design Language (live)</title>
+<link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+<script>if(localStorage.getItem('dl-theme')!=='light')document.documentElement.setAttribute('data-theme','dark');</script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Fallback tokens — overwritten at load with values parsed live from
+   _shared/dashboard.html. Kept here only so the page isn't blank if the
+   fetch fails. */
+:root {
+    --accent:#1C4F82; --accent-soft:#6b8cae; --accent-hover:#163f68; --accent-text:#fff;
+    --bg:#f5f2ed; --bg2:#ebe7e0; --surface:#fff; --surface2:#f0ede7; --border:#ddd8cf;
+    --text:#2a2a28; --text2:#5a5750; --success:#4a9a6a; --warn:#c8a840; --danger:#c0392b;
+    --radius:6px; --mono:'Monaco','Menlo',monospace;
+    --heading-font:'Cardo',Georgia,serif; --body-font:'Inter',-apple-system,sans-serif;
+}
+html[data-theme="dark"] {
+    --accent:#99cdff; --accent-soft:#7ea3c4; --accent-hover:#b8ddff; --accent-text:#1a1a1e;
+    --bg:#1a1a1e; --bg2:#222226; --surface:#2c2c30; --surface2:#343438; --border:#3e3e44;
+    --text:#e8e6e0; --text2:#aaa79e; --success:#6dca8a; --warn:#e0c060; --danger:#e74c3c;
+}
+
+body { font-family: var(--body-font); background: var(--bg); color: var(--text); transition: background .3s, color .3s; line-height: 1.5; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 28px 120px; }
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 28px; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+.brand { display: flex; align-items: baseline; gap: 12px; }
+.brand h1 { font-family: var(--heading-font); font-weight: 700; letter-spacing: -0.02em; font-size: 21px; }
+.brand .sub { font-size: 12px; color: var(--text2); }
+.live-note { max-width: 1040px; margin: 0 auto 30px; padding: 0 28px; }
+.live-note .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2);
+    background: var(--bg2); border: 1px solid var(--border); padding: 5px 11px; border-radius: 999px; }
+.live-note .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.live-note.err .pill { color: var(--danger); }
+.live-note.err .pill .dot { background: var(--danger); }
+
+.section { margin-bottom: 48px; }
+.h { font-family: var(--heading-font); font-size: 20px; font-weight: 400; margin-bottom: 4px; }
+.note { font-size: 12px; color: var(--text2); margin-bottom: 18px; max-width: 72ch; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.sw { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.sw .chip { height: 46px; }
+.sw .meta { padding: 6px 8px; font-size: 10px; }
+.sw .meta .name { font-family: var(--mono); }
+.sw .meta .val { color: var(--text2); font-family: var(--mono); }
+
+table.matrix { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.matrix th, table.matrix td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table.matrix th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); font-weight: 600; }
+table.matrix td:first-child { font-family: var(--mono); color: var(--text2); white-space: nowrap; }
+table.matrix td.v { font-family: var(--mono); }
+table.matrix .diff { color: var(--warn); font-weight: 600; }
+table.matrix tr:hover { background: var(--bg2); }
+
+.type-row { display: flex; align-items: baseline; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.type-row .lbl { font-size: 10px; color: var(--text2); font-family: var(--mono); width: 130px; flex-shrink: 0; }
+
+.frame-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.frame-card .fc-head { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2);
+    font-weight: 600; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg2);
+    display: flex; align-items: center; gap: 8px; }
+.frame-card .fc-head code { font-family: var(--mono); text-transform: none; letter-spacing: 0; color: var(--text2); }
+.frame-card iframe { width: 100%; border: 0; display: block; }
+
+.theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 6px 11px; font-size: 12px; border-radius: var(--radius); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; font-family: var(--body-font); }
+.theme-toggle:hover { border-color: var(--accent); color: var(--text); background: var(--surface2); }
+code.inline { font-family: var(--mono); font-size: 11px; background: var(--bg2); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">
+    <h1><span style="color:var(--accent);font-weight:400">[</span>Adze<span style="color:var(--accent);font-weight:400">]</span></h1>
+    <span class="sub">design language — <strong>live</strong> from source</span>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()"><i class="ph ph-moon"></i><span id="themeLbl">Dark</span></button>
+</div>
+
+<div class="live-note" id="liveNote">
+  <span class="pill"><span class="dot"></span> <span id="liveMsg">Loading CSS from live source…</span></span>
+</div>
+
+<div class="wrap">
+
+  <section class="section">
+    <div class="h">Colour tokens</div>
+    <p class="note">Parsed live from <code class="inline">_shared/dashboard.html</code> on load — toggle top-right to compare light/dark.</p>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <section class="section">
+    <div class="h">Tokens — dashboard vs admin</div>
+    <p class="note">Read live from both source files right now. Yellow = the two admin surfaces disagree. (Public pages — portal/home/intake — additionally use <code class="inline">--radius: 8px</code> vs the 6px here; they aren't fetched live.)</p>
+    <div class="card">
+      <table class="matrix">
+        <thead><tr><th>token</th><th>dashboard.html</th><th>admin.html</th></tr></thead>
+        <tbody id="matrixBody"><tr><td>…</td><td>…</td><td>…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Type</div>
+    <p class="note">Headings: <code class="inline">JetBrains Mono</code> (upright, often uppercase + tracked for section labels). Body/UI: <code class="inline">Inter</code>. Code: JetBrains Mono.</p>
+    <div class="card">
+      <div class="type-row"><span class="lbl">display 28 / 700</span><span style="font-family:var(--heading-font);font-weight:700;letter-spacing:-0.02em;font-size:28px;">Lydia Lott</span></div>
+      <div class="type-row"><span class="lbl">section label</span><span style="font-family:var(--heading-font);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;font-size:14px;">Studio dashboard</span></div>
+      <div class="type-row"><span class="lbl">body 13</span><span style="font-size:13px;">The quick brown fox edits an artist page.</span></div>
+      <div class="type-row"><span class="lbl">ui 11 / 600</span><span style="font-size:11px;font-weight:600;">Publish changes</span></div>
+      <div class="type-row"><span class="lbl">label 10 caps</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text2);">Domain status</span></div>
+      <div class="type-row"><span class="lbl">mono 11</span><span style="font-family:var(--mono);font-size:11px;">artists/lydialott/config.json</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Dashboard surface — live components</div>
+    <p class="note">Rendered in an isolated iframe using the <strong>actual CSS</strong> fetched from <code class="inline">/api/adze/dashboard</code>. Change the source file → this updates on refresh.</p>
+    <div class="frame-card">
+      <div class="fc-head"><i class="ph ph-broadcast"></i> live <code>_shared/dashboard.html</code></div>
+      <iframe id="frame-dashboard" title="dashboard components"></iframe>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="h">Admin surface — live components</div>
+    <p class="note">Isolated iframe using the actual CSS from <code class="inline">/api/adze/admin</code>. Note the buttons/pills differ from the dashboard surface — that's the real divergence, not a mock.</p>
+    <div class="frame-card">
+      <div class="fc-head"><i class="ph ph-broadcast"></i> live <code>_shared/admin.html</code></div>
+      <iframe id="frame-admin" title="admin components"></iframe>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const SWATCH_TOKENS = ['--accent','--accent-soft','--accent-hover','--bg','--bg2','--surface','--surface2','--border','--text','--text2','--success','--warn','--danger'];
+const MATRIX_TOKENS = [
+  ['--radius','--radius', 'light'],
+  ['--accent','--accent', 'light'],
+  ['--text2 (light)','--text2', 'light'],
+  ['--text2 (dark)','--text2', 'dark'],
+  ['--bg (light)','--bg', 'light'],
+  ['--surface (light)','--surface', 'light'],
+];
+const FRAMES = [];               // {iframe, doc}
+let TOK = null;                  // parsed dashboard tokens {light,dark}
+
+function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+
+// ── parse a CSS string into token maps for :root and [data-theme=dark] ──
+function blockDecls(css, re) {
+  const m = css.match(re); if (!m) return {};
+  const out = {};
+  m[1].replace(/(--[\w-]+)\s*:\s*([^;]+);/g, (_, k, v) => { out[k] = v.trim(); return _; });
+  return out;
+}
+function parseTokens(css) {
+  return {
+    light: blockDecls(css, /:root\s*\{([^}]*)\}/),
+    dark:  blockDecls(css, /\[data-theme=["']dark["']\]\s*\{([^}]*)\}/),
+  };
+}
+
+// ── apply parsed dashboard tokens to THIS page so all chrome is live ──
+function applyParentTokens(t) {
+  const decl = o => Object.entries(o).map(([k, v]) => `${k}:${v};`).join('');
+  let el = document.getElementById('parentTokens');
+  if (!el) { el = document.createElement('style'); el.id = 'parentTokens'; document.head.appendChild(el); }
+  el.textContent = `:root{${decl(t.light)}} html[data-theme="dark"]{${decl(t.dark)}}`;
+}
+
+function renderSwatches() {
+  if (!TOK) return;
+  const map = isDark() ? { ...TOK.light, ...TOK.dark } : TOK.light;
+  document.getElementById('swatches').innerHTML = SWATCH_TOKENS.map(t => {
+    const v = map[t] || '—';
+    return `<div class="sw"><div class="chip" style="background:${v}"></div><div class="meta"><div class="name">${t}</div><div class="val">${v}</div></div></div>`;
+  }).join('');
+}
+
+function renderMatrix(dash, adm) {
+  document.getElementById('matrixBody').innerHTML = MATRIX_TOKENS.map(([label, key, scope]) => {
+    const dv = (dash[scope] || {})[key] || '—';
+    const av = (adm[scope]  || {})[key] || '—';
+    const cls = dv !== av ? ' diff' : '';
+    return `<tr><td>${label}</td><td class="v${cls}">${dv}</td><td class="v${cls}">${av}</td></tr>`;
+  }).join('');
+}
+
+// ── mount real CSS + demo markup in a style-isolated iframe ──
+const FONT_LINKS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">';
+const FRAME_OVERRIDES = `
+  html,body{height:auto!important;min-height:0!important;overflow:visible!important;}
+  body{padding:20px!important;background:var(--bg)!important;color:var(--text)!important;}
+  .dlg-grp{margin-bottom:24px;} .dlg-grp:last-child{margin-bottom:0;}
+  .dlg-h{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text2);margin:0 0 10px;font-weight:600;font-family:var(--body-font);}
+  .dlg-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+  /* pin the normally-fixed/animated toasts in place so they show inline */
+  .ad-toast{position:static!important;transform:none!important;opacity:1!important;display:inline-block;box-shadow:none!important;}
+  .toast{opacity:1!important;animation:none!important;}
+`;
+
+function mountFrame(iframeId, realCSS, demoHTML) {
+  const iframe = document.getElementById(iframeId);
+  const d = iframe.contentDocument;
+  d.open(); d.write('<!DOCTYPE html><html><head></head><body></body></html>'); d.close();
+  if (isDark()) d.documentElement.setAttribute('data-theme', 'dark');
+  d.head.innerHTML = FONT_LINKS;
+  const real = d.createElement('style'); real.textContent = realCSS; d.head.appendChild(real);
+  const over = d.createElement('style'); over.textContent = FRAME_OVERRIDES; d.head.appendChild(over);
+  const ph = d.createElement('script'); ph.src = 'https://unpkg.com/@phosphor-icons/web@2.1.1'; d.head.appendChild(ph);
+  d.body.innerHTML = demoHTML;
+  const fit = () => { iframe.style.height = (d.documentElement.scrollHeight) + 'px'; };
+  try { new ResizeObserver(fit).observe(d.body); } catch (e) {}
+  ph.addEventListener('load', fit);
+  [200, 500, 1200, 2500].forEach(ms => setTimeout(fit, ms));
+  FRAMES.push({ iframe, doc: d });
+}
+
+const DASHBOARD_DEMO = `
+<div class="dlg-grp"><div class="dlg-h">Buttons — base &lt;button&gt; + variants</div><div class="dlg-row">
+  <button>Primary</button>
+  <button class="btn-ghost">Ghost</button>
+  <button class="btn-danger">Danger</button>
+  <button class="btn-success">Success</button>
+  <button class="btn-publish"><i class="ph ph-rocket-launch"></i> Publish</button>
+  <button class="btn-sm">Small</button>
+</div></div>
+<div class="dlg-grp"><div class="dlg-h">Tab bar</div>
+  <div class="tab-bar">
+    <button class="tab active"><i class="ph ph-pencil-simple"></i><span class="tab-label">Manual Edit</span></button>
+    <button class="tab"><i class="ph ph-images"></i><span class="tab-label">Assets</span></button>
+    <button class="tab"><i class="ph ph-chart-line"></i><span class="tab-label">Analytics</span></button>
+    <button class="tab"><i class="ph ph-terminal-window"></i><span class="tab-label">Terminal</span></button>
+  </div>
+</div>
+<div class="dlg-grp"><div class="dlg-h">Sidebar page list</div>
+  <ul class="page-list" style="max-width:220px;">
+    <li class="page-item active"><div class="page-item-title">Home</div><div class="page-item-slug">/home</div></li>
+    <li class="page-item"><div class="page-item-title">About</div><div class="page-item-slug">/about</div></li>
+    <li class="page-item"><div class="page-item-title">Writing</div><div class="page-item-slug">/writing</div></li>
+  </ul>
+</div>
+<div class="dlg-grp"><div class="dlg-h">Form controls</div><div class="dlg-row">
+  <input placeholder="text input" style="width:200px;">
+  <select><option>Select…</option></select>
+  <textarea style="width:240px;height:54px;" placeholder="textarea"></textarea>
+</div></div>
+<div class="dlg-grp"><div class="dlg-h">Toasts — .toast (colored, corner)</div><div class="dlg-row">
+  <div class="toast success">Published</div>
+  <div class="toast info">Heads up</div>
+</div></div>
+<div class="dlg-grp"><div class="dlg-h">Login box</div>
+  <div class="login-box" style="max-width:340px;">
+    <h1>Adze</h1>
+    <p class="login-subtitle">Sign in to your studio</p>
+    <div class="form-group"><label>Admin token</label><input type="password" value="••••••••"></div>
+    <button style="width:100%;padding:10px;">Sign in</button>
+  </div>
+</div>`;
+
+const ADMIN_DEMO = `
+<div class="dlg-grp"><div class="dlg-h">Buttons — .btn + variants</div><div class="dlg-row">
+  <button class="btn btn-primary">Primary</button>
+  <button class="btn btn-ghost">Ghost</button>
+  <button class="btn btn-danger">Danger</button>
+  <button class="btn btn-primary btn-sm">Small</button>
+</div></div>
+<div class="dlg-grp"><div class="dlg-h">Top tabs — .tabs / .tab</div>
+  <div class="tabs">
+    <div class="tab active">Overview</div>
+    <div class="tab">Artists</div>
+    <div class="tab">Leads</div>
+    <div class="tab">Extras</div>
+  </div>
+</div>
+<div class="dlg-grp"><div class="dlg-h">Status pills</div><div class="dlg-row">
+  <span class="ad-pill ad-pill-ok"><i class="ph ph-check-circle"></i> Live</span>
+  <span class="ad-pill ad-pill-fish">Featured</span>
+  <span class="ad-pill ad-pill-dim">Draft</span>
+  <span class="ad-pill"><i class="ph ph-globe"></i> lydialott.com</span>
+</div></div>
+<div class="dlg-grp"><div class="dlg-h">Stat blocks</div>
+  <div class="ad-stats">
+    <div class="ad-stat"><div class="ad-stat-val">1,284</div><div class="ad-stat-lbl">Visits 30d</div></div>
+    <div class="ad-stat"><div class="ad-stat-val">7</div><div class="ad-stat-lbl">Pages</div></div>
+    <div class="ad-stat"><div class="ad-stat-val">42</div><div class="ad-stat-lbl">Assets</div></div>
+  </div>
+</div>
+<div class="dlg-grp"><div class="dlg-h">Info card + fields</div>
+  <div class="ad-card" style="max-width:480px;">
+    <div class="ad-card-head"><i class="ph ph-info"></i> Artist details</div>
+    <div class="ad-fields">
+      <div class="ad-field"><div class="ad-label">Name</div><div class="ad-value">Lydia Lott</div></div>
+      <div class="ad-field"><div class="ad-label">Slug</div><div class="ad-value">lydialott</div></div>
+      <div class="ad-field"><div class="ad-label">Domain</div><div class="ad-value">lydialott.com</div></div>
+    </div>
+  </div>
+</div>
+<div class="dlg-grp"><div class="dlg-h">Toast — .ad-toast (dark, centered)</div><div class="dlg-row">
+  <span class="ad-toast">Saved</span>
+</div></div>`;
+
+// ── extract all <style> CSS from a fetched HTML document (no script exec) ──
+function extractCSS(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  return [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n');
+}
+
+async function boot() {
+  try {
+    const [dashHtml, admHtml] = await Promise.all([
+      fetch('/api/adze/dashboard').then(r => { if (!r.ok) throw new Error('dashboard ' + r.status); return r.text(); }),
+      fetch('/api/adze/admin').then(r => { if (!r.ok) throw new Error('admin ' + r.status); return r.text(); }),
+    ]);
+    const dashCSS = extractCSS(dashHtml), admCSS = extractCSS(admHtml);
+    const dashTok = parseTokens(dashCSS), admTok = parseTokens(admCSS);
+
+    TOK = dashTok;
+    applyParentTokens(dashTok);
+    renderSwatches();
+    renderMatrix(dashTok, admTok);
+    mountFrame('frame-dashboard', dashCSS, DASHBOARD_DEMO);
+    mountFrame('frame-admin', admCSS, ADMIN_DEMO);
+
+    document.getElementById('liveMsg').textContent =
+      'CSS pulled live from /api/adze/dashboard + /api/adze/admin — reflects source as of page load';
+  } catch (e) {
+    document.getElementById('liveNote').classList.add('err');
+    document.getElementById('liveMsg').textContent =
+      'Could not fetch live source (' + e.message + ') — showing fallback tokens only';
+    // still show swatches from fallback :root
+    TOK = { light: {}, dark: {} };
+  }
+}
+
+function toggleTheme() {
+  const dark = isDark();
+  if (dark) { document.documentElement.removeAttribute('data-theme'); localStorage.setItem('dl-theme', 'light'); }
+  else { document.documentElement.setAttribute('data-theme', 'dark'); localStorage.setItem('dl-theme', 'dark'); }
+  document.getElementById('themeLbl').textContent = dark ? 'Light' : 'Dark';
+  renderSwatches();
+  FRAMES.forEach(({ iframe, doc }) => {
+    if (dark) doc.documentElement.removeAttribute('data-theme');
+    else doc.documentElement.setAttribute('data-theme', 'dark');
+    // nudge a re-fit after the theme transition
+    setTimeout(() => { iframe.style.height = doc.documentElement.scrollHeight + 'px'; }, 60);
+  });
+}
+
+document.getElementById('themeLbl').textContent = isDark() ? 'Dark' : 'Light';
+boot();
+</script>
+</body>
+</html>

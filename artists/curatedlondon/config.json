@@ -1,0 +1,32 @@
+{
+    "name": "Curated London",
+    "slug": "curatedlondon",
+    "domain": "curated.london",
+    "admin_token": "keenfern",
+    "description": "",
+    "contact_email": "",
+    "workspace": "lastplace",
+    "slack_announced": true,
+    "slack_channel_id": "C0B6U1XHWFK",
+    "slack_pinned_ts": "1779981065.269569",
+    "figma_url": "",
+    "lead": {
+        "active": true,
+        "contact": "Arthur, Simon boss",
+        "stage": "1",
+        "fish_size": "l",
+        "instagram": "",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1779981066,
+        "updated_at": 1780526224
+    },
+    "intake_token": "wE6qU-OV8JnAjQWMm1KTrVUDZC9uM-0D",
+    "last_login": 1780394064,
+    "last_login_ip": "178.104.233.5"
+}

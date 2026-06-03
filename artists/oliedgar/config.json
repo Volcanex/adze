@@ -4,5 +4,9 @@
     "domain": "oliedgar.com",
     "admin_token": "oli123",
     "description": "",
-    "contact_email": ""
+    "contact_email": "",
+    "slack_channel_id": "C0B6K3U622J",
+    "slack_pinned_ts": "1779930847.409169",
+    "slack_announced": true,
+    "intake_token": "6RLg8WK2BdpnVuJTJQD8G4psrQjYPHZ7"
 }

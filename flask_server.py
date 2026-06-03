@@ -502,13 +502,23 @@ window.addEventListener('pagehide',send);
         except Exception as e:
             print(f"Error loading artist admin API: {e}")
 
-        # Register the aider WebSocket bridge (pty per artist over /aider namespace)
+        # Register the Terminal Access WebSocket bridge (tmux/pty per artist).
         try:
-            import aider_bridge
-            aider_bridge.register(self.socketio)
-            print("Registered aider WebSocket bridge on /aider")
+            import terminal_bridge
+            terminal_bridge.register(self.socketio)
+            print("Registered Terminal Access WebSocket bridge on /terminal")
         except Exception as e:
-            print(f"Error registering aider bridge: {e}")
+            print(f"Error registering terminal bridge: {e}")
+
+        # Register the Auto-Code HTTP+SSE proxy — runs `opencode serve`
+        # inside each per-artist sandbox and reverse-proxies it. Replaces
+        # the previous TUI-in-xterm WebSocket bridge.
+        try:
+            import autocode_proxy
+            autocode_proxy.register(self.app)
+            print("Registered Auto-Code HTTP proxy on /api/adze/autocode")
+        except Exception as e:
+            print(f"Error registering autocode proxy: {e}")
 
     def _register_artist_features(self):
         """Register per-artist feature blueprints based on config.json features list."""
