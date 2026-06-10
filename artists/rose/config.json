@@ -26,5 +26,8 @@
     "slack_channel_id": "C0B7FED349E",
     "slack_pinned_ts": "1779930848.335239",
     "slack_announced": true,
-    "figma_url": ""
+    "figma_url": "",
+    "last_login": 1780762947,
+    "last_login_ip": "148.252.147.214",
+    "features": ["rose_admin"]
 }

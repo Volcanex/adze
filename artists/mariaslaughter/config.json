@@ -4,17 +4,18 @@
     "slug": "mariaslaughter",
     "domain": "mariaslaughter.online",
     "admin_token": "adele",
+    "features": ["maria_admin"],
     "description": "Dark Arts & Photography - Digital Necropolis",
     "contact_email": "fallenangelselvatica@gmail.com",
-    "last_login": 1780486857,
-    "last_login_ip": "148.252.140.145",
+    "last_login": 1780568067,
+    "last_login_ip": "80.1.131.201",
     "slack_channel_id": "C0B6K3TR822",
     "slack_pinned_ts": "1779930843.390129",
     "slack_announced": true,
     "intake_token": "PUSSRrgX2XaMTnvs2ALKBtjIaRMPyyMl",
     "figma_url": "",
     "lead": {
-        "active": false,
+        "active": true,
         "contact": "",
         "stage": "4",
         "fish_size": null,
@@ -27,6 +28,6 @@
         "contacted": false,
         "original_lead_id": null,
         "created_at": 1780484261,
-        "updated_at": 1780484261
+        "updated_at": 1780611405
     }
 }

@@ -44,7 +44,7 @@ body {
 }
 
 a {
-    color: #ffff00;
+    color: #c9a573;
     text-decoration: none;
     font-weight: bold;
 }
@@ -65,13 +65,13 @@ center {
 
 table {
     margin: 0 auto;
-    border-color: #ff0000;
-    border-style: outset;
+    border-color: transparent;
+    border-style: none;
     background-color: #000000;
 }
 
 th, td {
-    color: #ffff00;
+    color: #c9a573;
     padding: 5px;
 }
 
@@ -88,7 +88,7 @@ img {
     width: 200px; /* From music page */
     height: 100vh; /* From music page */
     background: linear-gradient(180deg, #1a0000 0%, #330000 100%);
-    border-right: 3px solid #660000;
+    border-right: none;
     padding: 20px;
     overflow-y: auto;
     z-index: 100;
@@ -131,9 +131,9 @@ img {
 .nav-link {
     display: block;
     padding: 10px 8px;
-    color: #ffff00 !important;
+    color: #c9a573 !important;
     text-decoration: none;
-    border: 2px solid #660000;
+    border: none;
     border-radius: 0;
     transition: all 0.3s;
     background: #000000;
@@ -143,7 +143,7 @@ img {
 
 .nav-link:hover {
     background: #660000;
-    border-color: #ff0000;
+    border-color: #000000;
     color: #ffffff !important;
     padding-left: 15px;
 }
@@ -161,7 +161,7 @@ img {
     right: 20px; /* From music page */
     text-align: center;
     padding-top: 15px;
-    border-top: 2px solid #660000;
+    border-top: none;
 }
 
 .main-content-1996 {
@@ -194,7 +194,7 @@ img {
 .section-heading {
     font-family: 'Cardinal', serif;
     font-size: 22px;
-    color: #ffff00;
+    color: #c9a573;
     text-shadow: 1px 1px 2px #ff0000;
     letter-spacing: 3px;
     margin: 0 0 24px;
@@ -253,7 +253,7 @@ font {
 }
 
 b {
-    color: #ffff00;
+    color: #c9a573;
     text-shadow: 1px 1px 2px #ff0000;
     font-family: 'Aniron', serif;
 }
@@ -273,12 +273,12 @@ b {
 
 .gallery-grid img {
     margin: 10px;
-    border: 3px solid #660000;
+    border: none;
     transition: all 0.3s;
 }
 
 .gallery-grid img:hover {
-    border-color: #ff0000;
+    border-color: #000000;
     transform: scale(1.05);
     box-shadow: 0 0 20px #ff0000;
 }
@@ -303,7 +303,7 @@ b {
         height: auto;
         order: 2; /* Place below main content */
         border-right: none;
-        border-top: 3px solid #660000;
+        border-top: none;
         padding: 10px;
         box-shadow: none;
         transform: none;
@@ -395,10 +395,10 @@ b {
         </div>
 
         <div class="sidebar-title">
-            <font size="3" color="#ffff00"><b>MARIA<br>SLAUGHTER</b></font>
+            <font size="3" color="#c9a573"><b>MARIA<br>SLAUGHTER</b></font>
         </div>
 
-        <hr color="#660000" size="2">
+        <hr color="#000000" size="2">
 
         <div class="sidebar-nav">
             <a href="../home" class="nav-link">
@@ -407,8 +407,8 @@ b {
             <a href="../gallery" class="nav-link">
                 <font size="2">☩ GALLERY</font>
             </a>
-            <a href="../music" class="nav-link">
-                <font size="2">☩ MUSIC</font>
+            <a href="https://sacralforamina.bandcamp.com/" target="_blank" class="nav-link">
+                <font size="2">☩ BANDCAMP</font>
             </a>
             <a href="https://instagram.com/whitethornapple" target="_blank" class="nav-link">
                 <font size="2">☩ INSTAGRAM</font>
@@ -418,22 +418,10 @@ b {
             </a>
         </div>
 
-        <hr color="#660000" size="2">
-
-        <div class="sidebar-section">
-            <font size="2" color="#bb0000"><b>COLLECTIONS</b></font><br><br>
-            <font size="1">
-            → Dark Arts<br>
-            → Photography<br>
-            → Sound Works<br>
-            → Archive<br>
-            </font>
-        </div>
+        <hr color="#000000" size="2">
 
         <div class="sidebar-footer">
             <font size="1" color="#880000">
-            Est. MCMXCVI<br>
-            Digital Necropolis
             </font>
             <br><br>
             <img src="../assets/gifs/spider.webp" width="60">
@@ -444,8 +432,15 @@ b {
     <div class="main-content-1996">
         <div class="section hero">
             <h1 class="gothic-title">MARIA SLAUGHTER</h1>
+            <div class="tagline"><b>with un-angels hovering like flies round the ordure...</b></div>
             <img src="../assets/gifs/jump.webp" width="100">
-            <div class="tagline"><b>REVIVALIST OF THE DARK ARTS</b></div>
+        </div>
+
+        <div class="section">
+            <div class="section-heading">UPCOMING SHOWS</div>
+            <font size="2">
+            Trade - 19.06.2026 - The Lubber Fiend, Newcastle Upon Tyne
+            </font>
         </div>
 
         <div class="section">
@@ -453,16 +448,16 @@ b {
                 <tr>
                     <td align="center">
                         <a href="../gallery">
-                            <img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="240" border="0">
+                            <img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="240" height="240" border="0">
                             <br>
-                            <font size="2"><b>ENTER GALLERY</b></font>
+                             <font size="2"><b>GALLERY</b></font>
                         </a>
                     </td>
                     <td align="center">
-                        <a href="../music">
-                            <img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="240" border="0">
+                        <a href="https://soundcloud.com/adeleclifford" target="_blank">
+                            <img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="240" height="240" border="0">
                             <br>
-                            <font size="2"><b>HEAR THE SOUNDS</b></font>
+                             <font size="2"><b>SOUNDCLOUD</b></font>
                         </a>
                     </td>
                 </tr>
@@ -471,28 +466,19 @@ b {
 
         <div class="section">
             <div class="section-heading">LATEST WORKS</div>
-            <table border="5" cellpadding="10">
-                <tr>
-                    <td align="center">
-                        <img src="../assets/images/2025-10-25_17-29-26_UTC_1.jpg" width="200" border="0">
-                    </td>
-                    <td align="center">
-                        <img src="../assets/images/2023-10-05_16-13-19_UTC_1.jpg" width="200" border="0">
-                    </td>
-                    <td align="center">
-                        <img src="../assets/images/2025-09-16_20-53-46_UTC_1.jpg" width="200" border="0">
-                    </td>
-                </tr>
-            </table>
+            <font size="2">
+            - Sacral Foramina - 04.04.2026 - Little Buildings<br>
+            - Extravenous Therapy 26.11.2025 - Star and Shadow Cinema
+            </font>
         </div>
 
         <div class="section">
             <img src="../assets/gifs/email.webp" width="180" border="0">
-            <div class="contact-email"><b>FALLENANGELSELVATICA@GMAIL.COM</b></div>
+            <div class="contact-email"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></div>
         </div>
 
         <div class="section">
-            <div class="footer-meta">&copy; MARIA SLAUGHTER &mdash; DIGITAL NECROPOLIS</div>
+            <div class="footer-meta"></div>
             <img src="../assets/gifs/bottom.gif" class="border-bottom">
         </div>
     </div>

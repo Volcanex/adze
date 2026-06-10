@@ -17,12 +17,12 @@ body {
     overflow-x: hidden;
 }
 
-.page { max-width: 414px; margin: 0 auto; position: relative; padding-bottom: 120px; }
+.page { max-width: 414px; margin: 0 auto; position: relative; padding-top: 54px; padding-bottom: 120px; min-height: 100vh; }
 
 .header {
     height: 54px; background: #fff;
-    position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between;
     padding: 0 13px;
 }
 .brand { font-weight: 250; font-size: 36px; line-height: 60px; color: #000; text-decoration: none; }
@@ -37,15 +37,15 @@ body {
     position: absolute;
     top: 4px;
     box-sizing: border-box;
-    height: 22px;
-    border: 1px solid #000;
-    background: none;
+    height: 26px;
+    border: 0;
+    background: #000;
     transform-origin: center;
     transition: transform 0.35s cubic-bezier(.5,0,.2,1);
 }
-.menu-icon span:nth-child(1) { left: 2px;    width: 20px; }
-.menu-icon span:nth-child(2) { left: 19.5px; width: 14px; }
-.menu-icon span:nth-child(3) { left: 39.5px; width: 3.5px; }
+.menu-icon span:nth-child(1) { left: 2px;    width: 1px; }
+.menu-icon span:nth-child(2) { left: 19.5px; width: 1px; }
+.menu-icon span:nth-child(3) { left: 39.5px; width: 1px; }
 .menu-icon[aria-expanded="true"] span:nth-child(1) { transform: rotate(-39.6deg); }
 .menu-icon[aria-expanded="true"] span:nth-child(2) { transform: rotate(-32.26deg); }
 .menu-icon[aria-expanded="true"] span:nth-child(3) { transform: rotate(-11.9deg); }
@@ -53,27 +53,33 @@ body {
 /* Open menu — scattered cluster on white plates, mirrors the home-page scatter */
 .menu-overlay {
     position: fixed;
-    top: 54px; left: 50%;
-    transform: translateX(-50%);
-    width: 100%; max-width: 414px;
-    height: 150px;
+    top: 56px; left: 13px;
     z-index: 100;
-    display: none;
-}
-.menu-overlay.open { display: block; }
-.menu-overlay a {
-    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
     background: #fff;
-    padding: 0 8px;
-    font-weight: 400; font-size: 36px; line-height: 60px;
+    padding: 10px 18px 12px;
+    border-radius: 2px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
+}
+.menu-overlay.open { opacity: 1; visibility: visible; transform: translateY(0); transition: opacity 0.22s ease, transform 0.22s ease; }
+.menu-overlay a {
+    font-weight: 400; font-size: 26px; line-height: 1.3;
     text-decoration: none; white-space: nowrap;
     transition: opacity 0.15s ease;
 }
 .menu-overlay a:hover { opacity: 0.55; }
-.menu-overlay .m-works       { left: 29px;  top: 6px;  color: #0000FF; }
-.menu-overlay .m-about       { left: 199px; top: 6px;  color: #FF0033; }
-.menu-overlay .m-exhibitions { left: 5px;   top: 41px; color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.4); }
-.menu-overlay .m-contact     { left: 275px; top: 39px; color: #8C00FF; }
+.menu-overlay .m-works       { color: #0000FF; }
+.menu-overlay .m-about       { color: #FF0033; }
+.menu-overlay .m-exhibitions { color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
+.menu-overlay .m-contact     { color: #8C00FF; }
 
 .back-link {
     display: inline-block;
@@ -84,10 +90,13 @@ body {
 }
 .back-link:hover { opacity: 0.55; }
 
-.work-image {
+.work-figure {
     margin: 16px 13px 0;
     width: calc(100% - 26px);
+}
+.work-image {
     display: block;
+    width: 100%;
     height: auto;
 }
 
@@ -121,7 +130,7 @@ body {
 .detail-list dd { }
 
 .footer {
-    margin-top: 80px;
+    position: absolute; bottom: 0; left: 0; right: 0;
     padding: 14px 13px 24px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -133,12 +142,12 @@ body {
 .footer .center { text-align: center; }
 
 @media (min-width: 768px) {
-    .page { max-width: 980px; padding-bottom: 160px; }
+    .page { max-width: 980px; padding-top: 72px; padding-bottom: 160px; }
     .header { padding: 0 32px; height: 72px; }
     .brand { font-size: 44px; }
-    .menu-overlay { top: 72px; }
+    .menu-overlay { top: 80px; left: 32px; }
     .back-link { padding: 28px 32px 0; font-size: 15px; }
-    .work-image { margin: 24px 32px 0; width: calc(100% - 64px); aspect-ratio: 16/10; }
+    .work-figure { margin: 24px 32px 0; width: calc(100% - 64px); }
     .title-row { padding: 48px 32px 0; display: grid; grid-template-columns: 1fr 280px; gap: 32px; align-items: baseline; }
     .work-title { font-size: 56px; }
     .work-meta { font-size: 17px; margin-top: 0; text-align: right; }
@@ -146,9 +155,22 @@ body {
     .detail-list { padding: 32px 32px 0; font-size: 15px; }
     .footer { padding: 20px 32px 32px; font-size: 16px; }
 }
+
+/* loading veil: opaque white over the whole page until the hero image is ready */
+#page-veil {
+    position: fixed; inset: 0;
+    background: #fff;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    animation: veil-auto 0.5s ease 4s forwards; /* backstop if JS never fires */
+}
+#page-veil.hide { opacity: 0; pointer-events: none; animation: none; }
+@keyframes veil-auto { to { opacity: 0; visibility: hidden; } }
 </style>
 
 <html>
+<div id="page-veil"></div>
 
 <div class="page">
     <header class="header">
@@ -167,24 +189,21 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
-    <img class="work-image" src="../../assets/Works_2022_Skip_Kids.jpeg" alt="">
+    <figure class="work-figure" style="aspect-ratio:1549/2059">
+        <img class="work-image" src="../../assets/work-her-cup-good.jpg" alt="Her Cup" decoding="async">
+    </figure>
 
     <div class="title-row">
         <h1 class="work-title">Her Cup</h1>
         <div class="work-meta">
-            <span>2022</span><span>Oil on linen</span><span>120 × 90 cm</span>
+            <span>2022</span><span>Oil on canvas</span>
         </div>
     </div>
 
-    <div class="work-desc">
-        A short, dummy description for <em>Her Cup</em>. Replace this paragraph with notes on the work — what it explores, the materials, the moment it was made in. The image above is a placeholder; swap it for the real photograph when you have one.
-    </div>
 
     <dl class="detail-list">
         <dt>Year</dt><dd>2022</dd>
-        <dt>Medium</dt><dd>Oil on linen</dd>
-        <dt>Dimensions</dt><dd>120 × 90 cm</dd>
-        <dt>Status</dt><dd>Available</dd>
+        <dt>Medium</dt><dd>Oil on canvas</dd>
     </dl>
 
     <footer class="footer">
@@ -207,6 +226,30 @@ body {
     if (close) close.addEventListener('click', shut);
     menu.addEventListener('click', function(e){ if (e.target === menu) shut(); });
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') shut(); });
+})();
+</script>
+
+<script>
+(function(){
+  var veil=document.getElementById('page-veil');
+  var done=false;
+  function reveal(){ if(done) return; done=true;
+    if(veil){ veil.classList.add('hide'); setTimeout(function(){ if(veil.parentNode) veil.parentNode.removeChild(veil); }, 600); } }
+  var pending=0;
+  function dec(){ if(--pending<=0) reveal(); }
+  // wait for the displayed (good-tier) images
+  document.querySelectorAll('img.work-image, img.exh-image, img.about-image').forEach(function(img){
+    if(img.complete && img.naturalWidth) return;
+    pending++; img.addEventListener('load', dec, {once:true}); img.addEventListener('error', dec, {once:true});
+  });
+  // wait for the body::before full-bleed background (home page)
+  try {
+    var bb=getComputedStyle(document.body,'::before').backgroundImage;
+    var mb=/url\(["']?([^"')]+)["']?\)/.exec(bb||'');
+    if(mb){ pending++; var im=new Image(); im.onload=dec; im.onerror=dec; im.src=mb[1]; }
+  } catch(e){}
+  if(pending===0){ requestAnimationFrame(reveal); }
+  setTimeout(reveal, 3000); // hard fallback
 })();
 </script>
 </html>

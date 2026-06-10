@@ -17,13 +17,13 @@ body {
     overflow-x: hidden;
 }
 
-.page { max-width: 414px; margin: 0 auto; position: relative; padding-bottom: 120px; }
+.page { max-width: 414px; margin: 0 auto; position: relative; padding-top: 54px; padding-bottom: 120px; min-height: 100vh; }
 
 .header {
     height: 54px; background: #fff;
-    position: sticky; top: 0; z-index: 10;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
     display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between;
-    padding: 0 13px 0 0;
+    padding: 0 13px;
 }
 .brand { font-weight: 250; font-size: 36px; line-height: 60px; color: #000; text-decoration: none; }
 
@@ -50,45 +50,35 @@ body {
 .menu-icon[aria-expanded="true"] span:nth-child(2) { transform: rotate(-32.26deg); }
 .menu-icon[aria-expanded="true"] span:nth-child(3) { transform: rotate(-11.9deg); }
 
-/* Open menu — animated dropdown, coloured links stacked under the hamburger (left) */
+/* Open menu — coloured links stacked under the hamburger (left) */
 .menu-overlay {
     position: fixed;
-    top: 54px; left: 0; right: 0;
-    background: #fff;
+    top: 56px; left: 13px;
     z-index: 100;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
-    padding: 18px 13px 26px;
-    border-bottom: 1px solid #000;
-    transform: translateY(-14px);
+    gap: 2px;
+    text-align: left;
+    background: #fff;
+    padding: 10px 18px 12px;
+    border-radius: 2px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, transform 0.32s cubic-bezier(.4,0,.2,1), visibility 0s linear 0.32s;
+    transform: translateY(-6px);
+    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
 }
-.menu-overlay.open {
-    transform: translateY(0);
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 0.3s ease, transform 0.32s cubic-bezier(.4,0,.2,1);
-}
+.menu-overlay.open { opacity: 1; visibility: visible; transform: translateY(0); transition: opacity 0.22s ease, transform 0.22s ease; }
 .menu-overlay a {
-    font-weight: 400; font-size: 36px; line-height: 1.25;
-    text-decoration: none;
-    opacity: 0;
-    transform: translateY(-8px);
-    transition: opacity 0.25s ease, transform 0.25s cubic-bezier(.4,0,.2,1);
+    font-weight: 400; font-size: 26px; line-height: 1.3;
+    text-decoration: none; white-space: nowrap;
+    transition: opacity 0.15s ease;
 }
-.menu-overlay.open a { opacity: 1; transform: translateY(0); }
-.menu-overlay.open a:nth-child(1) { transition-delay: 0.06s; }
-.menu-overlay.open a:nth-child(2) { transition-delay: 0.12s; }
-.menu-overlay.open a:nth-child(3) { transition-delay: 0.18s; }
-.menu-overlay.open a:nth-child(4) { transition-delay: 0.24s; }
 .menu-overlay a:hover { opacity: 0.55; }
 .menu-overlay .m-works       { color: #0000FF; }
 .menu-overlay .m-about       { color: #FF0033; }
-.menu-overlay .m-exhibitions { color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.4); }
+.menu-overlay .m-exhibitions { color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
 .menu-overlay .m-contact     { color: #8C00FF; }
 
 .section-title {
@@ -101,7 +91,10 @@ body {
 .image-placeholder {
     margin: 24px 27px 32px;
     width: calc(100% - 54px);
+}
+.image-placeholder .exh-image {
     display: block;
+    width: 100%;
     height: auto;
 }
 
@@ -129,7 +122,7 @@ body {
 }
 
 .footer {
-    margin-top: 60px;
+    position: absolute; bottom: 0; left: 0; right: 0;
     padding: 14px 13px 24px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -141,10 +134,10 @@ body {
 .footer .center { text-align: center; }
 
 @media (min-width: 768px) {
-    .page { max-width: 880px; padding-bottom: 160px; }
-    .header { padding: 0 32px 0 0; height: 72px; }
+    .page { max-width: 880px; padding-top: 72px; padding-bottom: 160px; }
+    .header { padding: 0 32px; height: 72px; }
     .brand { font-size: 44px; }
-    .menu-overlay { top: 72px; }
+    .menu-overlay { top: 80px; left: 32px; }
     .section-title { font-size: 56px; padding: 48px 0 0 32px; }
     .image-placeholder {
         margin: 32px auto 48px; width: 60%;
@@ -162,9 +155,22 @@ body {
     to   { transform: translateY(10px); }
 }
 .section-title { animation: title-drift 2.2s ease-out forwards; }
+
+/* loading veil: opaque white over the whole page until the hero image is ready */
+#page-veil {
+    position: fixed; inset: 0;
+    background: #fff;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    animation: veil-auto 0.5s ease 4s forwards; /* backstop if JS never fires */
+}
+#page-veil.hide { opacity: 0; pointer-events: none; animation: none; }
+@keyframes veil-auto { to { opacity: 0; visibility: hidden; } }
 </style>
 
 <html>
+<div id="page-veil"></div>
 
 <div class="page">
     <header class="header">
@@ -183,13 +189,15 @@ body {
 
     <h1 class="section-title">Exhibitions</h1>
 
-    <img class="image-placeholder" src="../assets/intake/Assets/Exhibitions/good_grief1.jpeg" alt="Exhibitions">
+    <figure class="image-placeholder exh-figure" style="aspect-ratio:1920/2560">
+        <img class="exh-image" src="../assets/exh-good-grief-good.jpg" alt="GOOD GRIEF, group show, 2022" decoding="async">
+    </figure>
 
     <div class="exhibitions-list">
         <div class="item"><a href="/exhibitions/threading-the-eye/"><span class="year">2024</span><span class="title">Threading the Eye, group show, Crypt Gallery, London, UK</span></a></div>
         <div class="item"><a href="/exhibitions/kobokan-stories/"><span class="year">2024</span><span class="title">Kobokan stories, solo show and workshop, Tokyo, JPN</span></a></div>
-        <div class="item"><a href="/exhibitions/axxx-blood/"><span class="year">2023</span><span class="title">Axxx/Blood, group show, London, UK</span></a></div>
-        <div class="item"><a href="/exhibitions/slade-interim-show/"><span class="year">2023</span><span class="title">Slade Interim Show, group show, London, UK</span></a></div>
+        <div class="item"><a href="/exhibitions/axxx-blood/"><span class="year">2024</span><span class="title">Aίμα/Blood, group show, London, UK</span></a></div>
+        <div class="item"><a href="/exhibitions/slade-interim-show/"><span class="year">2023</span><span class="title">Slade Interim show, group show, London, UK</span></a></div>
         <div class="item"><a href="/exhibitions/discard-archives/"><span class="year">2023</span><span class="title">Discard Archives, group show, London, UK</span></a></div>
         <div class="item"><a href="/exhibitions/good-grief/"><span class="year">2022</span><span class="title">GOOD GRIEF, group show, London, UK</span></a></div>
         <div class="item"><a href="/exhibitions/juice-box/"><span class="year">2022</span><span class="title">Juice box, group show, London, UK</span></a></div>
@@ -215,6 +223,30 @@ body {
     if (close) close.addEventListener('click', shut);
     menu.addEventListener('click', function(e){ if (e.target === menu) shut(); });
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') shut(); });
+})();
+</script>
+
+<script>
+(function(){
+  var veil=document.getElementById('page-veil');
+  var done=false;
+  function reveal(){ if(done) return; done=true;
+    if(veil){ veil.classList.add('hide'); setTimeout(function(){ if(veil.parentNode) veil.parentNode.removeChild(veil); }, 600); } }
+  var pending=0;
+  function dec(){ if(--pending<=0) reveal(); }
+  // wait for the displayed (good-tier) images
+  document.querySelectorAll('img.work-image, img.exh-image, img.about-image').forEach(function(img){
+    if(img.complete && img.naturalWidth) return;
+    pending++; img.addEventListener('load', dec, {once:true}); img.addEventListener('error', dec, {once:true});
+  });
+  // wait for the body::before full-bleed background (home page)
+  try {
+    var bb=getComputedStyle(document.body,'::before').backgroundImage;
+    var mb=/url\(["']?([^"')]+)["']?\)/.exec(bb||'');
+    if(mb){ pending++; var im=new Image(); im.onload=dec; im.onerror=dec; im.src=mb[1]; }
+  } catch(e){}
+  if(pending===0){ requestAnimationFrame(reveal); }
+  setTimeout(reveal, 3000); // hard fallback
 })();
 </script>
 </html>

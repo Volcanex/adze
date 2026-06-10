@@ -5,8 +5,8 @@
     "admin_token": "loudhive",
     "description": "",
     "contact_email": "",
-    "last_login": 1780398861,
-    "last_login_ip": "172.18.0.1",
+    "last_login": 1780529319,
+    "last_login_ip": "82.33.103.61",
     "lead": {
         "active": true,
         "contact": "Self",
@@ -31,15 +31,17 @@
     "slack_figma_msg_ts": "1779932544.910159",
     "favicon": "favicon.svg",
     "platform_widgets": [
-        "image-pipeline"
+        "image-pipeline",
+        "loom"
     ],
     "features": {
         "image_pipeline": {
-            "mode": "dither",
-            "colorDepth": "4",
-            "paletteType": "auto",
-            "ditherAlgo": "floyd-steinberg",
-            "blockSize": 2
+            "mode": "progressive",
+            "blur": 12,
+            "transitionStyle": "zoom",
+            "transitionSpeed": "300",
+            "transitionEasing": "ease-in",
+            "transitionBlur": 12
         }
     }
 }

@@ -37,7 +37,7 @@ body {
 }
 
 a {
-    color: #ffff00;
+    color: #c9a573;
     text-decoration: none;
     font-weight: bold;
 }
@@ -58,13 +58,13 @@ center {
 
 table {
     margin: 0 auto;
-    border-color: #ff0000;
-    border-style: outset;
+    border-color: transparent;
+    border-style: none;
     background-color: #000000;
 }
 
 th, td {
-    color: #ffff00;
+    color: #c9a573;
     padding: 5px;
 }
 
@@ -81,7 +81,7 @@ img {
     width: 200px;
     height: 100vh;
     background: linear-gradient(180deg, #1a0000 0%, #330000 100%);
-    border-right: 3px solid #660000;
+    border-right: none;
     padding: 20px;
     overflow-y: auto;
     z-index: 100;
@@ -116,9 +116,9 @@ img {
 .nav-link {
     display: block;
     padding: 10px 8px;
-    color: #ffff00 !important;
+    color: #c9a573 !important;
     text-decoration: none;
-    border: 2px solid #660000;
+    border: none;
     border-radius: 0;
     transition: all 0.3s;
     background: #000000;
@@ -128,7 +128,7 @@ img {
 
 .nav-link:hover {
     background: #660000;
-    border-color: #ff0000;
+    border-color: #000000;
     color: #ffffff !important;
     padding-left: 15px;
 }
@@ -146,7 +146,7 @@ img {
     right: 20px;
     text-align: center;
     padding-top: 15px;
-    border-top: 2px solid #660000;
+    border-top: none;
 }
 
 .main-content-1996 {
@@ -188,7 +188,7 @@ font {
 }
 
 b {
-    color: #ffff00;
+    color: #c9a573;
     text-shadow: 1px 1px 2px #ff0000;
     font-family: 'Aniron', serif;
 }
@@ -239,7 +239,7 @@ b {
     .sidebar-footer {
         position: static;
         padding-top: 10px;
-        border-top: 1px solid #660000;
+        border-top: none;
     }
 
     .gothic-title {
@@ -269,10 +269,10 @@ b {
     </div>
 
     <div class="sidebar-title">
-        <font size="3" color="#ffff00"><b>MARIA<br>SLAUGHTER</b></font>
+        <font size="3" color="#c9a573"><b>MARIA<br>SLAUGHTER</b></font>
     </div>
 
-    <hr color="#660000" size="2">
+    <hr color="#000000" size="2">
 
     <div class="sidebar-nav">
         <a href="../home" class="nav-link">
@@ -281,8 +281,8 @@ b {
         <a href="../gallery" class="nav-link">
             <font size="2">☩ GALLERY</font>
         </a>
-        <a href="../music" class="nav-link">
-            <font size="2">☩ MUSIC</font>
+        <a href="https://sacralforamina.bandcamp.com/" target="_blank" class="nav-link">
+            <font size="2">☩ BANDCAMP</font>
         </a>
         <a href="https://instagram.com/whitethornapple" target="_blank" class="nav-link">
             <font size="2">☩ INSTAGRAM</font>
@@ -292,22 +292,10 @@ b {
         </a>
     </div>
 
-    <hr color="#660000" size="2">
-
-    <div class="sidebar-section">
-        <font size="2" color="#bb0000"><b>COLLECTIONS</b></font><br><br>
-        <font size="1">
-        → Dark Arts<br>
-        → Photography<br>
-        → Sound Works<br>
-        → Archive<br>
-        </font>
-    </div>
+    <hr color="#000000" size="2">
 
     <div class="sidebar-footer">
         <font size="1" color="#880000">
-        Est. MCMXCVI<br>
-        Digital Necropolis
         </font>
         <br><br>
         <img src="../assets/gifs/spider.webp" width="60">
@@ -318,7 +306,7 @@ b {
 <div class="main-content-1996">
 <center>
     <h1 class="gothic-title">SOUND WORKS</h1>
-    <font size="2" color="#ffff00" style="font-style: italic;">ECHOES FROM THE VOID</font>
+
 </center>
 <br><br>
 
@@ -343,15 +331,6 @@ b {
 <br><br>
 
 <center>
-    <font size="3"><b>SONIC NECROMANCY</b></font>
-    <br><br>
-    <font size="2">
-    Crafting soundscapes that traverse the liminal spaces between<br>
-    darkness and light, beauty and decay, past and present.<br><br>
-
-    Each composition is a ritual, summoning frequencies from the depths<br>
-    of consciousness and the shadows of forgotten dreams.
-    </font>
 </center>
 <br><br>
 
@@ -372,37 +351,16 @@ b {
 </center>
 <br><br>
 
-<center>
-    <table border="5" cellpadding="15" width="70%">
-        <tr>
-            <th><font size="3">THEMES & INFLUENCES</font></th>
-        </tr>
-        <tr>
-            <td>
-                <font size="2">
-                <b>→</b> Gothic Ambient<br>
-                <b>→</b> Dark Industrial<br>
-                <b>→</b> Neo-Classical Darkwave<br>
-                <b>→</b> Experimental Noise<br>
-                <b>→</b> Ritual Soundscapes<br>
-                </font>
-            </td>
-        </tr>
-    </table>
-</center>
-<br><br>
 
 <center>
     <img src="../assets/gifs/email.webp" width="180" border="0">
     <br>
-    <font size="3" color="#ff0000"><b>FOR COLLABORATIONS & COMMISSIONS</b></font>
-    <br>
-    <font size="4" color="#ff0000"><b>FALLENANGELSELVATICA@GMAIL.COM</b></font>
+    <font size="11" color="#ff0000"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></font>
 </center>
 <br><br>
 
 <center>
-    <font size="3"><a href="../home">← RETURN TO HOME</a></font>
+    <font size="3"><a href="../home" style="color: #ff0000; font-family: Arial;">← RETURN TO HOME</a></font>
 </center>
 <br><br>
 

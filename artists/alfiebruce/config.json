@@ -1,14 +1,14 @@
 {
     "name": "Alfie Bruce",
     "slug": "alfiebruce",
-    "domain": "",
-    "admin_token": "23-0y2tu830",
+    "domain": "https://alfiebruce.com",
+    "admin_token": "AlfieBruce2026!",
     "description": "",
     "contact_email": "",
     "lead": {
-        "active": false,
+        "active": true,
         "contact": "Whatsapp",
-        "stage": "1",
+        "stage": "4",
         "fish_size": "s",
         "instagram": "",
         "work": "",
@@ -19,12 +19,17 @@
         "contacted": true,
         "original_lead_id": "94a24aec-b093-4047-bad0-a26780e1ca61",
         "created_at": 1779807288,
-        "updated_at": 1780484266
+        "updated_at": 1780859514
     },
     "slack_channel_id": "C0B6M5XTS1G",
     "slack_pinned_ts": "1779930830.254669",
     "slack_announced": true,
     "intake_token": "9GQBk-EnJOEGOQkNDwbkT4ZlpeEOuM8T",
     "figma_url": "",
-    "is_stub": true
+    "platform_widgets": [
+        "loom"
+    ],
+    "last_login": 1780859594,
+    "last_login_ip": "82.33.103.61",
+    "features": ["alfie_admin"]
 }

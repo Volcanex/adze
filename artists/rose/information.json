@@ -1,0 +1,427 @@
+{
+  "_note": "Source-of-truth ledger for Rose Jones' site, reconciled from the 2025_04_Rose zip (Works List.pdf + Rose Jones Artist CV.pdf + Assets/). adze has no native per-work metadata; this file is authored by hand and used to generate each page's content.md. compile.py does NOT read it. 'status: live' = a real image file exists in the zip; 'status: missing' = the work is real (listed in Works List) but no photo exists anywhere in the file — render with placeholder + '(Work file missing)'.",
+  "_image_source_root": "2025_04_Rose/Assets/ inside 2025_04_Rose-20260607T121856Z-3-001.zip",
+  "artist": {
+    "name": "Rose Jones",
+    "born": 2002,
+    "bio": "Rose Jones is a multidisciplinary artist. Her work spans painting, illustration, and writing.",
+    "statement": "what I make is deeply ridiculous but equally important.",
+    "education": [
+      "Foundation Diploma, Colchester Institute, graduated 2021",
+      "BFA, Slade School of Fine Art, graduating 2025"
+    ],
+    "about_image": {
+      "source": "Assets/About page_image.png",
+      "status": "live",
+      "image": "about.png"
+    },
+    "home_background": {
+      "image": "home-bg.jpg",
+      "source": "intake/Assets/Work/Works_NA_2.jpg (the About painting)"
+    }
+  },
+  "works": [
+    {
+      "slug": "wise-man",
+      "title": "Wise Man",
+      "year": 2021,
+      "medium": "Oil on canvas",
+      "dimensions": "160 x 140 cm",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "worship",
+      "title": "Worship",
+      "year": 2021,
+      "medium": "Monoprint",
+      "dimensions": "A4",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "pin-mill",
+      "title": "Pin Mill",
+      "year": 2021,
+      "medium": "Oil on calico",
+      "dimensions": "180 x 120 cm",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "keeper-of-the-egg",
+      "title": "Keeper of the Egg",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 160 cm",
+      "status": "live",
+      "image": "work-keeper-of-the-egg.jpeg",
+      "source": "Assets/Works_2022_Keeper of the Egg.jpeg"
+    },
+    {
+      "slug": "while-we-sit-together",
+      "title": "While We Sit Together",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 160 cm",
+      "status": "live",
+      "image": "work-while-we-sit-together.jpg",
+      "source": "Assets/Works_2022_While We Sit Together.jpg"
+    },
+    {
+      "slug": "you-belong-at-the-head-of-the-table",
+      "title": "You belong at the head of the table",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "160 x 190 cm",
+      "status": "live",
+      "image": "work-you-belong-at-the-head-of-the-table.jpeg",
+      "source": "Assets/Works_2022_you belong at the head of the table.jpeg"
+    },
+    {
+      "slug": "her-cup",
+      "title": "Her Cup",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-her-cup.jpeg",
+      "source": "Assets/Works_2022_Her Cup .jpeg"
+    },
+    {
+      "slug": "my-memory-of-your-birth",
+      "title": "My Memory of your Birth",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-my-memory-of-your-birth.jpeg",
+      "source": "Assets/Works_2022_My Memory of your Birth.jpeg"
+    },
+    {
+      "slug": "divine-like-a-bird",
+      "title": "Divine like a Bird",
+      "year": 2022,
+      "medium": "Etching series",
+      "dimensions": "A5",
+      "status": "live",
+      "image": "work-divine-like-a-bird-01.jpeg",
+      "images": [
+        "work-divine-like-a-bird-01.jpeg",
+        "work-divine-like-a-bird-02.jpeg"
+      ],
+      "source": "Assets/Works_2022_Divine Like a Bird 01.jpeg + 02.jpeg"
+    },
+    {
+      "slug": "cormorant",
+      "title": "Cormorant",
+      "year": 2022,
+      "medium": "Drawing animation film; oil on ceramic tile",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "skip-kids",
+      "title": "Skip Kids",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 190 cm",
+      "status": "live",
+      "image": "work-skip-kids.jpeg",
+      "source": "Assets/Works_2022_Skip Kids.jpeg",
+      "_note": "Works_2023_Skip Kids.jpeg is the same painting shot in-studio; ignored in favour of the clean crop."
+    },
+    {
+      "slug": "untitled",
+      "title": "Untitled",
+      "year": 2022,
+      "medium": "Charcoal on paper; oil on canvas",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-untitled.jpeg",
+      "source": "Assets/Works_2022_untitled.jpeg",
+      "_flag": "Zip file shows a single standing figure; the Works List PDF thumbnail for 'Untitled' showed a wall of small drawings. Possible mismatch — confirm with Rose."
+    },
+    {
+      "slug": "murmuration",
+      "title": "Murmuration",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-murmuration.jpg",
+      "source": "Assets/Works_2022_Murmuration.jpg"
+    },
+    {
+      "slug": "night-fishing",
+      "title": "Night fishing",
+      "year": 2022,
+      "medium": null,
+      "dimensions": null,
+      "status": "live",
+      "image": "work-night-fishing.png",
+      "source": "intake/Assets/Work/Works_2022_Night_fishing.png (promoted; not in zip)"
+    },
+    {
+      "slug": "night-fishing-2",
+      "title": "Night fishing 2",
+      "year": 2022,
+      "medium": null,
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "my-mothers-hum",
+      "title": "My Mothers Hum",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "estuary",
+      "title": "Estuary",
+      "year": 2023,
+      "medium": "Dry point etch",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "math-equation",
+      "title": "Math Equation",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "what-did-it-mean-to-fly",
+      "title": "What did it mean to fly",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "tokyo-park",
+      "title": "Tokyo park",
+      "year": 2024,
+      "medium": "Drawing series",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "drive-thru",
+      "title": "Drive thru",
+      "year": 2024,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "a-shooting-star-from-atop-a-slide",
+      "title": "A shooting star from atop a slide and gold waiting below",
+      "year": 2024,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "mount-fuji-is-pregnant",
+      "title": "Mount fuji is pregnant",
+      "year": 2024,
+      "medium": "Oil on canvas",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "marsh-at-sunset",
+      "title": "Marsh at sunset",
+      "year": 2024,
+      "medium": "Oil on paper",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-marsh-at-sunset.jpg",
+      "source": "Assets/Works_2024_Marsh at Sunset.jpg"
+    },
+    {
+      "slug": "moonlit-sea",
+      "title": "Moonlit Sea",
+      "year": 2024,
+      "medium": "Oil on paper",
+      "dimensions": null,
+      "status": "live",
+      "image": "work-moonlit-sea.jpg",
+      "source": "Assets/Works_2024_Moonlit Sea.jpg"
+    },
+    {
+      "slug": "wondering-women",
+      "title": "Wondering women",
+      "year": 2024,
+      "medium": "Oil on MDF",
+      "dimensions": null,
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "bed",
+      "title": "Bed",
+      "year": 2025,
+      "medium": null,
+      "dimensions": null,
+      "status": "live",
+      "image": "work-bed.jpg",
+      "source": "Assets/work_2025_Bed.jpg"
+    },
+    {
+      "slug": "my-inner-child",
+      "title": "My Inner Child",
+      "year": 2025,
+      "medium": null,
+      "dimensions": null,
+      "status": "live",
+      "image": "work-my-inner-child.jpg",
+      "source": "Assets/work_2025_My Inner Child.jpg"
+    },
+    {
+      "slug": "paddle-for-dear-life",
+      "title": "Paddle for dear life",
+      "year": 2025,
+      "medium": null,
+      "dimensions": null,
+      "status": "live",
+      "image": "work-paddle-for-dear-life.jpg",
+      "source": "Assets/work_2025_Paddle_for_dear_life.jpg"
+    }
+  ],
+  "exhibitions": [
+    {
+      "slug": "good-grief",
+      "title": "GOOD GRIEF",
+      "year": 2022,
+      "type": "Group show",
+      "location": "London, UK",
+      "status": "live",
+      "image": "exh-good-grief.jpeg",
+      "images": [
+        "exh-good-grief.jpeg",
+        "exh-good-grief-detail.jpeg"
+      ],
+      "source": "Assets/Exhibition images/good grief*.jpeg (3 shots)"
+    },
+    {
+      "slug": "juice-box",
+      "title": "Juice box",
+      "year": 2022,
+      "type": "Group show",
+      "location": "London, UK",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "slade-interim-show",
+      "title": "Slade Interim show",
+      "year": 2023,
+      "type": "Group show",
+      "location": "London, UK",
+      "status": "live",
+      "image": "exh-slade-interim.jpg",
+      "source": "Assets/Exhibition images/Slade Interim.jpg"
+    },
+    {
+      "slug": "discard-archives",
+      "title": "Discard Archives",
+      "year": 2023,
+      "type": "Group show",
+      "location": "London, UK",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "threading-the-eye",
+      "title": "Threading the Eye",
+      "year": 2024,
+      "type": "Group show",
+      "location": "Crypt Gallery, London, UK",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "kobokan-stories",
+      "title": "Kobokan stories",
+      "year": 2024,
+      "type": "Solo show and workshop",
+      "location": "Tokyo, JPN",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "axxx-blood",
+      "title": "Aίμα/Blood",
+      "year": 2024,
+      "type": "Group show",
+      "location": "London, UK",
+      "status": "missing",
+      "image": null,
+      "source": null,
+      "_flag": "Current slug 'axxx-blood'; correct title is 'Aίμα/Blood' (Greek). Keep slug, fix display title."
+    }
+  ],
+  "unresolved_assets": {
+    "_note": "Files in the zip not yet mapped to a page — surface to Rose.",
+    "Assets/Exhibition images/Itchy nose.dng": "RAW file (cannot web-serve as-is). 'Itchy nose' appears as a small canvas in WIP install shots and the About page currently references Works_NA_itichy_nose.jpg. Clarify if it is a work or an exhibition shot.",
+    "Assets/WIP/*": "Studio / install context shots (2Q0A9214, 2Q0A9268, IMG_5390 [= Paddle for dear life duplicate], IMG_5394_1 + copy). Not individual works; candidate for an 'in the studio' strip if wanted.",
+    "work_2025_Bed.psd / work_2025_My Inner Child.psd": "Photoshop masters — keep as source, do not serve."
+  },
+  "junk_to_remove": {
+    "_note": "Currently inside artists/rose/assets/ and being served, but not part of the file / redundant.",
+    "served_dead_weight": [
+      "2025_04_Rose-20260607T121856Z-3-001.zip (193 MB)",
+      "quasimoda.rar"
+    ],
+    "stale_underscored_copies": [
+      "Works_2022_Divine_Like_a_Bird_01.jpeg",
+      "Works_2022_Murmuration.jpg",
+      "Works_2022_My_Memory_of_your_Birth.jpeg",
+      "Works_2022_Night_fishing.jpg",
+      "Works_2022_Skip_Kids.jpeg",
+      "Works_2024_Marsh_at_Sunset.JPG",
+      "Works_2024_Moonlit_Sea.jpg",
+      "Works_NA_itichy_nose.jpg"
+    ],
+    "keep": [
+      "favicon.svg",
+      "fonts/",
+      "intake/ (upload history)",
+      "assets.meta.json"
+    ]
+  }
+}

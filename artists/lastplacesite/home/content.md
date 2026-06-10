@@ -334,11 +334,106 @@ p { text-wrap: pretty; }
 }
 .tile:hover .tile-frame.placeholder .ph-cta { opacity: 1; transform: translateY(0); }
 
-/* Recent work section disabled — live iframe previews weren't up to standard.
-   Markup, CSS and JS are kept in place as dummy code so it can be re-enabled
-   later by removing this block and the `if (false)` guard in the JS below. */
+/* Recent work section (old morph system) — kept as dead code */
 .work { display: none; }
-.nav a[href="#work"] { display: none; }
+
+/* --- SHOWCASE (recent sites — simple scaled iframe tiles) --- */
+.showcase {
+    padding: 120px 60px;
+    position: relative;
+    z-index: 2;
+}
+.showcase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 48px;
+}
+.showcase-header h2 { font-size: 11pt; font-weight: 400; line-height: 0.88; }
+.showcase-header .meta { font-size: 11pt; color: var(--ink-soft); }
+.showcase-rail {
+    display: flex;
+    gap: 32px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+}
+.showcase-rail::-webkit-scrollbar { display: none; }
+.sh-tile {
+    flex: 0 0 380px;
+    scroll-snap-align: start;
+    text-decoration: none;
+    display: block;
+    cursor: none;
+    overflow: hidden;
+}
+.sh-tile:hover { opacity: 1; }
+.sh-frame-wrap {
+    width: 380px;
+    height: 238px;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+}
+.sh-tile:hover .sh-frame-wrap {
+    outline: 1px solid color-mix(in oklch, var(--primary) 12%, transparent);
+}
+.sh-loader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    z-index: 2;
+    transition: opacity 0.5s ease;
+}
+.sh-loader::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: sh-pulse 1.4s ease-in-out infinite;
+}
+@keyframes sh-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(2.2); opacity: 0.3; }
+}
+.sh-tile.loaded .sh-loader { opacity: 0; pointer-events: none; }
+/* iframe scaled from 1440×900 to fill the 380×238 tile (scale = 380/1440) */
+.sh-frame-wrap iframe {
+    width: 1440px;
+    height: 900px;
+    transform: scale(0.2639);
+    transform-origin: 0 0;
+    pointer-events: none;
+    border: 0;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    background: #fff;
+}
+.sh-tile.loaded .sh-frame-wrap iframe { opacity: 1; }
+.sh-caption {
+    margin-top: 14px;
+    font-size: 11pt;
+    color: var(--ink-soft);
+    transition: color 0.25s ease;
+    text-align: left;
+}
+.sh-tile:hover .sh-caption { color: var(--primary); }
+@media (max-width: 840px) {
+    .showcase { padding: 80px 0; }
+    .showcase-header { padding: 0 24px; margin-bottom: 32px; }
+    .showcase-rail {
+        gap: 12px;
+        padding-left: 24px;
+        scroll-padding-left: 24px;
+    }
+    /* 70vw tiles: on a 390px screen leaves ~80px of the next tile visible */
+    .sh-tile { flex: 0 0 70vw; overflow: hidden; }
+    .sh-frame-wrap { width: 100%; height: 180px; }
+}
 
 /* The carousel slot is just an empty paper rectangle. The live iframe lives
    in a fixed-position container at body level (see below) and is positioned
@@ -635,7 +730,7 @@ img.studio-portrait {
 <header class="header">
     <a href="./" class="logo">Last Place</a>
     <nav class="nav">
-        <a href="#work">Work</a>
+        <a href="#showcase">Work</a>
         <a href="#studio">About</a>
         <a href="../contact/">Contact</a>
     </nav>
@@ -645,7 +740,7 @@ img.studio-portrait {
     <section class="hero">
         <h1 class="hero-headline">
             Websites for <span class="u">artists</span>,<br>
-            musicians, and <em>cultural projects</em>.<br>
+            musicians, shops, and <em>cultural projects</em>.<br>
             Made once, made properly.
         </h1>
 
@@ -661,6 +756,50 @@ img.studio-portrait {
     <section class="manifesto pt-block">
         <div class="eyebrow">Service</div>
         <p>A one-of-one site, designed around your work. Your own domain, to keep. A simple dashboard to tend it, when you want to. One payment. No roof caving in.</p>
+    </section>
+
+    <section class="showcase" id="showcase">
+        <div class="showcase-header">
+            <h2>Recent work</h2>
+            <div class="meta">2024 — 2026</div>
+        </div>
+        <div class="showcase-rail">
+            <a class="sh-tile" href="https://alfiebruce.com" target="_blank" rel="noopener"
+               data-preview="https://adze.studio/preview/alfiebruce/home/">
+                <div class="sh-frame-wrap">
+                    <div class="sh-loader"></div>
+                </div>
+                <div class="sh-caption">Alfie Bruce</div>
+            </a>
+            <a class="sh-tile" href="https://rosefpjones.com" target="_blank" rel="noopener"
+               data-preview="https://adze.studio/preview/rose/home/">
+                <div class="sh-frame-wrap">
+                    <div class="sh-loader"></div>
+                </div>
+                <div class="sh-caption">Rose Jones</div>
+            </a>
+            <a class="sh-tile" href="https://lydialott.co.uk/" target="_blank" rel="noopener"
+               data-preview="https://adze.studio/preview/lydialott/home/">
+                <div class="sh-frame-wrap">
+                    <div class="sh-loader"></div>
+                </div>
+                <div class="sh-caption">Lydia Lott</div>
+            </a>
+            <a class="sh-tile" href="https://www.nellburgess.co.uk/home/" target="_blank" rel="noopener"
+               data-preview="https://adze.studio/preview/nell/home/">
+                <div class="sh-frame-wrap">
+                    <div class="sh-loader"></div>
+                </div>
+                <div class="sh-caption">Nell Burgess</div>
+            </a>
+            <a class="sh-tile" href="https://mariaslaughter.online" target="_blank" rel="noopener"
+               data-preview="https://adze.studio/preview/mariaslaughter/home/">
+                <div class="sh-frame-wrap">
+                    <div class="sh-loader"></div>
+                </div>
+                <div class="sh-caption">Maria Slaughter</div>
+            </a>
+        </div>
     </section>
 
     <section class="work" id="work">
@@ -724,7 +863,7 @@ img.studio-portrait {
         <article class="studio-card john">
             <img class="studio-portrait" src="../assets/images/61O_1323-4.jpg" alt="Gabriel Penman">
             <h3>Gabriel Penman <span class="tag">The Build</span></h3>
-            <p class="pt-block"><strong>Gabriel Penman</strong> (b. 2002) is a developer and machine learning engineer currently based in Saigon. He's completing an MSc in Artificial Intelligence at the University of Huddersfield, and is Lead Developer at <em>Baseline Labs</em>, an Irish AI startup. He considers his study of AI something like the Dark Arts in Harry Potter — useful, dangerous, faintly embarrassing to admit in polite company — and finds the use of AI for creative outlets pretty abhorrent. Specialising in autonomic infrastructure has its benefits, though, and it means your website runs very cleanly.</p>
+            <p class="pt-block"><strong>Gabriel Penman</strong> (b. 2002) is a developer currently based in London, completing an MSc at the University of Huddersfield and working as Lead Developer at <em>Baseline Labs</em>, an Irish technology startup. Specialising in infrastructure means your website runs very cleanly.</p>
             <p class="link-line"><a href="https://gabrielpenman.com" target="_blank" rel="noopener">gabrielpenman.com →</a></p>
         </article>
 
@@ -1190,6 +1329,24 @@ if (CAN_PUSH_STATE) {
 }
 
 // (flower-rain + hero drift live in the ES module below)
+
+// ---- Showcase: inject iframes lazily, show pulsing dot until loaded ----
+document.querySelectorAll('.sh-tile').forEach(tile => {
+    const wrap = tile.querySelector('.sh-frame-wrap');
+    const previewUrl = tile.dataset.preview;
+    if (!previewUrl || !wrap) return;
+    const iframe = document.createElement('iframe');
+    iframe.src = previewUrl;
+    iframe.title = (tile.querySelector('.sh-caption') || {}).textContent + ' preview';
+    iframe.setAttribute('loading', 'lazy');
+    iframe.setAttribute('allow', 'autoplay');
+    iframe.setAttribute('tabindex', '-1');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.addEventListener('load', () => tile.classList.add('loaded'));
+    wrap.appendChild(iframe);
+    tile.addEventListener('mouseenter', () => cursor.classList.add('clickable'));
+    tile.addEventListener('mouseleave', () => cursor.classList.remove('clickable'));
+});
 
 function pad(n){ return String(n).padStart(2,'0'); }
 function tick() {

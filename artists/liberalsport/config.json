@@ -1,0 +1,29 @@
+{
+    "name": "Liberal Sport",
+    "slug": "liberalsport",
+    "domain": "liberalsport.com",
+    "admin_token": "flatpond",
+    "description": "E-Comm, rolling workflow and site building. Shopify backend/plug in",
+    "contact_email": "",
+    "workspace": "lastplace",
+    "slack_announced": true,
+    "slack_channel_id": "C0BADP2HSP2",
+    "slack_pinned_ts": "1781085869.833869",
+    "figma_url": "",
+    "lead": {
+        "active": true,
+        "contact": "Will Munroe",
+        "stage": "1",
+        "fish_size": "l",
+        "instagram": "liberalsport_uk",
+        "work": "",
+        "discount": "",
+        "notes": "",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": true,
+        "original_lead_id": null,
+        "created_at": 1781085870,
+        "updated_at": 1781085870
+    }
+}

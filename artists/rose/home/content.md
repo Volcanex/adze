@@ -12,6 +12,7 @@
 
 html, body {
     height: 100%;
+    overflow: hidden;
 }
 
 body {
@@ -28,7 +29,7 @@ body::before {
     content: "";
     position: fixed;
     inset: 0;
-    background-image: url('../assets/intake/Assets/Work/Works_NA_2.jpg');
+    background-image: url('../assets/home-bg-good.jpg');
     background-size: cover;
     background-position: center;
     z-index: -1;
@@ -48,7 +49,7 @@ body::before {
 }
 
 .name {
-    font-weight: 400;
+    font-weight: 600;
     font-size: clamp(48px, 8vw, 96px);
     line-height: 1;
     color: #22348D;
@@ -70,7 +71,7 @@ body::before {
     column-gap: 0;
 }
 .nav a {
-    font-weight: 400;
+    font-weight: 600;
     font-size: clamp(34px, 5vw, 60px);
     line-height: 1.05;
     text-decoration: none;
@@ -102,9 +103,22 @@ body::before {
     to   { transform: translateY(10px); }
 }
 .name { animation: title-drift 2.2s ease-out forwards; }
+
+/* loading veil: opaque white over the whole page until the hero image is ready */
+#page-veil {
+    position: fixed; inset: 0;
+    background: #fff;
+    z-index: 9999;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    animation: veil-auto 0.5s ease 4s forwards; /* backstop if JS never fires */
+}
+#page-veil.hide { opacity: 0; pointer-events: none; animation: none; }
+@keyframes veil-auto { to { opacity: 0; visibility: hidden; } }
 </style>
 
 <html>
+<div id="page-veil"></div>
 <div class="stage">
     <span class="name rose">Rose</span>
     <span class="name jones">Jones</span>
@@ -115,4 +129,27 @@ body::before {
         <a class="contact" href="/contact/">Contact</a>
     </nav>
 </div>
+<script>
+(function(){
+  var veil=document.getElementById('page-veil');
+  var done=false;
+  function reveal(){ if(done) return; done=true;
+    if(veil){ veil.classList.add('hide'); setTimeout(function(){ if(veil.parentNode) veil.parentNode.removeChild(veil); }, 600); } }
+  var pending=0;
+  function dec(){ if(--pending<=0) reveal(); }
+  // wait for the displayed (good-tier) images
+  document.querySelectorAll('img.work-image, img.exh-image, img.about-image').forEach(function(img){
+    if(img.complete && img.naturalWidth) return;
+    pending++; img.addEventListener('load', dec, {once:true}); img.addEventListener('error', dec, {once:true});
+  });
+  // wait for the body::before full-bleed background (home page)
+  try {
+    var bb=getComputedStyle(document.body,'::before').backgroundImage;
+    var mb=/url\(["']?([^"')]+)["']?\)/.exec(bb||'');
+    if(mb){ pending++; var im=new Image(); im.onload=dec; im.onerror=dec; im.src=mb[1]; }
+  } catch(e){}
+  if(pending===0){ requestAnimationFrame(reveal); }
+  setTimeout(reveal, 3000); // hard fallback
+})();
+</script>
 </html>

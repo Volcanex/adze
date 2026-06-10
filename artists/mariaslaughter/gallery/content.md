@@ -37,7 +37,7 @@ body {
 }
 
 a {
-    color: #ffff00;
+    color: #c9a573;
     text-decoration: none;
     font-weight: bold;
 }
@@ -58,13 +58,13 @@ center {
 
 table {
     margin: 0 auto;
-    border-color: #ff0000;
-    border-style: outset;
+    border-color: transparent;
+    border-style: none;
     background-color: #000000;
 }
 
 th, td {
-    color: #ffff00;
+    color: #c9a573;
     padding: 5px;
 }
 
@@ -81,7 +81,7 @@ img {
     width: 200px;
     height: 100vh;
     background: linear-gradient(180deg, #1a0000 0%, #330000 100%);
-    border-right: 3px solid #660000;
+    border-right: none;
     padding: 20px;
     overflow-y: auto;
     z-index: 100;
@@ -116,9 +116,9 @@ img {
 .nav-link {
     display: block;
     padding: 10px 8px;
-    color: #ffff00 !important;
+    color: #c9a573 !important;
     text-decoration: none;
-    border: 2px solid #660000;
+    border: none;
     border-radius: 0;
     transition: all 0.3s;
     background: #000000;
@@ -128,7 +128,7 @@ img {
 
 .nav-link:hover {
     background: #660000;
-    border-color: #ff0000;
+    border-color: #000000;
     color: #ffffff !important;
     padding-left: 15px;
 }
@@ -146,7 +146,7 @@ img {
     right: 20px;
     text-align: center;
     padding-top: 15px;
-    border-top: 2px solid #660000;
+    border-top: none;
 }
 
 .main-content-1996 {
@@ -188,7 +188,7 @@ font {
 }
 
 b {
-    color: #ffff00;
+    color: #c9a573;
     text-shadow: 1px 1px 2px #ff0000;
     font-family: 'Aniron', serif;
 }
@@ -208,12 +208,12 @@ b {
 
 .gallery-grid img {
     margin: 10px;
-    border: 3px solid #660000;
+    border: none;
     transition: all 0.3s;
 }
 
 .gallery-grid img:hover {
-    border-color: #ff0000;
+    border-color: #000000;
     transform: scale(1.05);
     box-shadow: 0 0 20px #ff0000;
 }
@@ -229,7 +229,7 @@ b {
         width: 100%;
         height: auto;
         border-right: none;
-        border-bottom: 3px solid #660000;
+        border-bottom: none;
         box-shadow: 0 5px 15px rgba(0,0,0,0.7);
         order: 2;
     }
@@ -276,6 +276,7 @@ b {
     }
 }
 </style>
+
 <html>
 <img class="border-left" src="../assets/gifs/left.gif">
 <img class="border-right" src="../assets/gifs/right.gif">
@@ -287,10 +288,10 @@ b {
     </div>
 
     <div class="sidebar-title">
-        <font size="3" color="#ffff00"><b>MARIA<br>SLAUGHTER</b></font>
+        <font size="3" color="#c9a573"><b>MARIA<br>SLAUGHTER</b></font>
     </div>
 
-    <hr color="#660000" size="2">
+    <hr color="#000000" size="2">
 
     <div class="sidebar-nav">
         <a href="../home" class="nav-link">
@@ -299,8 +300,8 @@ b {
         <a href="../gallery" class="nav-link">
             <font size="2">☩ GALLERY</font>
         </a>
-        <a href="../music" class="nav-link">
-            <font size="2">☩ MUSIC</font>
+        <a href="https://sacralforamina.bandcamp.com/" target="_blank" class="nav-link">
+            <font size="2">☩ BANDCAMP</font>
         </a>
         <a href="https://instagram.com/whitethornapple" target="_blank" class="nav-link">
             <font size="2">☩ INSTAGRAM</font>
@@ -310,22 +311,10 @@ b {
         </a>
     </div>
 
-    <hr color="#660000" size="2">
-
-    <div class="sidebar-section">
-        <font size="2" color="#bb0000"><b>COLLECTIONS</b></font><br><br>
-        <font size="1">
-        → Dark Arts<br>
-        → Photography<br>
-        → Sound Works<br>
-        → Archive<br>
-        </font>
-    </div>
+    <hr color="#000000" size="2">
 
     <div class="sidebar-footer">
         <font size="1" color="#880000">
-        Est. MCMXCVI<br>
-        Digital Necropolis
         </font>
         <br><br>
         <img src="../assets/gifs/spider.webp" width="60">
@@ -336,7 +325,7 @@ b {
 <div class="main-content-1996">
 <center>
     <h1 class="gothic-title">GALLERY</h1>
-    <font size="2" color="#ffff00" style="font-style: italic;">A COLLECTION OF DARK AESTHETIC PHOTOGRAPHY</font>
+    <font size="2" color="#c9a573" style="font-style: italic;">instagram: whitethornapple</font>
 </center>
 <br><br>
 
@@ -408,7 +397,7 @@ b {
 <br><br>
 
 <center>
-    <font size="3"><a href="../home">← RETURN TO HOME</a></font>
+    <font size="3"><a href="../home" style="color: #ff0000; font-family: Arial;">← RETURN TO HOME</a></font>
 </center>
 <br><br>
 

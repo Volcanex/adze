@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "size": {
+    "w": 360,
+    "h": 360
+  },
+  "fps": 30,
+  "nodes": [
+    {
+      "id": "src",
+      "type": "lorenz",
+      "x": 40,
+      "y": 60,
+      "params": {
+        "speed": 1,
+        "hue": 200,
+        "fade": 0.08
+      }
+    },
+    {
+      "id": "lfo",
+      "type": "lfo",
+      "x": 40,
+      "y": 280,
+      "params": {
+        "shape": "sine",
+        "freq": 0.15
+      }
+    },
+    {
+      "id": "dith",
+      "type": "dither",
+      "x": 320,
+      "y": 60,
+      "params": {
+        "blockSize": 6,
+        "levels": 4
+      }
+    },
+    {
+      "id": "out",
+      "type": "output",
+      "x": 600,
+      "y": 60,
+      "params": {}
+    }
+  ],
+  "edges": [
+    {
+      "from": [
+        "src",
+        "out"
+      ],
+      "to": [
+        "dith",
+        "in"
+      ],
+      "kind": "buffer"
+    },
+    {
+      "from": [
+        "dith",
+        "out"
+      ],
+      "to": [
+        "out",
+        "in"
+      ],
+      "kind": "buffer"
+    },
+    {
+      "from": [
+        "lfo",
+        "out"
+      ],
+      "to": [
+        "dith",
+        "blockSize"
+      ],
+      "kind": "control",
+      "range": [
+        3,
+        12
+      ]
+    }
+  ]
+}
