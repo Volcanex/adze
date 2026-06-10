@@ -1,0 +1,9 @@
+{
+    "name": "loom",
+    "description": "Loom — a visual synth for generative backgrounds. Wire sources (strange attractor, gradient, image, video) through effect layers (dither, glitch, VHS) and patch modulators (LFOs) into any parameter. Saves a 'trace' the autocoder can render live or bake to an asset.",
+    "icon": "zap",
+    "author": "Adze Studio",
+    "version": "0.3",
+    "category": "design",
+    "flagship": true
+}
