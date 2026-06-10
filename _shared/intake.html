@@ -4,15 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Send your work — Adze</title>
+<meta name="theme-color" content="#1a1a1e">
 <link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<script>
+// Apply theme before paint so the attractor backdrop renders in the right palette.
+// Dark is the default — only go light if the visitor explicitly chose it. Shared
+// with the adze.studio landing (home.html), down to the localStorage key.
+if (localStorage.getItem('adze-theme') === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
 <style>
-    /* Adze design language — see design-language/project/Adze Design Language.html.
-       This is a portal surface: warm paper, italic Cardo display, Inter UI,
-       Monaco mono eyebrows, single editorial-blue accent. */
+    /* Adze intake portal — styled as a sibling of the adze.studio landing
+       (_shared/home.html): live de Jong strange-attractor backdrop, dark by
+       default with a moon/sun toggle, JetBrains Mono display type, glassy
+       chrome, tight 4px radii. Shared palette + theming with home.html. */
     :root {
         --accent: #1C4F82;
         --accent-soft: #6b8cae;
@@ -27,26 +37,87 @@
         --border: #ddd8cf;
         --text: #2a2a28;
         --text2: #6b6860;
-        --radius: 8px;
+        --radius: 4px;
         --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
         --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-        --mono: 'Monaco','Menlo','Courier New',monospace;
-        --heading-font: 'Cardo', Georgia, serif;
+        --mono: 'JetBrains Mono','Monaco','Menlo','Courier New',monospace;
+        --heading-font: 'JetBrains Mono','Monaco','Menlo',monospace;
         --body-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
+
+    [data-theme="dark"] {
+        --accent: #99cdff;
+        --accent-soft: #7ea3c4;
+        --accent-hover: #b8ddff;
+        --accent-text: #1a1a1e;
+        --danger: #e0796b;
+        --success: #6abf8a;
+        --bg: #1a1a1e;
+        --bg2: #222226;
+        --surface: #2c2c30;
+        --surface2: #34343a;
+        --border: #3e3e44;
+        --text: #e8e6e0;
+        --text2: #9a978e;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    }
     * { box-sizing: border-box; }
+    /* NB: no background on <html> — that lets the body's background propagate to
+       the root, so the fixed z-index:-1 attractor canvas shows through (same
+       trick home.html relies on). */
     body {
         margin: 0; padding: 0; background: var(--bg); color: var(--text);
         font: 14px/1.6 var(--body-font);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
+        overscroll-behavior-y: none;
+        transition: background 0.3s, color 0.3s;
     }
-    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 24px 80px; }
-    header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+
+    /* ── Parallax attractor backdrop (ported from home.html) ── */
+    .bg-layer {
+        position: fixed; left: 0; top: -20vh; width: 100%; height: 140vh;
+        z-index: -1; pointer-events: none; will-change: transform;
+    }
+    .bg-layer canvas {
+        display: block; width: 100%; height: 100%;
+        image-rendering: pixelated; opacity: 0.9;
+    }
+    .bg-layer::after {
+        content: ""; position: absolute; inset: 0;
+        background: radial-gradient(120% 80% at 70% 30%, transparent 0%, transparent 45%, var(--bg) 100%);
+    }
+
+    /* ── Glassy site header (ported from home.html) ── */
+    .site-header {
+        background: color-mix(in srgb, var(--surface) 82%, transparent);
+        backdrop-filter: saturate(1.4) blur(8px);
+        -webkit-backdrop-filter: saturate(1.4) blur(8px);
+        border-bottom: 1px solid var(--border);
+        padding: 0 40px; height: 52px;
+        display: flex; align-items: center; justify-content: space-between;
+        box-shadow: var(--shadow-sm);
+        position: sticky; top: 0; z-index: 100;
+    }
+    .site-header .logo img { height: 22px; display: block; }
+    [data-theme="dark"] .site-header .logo img { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
+    .theme-toggle {
+        background: transparent; border: none; border-radius: var(--radius);
+        width: 34px; height: 34px; margin-right: -10px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: var(--text2);
+        transition: color 0.15s, background 0.15s;
+    }
+    .theme-toggle:hover { color: var(--text); }
+    .theme-toggle i { font-size: 18px; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+    .intake-head { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
     h1 {
-        margin: 0 0 8px; font-family: var(--heading-font); font-style: normal;
-        font-weight: 700; font-size: 34px; line-height: 1.15; letter-spacing: -0.005em;
-        color: var(--text);
+        margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 700; font-size: clamp(26px, 4vw, 38px); line-height: 1.1;
+        letter-spacing: -0.03em; color: var(--text);
     }
     .subtitle {
         color: var(--text2); margin: 0; font-family: var(--mono);
@@ -251,6 +322,20 @@
 
     footer { margin-top: 48px; color: var(--text2); font-size: 11px; text-align: center; }
 
+    @media (max-width: 600px) {
+        .site-header { padding: 0 16px; }
+        .wrap { padding: 24px 16px 60px; }
+        .pick-row { flex-wrap: wrap; }
+        .pick-btn { flex: 1 1 120px; justify-content: center; }
+        .link-add { flex-wrap: wrap; gap: 8px; }
+        .link-add input { min-width: 0; width: 100%; }
+        .link-add button { width: 100%; text-align: center; }
+        .welcome { padding: 18px 16px 16px; }
+        .cred-value { max-width: 100%; }
+        .creds { gap: 12px; }
+        .login-btn { width: 100%; justify-content: center; }
+    }
+
     /* Welcome + editor login card — the page's display moment */
     .welcome {
         background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -260,7 +345,7 @@
     }
     .welcome h2 {
         margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
-        font-weight: 700; font-size: 24px; line-height: 1.15; letter-spacing: -0.005em;
+        font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.025em;
         color: var(--text); text-transform: none;
     }
     .welcome p { margin: 0 0 18px; font-size: 13.5px; color: var(--text2); line-height: 1.6; max-width: 56ch; }
@@ -304,16 +389,45 @@
 </style>
 </head>
 <body>
+
+<div class="bg-layer" aria-hidden="true"><canvas id="noise"></canvas></div>
+
+<header class="site-header">
+    <a href="https://adze.studio/" class="logo" title="Adze"><img src="/static/ADZE.png" alt="Adze"></a>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <i class="ph ph-moon"></i>
+    </button>
+</header>
+
 <div class="wrap">
-    <header>
+    <header class="intake-head">
         <h1>Send your work to {{ARTIST_NAME}}</h1>
         <p class="subtitle">Adze · Artist intake portal</p>
     </header>
 
+    <div class="drop" id="drop">
+        <input type="file" id="file" multiple>
+        <input type="file" id="folder" webkitdirectory directory multiple>
+        <i class="ph ph-upload-simple"></i>
+        <p><strong>Drag files or a folder here</strong>, or paste (Ctrl+V)</p>
+        <p style="font-size:12px">Images, video, audio, PDF — or a <strong>.zip</strong>. Folders keep their structure · up to 1 GB each</p>
+        <div class="pick-row">
+            <button type="button" class="pick-btn" id="pickFiles"><i class="ph ph-file"></i> Choose files</button>
+            <button type="button" class="pick-btn" id="pickFolder"><i class="ph ph-folder"></i> Choose a folder</button>
+        </div>
+    </div>
+
+    <div class="link-add">
+        <i class="ph ph-link"></i>
+        <input type="url" id="linkInput" placeholder="…or paste a link — Instagram, Vimeo, a Drive folder, anything"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addLink();}">
+        <button id="linkBtn" onclick="addLink()">Add link</button>
+    </div>
+
     <div class="welcome" id="welcome">
         <h2>Welcome to the Adze Studio</h2>
         <p>Built by Gabriel for friends and the clients of <strong>LastPlace</strong>.
-           This portal is your way in — drop work below, or sign into the editor to
+           This portal is your way in — drop work above, or sign into the editor to
            shape your site directly.</p>
         <div class="login-block">
             <div class="creds">
@@ -339,30 +453,11 @@
     </div>
 
     <div class="intro">
-        Drop images, videos, audio, or PDFs below — or paste a <strong>link</strong> to anything
+        Drop images, videos, audio, or PDFs above — or paste a <strong>link</strong> to anything
         online (an Instagram post, a Vimeo video, a Drive folder). Add labels to describe each
         piece — e.g. <strong>sculpture</strong>, <strong>2024</strong>, <strong>commission</strong>.
         You don't need an account; this link is your access. Everything you add goes
         straight to your admin's library.
-    </div>
-
-    <div class="drop" id="drop">
-        <input type="file" id="file" multiple>
-        <input type="file" id="folder" webkitdirectory directory multiple>
-        <i class="ph ph-upload-simple"></i>
-        <p><strong>Drag files or a folder here</strong>, or paste (Ctrl+V)</p>
-        <p style="font-size:12px">Images, video, audio, PDF — or a <strong>.zip</strong>. Folders keep their structure · up to 1 GB each</p>
-        <div class="pick-row">
-            <button type="button" class="pick-btn" id="pickFiles"><i class="ph ph-file"></i> Choose files</button>
-            <button type="button" class="pick-btn" id="pickFolder"><i class="ph ph-folder"></i> Choose a folder</button>
-        </div>
-    </div>
-
-    <div class="link-add">
-        <i class="ph ph-link"></i>
-        <input type="url" id="linkInput" placeholder="…or paste a link — Instagram, Vimeo, a Drive folder, anything"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();addLink();}">
-        <button id="linkBtn" onclick="addLink()">Add link</button>
     </div>
 
     <div class="labels-bar">
@@ -389,6 +484,160 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<script>
+/* ── Attractor backdrop + dark-mode toggle ──
+   Ported verbatim from _shared/home.html so the intake portal shares the
+   landing page's living de Jong strange-attractor field. Element lookups are
+   all guarded, so the absence of home's scroll-cue / footer-year / gp-name is
+   harmless here. */
+(function () {
+    var canvas = document.getElementById('noise');
+    var bgLayer = document.querySelector('.bg-layer');
+    var ctx = canvas.getContext('2d');
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var BAYER = [0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5];
+    var LEVELS = 4;
+    var BLOCK = 3;
+
+    var GAMMA = new Float32Array(1024);
+    for (var gi = 0; gi < 1024; gi++) GAMMA[gi] = Math.pow(gi / 1023, 0.8);
+
+    var RW = 0, RH = 0, dens = null, img = null, data = null;
+
+    function resize() {
+        var coverW = window.innerWidth;
+        var coverH = window.innerHeight * 1.4;
+        RW = Math.max(60, Math.round(coverW / BLOCK));
+        RH = Math.max(60, Math.round(coverH / BLOCK));
+        canvas.width = RW;
+        canvas.height = RH;
+        dens = new Float32Array(RW * RH);
+        img = ctx.createImageData(RW, RH);
+        data = img.data;
+    }
+
+    function render(t) {
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        var a = -2.0 + 0.22 * Math.sin(t * 0.00018);
+        var b = -2.0 + 0.20 * Math.cos(t * 0.00013);
+        var c = -1.2 + 0.20 * Math.sin(t * 0.00021 + 1.3);
+        var d =  2.0 + 0.22 * Math.cos(t * 0.00016 + 0.7);
+        var x = 0.1, y = 0.1;
+
+        var xmin = -0.55, xmax = 2.05, ymin = -2.05, ymax = 0.55;
+        var sx = RW / (xmax - xmin), sy = RH / (ymax - ymin);
+
+        dens.fill(0);
+        var N = Math.min(320000, RW * RH * 4);
+        for (var i = 0; i < N; i++) {
+            var nx = Math.sin(a * y) - Math.cos(b * x);
+            var ny = Math.sin(c * x) - Math.cos(d * y);
+            x = nx; y = ny;
+            if (i < 24) continue;
+            if (x < xmin || x > xmax || y < ymin || y > ymax) continue;
+            var px = ((x - xmin) * sx) | 0;
+            var py = ((y - ymin) * sy) | 0;
+            if (px >= 0 && px < RW && py >= 0 && py < RH) dens[py * RW + px]++;
+        }
+
+        var max = 0;
+        for (var k = 0; k < dens.length; k++) {
+            var v = Math.log(1 + dens[k]);
+            dens[k] = v;
+            if (v > max) max = v;
+        }
+        var inv = max > 0 ? 1 / max : 0;
+
+        var cr = dark ? 153 : 33, cg = dark ? 205 : 95, cb = dark ? 255 : 158;
+        var srr = dark ? 86 : 120, sg = dark ? 132 : 150, sb = dark ? 178 : 185;
+        var maxA = (dark ? 0.55 : 0.5) * 255;
+
+        for (var yy = 0; yy < RH; yy++) {
+            for (var xx = 0; xx < RW; xx++) {
+                var idx = yy * RW + xx;
+                var g = GAMMA[(dens[idx] * inv * 1023) | 0];
+                var m = (BAYER[(yy & 3) * 4 + (xx & 3)] + 0.5) / 16;
+                var q = Math.floor(g * LEVELS + (m - 0.5));
+                if (q < 0) q = 0; else if (q > LEVELS) q = LEVELS;
+                var tt = q / LEVELS;
+                var o = idx * 4;
+                data[o]     = srr + (cr - srr) * tt;
+                data[o + 1] = sg + (cg - sg) * tt;
+                data[o + 2] = sb + (cb - sb) * tt;
+                data[o + 3] = (tt * maxA) | 0;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+    }
+
+    var INTERVAL = 60;
+    var lastDraw = -1e9;
+    function frame(now) {
+        if (!document.hidden && now - lastDraw >= INTERVAL) {
+            lastDraw = now;
+            render(now);
+        }
+        requestAnimationFrame(frame);
+    }
+
+    var ticking = false;
+    function onScroll() {
+        if (reduced) return;
+        if (!ticking) {
+            window.requestAnimationFrame(function () {
+                var y = window.scrollY || window.pageYOffset || 0;
+                bgLayer.style.transform = 'translate3d(0,' + (-y * 0.28) + 'px,0)';
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            resize();
+            if (reduced) render(0);
+        }, 180);
+    });
+
+    // Dark-mode toggle (moon ⇄ sun) — backdrop re-reads the theme every frame.
+    var toggle = document.getElementById('theme-toggle');
+    var toggleIcon = toggle ? toggle.querySelector('i') : null;
+    function syncToggleIcon() {
+        if (!toggleIcon) return;
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        toggleIcon.className = dark ? 'ph ph-sun' : 'ph ph-moon';
+    }
+    syncToggleIcon();
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (dark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('adze-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('adze-theme', 'dark');
+            }
+            syncToggleIcon();
+            if (reduced) render(0);
+        });
+    }
+
+    resize();
+    if (reduced) {
+        render(0);
+    } else {
+        requestAnimationFrame(frame);
+    }
+})();
+</script>
 
 <script src="/api/adze/asset-tree.js"></script>
 <script>

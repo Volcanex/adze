@@ -5,6 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adze</title>
     <link rel="icon" type="image/png" href="/api/adze/favicon.png">
+    <link rel="apple-touch-icon" href="/api/adze/favicon.png">
+
+    <!-- SEO -->
+    <meta name="description" content="Permanent, flexible site management and hosting — hand-built, lightweight static sites on independent hardware. By Gabriel Penman, for Last Place & friends.">
+    <link rel="canonical" href="https://adze.studio/">
+    <meta name="theme-color" content="#1a1a1e">
+
+    <!-- Open Graph / social -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Adze">
+    <meta property="og:title" content="Adze — site management & hosting">
+    <meta property="og:description" content="Permanent, flexible site management and hosting. Hand-built, lightweight static sites on independent hardware. By Gabriel Penman.">
+    <meta property="og:url" content="https://adze.studio/">
+    <meta property="og:image" content="https://adze.studio/api/adze/logo.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Adze — site management & hosting">
+    <meta name="twitter:description" content="Permanent, flexible site management and hosting. Hand-built, lightweight static sites on independent hardware.">
+    <meta name="twitter:image" content="https://adze.studio/api/adze/logo.png">
+
+    <!-- Structured data (schema.org) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://adze.studio/#org",
+          "name": "Adze",
+          "url": "https://adze.studio/",
+          "logo": "https://adze.studio/api/adze/logo.png",
+          "description": "Permanent, flexible site management and hosting — hand-built, lightweight static sites on independent hardware.",
+          "founder": { "@type": "Person", "name": "Gabriel Penman", "url": "https://gabrielpenman.com" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://adze.studio/#website",
+          "name": "Adze",
+          "url": "https://adze.studio/",
+          "publisher": { "@id": "https://adze.studio/#org" }
+        }
+      ]
+    }
+    </script>
+
     <script>
     // Apply theme before paint so the backdrop renders in the right palette.
     // Dark is the default — only go light if the visitor explicitly chose it.
@@ -14,8 +58,8 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
     <style>
         :root {
@@ -29,10 +73,11 @@
             --border: #ddd8cf;
             --text: #2a2a28;
             --text2: #6b6860;
-            --radius: 8px;
+            --radius: 4px;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
             --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-            --heading-font: 'Cardo', Georgia, serif;
+            --mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+            --heading-font: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
             --body-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
@@ -156,14 +201,14 @@
 
         .hero-headline {
             font-family: var(--heading-font);
-            font-size: clamp(28px, 3.6vw, 56px);
-            font-weight: 400;
-            line-height: 1.08;
-            letter-spacing: -0.01em;
+            font-size: clamp(26px, 3.4vw, 52px);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
             color: var(--text);
         }
         .hero-headline em {
-            font-style: italic;
+            font-style: normal;
             color: var(--accent);
         }
 
@@ -289,14 +334,15 @@
         }
         .about-lead {
             font-family: var(--heading-font);
-            font-size: clamp(20px, 2.4vw, 30px);
-            font-weight: 400;
-            line-height: 1.3;
+            font-size: clamp(19px, 2.2vw, 27px);
+            font-weight: 500;
+            line-height: 1.35;
+            letter-spacing: -0.02em;
             color: var(--text);
             max-width: 560px;
             margin-bottom: 56px;
         }
-        .about-lead em { font-style: italic; color: var(--accent); }
+        .about-lead em { font-style: normal; color: var(--accent); }
 
         /* Staircase: every point is the same width but steps further right than
            the one above it. Point 1's left edge aligns with the hero's left,

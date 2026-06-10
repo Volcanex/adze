@@ -1404,8 +1404,8 @@
 
         <!-- Header -->
         <div class="header-bar">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:21px;width:auto;">
+            <div style="display:flex;align-items:baseline;gap:10px;">
+                <img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:21px;width:auto;align-self:center;">
                 <h1 style="font-family:var(--heading-font);font-weight:700;letter-spacing:-0.02em;color:var(--text);font-size:21px;"><span style="color:var(--accent);font-weight:400">[</span>Adze<span style="color:var(--accent);font-weight:400">]</span> Studio</h1>
                 <span class="welcome-dash" style="color:var(--text2);margin-left:6px;">–</span>
                 <span class="welcome-text" style="font-family:var(--mono);color:var(--text2);font-size:11px;margin-left:5px;">Welcome back, <span id="artistName" style="color:var(--text2);"></span></span>
@@ -5848,18 +5848,191 @@ function renderSchemaEditorBlock(scope, title, hint, currentValue, templates) {
     `;
 }
 
+// ── Site identity (SEO + Schema.org) — sectioned form, no raw JSON ──────────
+const SEO_TYPES = [
+    { v: 'Person',       label: 'Person — a solo artist or individual' },
+    { v: 'MusicGroup',   label: 'MusicGroup — a band or musical act' },
+    { v: 'Organization', label: 'Organization — a business or collective' },
+];
+const _SEO_INP = 'width:100%;font-size:11px;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--body-font);box-sizing:border-box;';
+const _SEO_LBL = 'font-size:10px;font-weight:600;color:var(--text2);display:block;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.4px;';
+
+function _seoTypeFieldHtml(type, seo) {
+    if (type === 'Person')
+        return `<label style="${_SEO_LBL}">Role / job title</label><input id="seoExtra" type="text" value="${escHtml(seo.role||'')}" placeholder="e.g. Musician, Photographer" style="${_SEO_INP}">`;
+    if (type === 'MusicGroup')
+        return `<label style="${_SEO_LBL}">Genre</label><input id="seoExtra" type="text" value="${escHtml(seo.genre||'')}" placeholder="e.g. Ambient, Folk" style="${_SEO_INP}">`;
+    return '<span style="font-size:10px;color:var(--text2);">No extra fields for Organization.</span>';
+}
+
+function _seoLinkRowHtml(val) {
+    return `<div class="seo-link-row" style="display:flex;gap:6px;">
+        <input type="url" value="${escHtml(val||'')}" placeholder="https://…  (Instagram, Spotify, Bandcamp, website)" style="${_SEO_INP}">
+        <button onclick="this.closest('.seo-link-row').remove()" class="btn-ghost" style="font-size:12px;padding:4px 10px;" title="Remove">×</button>
+    </div>`;
+}
+
 function renderSiteSchemaEditor() {
     const host = document.getElementById('siteSchemaSection');
     if (!host) return;
-    const current = artistConfig?.schema ?? null;
-    host.innerHTML = renderSchemaEditorBlock(
-        'site',
-        'Site identity (Schema.org)',
-        'Injected on every page of this site as JSON-LD. Use Person, MusicGroup, Organization, or ArtGallery to describe who/what this site is — Google and AI crawlers read this directly. <code style="font-size:10px;">sameAs</code> links (Spotify, Bandcamp, Instagram) drive the Google knowledge panel.',
-        current,
-        SITE_SCHEMA_TEMPLATES
-    );
-    wireSchemaEditor('site');
+    const seo = artistConfig?.seo || {};
+    const type = seo.type || 'Person';
+    const links = (Array.isArray(seo.sameAs) && seo.sameAs.length) ? seo.sameAs : [''];
+    host.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Site identity</div>
+        <p style="font-size:10px;color:var(--text2);margin:0 0 14px;line-height:1.5;">
+            Describes who this site is, for Google and AI crawlers. Generates Schema.org structured data, a meta description, and social-share (Open Graph) tags on every page.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+                <label style="${_SEO_LBL}">Type</label>
+                <select id="seoType" onchange="onSeoTypeChange()" style="${_SEO_INP}">
+                    ${SEO_TYPES.map(t=>`<option value="${t.v}" ${t.v===type?'selected':''}>${t.label}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label style="${_SEO_LBL}">Name</label>
+                <input id="seoName" type="text" value="${escHtml(seo.name||'')}" placeholder="${escHtml(artistConfig?.name||'')}" style="${_SEO_INP}">
+            </div>
+            <div id="seoTypeField">${_seoTypeFieldHtml(type, seo)}</div>
+            <div>
+                <label style="${_SEO_LBL}">Description</label>
+                <textarea id="seoDesc" rows="2" placeholder="One or two sentences for search results & link previews." style="${_SEO_INP}resize:vertical;">${escHtml(seo.description||'')}</textarea>
+            </div>
+            <div>
+                <label style="${_SEO_LBL}">Share image</label>
+                <div style="display:flex;gap:6px;">
+                    <input id="seoImage" type="text" value="${escHtml(seo.image||'')}" placeholder="images/cover.jpg — relative to assets/" style="${_SEO_INP}">
+                    <button onclick="openSeoImagePicker()" class="btn-ghost" style="font-size:10px;padding:5px 10px;white-space:nowrap;">Pick</button>
+                </div>
+            </div>
+            <div>
+                <label style="${_SEO_LBL}">Profile &amp; social links</label>
+                <div id="seoLinks" style="display:flex;flex-direction:column;gap:6px;">
+                    ${links.map(_seoLinkRowHtml).join('')}
+                </div>
+                <button onclick="addSeoLink()" class="btn-ghost" style="font-size:10px;padding:4px 10px;margin-top:6px;">+ Add link</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:2px;">
+                <button onclick="saveSeo()" style="font-size:11px;padding:7px 16px;">Save identity</button>
+                <span id="seoStatus" style="font-size:10px;color:var(--text2);"></span>
+            </div>
+        </div>
+    </div>`;
+    host.insertAdjacentHTML('beforeend', _robotsCardHtml());
+}
+
+function _seoBaseUrl() {
+    return artistConfig?.domain ? `https://${artistConfig.domain}` : `https://adze.studio/artists/${currentArtist}`;
+}
+
+function _robotsCardHtml() {
+    const base = _seoBaseUrl();
+    const robots = artistConfig?.robots || '';
+    const def = `User-agent: *\nAllow: /\nSitemap: ${base}/sitemap.xml`;
+    return `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:4px;">Search engines</div>
+        <p style="font-size:10px;color:var(--text2);margin:0 0 12px;line-height:1.5;">
+            Your <code style="font-size:10px;">sitemap.xml</code> is generated automatically from your pages. Edit <code style="font-size:10px;">robots.txt</code> below to control crawling — leave it blank for the sensible default (allow everything). <a href="${escHtml(base)}/sitemap.xml" target="_blank" style="color:var(--accent);">View sitemap →</a>
+        </p>
+        <label style="${_SEO_LBL}">robots.txt</label>
+        <textarea id="robotsText" rows="5" placeholder="${escHtml(def)}" style="${_SEO_INP}resize:vertical;font-family:var(--mono);">${escHtml(robots)}</textarea>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+            <button onclick="saveRobots()" style="font-size:11px;padding:7px 16px;">Save robots.txt</button>
+            <span id="robotsStatus" style="font-size:10px;color:var(--text2);"></span>
+        </div>
+    </div>`;
+}
+
+async function saveRobots() {
+    const status = document.getElementById('robotsStatus');
+    const robots = document.getElementById('robotsText').value;
+    if (status) { status.style.color = 'var(--text2)'; status.textContent = 'Saving…'; }
+    try {
+        const resp = await apiFetch('/api/adze/update-site-config', { method: 'POST', body: { config: { robots } } });
+        if (!resp.ok) { if (status){ status.style.color='#ff7676'; status.textContent='Save failed.'; } return; }
+        if (artistConfig) artistConfig.robots = robots;
+        if (status) { status.style.color = 'var(--accent)'; status.textContent = 'Saved — republish to apply.'; }
+        toast('robots.txt saved', 'success');
+    } catch(e) {
+        if (status) { status.style.color = '#ff7676'; status.textContent = 'Error: ' + e.message; }
+    }
+}
+
+function onSeoTypeChange() {
+    const type = document.getElementById('seoType').value;
+    const f = document.getElementById('seoTypeField');
+    if (f) f.innerHTML = _seoTypeFieldHtml(type, artistConfig?.seo || {});
+}
+
+function addSeoLink() {
+    const wrap = document.getElementById('seoLinks');
+    if (wrap) wrap.insertAdjacentHTML('beforeend', _seoLinkRowHtml(''));
+}
+
+function openSeoImagePicker() {
+    const imgExts = ['png','jpg','jpeg','svg','gif','webp'];
+    const eligible = (typeof assetList !== 'undefined' ? assetList : []).filter(a => imgExts.some(e => a.path.toLowerCase().endsWith('.' + e)));
+    if (!eligible.length) { toast('No images in assets yet — upload one first', 'warn'); return; }
+    const existing = document.getElementById('seoImagePickerModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'seoImagePickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;width:480px;max-width:90vw;max-height:70vh;display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:13px;font-weight:600;">Pick share image</div>
+                <button onclick="document.getElementById('seoImagePickerModal').remove()" class="btn-ghost" style="padding:4px 8px;font-size:11px;">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;overflow-y:auto;flex:1;">
+                ${eligible.map(a => `
+                    <div onclick="setSeoImage('${escHtml(a.path)}')" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <img src="/artists/${currentArtist}/assets/${escHtml(a.path)}" style="width:40px;height:40px;object-fit:contain;" onerror="this.style.display='none'">
+                        <span style="font-size:8px;color:var(--text2);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;">${escHtml(a.filename)}</span>
+                    </div>`).join('')}
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+function setSeoImage(path) {
+    const modal = document.getElementById('seoImagePickerModal');
+    if (modal) modal.remove();
+    const inp = document.getElementById('seoImage');
+    if (inp) inp.value = path;
+}
+
+async function saveSeo() {
+    const status = document.getElementById('seoStatus');
+    const type = document.getElementById('seoType').value;
+    const seo = { type };
+    const name  = document.getElementById('seoName').value.trim();
+    const desc  = document.getElementById('seoDesc').value.trim();
+    const image = document.getElementById('seoImage').value.trim();
+    if (name)  seo.name = name;
+    if (desc)  seo.description = desc;
+    if (image) seo.image = image;
+    const extra = document.getElementById('seoExtra');
+    if (extra && extra.value.trim()) {
+        if (type === 'Person') seo.role = extra.value.trim();
+        else if (type === 'MusicGroup') seo.genre = extra.value.trim();
+    }
+    const links = Array.from(document.querySelectorAll('#seoLinks input')).map(i => i.value.trim()).filter(Boolean);
+    if (links.length) seo.sameAs = links;
+    if (status) { status.style.color = 'var(--text2)'; status.textContent = 'Saving…'; }
+    try {
+        const resp = await apiFetch('/api/adze/update-site-config', { method: 'POST', body: { config: { seo } } });
+        if (!resp.ok) { if (status){ status.style.color='#ff7676'; status.textContent='Save failed.'; } return; }
+        if (artistConfig) artistConfig.seo = seo;
+        if (status) { status.style.color = 'var(--accent)'; status.textContent = 'Saved — republish to apply.'; }
+        toast('Site identity saved', 'success');
+    } catch(e) {
+        if (status) { status.style.color = '#ff7676'; status.textContent = 'Error: ' + e.message; }
+    }
 }
 
 function renderPageSchemaEditorHtml(pageUrl) {
