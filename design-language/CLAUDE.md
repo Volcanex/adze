@@ -10,9 +10,10 @@ Bundle exported from claude.ai/design and dropped here as the source of truth fo
 
 ## ⚠ Chrome moved to the "mono" direction (2026-06-03)
 
-The live chrome (`portal.html`, `admin.html`, `dashboard.html`) has been migrated
-off the original Cardo-serif-italic identity to a **mono / technical** direction
-("Alt 2"). The `project/Adze Design Language.html` export here still documents the
+The live chrome (`home.html` — the adze.studio landing page, served at
+`/api/adze/home` — plus `portal.html`, `admin.html`, `dashboard.html`) has been
+migrated off the original Cardo-serif-italic identity to a **mono / technical**
+direction ("Alt 2"). The `project/Adze Design Language.html` export here still documents the
 **old** Cardo look and is now behind — treat it as historical until re-exported.
 
 What changed in all three `:root` blocks:

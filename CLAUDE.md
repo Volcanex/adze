@@ -12,6 +12,7 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 
 ## Layout
 - `artists/<slug>/config.json` — `name`, `slug`, `domain`, `admin_token`
+  - SEO fields (edited in the dashboard **Presence** tab): `seo` (Person/MusicGroup/Organization site identity → JSON-LD), `robots` (custom robots.txt override). `compile.py` generates per-page meta description + Open Graph/Twitter + JSON-LD (`_build_seo_head`) and writes `sitemap.xml` + `robots.txt` at each site root (`_write_artist_seo_files`). adze.studio's own robots/sitemap/favicon are Flask routes in `admin_api.py` mapped at the site root by `nginx/sites-available/adze.studio`.
 - `artists/<slug>/<page>/content.md` — Markdown + inline `<style>`/`<script>` for each page
 - `artists/<slug>/assets/` — fonts, images, JS referenced via `../assets/...`
 - `_shared/` — code shared across artist sites
@@ -21,6 +22,7 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 ## Routing
 - Default: domain-based — `_get_artist_by_domain(host)` matches `config.json`'s `domain`
 - `/preview/<slug>/` — same-origin route for cross-site iframe embeds (added for lastplacesite case studies)
+- **Asset URLs must be flat.** Flask registers `/assets/<page_slug>/<path>` (`serve_page_assets`), so any `/assets/<subdir>/file` request is read as "page asset for page `<subdir>`" and 404s with *"Assets directory not found"*. Put artist images directly in `assets/` with flat prefixed names (`work-…`, `exh-…`), **not** in `assets/works/…` subfolders. nginx serves them fine in prod, but Flask (dashboard preview iframe) does not — so subfolders break the preview.
 
 ## Self-documenting agent docs
 Whenever you discover something non-obvious about a subdirectory — an unusual convention, a compile gotcha, a deployment quirk, a "future-agent should know" detail — create or update a `CLAUDE.md` in that directory. Run `scripts/sync-agent-docs.sh` so a sibling `AGENTS.md` symlink exists beside it. `AGENTS.md` must point at `CLAUDE.md`, so edits through either filename update the same file. Add a one-line entry to the index below so they remain discoverable from here.
@@ -70,10 +72,12 @@ hand-edit between the markers.
 | `_shared/dashboard-themes/CLAUDE.md` | dashboard-themes/ — admin dashboard color themes |
 | `_shared/features/CLAUDE.md` | Features — Site-wide capability modules |
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
+| `_shared/widgets/loom/CLAUDE.md` | Loom — visual synth (flagship T2 widget) |
 | `artists/CLAUDE.md` | Artists — coordination with Terminal Access |
+| `artists/rose/CLAUDE.md` | Rose Jones — generated from information.json |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 | `shared/CLAUDE.md` | shared/ — legacy stub, do not use |
 
-_Auto-compiled 2026-06-03 23:50 UTC — 8 doc(s) found._
+_Auto-compiled 2026-06-07 14:41 UTC — 10 doc(s) found._
 <!-- DOCS:END -->

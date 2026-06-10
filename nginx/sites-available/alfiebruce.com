@@ -1,10 +1,10 @@
 server {
-    server_name rosefpjones.com www.rosefpjones.com;
+    server_name alfiebruce.com www.alfiebruce.com;
 
-    root /home/gabriel/adze/output/artists/rose;
+    root /home/gabriel/adze/output/artists/alfiebruce;
 
     location /assets/ {
-        alias /home/gabriel/adze/output/artists/rose/assets/;
+        alias /home/gabriel/adze/output/artists/alfiebruce/assets/;
         expires 24h;
         add_header Cache-Control "public, max-age=86400";
     }
@@ -19,10 +19,6 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         client_max_body_size 50M;
-    }
-
-    location = / {
-        return 301 /home/;
     }
 
     location / {
@@ -40,17 +36,33 @@ server {
         proxy_set_header Connection "upgrade";
     }
 
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    ssl_certificate /etc/letsencrypt/live/rosefpjones.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/rosefpjones.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-}
+    listen [::]:443 ssl; # managed by Certbot
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/alfiebruce.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/alfiebruce.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
 
+
+}
 server {
-    server_name rosefpjones.com www.rosefpjones.com;
+    if ($host = www.alfiebruce.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = alfiebruce.com) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    server_name alfiebruce.com www.alfiebruce.com;
+
     listen 80;
     listen [::]:80;
-    return 301 https://$host$request_uri;
+    return 404; # managed by Certbot
+
+
+
+
 }

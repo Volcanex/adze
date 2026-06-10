@@ -10,8 +10,7 @@ server {
     }
 
     # Dashboard at /dashboard (clean URL)
-    # Super-admin dashboard — prefix match so client-side routes like
-    # /admin/artist/<slug> all hit the SPA shell.
+    # Super-admin dashboard
     location /admin {
         proxy_pass http://127.0.0.1:5001/api/adze/admin;
         proxy_set_header Host $host;
@@ -28,7 +27,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Root → Adze landing page (hero links onward to /dashboard and /admin)
+    # Root → Adze landing page
     location = / {
         proxy_pass http://127.0.0.1:5001/api/adze/home;
         proxy_set_header Host $host;
@@ -38,6 +37,24 @@ server {
     }
 
     # Docs at /docs (clean URL)
+    # Favicon at the site root — browsers and crawlers (incl. Googlebot)
+    # request /favicon.ico by default; map it to the Flask-served .ico.
+    location = /favicon.ico {
+        proxy_pass http://127.0.0.1:5001/api/adze/favicon.ico;
+        proxy_set_header Host $host;
+        expires 24h;
+    }
+
+    # Search-engine discovery files at the site root.
+    location = /robots.txt {
+        proxy_pass http://127.0.0.1:5001/api/adze/robots.txt;
+        proxy_set_header Host $host;
+    }
+    location = /sitemap.xml {
+        proxy_pass http://127.0.0.1:5001/api/adze/sitemap.xml;
+        proxy_set_header Host $host;
+    }
+
     location = /docs {
         proxy_pass http://127.0.0.1:5001/api/adze/docs;
         proxy_set_header Host $host;
@@ -56,7 +73,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        client_max_body_size 50M;
+        client_max_body_size 2G;
 
         # Vibe Coder streams can run 5+ minutes
         proxy_read_timeout 600s;
@@ -83,6 +100,16 @@ server {
         proxy_buffering off;
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
+    }
+
+    # Intake portal — public token-gated upload page
+    location /intake/ {
+        proxy_pass http://127.0.0.1:5001/api/adze/intake/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 2G;
     }
 
     # Same-origin preview of an artist site (for cross-site iframe embeds)
