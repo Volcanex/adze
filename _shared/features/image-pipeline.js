@@ -116,10 +116,10 @@
     ctx.globalCompositeOperation = 'multiply';
 
     var channels = [
-      { ang: 15, rgb: [0, 183, 235],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.r/255-k)/(1-k); } },
-      { ang: 75, rgb: [236, 0, 140],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.g/255-k)/(1-k); } },
-      { ang: 90, rgb: [255, 239, 0],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.b/255-k)/(1-k); } },
-      { ang: 45, rgb: [20, 20, 20],    ex: function(c){ return 1-Math.max(c.r,c.g,c.b)/255; } },
+      { ang: cfg.cAngle != null ? +cfg.cAngle : 15, rgb: [0, 183, 235],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.r/255-k)/(1-k); } },
+      { ang: cfg.mAngle != null ? +cfg.mAngle : 75, rgb: [236, 0, 140],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.g/255-k)/(1-k); } },
+      { ang: cfg.yAngle != null ? +cfg.yAngle : 90, rgb: [255, 239, 0],   ex: function(c){ var k=1-Math.max(c.r,c.g,c.b)/255; return k===1?0:(1-c.b/255-k)/(1-k); } },
+      { ang: cfg.kAngle != null ? +cfg.kAngle : 45, rgb: [20, 20, 20],    ex: function(c){ return 1-Math.max(c.r,c.g,c.b)/255; } },
     ];
 
     channels.forEach(function(ch) {
@@ -279,9 +279,10 @@
         full.onload = function () {
           img.style.imageRendering = '';
 
-          var txStyle = cfg.transitionStyle || 'crystallise';
-          var txMs    = cfg.transitionSpeed != null ? +cfg.transitionSpeed : 750;
-          var txBlur  = cfg.transitionBlur  != null ? +cfg.transitionBlur  : 12;
+          var txStyle  = cfg.transitionStyle  || 'crystallise';
+          var txMs     = cfg.transitionSpeed != null ? +cfg.transitionSpeed : 750;
+          var txBlur   = cfg.transitionBlur  != null ? +cfg.transitionBlur  : 12;
+          var txEase   = cfg.transitionEasing || 'ease';
 
           // 'none' — instant swap, no overlay
           if (txStyle === 'none') {
@@ -292,40 +293,59 @@
             return;
           }
 
-          // Overlay is position:fixed appended to body — no parent manipulation,
-          // no layout shifts regardless of the img's containing context.
           var ir = img.getBoundingClientRect();
           var cs = window.getComputedStyle(img);
           var ov = new Image();
           ov.src = full.src;
+          var tx = txMs + 'ms ' + txEase;
 
-          var txParts = ['opacity ' + txMs + 'ms ease'];
-          if (txStyle === 'crystallise') txParts.push('filter ' + txMs + 'ms ease');
-
-          ov.style.cssText = [
+          // Build overlay CSS — sharp overlay (no blur), position:fixed so no
+          // parent is mutated and no layout shifts occur.
+          var ovCSS = [
             'position:fixed',
-            'left:'   + ir.left   + 'px',
-            'top:'    + ir.top    + 'px',
-            'width:'  + ir.width  + 'px',
-            'height:' + ir.height + 'px',
-            'object-fit:'      + (cs.objectFit      || 'cover'),
+            'left:' + ir.left + 'px', 'top:' + ir.top + 'px',
+            'width:' + ir.width + 'px', 'height:' + ir.height + 'px',
+            'object-fit:' + (cs.objectFit || 'cover'),
             'object-position:' + (cs.objectPosition || 'center'),
-            'opacity:0',
-            txStyle === 'crystallise' ? 'filter:blur(' + txBlur + 'px)' : '',
-            'transition:' + txParts.join(','),
-            'pointer-events:none',
-            'z-index:9999',
+            'pointer-events:none', 'z-index:9999',
             'margin:0', 'padding:0', 'border:0', 'display:block',
-          ].filter(Boolean).join(';');
+          ];
 
+          if (txStyle === 'wipe-right') {
+            ovCSS.push('clip-path:inset(0 100% 0 0)', 'opacity:1',
+                       'transition:clip-path ' + tx);
+          } else if (txStyle === 'wipe-down') {
+            ovCSS.push('clip-path:inset(100% 0 0 0)', 'opacity:1',
+                       'transition:clip-path ' + tx);
+          } else if (txStyle === 'zoom') {
+            ovCSS.push('opacity:0', 'transform:scale(0.96)', 'transform-origin:center',
+                       'transition:opacity ' + tx + ',transform ' + tx);
+          } else {
+            // crystallise, fade — overlay fades in sharp; placeholder blurs out (crystallise)
+            ovCSS.push('opacity:0', 'transition:opacity ' + tx);
+          }
+
+          ov.style.cssText = ovCSS.join(';');
           document.body.appendChild(ov);
+
+          // Also animate the placeholder out for crystallise/zoom
+          if (txStyle === 'crystallise' || txStyle === 'zoom') {
+            img.style.transition = 'filter ' + tx;
+            var outBlur = txStyle === 'crystallise' ? txBlur : Math.round(txBlur * 0.4);
+            requestAnimationFrame(function () { img.style.filter = 'blur(' + outBlur + 'px)'; });
+          }
+
           requestAnimationFrame(function () {
-            ov.style.opacity = '1';
-            if (txStyle === 'crystallise') ov.style.filter = 'blur(0px)';
+            if (txStyle === 'wipe-right') ov.style.clipPath = 'inset(0 0% 0 0)';
+            else if (txStyle === 'wipe-down') ov.style.clipPath = 'inset(0% 0 0 0)';
+            else if (txStyle === 'zoom') { ov.style.opacity = '1'; ov.style.transform = 'scale(1)'; }
+            else ov.style.opacity = '1';
           });
 
           ov.addEventListener('transitionend', function () {
             img.dataset.pipeline = '1';
+            img.style.filter = '';
+            img.style.transition = '';
             img.style.aspectRatio = '';
             img.src = full.src;
             if (document.body.contains(ov)) document.body.removeChild(ov);

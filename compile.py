@@ -12,6 +12,7 @@ import re
 import shutil
 import base64
 import hashlib
+import html
 from urllib.parse import quote
 from pathlib import Path
 from datetime import datetime
@@ -140,9 +141,89 @@ class AdzeCompiler:
             out.append(f'\n    <script type="application/ld+json">{payload}</script>')
         return ''.join(out)
 
+    def _build_seo_head(self, artist_slug, artist_config, page_config, page_rel):
+        """Generate meta description, canonical, Open Graph/Twitter tags, and a
+        typed JSON-LD entity from the artist's `seo` block + page config.
+
+        Baseline meta/OG is emitted for every page from the best-available
+        name/description/image. The typed Schema.org entity (Person / MusicGroup
+        / Organization) is emitted only once the artist fills in `seo` (so we
+        never assert a wrong @type). Raw `schema` blocks are handled separately."""
+        seo = artist_config.get('seo') or {}
+
+        # Absolute site base — custom domain if set, else the adze.studio path.
+        domain = (artist_config.get('domain') or '').strip()
+        base = f"https://{domain}" if domain else f"https://adze.studio/artists/{artist_slug}"
+        page_path = page_rel.as_posix() if hasattr(page_rel, 'as_posix') else str(page_rel)
+        page_url = f"{base}/{page_path}/" if page_path and page_path != '.' else f"{base}/"
+
+        name = (seo.get('name') or artist_config.get('name') or artist_slug).strip()
+        # Page-specific description drives this page's meta/OG; the site-level
+        # description (about the artist, identical on every page) drives the
+        # JSON-LD entity so its description doesn't change page to page.
+        site_desc = (seo.get('description') or artist_config.get('description') or '').strip()
+        description = (page_config.get('description') or site_desc).strip()
+        title = (page_config.get('title') or name).strip()
+
+        # Resolve an absolute image URL (page og_image wins, else seo.image).
+        img = (page_config.get('og_image') or seo.get('image') or '').strip()
+        if img.startswith(('http://', 'https://')):
+            image_abs = img
+        elif img:
+            image_abs = f"{base}/assets/{img.lstrip('/')}"
+        else:
+            image_abs = ''
+
+        e = html.escape
+        out = []
+        if description:
+            out.append(f'<meta name="description" content="{e(description)}">')
+        out.append(f'<link rel="canonical" href="{e(page_url)}">')
+        out.append('<meta property="og:type" content="website">')
+        out.append(f'<meta property="og:site_name" content="{e(name)}">')
+        out.append(f'<meta property="og:title" content="{e(title)}">')
+        if description:
+            out.append(f'<meta property="og:description" content="{e(description)}">')
+        out.append(f'<meta property="og:url" content="{e(page_url)}">')
+        if image_abs:
+            out.append(f'<meta property="og:image" content="{e(image_abs)}">')
+        out.append(f'<meta name="twitter:card" content="{"summary_large_image" if image_abs else "summary"}">')
+        out.append(f'<meta name="twitter:title" content="{e(title)}">')
+        if description:
+            out.append(f'<meta name="twitter:description" content="{e(description)}">')
+        if image_abs:
+            out.append(f'<meta name="twitter:image" content="{e(image_abs)}">')
+
+        if seo.get('type'):
+            entity = {
+                '@context': 'https://schema.org',
+                '@type': seo['type'],
+                'name': name,
+                'url': f"{base}/",
+            }
+            if site_desc:
+                entity['description'] = site_desc
+            if image_abs:
+                entity['image'] = image_abs
+            same = [s for s in (seo.get('sameAs') or []) if s]
+            if same:
+                entity['sameAs'] = same
+            if seo['type'] == 'Person' and seo.get('role'):
+                entity['jobTitle'] = seo['role']
+            if seo['type'] == 'MusicGroup' and seo.get('genre'):
+                entity['genre'] = seo['genre']
+            payload = json.dumps(entity, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
+            out.append(f'<script type="application/ld+json">{payload}</script>')
+
+        return ('\n    ' + '\n    '.join(out)) if out else ''
+
     def _inject_image_pipeline(self, html, artist_slug, artist_config, up_prefix):
         """Rewrite <img> tags with data-thumb and inject pipeline script. No-op if feature not configured."""
-        pipeline_cfg = (artist_config.get('features') or {}).get('image_pipeline')
+        # `features` may be a dict (per-feature config) or a list of enabled
+        # feature names (e.g. ["bookings"]) — only the dict form carries an
+        # image_pipeline config block.
+        _feats = artist_config.get('features')
+        pipeline_cfg = _feats.get('image_pipeline') if isinstance(_feats, dict) else None
         if not pipeline_cfg:
             return html
 
@@ -234,6 +315,69 @@ class AdzeCompiler:
         html = html.replace('</body>', script_block + '</body>')
         return html
 
+    def _inject_data_placeholders(self, html_content, artist_slug):
+        """Replace data placeholders in HTML with content derived from information.json.
+
+        <!-- EXHIBITIONS_BLOCK --> → <p> lines for each exhibition, newest first.
+        No-op if information.json is absent or the placeholder isn't present.
+        """
+        if '<!-- EXHIBITIONS_BLOCK -->' not in html_content:
+            return html_content
+
+        info_path = self.artists_dir / artist_slug / 'information.json'
+        if not info_path.exists():
+            return html_content
+
+        try:
+            info = json.loads(info_path.read_text(encoding='utf-8'))
+        except Exception:
+            return html_content
+
+        exhibitions = info.get('exhibitions', [])
+        # Sort newest first, stable on title
+        exhibitions = sorted(exhibitions, key=lambda e: -e.get('year', 0))
+
+        lines = []
+        for e in exhibitions:
+            year = str(e.get('year', ''))
+            title = e.get('title', '')
+            etype = (e.get('type') or '').lower()
+            location = e.get('location', '')
+            suffix = ', '.join(p for p in [etype, location] if p)
+            text = f"{year} — {title}, {suffix}" if suffix else f"{year} — {title}"
+            lines.append(f'        <p>{html.escape(text)}</p>')
+
+        block = '\n'.join(lines)
+        return html_content.replace('<!-- EXHIBITIONS_BLOCK -->', block)
+
+    def _inject_loom(self, html, artist_config):
+        """Inject the Loom visual-synth runtime if features.loom holds a trace.
+
+        Loads the shared engine (_shared/widgets/loom/engine.js) + the live
+        runtime (_shared/features/loom.js) + the trace as window.__loom. The
+        trace is the source of truth; this is just the 'live' renderer. No-op
+        if the feature is not configured.
+        """
+        _feats = artist_config.get('features')
+        trace = _feats.get('loom') if isinstance(_feats, dict) else None
+        if not trace:
+            return html
+
+        engine_path = self.shared_dir / 'widgets' / 'loom' / 'engine.js'
+        runtime_path = self.shared_dir / 'features' / 'loom.js'
+        if not engine_path.exists() or not runtime_path.exists():
+            return html
+
+        engine_js  = engine_path.read_text(encoding='utf-8')
+        runtime_js = runtime_path.read_text(encoding='utf-8')
+        trace_json = json.dumps(trace, ensure_ascii=False, separators=(',', ':'))
+        script_block = (
+            '<script>' + engine_js + '</script>\n'
+            '<script>window.__loom=' + trace_json + ';</script>\n'
+            '<script>' + runtime_js + '</script>\n'
+        )
+        return html.replace('</body>', script_block + '</body>')
+
     @staticmethod
     def _hsl_hex(h, s, l):
         """HSL (h 0-360, s/l 0-100) -> #RRGGBB. Mirrors the dashboard's JS
@@ -273,6 +417,7 @@ class AdzeCompiler:
         """Compile a single page into output/{slug}/{page}/index.html."""
         config = json.loads((page_dir / 'config.json').read_text(encoding='utf-8'))
         html_content, css_content, meta_tags = self.parse_content(page_dir)
+        html_content = self._inject_data_placeholders(html_content, artist_slug)
         artist_root = self.artists_dir / artist_slug
         page_rel = page_dir.relative_to(artist_root)
         page_name = str(page_rel)
@@ -300,13 +445,14 @@ class AdzeCompiler:
             favicon_link = self._favicon_dot_link(color)
 
         schema_blocks = self._build_schema_blocks(artist_config, config)
+        seo_head = self._build_seo_head(artist_slug, artist_config, config, page_rel)
 
         full_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">{meta_section}
-    <title>{config.get('title', 'Untitled')}</title>
+    <title>{config.get('title', 'Untitled')}</title>{seo_head}
     {favicon_link}{schema_blocks}
     {css_content}
 </head>
@@ -317,6 +463,7 @@ class AdzeCompiler:
 
         # Feature injection (opt-in, no-op if not configured)
         full_html = self._inject_image_pipeline(full_html, artist_slug, artist_config, up_prefix)
+        full_html = self._inject_loom(full_html, artist_config)
 
         # Write to output/artists/{slug}/{page}/index.html (matches URL structure)
         out_dir = self.output_dir / 'artists' / artist_slug / page_rel
@@ -324,6 +471,59 @@ class AdzeCompiler:
         (out_dir / 'index.html').write_text(full_html, encoding='utf-8')
 
         return config
+
+    def _artist_base_url(self, artist_slug, artist_config):
+        """Canonical site origin — custom domain if set, else the adze.studio path."""
+        domain = (artist_config.get('domain') or '').strip()
+        return f"https://{domain}" if domain else f"https://adze.studio/artists/{artist_slug}"
+
+    def _write_artist_seo_files(self, artist_slug, artist_config, pages, artist_output):
+        """Emit sitemap.xml (built from the compiled pages) and robots.txt (the
+        artist's override, or a sensible allow-all default) at the site root so
+        search engines can discover the site. Served at <domain>/sitemap.xml and
+        <domain>/robots.txt via the artist's nginx `try_files $uri`."""
+        base = self._artist_base_url(artist_slug, artist_config)
+
+        locs = [f"{base}/{p}/" for p in pages] or [f"{base}/"]
+        urls = '\n'.join(f'  <url><loc>{html.escape(u)}</loc></url>' for u in locs)
+        sitemap = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+                   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                   f'{urls}\n</urlset>\n')
+        (artist_output / 'sitemap.xml').write_text(sitemap, encoding='utf-8')
+
+        custom = (artist_config.get('robots') or '').strip()
+        if custom:
+            robots = custom if custom.endswith('\n') else custom + '\n'
+            if 'sitemap:' not in robots.lower():
+                robots += f"Sitemap: {base}/sitemap.xml\n"
+        else:
+            robots = f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n"
+        (artist_output / 'robots.txt').write_text(robots, encoding='utf-8')
+
+    def prune_orphaned_output(self, artist_slug, source_page_rels):
+        """Remove compiled page dirs whose source page no longer exists, so a
+        deleted page stops being served. Scoped strictly to this artist's
+        output tree; never touches assets/ or the site-root files. Keyed on
+        *source presence* (not compile success) so a transient compile error
+        never deletes a still-valid page."""
+        artist_output = self.output_dir / 'artists' / artist_slug
+        if not artist_output.exists():
+            return 0
+        keep = set(source_page_rels)
+        removed = 0
+        for index_file in sorted(artist_output.rglob('index.html'), reverse=True):
+            page_dir = index_file.parent
+            rel = page_dir.relative_to(artist_output)
+            if rel == Path('.') or 'assets' in rel.parts:
+                continue  # root redirect + asset tree are not pages
+            if rel.as_posix() in keep or not page_dir.exists():
+                continue
+            try:
+                shutil.rmtree(page_dir)
+                removed += 1
+            except OSError:
+                pass
+        return removed
 
     def compile_artist(self, artist_slug):
         """Compile all pages for a single artist."""
@@ -341,13 +541,22 @@ class AdzeCompiler:
 
         # Compile pages
         compiled = 0
+        compiled_pages = []
+        source_page_rels = [p.relative_to(artist_dir).as_posix()
+                            for p in self.get_page_dirs(artist_dir)]
         for page_dir in self.get_page_dirs(artist_dir):
             try:
                 self.compile_page(artist_slug, page_dir)
+                compiled_pages.append(page_dir.relative_to(artist_dir).as_posix())
                 print(f"  Compiled: {page_dir.name}")
                 compiled += 1
             except Exception as e:
                 print(f"  Error compiling {page_dir.name}: {e}")
+
+        # Drop compiled output for pages deleted from source
+        pruned = self.prune_orphaned_output(artist_slug, source_page_rels)
+        if pruned:
+            print(f"  Pruned {pruned} orphaned page(s)")
 
         # Generate root index redirect to home/
         artist_output = self.output_dir / 'artists' / artist_slug
@@ -356,6 +565,16 @@ class AdzeCompiler:
         if home_index.exists():
             redirect = '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=home/"></head></html>'
             (artist_output / 'index.html').write_text(redirect)
+
+        # robots.txt + sitemap.xml for search engines (served at the site root)
+        artist_config = {}
+        cfg_file = artist_dir / 'config.json'
+        if cfg_file.exists():
+            try:
+                artist_config = json.loads(cfg_file.read_text(encoding='utf-8'))
+            except Exception:
+                pass
+        self._write_artist_seo_files(artist_slug, artist_config, compiled_pages, artist_output)
 
         print(f"=== Done: {compiled} pages ===")
         return True

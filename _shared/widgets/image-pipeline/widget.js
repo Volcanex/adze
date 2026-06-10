@@ -19,7 +19,7 @@
   const MODE_PARAMS = {
     halftone:    ['cellSize','angle','inkColor','paperColor'],
     duotone:     ['cellSize','angle1','angle2','color1','color2','paperColor'],
-    cmyk:        ['cellSize','paperColor'],
+    cmyk:        ['cellSize','cAngle','mAngle','yAngle','kAngle','paperColor'],
     dither:      ['colorDepth','paletteType','ditherAlgo','blockSize'],
     bitmap:      [],
     progressive: ['blur'],
@@ -35,6 +35,10 @@
     color1:          { label: 'Colour 1',       type: 'color',  def: '#1a1a1a' },
     color2:          { label: 'Colour 2',       type: 'color',  def: '#c0392b' },
     blockSize:       { label: 'Display scale',  type: 'range',  min: 2,  max: 16, step: 1, def: 6 },
+    cAngle:          { label: 'Cyan °',         type: 'range',  min: 0,  max: 90, step: 1, def: 15 },
+    mAngle:          { label: 'Magenta °',      type: 'range',  min: 0,  max: 90, step: 1, def: 75 },
+    yAngle:          { label: 'Yellow °',       type: 'range',  min: 0,  max: 90, step: 1, def: 90 },
+    kAngle:          { label: 'Black °',        type: 'range',  min: 0,  max: 90, step: 1, def: 45 },
     blur:            { label: 'Blur amount',    type: 'range',  min: 4,  max: 40, step: 1, def: 20 },
     colorDepth:  { label: 'Colour depth',   type: 'select', def: '4',
       options: [
@@ -61,20 +65,32 @@
   };
 
   // Transition params are mode-independent
-  const TX_PARAMS = ['transitionStyle', 'transitionSpeed', 'transitionBlur'];
+  const TX_PARAMS = ['transitionStyle', 'transitionSpeed', 'transitionEasing', 'transitionBlur'];
   const TX_META = {
     transitionStyle: { label: 'Style', type: 'select', def: 'crystallise',
       options: [
-        { v: 'crystallise', l: 'Crystallise — blur resolves in' },
-        { v: 'fade',        l: 'Fade — opacity only' },
+        { v: 'crystallise', l: 'Crystallise — placeholder blurs out' },
+        { v: 'fade',        l: 'Fade — clean crossfade' },
+        { v: 'wipe-right',  l: 'Wipe →  left to right' },
+        { v: 'wipe-down',   l: 'Wipe ↓  top to bottom' },
+        { v: 'zoom',        l: 'Zoom — image zooms in sharp' },
         { v: 'none',        l: 'None — instant swap' },
       ]
     },
     transitionSpeed: { label: 'Speed', type: 'select', def: '750',
       options: [
-        { v: '350',  l: 'Fast  (0.35s)' },
+        { v: '300',  l: 'Fast  (0.3s)' },
         { v: '750',  l: 'Medium  (0.75s)' },
         { v: '1400', l: 'Slow  (1.4s)' },
+      ]
+    },
+    transitionEasing: { label: 'Easing', type: 'select', def: 'ease',
+      options: [
+        { v: 'ease',         l: 'Ease' },
+        { v: 'ease-in-out',  l: 'Ease in-out' },
+        { v: 'ease-in',      l: 'Ease in' },
+        { v: 'ease-out',     l: 'Ease out' },
+        { v: 'linear',       l: 'Linear' },
       ]
     },
     transitionBlur: { label: 'Blur', type: 'range', min: 2, max: 30, step: 1, def: 12 },
@@ -142,7 +158,7 @@
         <!-- Transition params -->
         <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);margin-bottom:10px;">Transition</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;" id="pip-tx-params"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" id="pip-tx-params"></div>
         </div>
 
         <!-- Actions -->
@@ -186,6 +202,12 @@
     return cfg;
   }
 
+  let _txPlayTimer = null;
+  function debouncedPlay() {
+    clearTimeout(_txPlayTimer);
+    _txPlayTimer = setTimeout(() => { if (_placeholderCanvas) playTransition(); }, 1500);
+  }
+
   function buildTxParams(existingCfg) {
     const wrap = document.getElementById('pip-tx-params');
     wrap.innerHTML = '';
@@ -210,14 +232,16 @@
         row.innerHTML = `
           <label style="font-size:10px;color:var(--text2);display:block;margin-bottom:3px;">${meta.label}</label>
           <select id="pip-tx-${p}" style="width:100%;padding:3px 6px;font-size:10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);">${opts}</select>`;
+        // no auto-play on change — use ▶ button
       }
       wrap.appendChild(row);
     });
-    // Show/hide blur slider based on style
+    // Show/hide blur slider — only relevant for crystallise/zoom
+    const BLUR_STYLES = ['crystallise', 'zoom'];
     function syncBlurVisibility() {
       const style = document.getElementById('pip-tx-transitionStyle')?.value;
       const blurRow = document.getElementById('pip-tx-transitionBlur')?.parentNode;
-      if (blurRow) blurRow.style.opacity = style === 'crystallise' ? '1' : '0.35';
+      if (blurRow) blurRow.style.opacity = BLUR_STYLES.includes(style) ? '1' : '0.35';
     }
     syncBlurVisibility();
     document.getElementById('pip-tx-transitionStyle')?.addEventListener('change', syncBlurVisibility);
@@ -360,22 +384,57 @@
       }
       const start = performance.now();
       const snap  = _placeholderCanvas;
+
+      const easeFn = (function() {
+        const e = cfg.transitionEasing || 'ease';
+        if (e === 'linear')     return t => t;
+        if (e === 'ease-in')    return t => t * t;
+        if (e === 'ease-out')   return t => t * (2 - t);
+        return t => t < 0.5 ? 2*t*t : -1 + (4-2*t)*t; // ease / ease-in-out
+      })();
+
       function frame(now) {
         const t    = Math.min(1, (now - start) / txMs);
-        const ease = t < 0.5 ? 2*t*t : -1 + (4-2*t)*t;
+        const ease = easeFn(t);
         const c2   = canvas.getContext('2d');
         c2.clearRect(0, 0, W, H);
 
-        // Draw full image (fading in)
-        if (txStyle === 'crystallise') c2.filter = `blur(${txBlur * (1 - ease)}px)`;
-        c2.globalAlpha = ease;
-        c2.drawImage(fullImg, 0, 0, W, H);
-        c2.filter = 'none';
-
-        // Draw placeholder on top, fading out
-        c2.globalAlpha = 1 - ease;
-        c2.drawImage(snap, 0, 0, W, H);
-        c2.globalAlpha = 1;
+        if (txStyle === 'wipe-right') {
+          c2.drawImage(snap, 0, 0, W, H);
+          const wipeX = Math.round(W * ease);
+          if (wipeX > 0) {
+            c2.save(); c2.beginPath(); c2.rect(0, 0, wipeX, H); c2.clip();
+            c2.drawImage(fullImg, 0, 0, W, H); c2.restore();
+          }
+        } else if (txStyle === 'wipe-down') {
+          c2.drawImage(snap, 0, 0, W, H);
+          const wipeY = Math.round(H * ease);
+          if (wipeY > 0) {
+            c2.save(); c2.beginPath(); c2.rect(0, 0, W, wipeY); c2.clip();
+            c2.drawImage(fullImg, 0, 0, W, H); c2.restore();
+          }
+        } else if (txStyle === 'zoom') {
+          c2.drawImage(fullImg, 0, 0, W, H);
+          const s = 1 - (1 - 0.96) * ease;
+          const ox = (W - W*s)/2, oy = (H - H*s)/2;
+          c2.filter = `blur(${txBlur * 0.4 * (1 - ease)}px)`;
+          c2.globalAlpha = 1 - ease;
+          c2.drawImage(snap, ox, oy, W*s, H*s);
+          c2.filter = 'none'; c2.globalAlpha = 1;
+        } else if (txStyle === 'crystallise') {
+          // Full image underneath, placeholder blurs out on top — no darkening
+          c2.drawImage(fullImg, 0, 0, W, H);
+          c2.filter = `blur(${txBlur * ease}px)`;
+          c2.globalAlpha = 1 - ease;
+          c2.drawImage(snap, 0, 0, W, H);
+          c2.filter = 'none'; c2.globalAlpha = 1;
+        } else {
+          // fade — full underneath, placeholder fades out — no darkening
+          c2.drawImage(fullImg, 0, 0, W, H);
+          c2.globalAlpha = 1 - ease;
+          c2.drawImage(snap, 0, 0, W, H);
+          c2.globalAlpha = 1;
+        }
 
         if (t < 1) requestAnimationFrame(frame);
         else setTimeout(drawPreview, 1200);
@@ -485,10 +544,10 @@
       ctx.fillRect(0,0,W,H);
       ctx.globalCompositeOperation = 'multiply';
       const chs=[
-        {a:15,c:'rgb(0,183,235)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.r/255-k)/(1-k);}},
-        {a:75,c:'rgb(236,0,140)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.g/255-k)/(1-k);}},
-        {a:90,c:'rgb(255,239,0)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.b/255-k)/(1-k);}},
-        {a:45,c:'rgb(20,20,20)',   ex:c=>1-Math.max(c.r,c.g,c.b)/255},
+        {a:cfg.cAngle!=null?+cfg.cAngle:15, c:'rgb(0,183,235)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.r/255-k)/(1-k);}},
+        {a:cfg.mAngle!=null?+cfg.mAngle:75, c:'rgb(236,0,140)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.g/255-k)/(1-k);}},
+        {a:cfg.yAngle!=null?+cfg.yAngle:90, c:'rgb(255,239,0)',  ex:c=>{const k=1-Math.max(c.r,c.g,c.b)/255;return k===1?0:(1-c.b/255-k)/(1-k);}},
+        {a:cfg.kAngle!=null?+cfg.kAngle:45, c:'rgb(20,20,20)',   ex:c=>1-Math.max(c.r,c.g,c.b)/255},
       ];
       chs.forEach(ch=>dotGrid(ctx,W,H,px,ch.a,ch.c,ch.ex));
       ctx.globalCompositeOperation = 'source-over';
