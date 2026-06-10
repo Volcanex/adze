@@ -46,7 +46,8 @@
 
         /* ── Header ── */
         .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 9px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-left { display: flex; align-items: baseline; gap: 10px; }
+        .header-left img { align-self: center; }
         .header-left h1 { font-family: var(--heading-font); font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
         .header-right { display: flex; align-items: center; gap: 6px; }
         .header-right button { background: none; border: 1px solid var(--border); padding: 4px 11px; border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--text2); font-family: var(--body-font); }
@@ -1055,6 +1056,7 @@
             <button class="modal-close" onclick="closeLeadModal()">&times;</button>
         </div>
 
+        <div id="lmEmphasisBanner" style="display:none;padding:8px 12px;border-radius:6px;font-size:11px;line-height:1.5;margin:-4px 0 12px"></div>
         <p style="font-size:11px;color:var(--text2);margin:-4px 0 14px;line-height:1.5">
             Fill the <strong>Artist</strong> section to create a hosted site, the <strong>Lead</strong> section
             to track in the pipeline, or both to do both. Name is the only field you always need.
@@ -2477,7 +2479,13 @@ function renderArtistDetail(c) {
                 </div>
                 <h1 class="ad-hero-name">${esc(c.name)}</h1>
                 <div class="ad-hero-actions">
-                    <button class="btn btn-primary" onclick="openLeadModal(null,'${esc(c.slug)}')"><i class="ph ph-pencil-simple"></i> Edit</button>
+                    ${c.is_stub
+                        ? `<button class="btn btn-primary" onclick="openLeadModal(null,'${esc(c.slug)}','artist')"><i class="ph ph-rocket-launch"></i> Launch hosted site</button>`
+                        : ''}
+                    ${!c.has_lead
+                        ? `<button class="btn btn-primary" onclick="openLeadModal(null,'${esc(c.slug)}','lead')"><i class="ph ph-fish"></i> Add to pipeline</button>`
+                        : ''}
+                    <button class="btn" onclick="openLeadModal(null,'${esc(c.slug)}')"><i class="ph ph-pencil-simple"></i> Edit</button>
                     ${!c.is_stub ? `<a class="btn" href="/dashboard?slug=${esc(c.slug)}" target="_blank"><i class="ph ph-squares-four"></i> Dashboard</a>` : ''}
                     ${(c.domain && c.domain_live) ? `<a class="btn" href="https://${esc(c.domain)}" target="_blank"><i class="ph ph-arrow-square-out"></i> Live site</a>` : ''}
                 </div>
@@ -3058,6 +3066,24 @@ function openLeadModal(_legacyId, slug, emphasis) {
     if (artistSec && leadSec && artistSec.parentNode === leadSec.parentNode) {
         if (emphasis === 'lead') leadSec.parentNode.insertBefore(leadSec, artistSec);
         else                     artistSec.parentNode.insertBefore(artistSec, leadSec);
+    }
+    const banner = document.getElementById('lmEmphasisBanner');
+    if (banner) {
+        if (emphasis === 'artist') {
+            banner.style.display = '';
+            banner.style.background = 'color-mix(in srgb, var(--success) 12%, var(--surface))';
+            banner.style.border = '1px solid color-mix(in srgb, var(--success) 35%, var(--border))';
+            banner.style.color = 'var(--success)';
+            banner.innerHTML = '<i class="ph ph-rocket-launch"></i> <strong>Launching a hosted site</strong> — add a domain below and it\'ll get a real URL. You can also add pipeline details in the Lead section.';
+        } else if (emphasis === 'lead') {
+            banner.style.display = '';
+            banner.style.background = 'color-mix(in srgb, var(--accent) 12%, var(--surface))';
+            banner.style.border = '1px solid color-mix(in srgb, var(--accent) 35%, var(--border))';
+            banner.style.color = 'var(--accent)';
+            banner.innerHTML = '<i class="ph ph-fish"></i> <strong>Adding to pipeline</strong> — fill in the Lead section below to start tracking this person in the CRM.';
+        } else {
+            banner.style.display = 'none';
+        }
     }
     const titleByMode = card ? `Edit — ${card.name}`
         : (emphasis === 'lead' ? 'New Lead' : emphasis === 'artist' ? 'New Artist' : 'New Artist / Lead');

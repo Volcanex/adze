@@ -455,6 +455,9 @@ window.addEventListener('pagehide',send);
                     if artist_index_path.exists():
                         return send_from_directory(str(self.static_dir / artist_base / filename), "index.html")
 
+                artist_404 = self.static_dir / artist_base / '404' / 'index.html'
+                if artist_404.exists():
+                    return send_from_directory(str(self.static_dir / artist_base / '404'), 'index.html'), 404
                 return jsonify({'error': f'File {filename} not found for artist {artist_slug}'}), 404
 
             # Default blog behavior
@@ -533,6 +536,20 @@ window.addEventListener('pagehide',send);
         if features_parent not in sys.path:
             sys.path.insert(0, features_parent)
 
+        # domain -> panel_url, populated as features are loaded below
+        admin_panel_map = {}
+
+        @self.app.route('/admin')
+        @self.app.route('/admin/')
+        def admin_panel_dispatch():
+            from flask import redirect, request, abort
+            host = request.headers.get('Host', '').split(':')[0]
+            host = host.removeprefix('www.')
+            panel_url = admin_panel_map.get(host)
+            if panel_url:
+                return redirect(panel_url, code=302)
+            abort(404)
+
         registered = []
 
         for artist_dir in artists_dir.iterdir():
@@ -571,6 +588,11 @@ window.addEventListener('pagehide',send);
                         self.app.register_blueprint(bp)
                         registered.append(f"{artist_slug}/{feature_name}")
                         print(f"  Registered feature '{feature_name}' for artist '{artist_slug}' -> {bp.url_prefix}")
+                        if hasattr(module, 'PANEL_URL'):
+                            domain = config.get('domain', '').removeprefix('https://').removeprefix('http://').removeprefix('www.')
+                            if domain:
+                                admin_panel_map[domain] = module.PANEL_URL
+                                print(f"    /admin -> {module.PANEL_URL} for {domain}")
                     else:
                         print(f"Warning: feature '{feature_name}' has no create_blueprint()")
 

@@ -1887,11 +1887,43 @@ def serve_logo():
 
 @bp.route('/favicon.png')
 def serve_favicon():
-    """Serve the Adze Studio favicon"""
+    """Serve the Adze Studio favicon (square PNG — Google requires 1:1)."""
     fav_path = Path(__file__).parent / 'adze-favicon.png'
     if not fav_path.exists():
         abort(404)
     return send_file(fav_path, mimetype='image/png')
+
+@bp.route('/favicon.ico')
+def serve_favicon_ico():
+    """Multi-size .ico for the default /favicon.ico crawlers/browsers request.
+    nginx maps the site-root /favicon.ico here (see nginx/sites-available)."""
+    ico_path = Path(__file__).parent / 'adze-favicon.ico'
+    if not ico_path.exists():
+        abort(404)
+    return send_file(ico_path, mimetype='image/x-icon')
+
+
+@bp.route('/robots.txt')
+def serve_robots():
+    """adze.studio robots.txt. nginx maps the site-root /robots.txt here.
+    Keeps /api/ crawlable so Googlebot can fetch the favicon; only the
+    login surfaces are disallowed."""
+    body = ("User-agent: *\n"
+            "Disallow: /admin\n"
+            "Disallow: /dashboard\n"
+            "Sitemap: https://adze.studio/sitemap.xml\n")
+    return body, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+
+@bp.route('/sitemap.xml')
+def serve_sitemap():
+    """adze.studio sitemap — just the public landing page. nginx maps the
+    site-root /sitemap.xml here."""
+    body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '  <url><loc>https://adze.studio/</loc></url>\n'
+            '</urlset>\n')
+    return body, 200, {'Content-Type': 'application/xml; charset=utf-8'}
 
 
 # ── List Pages ─────────────────────────────────────────────────────────────
@@ -2102,6 +2134,20 @@ def edit_page():
             'page_slug': page_slug,
             'remote': True,
         })
+
+    # Refuse edits to dashboard-generated pages — they're derived from the
+    # artist's dashboard data file (source of truth) and the next rebuild would
+    # silently overwrite a direct edit here.
+    try:
+        from features.artist_admin import generated_pages
+    except ImportError:
+        from artist_admin import generated_pages
+    if page_slug in generated_pages(artist_slug):
+        return jsonify({
+            'error': f"'{page_slug}' is generated from this artist's dashboard data "
+                     f"and can't be edited directly — change it in the dashboard instead.",
+            'generated': True,
+        }), 409
 
     page_path = get_page_path(artist_slug, page_slug)
 
@@ -3873,7 +3919,7 @@ def update_site_config():
             config = json.load(f)
 
         # Only allow safe fields to be updated
-        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon', 'favicon_color', 'schema']
+        allowed = ['name', 'description', 'contact_email', 'domain', 'favicon', 'favicon_color', 'schema', 'seo', 'robots']
         for key in allowed:
             if key in new_config:
                 config[key] = new_config[key]
@@ -3934,6 +3980,59 @@ def save_feature():
         compile_error = (result.stderr or result.stdout or '').strip() if not compile_ok else None
 
     return jsonify({'ok': True, 'compile_ok': compile_ok, 'compile_error': compile_error})
+
+
+@bp.route('/loom-presets', methods=['GET'])
+def loom_presets():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+    looms_dir = get_artist_path(artist_slug) / 'looms'
+    presets = []
+    if looms_dir.exists():
+        for f in sorted(looms_dir.glob('*.json')):
+            try:
+                with open(f, 'r', encoding='utf-8') as fp:
+                    trace = json.load(fp)
+                presets.append({'name': f.stem, 'trace': trace})
+            except (json.JSONDecodeError, IOError):
+                pass
+    return jsonify({'presets': presets})
+
+
+@bp.route('/loom-preset', methods=['POST'])
+def save_loom_preset():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+    data  = request.get_json() or {}
+    name  = (data.get('name') or '').strip()
+    trace = data.get('trace')
+    if not name or not trace:
+        return jsonify({'error': 'name and trace required'}), 400
+    import re as _re
+    name = _re.sub(r'[^a-zA-Z0-9_\- ]', '', name).strip()[:64]
+    if not name:
+        return jsonify({'error': 'invalid name'}), 400
+    looms_dir = get_artist_path(artist_slug) / 'looms'
+    looms_dir.mkdir(exist_ok=True)
+    with open(looms_dir / f'{name}.json', 'w', encoding='utf-8') as f:
+        json.dump(trace, f, indent=2, ensure_ascii=False)
+    return jsonify({'ok': True, 'name': name})
+
+
+@bp.route('/loom-preset/<name>', methods=['DELETE'])
+def delete_loom_preset(name):
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+    import re as _re
+    name = _re.sub(r'[^a-zA-Z0-9_\- ]', '', name).strip()
+    looms_dir = get_artist_path(artist_slug) / 'looms'
+    preset_file = looms_dir / f'{name}.json'
+    if preset_file.exists():
+        preset_file.unlink()
+    return jsonify({'ok': True})
 
 
 @bp.route('/generate-thumbs', methods=['POST'])
@@ -4373,18 +4472,20 @@ def list_widgets():
         except (json.JSONDecodeError, IOError):
             pass
 
-    # Tier 2: Adze official widgets (opt-in per artist, admin-hideable)
+    # Tier 2: Adze official widgets — flagship widgets are core (always on); others are opt-in per artist
     platform_dir = Path(__file__).parent / 'widgets'
     all_platform = _scan_widgets(platform_dir, 'platform')
     platform_widgets = [w for w in all_platform
-                        if w['name'] in enabled_platform and w['name'] not in hidden_widgets]
+                        if (w.get('flagship') or w['name'] in enabled_platform)
+                        and w['name'] not in hidden_widgets]
 
     # Tier 4: artist custom/forked widgets
     artist_dir = get_artist_path(artist_slug) / 'widgets'
     artist_widgets = _scan_widgets(artist_dir, 'artist')
 
-    # Also return available (not yet enabled) platform widgets for extensions tab
-    available_platform = [w for w in all_platform if w['name'] not in enabled_platform]
+    # Available = opt-in widgets not yet installed (exclude flagship — they're always on)
+    available_platform = [w for w in all_platform
+                          if not w.get('flagship') and w['name'] not in enabled_platform]
 
     return jsonify({
         'artist': artist_slug,
@@ -4413,7 +4514,9 @@ def list_extensions():
     platform_dir = Path(__file__).parent / 'widgets'
     platform_widgets = _scan_widgets(platform_dir, 'platform')
     for w in platform_widgets:
-        w['installed'] = w['name'] in enabled_platform
+        w['installed'] = w.get('flagship') or w['name'] in enabled_platform
+    # Core/flagship widgets are always installed — exclude from the extensions marketplace
+    platform_widgets = [w for w in platform_widgets if not w.get('flagship')]
 
     return jsonify({'platform': platform_widgets})
 
@@ -4745,9 +4848,10 @@ def get_widget():
     if len(parts) == 1:
         # Simple: name.js
         safe_filename = parts[0]
-    elif len(parts) == 2 and parts[1] == 'widget.js':
-        # Directory format: name/widget.js — only 'widget.js' is a valid leaf
-        safe_filename = parts[0] + '/widget.js'
+    elif len(parts) == 2 and parts[1] in ('widget.js', 'engine.js'):
+        # Directory format: name/widget.js — plus name/engine.js for widgets
+        # (e.g. Loom) whose editor and live runtime share one engine file.
+        safe_filename = parts[0] + '/' + parts[1]
     else:
         return jsonify({'error': 'Invalid widget filename'}), 400
 
