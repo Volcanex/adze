@@ -2676,7 +2676,30 @@ function renderHandoverCard(slug, data) {
             <button class="btn btn-sm" onclick="rotateHandoverToken('${esc(slug)}')"><i class="ph ph-arrows-clockwise"></i> Rotate (invalidate old link)</button>
             <button class="btn btn-sm" onclick="revokeHandoverToken('${esc(slug)}')" style="color:var(--danger,#b00020)"><i class="ph ph-x"></i> Revoke</button>
         </div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:${data.has_custom_dashboard ? 'pointer' : 'default'}">
+                <input type="checkbox" id="adHandoverCfgDash" ${(data.config && data.config.include_custom_dashboard !== false) ? 'checked' : ''} ${data.has_custom_dashboard ? '' : 'disabled'}
+                    onchange="updateHandoverConfig('${esc(slug)}', 'include_custom_dashboard', this.checked, this)">
+                Include custom dashboard details${data.has_custom_dashboard ? '' : ' <span style="opacity:0.55">(no custom dashboard)</span>'}
+            </label>
+            <label style="font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="checkbox" id="adHandoverCfgLogin" ${(data.config && data.config.include_adze_login !== false) ? 'checked' : ''}
+                    onchange="updateHandoverConfig('${esc(slug)}', 'include_adze_login', this.checked, this)">
+                Include Adze editor login
+            </label>
+        </div>
     `;
+}
+
+async function updateHandoverConfig(slug, field, value, checkboxEl) {
+    const body = {};
+    body[field] = value;
+    const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/handover-config`,
+        { method: 'POST', headers: { 'X-Admin-Token': adminToken, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) {
+        checkboxEl.checked = !value;
+        showToast('Config save failed', true);
+    }
 }
 
 async function copyHandoverLink() {

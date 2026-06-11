@@ -2925,22 +2925,23 @@ def _brand_substitutions(cfg):
     else:
         favicon_url = '/api/adze/favicon.png'
 
-    if brand.get('name'):
-        footer = f'Managed by {brand["name"]} · This link is private to you.'
-    else:
-        footer = 'Powered by Adze · This link is private to you.'
-
     if brand:
         css_link = f'<link rel="stylesheet" href="{asset_base}brand.css">'
     else:
         css_link = ''
+
+    if brand.get('link_domain'):
+        site_url = f'https://{brand["link_domain"]}'
+    else:
+        site_url = 'https://adze.studio/'
 
     return {
         '{{BRAND_NAME}}': brand.get('name') or 'Adze',
         '{{BRAND_LOGO_URL}}': logo_url,
         '{{BRAND_FAVICON_URL}}': favicon_url,
         '{{BRAND_SUBTITLE}}': brand.get('tagline') or 'Adze · Artist intake portal',
-        '{{BRAND_FOOTER}}': footer,
+        '{{BRAND_FOOTER}}': 'This link is private to you.',
+        '{{BRAND_SITE_URL}}': site_url,
         '{{BRAND_WELCOME_HEADING}}': brand.get('welcome_heading') or 'Welcome to the Adze Studio',
         '{{BRAND_WELCOME_COPY}}': (brand.get('welcome_copy') or
             'Built by Gabriel for friends and the clients of <strong>LastPlace</strong>. '
@@ -2981,6 +2982,28 @@ def _handover_validate(slug, token):
     return cfg, get_artist_path(slug)
 
 
+def _handover_flags(cfg):
+    """Return control flags governing what the handover page shows."""
+    features = cfg.get('features') or []
+    domain = cfg.get('domain') or ''
+    has_custom_dashboard = any(f.endswith('_admin') for f in features) and bool(domain)
+    handover_cfg = cfg.get('handover') or {}
+    return {
+        'has_custom_dashboard': has_custom_dashboard,
+        'include_adze_login': handover_cfg.get('include_adze_login', True),
+        'include_custom_dashboard': handover_cfg.get('include_custom_dashboard', True),
+    }
+
+
+def _strip_domain_scheme(domain):
+    """Normalise a domain value that may carry a scheme (e.g. 'https://alfiebruce.com')."""
+    d = (domain or '').strip()
+    for prefix in ('https://', 'http://', 'www.'):
+        if d.startswith(prefix):
+            d = d[len(prefix):]
+    return d.rstrip('/')
+
+
 @bp.route('/handover/<slug>/<token>')
 def handover_portal(slug, token):
     """Public handover page — carries editor credentials + intake link."""
@@ -2993,6 +3016,15 @@ def handover_portal(slug, token):
     brand = brand_json(ws)
     intake_url = (f'/intake/{slug}/{cfg["intake_token"]}'
                   if cfg.get('intake_token') else '')
+    flags = _handover_flags(cfg)
+    if flags['has_custom_dashboard'] and flags['include_custom_dashboard']:
+        show_custom_dash = 'true'
+    else:
+        show_custom_dash = 'false'
+    if flags['has_custom_dashboard']:
+        custom_dash_url = f'https://{_strip_domain_scheme(cfg.get("domain"))}/admin'
+    else:
+        custom_dash_url = ''
     subs = {
         '{{ARTIST_NAME}}': cfg.get('name') or slug,
         '{{ARTIST_SLUG}}': slug,
@@ -3003,6 +3035,9 @@ def handover_portal(slug, token):
         '{{HOW_IT_WORKS}}': (brand.get('how_it_works') or
             'Your site is built and managed by Adze. '
             'Use the details below to sign into your editor.'),
+        '{{SHOW_CUSTOM_DASH}}': show_custom_dash,
+        '{{SHOW_ADZE_LOGIN}}': 'true' if flags['include_adze_login'] else 'false',
+        '{{CUSTOM_DASH_URL}}': custom_dash_url,
         **_brand_substitutions(cfg),
     }
     for placeholder, value in subs.items():
@@ -3028,10 +3063,41 @@ def admin_handover_token(slug):
     if request.method == 'POST' or not cfg.get('handover_token'):
         cfg['handover_token'] = secrets.token_urlsafe(24)
         _write_artist_config(cfg_path, cfg)
+    flags = _handover_flags(cfg)
     return jsonify({
         'success': True,
         'token': cfg['handover_token'],
         'url': brand_link_base(_artist_workspace(cfg)) + f'/handover/{slug}/{cfg["handover_token"]}',
+        'config': {
+            'include_adze_login': flags['include_adze_login'],
+            'include_custom_dashboard': flags['include_custom_dashboard'],
+        },
+        'has_custom_dashboard': flags['has_custom_dashboard'],
+    })
+
+
+@bp.route('/admin/artists/<slug>/handover-config', methods=['POST'])
+def admin_handover_config(slug):
+    """Persist optional booleans controlling what the handover page shows."""
+    from auth import is_admin_token
+    token = request.headers.get('X-Admin-Token', '')
+    if not is_admin_token(token):
+        abort(403)
+    cfg_path, cfg = _read_artist_config(slug)
+    body = request.get_json(silent=True) or {}
+    handover = cfg.get('handover') or {}
+    for key in ('include_adze_login', 'include_custom_dashboard'):
+        if key in body and isinstance(body[key], bool):
+            handover[key] = body[key]
+    cfg['handover'] = handover
+    _write_artist_config(cfg_path, cfg)
+    flags = _handover_flags(cfg)
+    return jsonify({
+        'success': True,
+        'config': {
+            'include_adze_login': flags['include_adze_login'],
+            'include_custom_dashboard': flags['include_custom_dashboard'],
+        },
     })
 
 

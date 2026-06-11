@@ -89,7 +89,9 @@ if (localStorage.getItem('adze-theme') === 'dark') {
         box-shadow: var(--shadow-sm);
         position: sticky; top: 0; z-index: 100;
     }
+    .site-header .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .site-header .logo img { height: 22px; display: block; }
+    .brand-wordmark { font-family: var(--heading-font); font-size: 18px; color: var(--text); font-weight: 700; letter-spacing: -0.02em; }
     [data-theme="dark"] .site-header .logo img { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
     .theme-toggle {
         background: transparent; border: none; border-radius: var(--radius);
@@ -120,18 +122,47 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     }
     .intro strong { color: var(--text); }
 
-    /* Editor login card */
-    .welcome {
+    /* Dashboard card — primary */
+    .dash-card {
         background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
         padding: 26px 24px 22px; margin-bottom: 22px;
-        box-shadow: var(--shadow-sm);
-        border-left: 3px solid var(--accent-soft);
+        box-shadow: var(--shadow-md);
+        border-left: 3px solid var(--accent);
     }
-    .welcome h2 {
-        margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
+    .dash-card h2 {
+        margin: 0 0 8px; font-family: var(--heading-font); font-style: normal;
         font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.025em;
         color: var(--text); text-transform: none;
     }
+    .dash-card p { margin: 0 0 18px; font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+    .dash-link-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 11px 20px; border: 0; border-radius: var(--radius);
+        background: var(--accent); color: var(--accent-text);
+        font-family: var(--body-font); font-size: 14px; font-weight: 600; line-height: 1;
+        cursor: pointer; white-space: nowrap; transition: background 0.2s; text-decoration: none;
+    }
+    .dash-link-btn:hover { background: var(--accent-hover); }
+    .dash-token-row {
+        margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .dash-token-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); }
+
+    /* Editor login card — secondary / advanced */
+    .welcome {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 20px 24px 18px; margin-bottom: 22px;
+        box-shadow: var(--shadow-sm);
+        border-left: 3px solid var(--border);
+        opacity: 0.92;
+    }
+    .welcome h2 {
+        margin: 0 0 8px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 600; font-size: 16px; line-height: 1.2; letter-spacing: -0.015em;
+        color: var(--text2); text-transform: none;
+    }
+    .welcome .editor-copy { margin: 0 0 14px; font-size: 13px; color: var(--text2); line-height: 1.6; max-width: 60ch; }
     .login-block {
         display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px;
         padding-top: 18px; border-top: 1px solid var(--border);
@@ -193,6 +224,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     .toast.is-error { background: var(--danger); }
 
     footer { margin-top: 48px; color: var(--text2); font-size: 11px; text-align: center; }
+    .powered-by { font-size: 10px; opacity: 0.6; margin-left: 8px; font-family: var(--mono); }
 
     @media (max-width: 600px) {
         .site-header { padding: 0 16px; }
@@ -209,7 +241,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 <div class="bg-layer" aria-hidden="true"><canvas id="noise"></canvas></div>
 
 <header class="site-header">
-    <a href="#" class="logo"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></a>
+    <a href="{{BRAND_SITE_URL}}" class="logo"><img src="{{BRAND_LOGO_URL}}" alt=""><span class="brand-wordmark">{{BRAND_NAME}}</span></a>
     <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
         <i class="ph ph-moon"></i>
     </button>
@@ -223,8 +255,26 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 
     <div class="intro">{{HOW_IT_WORKS}}</div>
 
-    <div class="welcome">
-        <h2>Your editor login</h2>
+    <!-- Dashboard card: shown when SHOW_CUSTOM_DASH -->
+    <div class="dash-card" id="dashCard">
+        <h2>Your dashboard</h2>
+        <p>Your day-to-day dashboard for updating your site:</p>
+        <a class="dash-link-btn" id="dashLink" href="#"><i class="ph ph-layout"></i> Go to your dashboard</a>
+        <div class="dash-token-row">
+            <div class="cred-field">
+                <div class="cred-label dash-token-label">Login token</div>
+                <div class="cred-value">
+                    <span id="credTokenDash"></span>
+                    <button class="cred-copy" title="Copy" onclick="copyCred('credTokenDash')"><i class="ph ph-copy"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editor / Adze card: shown when SHOW_ADZE_LOGIN -->
+    <div class="welcome" id="editorCard">
+        <h2>The full editor (advanced)</h2>
+        <p class="editor-copy" id="editorCopy"></p>
         <div class="login-block">
             <div class="creds">
                 <div class="cred-field">
@@ -243,7 +293,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
                 </div>
             </div>
             <button class="login-btn" id="loginBtn" onclick="loginToEditor()">
-                <i class="ph ph-pencil-simple"></i> Open your editor
+                <i class="ph ph-pencil-simple"></i> Open the editor
             </button>
         </div>
     </div>
@@ -428,16 +478,42 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 </script>
 
 <script>
-const ARTIST_SLUG  = '{{ARTIST_SLUG}}';
-const ADMIN_TOKEN  = '{{ADMIN_TOKEN}}';
-const DOMAIN       = '{{DOMAIN}}';
-const INTAKE_URL   = '{{INTAKE_URL}}';
+const ARTIST_SLUG   = '{{ARTIST_SLUG}}';
+const ADMIN_TOKEN   = '{{ADMIN_TOKEN}}';
+const DOMAIN        = '{{DOMAIN}}';
+const INTAKE_URL    = '{{INTAKE_URL}}';
 const CONTACT_EMAIL = '{{CONTACT_EMAIL}}';
-const BRAND_FOOTER = '{{BRAND_FOOTER}}';
+const BRAND_FOOTER  = '{{BRAND_FOOTER}}';
+const SHOW_ADZE_LOGIN  = {{SHOW_ADZE_LOGIN}};
+const SHOW_CUSTOM_DASH = {{SHOW_CUSTOM_DASH}};
+const CUSTOM_DASH_URL  = '{{CUSTOM_DASH_URL}}';
 
 // Populate credentials
-document.getElementById('credSlug').textContent  = ARTIST_SLUG;
-document.getElementById('credToken').textContent = ADMIN_TOKEN;
+document.getElementById('credSlug').textContent       = ARTIST_SLUG;
+document.getElementById('credToken').textContent      = ADMIN_TOKEN;
+document.getElementById('credTokenDash').textContent  = ADMIN_TOKEN;
+
+// Dashboard card
+const dashCard = document.getElementById('dashCard');
+if (SHOW_CUSTOM_DASH) {
+    const dashLink = document.getElementById('dashLink');
+    dashLink.href = CUSTOM_DASH_URL;
+} else {
+    dashCard.style.display = 'none';
+}
+
+// Editor card
+const editorCard = document.getElementById('editorCard');
+const editorCopy = document.getElementById('editorCopy');
+if (SHOW_ADZE_LOGIN) {
+    if (SHOW_CUSTOM_DASH) {
+        editorCopy.innerHTML = 'If you want to, you can also use our custom design software — Adze — to make edits to your site directly. This is more complex than using your dashboard and should be done with care.';
+    } else {
+        editorCopy.innerHTML = 'Sign in here to make edits to your site.';
+    }
+} else {
+    editorCard.style.display = 'none';
+}
 
 // Domain row — hide if empty
 const domainRow = document.getElementById('domainRow');
@@ -467,7 +543,7 @@ contactLink.textContent = CONTACT_EMAIL;
 
 // Footer
 document.getElementById('footerEl').innerHTML =
-    BRAND_FOOTER + ' · Keep this page private — it contains your login.';
+    BRAND_FOOTER + '<span class="powered-by">Powered by Adze</span>';
 
 const toastEl = document.getElementById('toast');
 function toast(msg, isErr) {
@@ -499,7 +575,7 @@ async function loginToEditor() {
     } catch (err) {
         toast(err.message || 'Could not sign in', true);
         btn.disabled = false;
-        btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Open your editor';
+        btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Open the editor';
     }
 }
 </script>

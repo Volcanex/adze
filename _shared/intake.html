@@ -101,7 +101,9 @@ if (localStorage.getItem('adze-theme') === 'dark') {
         box-shadow: var(--shadow-sm);
         position: sticky; top: 0; z-index: 100;
     }
+    .site-header .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .site-header .logo img { height: 22px; display: block; }
+    .brand-wordmark { font-family: var(--heading-font); font-size: 18px; color: var(--text); font-weight: 700; letter-spacing: -0.02em; }
     [data-theme="dark"] .site-header .logo img { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
     .theme-toggle {
         background: transparent; border: none; border-radius: var(--radius);
@@ -322,6 +324,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     .toast.is-error { background: var(--danger); }
 
     footer { margin-top: 48px; color: var(--text2); font-size: 11px; text-align: center; }
+    .powered-by { font-size: 10px; opacity: 0.6; margin-left: 8px; font-family: var(--mono); }
 
     @media (max-width: 600px) {
         .site-header { padding: 0 16px; }
@@ -394,7 +397,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 <div class="bg-layer" aria-hidden="true"><canvas id="noise"></canvas></div>
 
 <header class="site-header">
-    <a href="https://adze.studio/" class="logo" title="Adze"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></a>
+    <a href="{{BRAND_SITE_URL}}" class="logo"><img src="{{BRAND_LOGO_URL}}" alt=""><span class="brand-wordmark">{{BRAND_NAME}}</span></a>
     <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
         <i class="ph ph-moon"></i>
     </button>
@@ -479,7 +482,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     <h2>What you've uploaded</h2>
     <div id="items"><div class="empty">Nothing yet.</div></div>
 
-    <footer>{{BRAND_FOOTER}}</footer>
+    <footer id="footerEl"></footer>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -640,9 +643,12 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 
 <script src="/api/adze/asset-tree.js"></script>
 <script>
-const ARTIST_SLUG = '{{ARTIST_SLUG}}';
-const INTAKE_TOKEN = '{{INTAKE_TOKEN}}';
-const ADMIN_TOKEN = '{{ADMIN_TOKEN}}';
+const ARTIST_SLUG   = '{{ARTIST_SLUG}}';
+const INTAKE_TOKEN  = '{{INTAKE_TOKEN}}';
+const ADMIN_TOKEN   = '{{ADMIN_TOKEN}}';
+const BRAND_FOOTER  = '{{BRAND_FOOTER}}';
+document.getElementById('footerEl').innerHTML =
+    BRAND_FOOTER + '<span class="powered-by">Powered by Adze</span>';
 const API_BASE = `/api/adze/intake/${ARTIST_SLUG}/${INTAKE_TOKEN}`;
 
 AssetTree.injectCSS();
