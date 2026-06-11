@@ -1284,7 +1284,7 @@ function _applyAdminBrandLockup(brand) {
         head.setAttribute('data-brand-font', brand.lockup_font);
         const base = brand.asset_base_url;
         // Literal brackets in font filename must be percent-encoded for CSS url().
-        const fontFile = base + brand.lockup_font.replace(/\[/g, '%5B').replace(/\]/g, '%5D') + '[wght].ttf';
+        const fontFile = base + encodeURIComponent(brand.lockup_font + '[wght].ttf');
         const style = document.createElement('style');
         style.textContent = `@font-face { font-family: '${brand.lockup_font}'; src: url('${fontFile}') format('truetype'); font-weight: 100 900; }`;
         head.appendChild(style);
@@ -1292,16 +1292,26 @@ function _applyAdminBrandLockup(brand) {
     const h1 = document.querySelector('.header-left h1');
     if (!h1 || h1.hasAttribute('data-brand-applied')) return;
     h1.setAttribute('data-brand-applied', '1');
-    // Brand name span.
+    // Insert brand logo + name + × as flex siblings BEFORE the Adze logo, so
+    // the lockup reads: [brand logo] Brand × [adze logo] [Adze] Admin.
+    const headerLeft = h1.parentElement;
+    const adzeImg = headerLeft.querySelector('img') || h1;
+    if (brand.lockup_logo_asset && brand.asset_base_url) {
+        const brandLogo = document.createElement('img');
+        brandLogo.src = brand.asset_base_url + encodeURIComponent(brand.lockup_logo_asset);
+        brandLogo.alt = brand.name;
+        brandLogo.style.cssText = 'height:20px;width:auto;';
+        headerLeft.insertBefore(brandLogo, adzeImg);
+    }
     const brandSpan = document.createElement('span');
     brandSpan.textContent = brand.name;
-    brandSpan.style.cssText = `font-family: '${brand.lockup_font || 'Georgia'}', Georgia, serif; color: ${brand.accent || 'inherit'}; font-weight: 500; font-style: normal;`;
+    brandSpan.style.cssText = `font-family: '${brand.lockup_font || 'Georgia'}', Georgia, serif; color: ${brand.accent || 'inherit'}; font-weight: 500; font-style: normal; font-size: 20px;`;
+    headerLeft.insertBefore(brandSpan, adzeImg);
     // Separator span.
     const sepSpan = document.createElement('span');
     sepSpan.textContent = '×';
-    sepSpan.style.cssText = 'color: var(--text2); padding: 0 2px; font-style: normal; font-weight: 400;';
-    h1.prepend(sepSpan);
-    h1.prepend(brandSpan);
+    sepSpan.style.cssText = 'color: var(--text2); font-style: normal; font-weight: 400;';
+    headerLeft.insertBefore(sepSpan, adzeImg);
 }
 
 async function doLogin() {

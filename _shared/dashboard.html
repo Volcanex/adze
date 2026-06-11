@@ -2544,22 +2544,28 @@ function _applyBrandLockup(brand) {
     const accentColor = brand.accent || 'var(--accent)';
     const fontFamily  = brand.lockup_font ? `'${brand.lockup_font}', Georgia, serif` : 'Georgia, serif';
 
+    // Insert brand logo + name + × as flex siblings BEFORE the Adze logo, so
+    // the lockup reads: [brand logo] Brand × [adze logo] [Adze] Studio.
+    const container = h1.parentElement;
+    const adzeImg = container.querySelector('img.adze-logo') || h1;
+
+    if (brand.lockup_logo_asset && brand.asset_base_url) {
+        const brandLogo = document.createElement('img');
+        brandLogo.src = brand.asset_base_url + encodeURIComponent(brand.lockup_logo_asset);
+        brandLogo.alt = brand.name;
+        brandLogo.style.cssText = 'height:24px;width:auto;align-self:center;';
+        container.insertBefore(brandLogo, adzeImg);
+    }
+
     const brandSpan = document.createElement('span');
     brandSpan.style.cssText = `font-family:${fontFamily};color:${accentColor};font-weight:500;font-size:26px;letter-spacing:-0.01em;`;
     brandSpan.textContent = brand.name;
+    container.insertBefore(brandSpan, adzeImg);
 
     const sep = document.createElement('span');
-    sep.style.cssText = 'color:var(--text2);font-weight:400;padding:0 6px;font-family:var(--heading-font);font-size:21px;';
+    sep.style.cssText = 'color:var(--text2);font-weight:400;font-family:var(--heading-font);font-size:21px;';
     sep.textContent = '×';
-
-    // Preserve existing [Adze] Studio markup
-    const originalHTML = h1.innerHTML;
-    h1.innerHTML = '';
-    h1.appendChild(brandSpan);
-    h1.appendChild(sep);
-    const adzeWrap = document.createElement('span');
-    adzeWrap.innerHTML = originalHTML;
-    h1.appendChild(adzeWrap);
+    container.insertBefore(sep, adzeImg);
 
     document.title = `${brand.name} × Adze Studio`;
 }
