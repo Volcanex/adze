@@ -2935,7 +2935,7 @@ def _brand_substitutions(cfg):
     else:
         site_url = 'https://adze.studio/'
 
-    return {
+    subs = {
         '{{BRAND_NAME}}': brand.get('name') or 'Adze',
         '{{BRAND_LOGO_URL}}': logo_url,
         '{{BRAND_FAVICON_URL}}': favicon_url,
@@ -2949,6 +2949,11 @@ def _brand_substitutions(cfg):
             'shape your site directly.'),
         '{{BRAND_CSS_LINK}}': css_link,
     }
+    # Brand copy may personalise with {{ARTIST_NAME}} ("Hey Curated London") —
+    # resolve it here, since the portal routes replace artist placeholders
+    # before brand values are inserted.
+    artist_name = cfg.get('name') or cfg.get('slug') or ''
+    return {k: v.replace('{{ARTIST_NAME}}', artist_name) for k, v in subs.items()}
 
 
 # Public portal HTML — token-gated, no admin auth.

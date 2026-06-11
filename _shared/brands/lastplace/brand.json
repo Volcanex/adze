@@ -5,10 +5,10 @@
     "link_domain": "lastplace.co.uk",
     "lockup_font": "Cormorant",
     "contact_email": "hello@lastplace.co.uk",
-    "logo_asset": "logo-line.png",
+    "logo_asset": "lastplacelogo.png",
     "lockup_logo_asset": "lastplacelogo.png",
     "favicon_asset": null,
-    "welcome_heading": "Welcome to Last Place",
-    "welcome_copy": "Made once, made properly. This portal is your way in — drop work above and we will shape it into your site.",
+    "welcome_heading": "Hey {{ARTIST_NAME}}",
+    "welcome_copy": "Put your assets, links and anything else here — we'll use them to construct your site.",
     "how_it_works": "Your site is built and looked after by Last Place. Use the details below to sign into your editor, and the intake link to send us new work. If anything is unclear, just reply to us — that is what we are here for."
 }
