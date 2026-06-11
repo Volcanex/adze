@@ -2,6 +2,7 @@
     "name": "Last Place",
     "tagline": "Last Place · Artist intake portal",
     "accent": "#0000ff",
+    "link_domain": "lastplace.co.uk",
     "lockup_font": "Cormorant",
     "contact_email": "hello@lastplace.co.uk",
     "logo_asset": "logo-line.png",

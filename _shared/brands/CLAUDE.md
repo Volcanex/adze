@@ -11,7 +11,13 @@ Packs are keyed off the artist's `workspace` field in `config.json`
 brands/<workspace>/
   brand.json    name, tagline, accent, lockup_font, contact_email,
                 logo_asset, favicon_asset, welcome_heading, welcome_copy,
-                how_it_works — ALL optional, each falls back to an Adze default
+                how_it_works, link_domain — ALL optional, each falls back to
+                an Adze default. link_domain makes the admin panel mint
+                intake/handover URLs on the brand's domain
+                (https://lastplace.co.uk/handover/…) instead of adze.studio;
+                routing itself is domain-agnostic (root-level Flask aliases in
+                flask_server.py + each vhost's fall-through proxy), only URL
+                generation reads it (`brand_link_base`).
   brand.css     CSS custom-property overrides ONLY (same rule as
                 dashboard-themes) + @font-face blocks. Loaded after the page's
                 own :root, so the cascade does the re-skin. Include a

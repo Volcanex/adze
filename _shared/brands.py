@@ -25,6 +25,13 @@ def brand_json(workspace):
     return get_brand(workspace) or {}
 
 
+def brand_link_base(workspace):
+    """Absolute URL base for artist-facing links (handover/intake) when the
+    workspace brand declares a link_domain, else '' (caller stays relative)."""
+    domain = brand_json(workspace).get('link_domain')
+    return f'https://{domain}' if domain else ''
+
+
 def brand_asset_path(workspace, filename):
     """Resolve a brand asset (assets/<filename>, or brand.css at the pack
     root) to an absolute path. Returns None on miss or path traversal."""

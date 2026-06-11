@@ -2579,7 +2579,8 @@ async function loadArtistIntake(slug) {
 
 function renderIntakeCard(slug, data) {
     const el = document.getElementById('adIntakeBody');
-    const url = location.origin + (data.url || `/intake/${slug}/${data.token}`);
+    const path = data.url || `/intake/${slug}/${data.token}`;
+    const url = path.startsWith('http') ? path : location.origin + path;
     el.innerHTML = `
         <p style="font-size:13px;color:var(--text2);margin:0 0 10px">
             A magic-link upload portal for this artist. Send it to them; they upload assets directly into your library — no Adze account required. Tags they add are searchable.
@@ -2650,7 +2651,8 @@ function renderHandoverCard(slug, data) {
         el.innerHTML = `<p style="font-size:13px;color:var(--text2)">No handover token. <button class="btn btn-sm btn-primary" onclick="mintHandoverToken('${esc(slug)}')"><i class="ph ph-plus"></i> Generate link</button></p>`;
         return;
     }
-    const url = location.origin + (data.url || `/handover/${slug}/${data.token}`);
+    const path = data.url || `/handover/${slug}/${data.token}`;
+    const url = path.startsWith('http') ? path : location.origin + path;
     el.innerHTML = `
         <p style="font-size:13px;color:var(--text2);margin:0 0 10px">
             Private page with the artist's login details — replaces credentials on the intake link.

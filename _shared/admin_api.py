@@ -16,7 +16,7 @@ import mimetypes
 from pathlib import Path
 from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context, make_response
 from werkzeug.utils import secure_filename
-from brands import brand_json, brand_asset_path
+from brands import brand_json, brand_asset_path, brand_link_base
 import sys
 
 
@@ -2893,7 +2893,7 @@ def admin_intake_token(slug):
     return jsonify({
         'success': True,
         'token': cfg['intake_token'],
-        'url': f'/intake/{slug}/{cfg["intake_token"]}',
+        'url': brand_link_base(_artist_workspace(cfg)) + f'/intake/{slug}/{cfg["intake_token"]}',
     })
 
 
@@ -3031,7 +3031,7 @@ def admin_handover_token(slug):
     return jsonify({
         'success': True,
         'token': cfg['handover_token'],
-        'url': f'/handover/{slug}/{cfg["handover_token"]}',
+        'url': brand_link_base(_artist_workspace(cfg)) + f'/handover/{slug}/{cfg["handover_token"]}',
     })
 
 

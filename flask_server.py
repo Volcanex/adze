@@ -498,6 +498,14 @@ window.addEventListener('pagehide',send);
             # Register the blueprint if it exists
             if hasattr(admin_module, 'bp'):
                 self.app.register_blueprint(admin_module.bp)
+                # Root-level aliases for the token-gated artist portals, so the
+                # pretty paths work on any domain whose vhost falls through to
+                # Flask (lastplace.co.uk, artist domains) — adze.studio reaches
+                # the bp routes via nginx rewrites instead.
+                self.app.add_url_rule('/intake/<slug>/<token>',
+                                      'intake_portal_root', admin_module.intake_portal)
+                self.app.add_url_rule('/handover/<slug>/<token>',
+                                      'handover_portal_root', admin_module.handover_portal)
                 print(f"Registered artist admin API endpoints")
             else:
                 print(f"Warning: admin_api.py doesn't have a 'bp' blueprint")
