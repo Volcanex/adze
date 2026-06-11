@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your site — {{BRAND_NAME}}</title>
+<meta name="theme-color" content="#1a1a1e">
+<link rel="icon" type="image/png" href="{{BRAND_FAVICON_URL}}">
+<script>
+if (localStorage.getItem('adze-theme') === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+{{BRAND_CSS_LINK}}
+<style>
+    :root {
+        --accent: #1C4F82;
+        --accent-soft: #6b8cae;
+        --accent-hover: #163f68;
+        --accent-text: #ffffff;
+        --danger: #c0392b;
+        --success: #4a9a6a;
+        --bg: #f5f2ed;
+        --bg2: #ebe7e0;
+        --surface: #ffffff;
+        --surface2: #f0ede7;
+        --border: #ddd8cf;
+        --text: #2a2a28;
+        --text2: #6b6860;
+        --radius: 4px;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+        --mono: 'JetBrains Mono','Monaco','Menlo','Courier New',monospace;
+        --heading-font: 'JetBrains Mono','Monaco','Menlo',monospace;
+        --body-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    [data-theme="dark"] {
+        --accent: #99cdff;
+        --accent-soft: #7ea3c4;
+        --accent-hover: #b8ddff;
+        --accent-text: #1a1a1e;
+        --danger: #e0796b;
+        --success: #6abf8a;
+        --bg: #1a1a1e;
+        --bg2: #222226;
+        --surface: #2c2c30;
+        --surface2: #34343a;
+        --border: #3e3e44;
+        --text: #e8e6e0;
+        --text2: #9a978e;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 0; background: var(--bg); color: var(--text);
+        font: 14px/1.6 var(--body-font);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        overscroll-behavior-y: none;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    .bg-layer {
+        position: fixed; left: 0; top: -20vh; width: 100%; height: 140vh;
+        z-index: -1; pointer-events: none; will-change: transform;
+    }
+    .bg-layer canvas {
+        display: block; width: 100%; height: 100%;
+        image-rendering: pixelated; opacity: 0.9;
+    }
+    .bg-layer::after {
+        content: ""; position: absolute; inset: 0;
+        background: radial-gradient(120% 80% at 70% 30%, transparent 0%, transparent 45%, var(--bg) 100%);
+    }
+
+    .site-header {
+        background: color-mix(in srgb, var(--surface) 82%, transparent);
+        backdrop-filter: saturate(1.4) blur(8px);
+        -webkit-backdrop-filter: saturate(1.4) blur(8px);
+        border-bottom: 1px solid var(--border);
+        padding: 0 40px; height: 52px;
+        display: flex; align-items: center; justify-content: space-between;
+        box-shadow: var(--shadow-sm);
+        position: sticky; top: 0; z-index: 100;
+    }
+    .site-header .logo img { height: 22px; display: block; }
+    [data-theme="dark"] .site-header .logo img { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
+    .theme-toggle {
+        background: transparent; border: none; border-radius: var(--radius);
+        width: 34px; height: 34px; margin-right: -10px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: var(--text2);
+        transition: color 0.15s, background 0.15s;
+    }
+    .theme-toggle:hover { color: var(--text); }
+    .theme-toggle i { font-size: 18px; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+    .handover-head { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    h1 {
+        margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 700; font-size: clamp(26px, 4vw, 38px); line-height: 1.1;
+        letter-spacing: -0.03em; color: var(--text);
+    }
+    .subtitle {
+        color: var(--text2); margin: 0; font-family: var(--mono);
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+
+    .intro {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 16px 18px; margin-bottom: 22px; font-size: 13px; color: var(--text2);
+        box-shadow: var(--shadow-sm);
+    }
+    .intro strong { color: var(--text); }
+
+    /* Editor login card */
+    .welcome {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 26px 24px 22px; margin-bottom: 22px;
+        box-shadow: var(--shadow-sm);
+        border-left: 3px solid var(--accent-soft);
+    }
+    .welcome h2 {
+        margin: 0 0 10px; font-family: var(--heading-font); font-style: normal;
+        font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.025em;
+        color: var(--text); text-transform: none;
+    }
+    .login-block {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px;
+        padding-top: 18px; border-top: 1px solid var(--border);
+    }
+    .creds { display: flex; gap: 22px; flex-wrap: wrap; flex: 1; min-width: 0; }
+    .cred-field { min-width: 0; }
+    .cred-label {
+        font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text2); margin-bottom: 5px;
+    }
+    .cred-value {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: var(--mono); font-size: 13px; color: var(--text);
+        background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+        padding: 7px 10px; max-width: 280px;
+    }
+    .cred-value span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cred-copy {
+        border: 0; background: transparent; color: var(--text2); cursor: pointer;
+        padding: 2px; font-size: 15px; line-height: 1; flex-shrink: 0;
+        transition: color 0.15s;
+    }
+    .cred-copy:hover { color: var(--accent); }
+    .login-btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 11px 20px; border: 0; border-radius: var(--radius);
+        background: var(--accent); color: var(--accent-text);
+        font-family: var(--body-font); font-size: 14px; font-weight: 600; line-height: 1;
+        cursor: pointer; white-space: nowrap; transition: background 0.2s;
+    }
+    .login-btn i { font-size: 16px; line-height: 1; display: block; }
+    .login-btn:hover { background: var(--accent-hover); }
+    .login-btn:disabled { opacity: 0.6; cursor: default; }
+    .login-btn i.ph-circle-notch { animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Info rows */
+    .info-rows { display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+    .info-row {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 14px 18px; display: flex; align-items: center; gap: 14px;
+        box-shadow: var(--shadow-sm); font-size: 13px;
+    }
+    .info-row i { font-size: 18px; color: var(--accent-soft); flex-shrink: 0; }
+    .info-row-label {
+        font-family: var(--mono); font-size: 10px; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text2); margin-bottom: 3px;
+    }
+    .info-row a { color: var(--accent); text-decoration: none; }
+    .info-row a:hover { text-decoration: underline; }
+
+    .toast {
+        position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+        background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 6px;
+        font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+        opacity: 0; transition: opacity 0.2s; pointer-events: none;
+    }
+    .toast.is-visible { opacity: 1; }
+    .toast.is-error { background: var(--danger); }
+
+    footer { margin-top: 48px; color: var(--text2); font-size: 11px; text-align: center; }
+
+    @media (max-width: 600px) {
+        .site-header { padding: 0 16px; }
+        .wrap { padding: 24px 16px 60px; }
+        .welcome { padding: 18px 16px 16px; }
+        .cred-value { max-width: 100%; }
+        .creds { gap: 12px; }
+        .login-btn { width: 100%; justify-content: center; }
+    }
+</style>
+</head>
+<body>
+
+<div class="bg-layer" aria-hidden="true"><canvas id="noise"></canvas></div>
+
+<header class="site-header">
+    <a href="#" class="logo"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></a>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <i class="ph ph-moon"></i>
+    </button>
+</header>
+
+<div class="wrap">
+    <header class="handover-head">
+        <h1>Your site, {{ARTIST_NAME}}</h1>
+        <p class="subtitle">{{BRAND_NAME}} · Site handover</p>
+    </header>
+
+    <div class="intro">{{HOW_IT_WORKS}}</div>
+
+    <div class="welcome">
+        <h2>Your editor login</h2>
+        <div class="login-block">
+            <div class="creds">
+                <div class="cred-field">
+                    <div class="cred-label">Your site</div>
+                    <div class="cred-value">
+                        <span id="credSlug"></span>
+                        <button class="cred-copy" title="Copy" onclick="copyCred('credSlug')"><i class="ph ph-copy"></i></button>
+                    </div>
+                </div>
+                <div class="cred-field">
+                    <div class="cred-label">Login token</div>
+                    <div class="cred-value">
+                        <span id="credToken"></span>
+                        <button class="cred-copy" title="Copy" onclick="copyCred('credToken')"><i class="ph ph-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+            <button class="login-btn" id="loginBtn" onclick="loginToEditor()">
+                <i class="ph ph-pencil-simple"></i> Open your editor
+            </button>
+        </div>
+    </div>
+
+    <div class="info-rows">
+        <div class="info-row" id="domainRow">
+            <i class="ph ph-globe"></i>
+            <div>
+                <div class="info-row-label">Your domain</div>
+                <a id="domainLink" href="#" target="_blank" rel="noopener"></a>
+            </div>
+        </div>
+        <div class="info-row" id="intakeRow">
+            <i class="ph ph-upload-simple"></i>
+            <div>
+                <div class="info-row-label">Send us work</div>
+                <a id="intakeLink" href="#"></a>
+            </div>
+        </div>
+        <div class="info-row">
+            <i class="ph ph-chat-circle-text"></i>
+            <div>
+                <div class="info-row-label">Questions?</div>
+                <a id="contactLink" href="#"></a>
+            </div>
+        </div>
+    </div>
+
+    <footer id="footerEl"></footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Attractor backdrop + dark-mode toggle ──
+   Ported verbatim from _shared/intake.html. */
+(function () {
+    var canvas = document.getElementById('noise');
+    var bgLayer = document.querySelector('.bg-layer');
+    var ctx = canvas.getContext('2d');
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var BAYER = [0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5];
+    var LEVELS = 4;
+    var BLOCK = 3;
+
+    var GAMMA = new Float32Array(1024);
+    for (var gi = 0; gi < 1024; gi++) GAMMA[gi] = Math.pow(gi / 1023, 0.8);
+
+    var RW = 0, RH = 0, dens = null, img = null, data = null;
+
+    function resize() {
+        var coverW = window.innerWidth;
+        var coverH = window.innerHeight * 1.4;
+        RW = Math.max(60, Math.round(coverW / BLOCK));
+        RH = Math.max(60, Math.round(coverH / BLOCK));
+        canvas.width = RW;
+        canvas.height = RH;
+        dens = new Float32Array(RW * RH);
+        img = ctx.createImageData(RW, RH);
+        data = img.data;
+    }
+
+    function render(t) {
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        var a = -2.0 + 0.22 * Math.sin(t * 0.00018);
+        var b = -2.0 + 0.20 * Math.cos(t * 0.00013);
+        var c = -1.2 + 0.20 * Math.sin(t * 0.00021 + 1.3);
+        var d =  2.0 + 0.22 * Math.cos(t * 0.00016 + 0.7);
+        var x = 0.1, y = 0.1;
+
+        var xmin = -0.55, xmax = 2.05, ymin = -2.05, ymax = 0.55;
+        var sx = RW / (xmax - xmin), sy = RH / (ymax - ymin);
+
+        dens.fill(0);
+        var N = Math.min(320000, RW * RH * 4);
+        for (var i = 0; i < N; i++) {
+            var nx = Math.sin(a * y) - Math.cos(b * x);
+            var ny = Math.sin(c * x) - Math.cos(d * y);
+            x = nx; y = ny;
+            if (i < 24) continue;
+            if (x < xmin || x > xmax || y < ymin || y > ymax) continue;
+            var px = ((x - xmin) * sx) | 0;
+            var py = ((y - ymin) * sy) | 0;
+            if (px >= 0 && px < RW && py >= 0 && py < RH) dens[py * RW + px]++;
+        }
+
+        var max = 0;
+        for (var k = 0; k < dens.length; k++) {
+            var v = Math.log(1 + dens[k]);
+            dens[k] = v;
+            if (v > max) max = v;
+        }
+        var inv = max > 0 ? 1 / max : 0;
+
+        var cr = dark ? 153 : 33, cg = dark ? 205 : 95, cb = dark ? 255 : 158;
+        var srr = dark ? 86 : 120, sg = dark ? 132 : 150, sb = dark ? 178 : 185;
+        var maxA = (dark ? 0.55 : 0.5) * 255;
+
+        for (var yy = 0; yy < RH; yy++) {
+            for (var xx = 0; xx < RW; xx++) {
+                var idx = yy * RW + xx;
+                var g = GAMMA[(dens[idx] * inv * 1023) | 0];
+                var m = (BAYER[(yy & 3) * 4 + (xx & 3)] + 0.5) / 16;
+                var q = Math.floor(g * LEVELS + (m - 0.5));
+                if (q < 0) q = 0; else if (q > LEVELS) q = LEVELS;
+                var tt = q / LEVELS;
+                var o = idx * 4;
+                data[o]     = srr + (cr - srr) * tt;
+                data[o + 1] = sg + (cg - sg) * tt;
+                data[o + 2] = sb + (cb - sb) * tt;
+                data[o + 3] = (tt * maxA) | 0;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+    }
+
+    var INTERVAL = 60;
+    var lastDraw = -1e9;
+    function frame(now) {
+        if (!document.hidden && now - lastDraw >= INTERVAL) {
+            lastDraw = now;
+            render(now);
+        }
+        requestAnimationFrame(frame);
+    }
+
+    var ticking = false;
+    function onScroll() {
+        if (reduced) return;
+        if (!ticking) {
+            window.requestAnimationFrame(function () {
+                var y = window.scrollY || window.pageYOffset || 0;
+                bgLayer.style.transform = 'translate3d(0,' + (-y * 0.28) + 'px,0)';
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    var resizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+            resize();
+            if (reduced) render(0);
+        }, 180);
+    });
+
+    var toggle = document.getElementById('theme-toggle');
+    var toggleIcon = toggle ? toggle.querySelector('i') : null;
+    function syncToggleIcon() {
+        if (!toggleIcon) return;
+        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        toggleIcon.className = dark ? 'ph ph-sun' : 'ph ph-moon';
+    }
+    syncToggleIcon();
+    if (toggle) {
+        toggle.addEventListener('click', function () {
+            var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+            if (dark) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('adze-theme', 'light');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('adze-theme', 'dark');
+            }
+            syncToggleIcon();
+            if (reduced) render(0);
+        });
+    }
+
+    resize();
+    if (reduced) {
+        render(0);
+    } else {
+        requestAnimationFrame(frame);
+    }
+})();
+</script>
+
+<script>
+const ARTIST_SLUG  = '{{ARTIST_SLUG}}';
+const ADMIN_TOKEN  = '{{ADMIN_TOKEN}}';
+const DOMAIN       = '{{DOMAIN}}';
+const INTAKE_URL   = '{{INTAKE_URL}}';
+const CONTACT_EMAIL = '{{CONTACT_EMAIL}}';
+const BRAND_FOOTER = '{{BRAND_FOOTER}}';
+
+// Populate credentials
+document.getElementById('credSlug').textContent  = ARTIST_SLUG;
+document.getElementById('credToken').textContent = ADMIN_TOKEN;
+
+// Domain row — hide if empty
+const domainRow = document.getElementById('domainRow');
+if (DOMAIN) {
+    const href = /^https?:\/\//.test(DOMAIN) ? DOMAIN : 'https://' + DOMAIN;
+    const link = document.getElementById('domainLink');
+    link.href = href;
+    link.textContent = DOMAIN;
+} else {
+    domainRow.style.display = 'none';
+}
+
+// Intake row — hide if empty
+const intakeRow = document.getElementById('intakeRow');
+if (INTAKE_URL) {
+    const link = document.getElementById('intakeLink');
+    link.href = INTAKE_URL;
+    link.textContent = INTAKE_URL;
+} else {
+    intakeRow.style.display = 'none';
+}
+
+// Contact
+const contactLink = document.getElementById('contactLink');
+contactLink.href = 'mailto:' + CONTACT_EMAIL;
+contactLink.textContent = CONTACT_EMAIL;
+
+// Footer
+document.getElementById('footerEl').innerHTML =
+    BRAND_FOOTER + ' · Keep this page private — it contains your login.';
+
+const toastEl = document.getElementById('toast');
+function toast(msg, isErr) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('is-error', !!isErr);
+    toastEl.classList.add('is-visible');
+    setTimeout(() => toastEl.classList.remove('is-visible'), 2400);
+}
+
+function copyCred(id) {
+    const text = document.getElementById(id).textContent;
+    navigator.clipboard?.writeText(text).then(
+        () => toast('Copied'),
+        () => toast('Could not copy', true));
+}
+
+async function loginToEditor() {
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch"></i> Signing in…';
+    try {
+        const r = await fetch('/api/adze/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: ARTIST_SLUG, token: ADMIN_TOKEN }),
+        });
+        if (!r.ok) throw new Error('Login failed');
+        window.location.href = `/api/adze/dashboard?slug=${encodeURIComponent(ARTIST_SLUG)}`;
+    } catch (err) {
+        toast(err.message || 'Could not sign in', true);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Open your editor';
+    }
+}
+</script>
+</body>
+</html>

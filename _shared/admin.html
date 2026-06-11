@@ -1267,6 +1267,41 @@ function _applyIdentity(ident) {
         const field = sel.closest('.form-field');
         if (field && kept <= 1) field.style.display = 'none';
     });
+    // Co-brand lockup for single-workspace (non-personal) admins.
+    const wss = ident?.workspaces || [];
+    if (wss.length === 1 && wss[0] !== 'personal') {
+        fetch('/api/adze/brand-info', { headers: { 'X-Admin-Token': adminToken } })
+            .then(r => r.ok ? r.json() : null)
+            .then(brand => { if (brand && brand.name) _applyAdminBrandLockup(brand); })
+            .catch(() => {});
+    }
+}
+
+function _applyAdminBrandLockup(brand) {
+    // Inject @font-face once, guarded by a sentinel attribute on <head>.
+    const head = document.head;
+    if (brand.lockup_font && brand.asset_base_url && !head.hasAttribute('data-brand-font')) {
+        head.setAttribute('data-brand-font', brand.lockup_font);
+        const base = brand.asset_base_url;
+        // Literal brackets in font filename must be percent-encoded for CSS url().
+        const fontFile = base + brand.lockup_font.replace(/\[/g, '%5B').replace(/\]/g, '%5D') + '[wght].ttf';
+        const style = document.createElement('style');
+        style.textContent = `@font-face { font-family: '${brand.lockup_font}'; src: url('${fontFile}') format('truetype'); font-weight: 100 900; }`;
+        head.appendChild(style);
+    }
+    const h1 = document.querySelector('.header-left h1');
+    if (!h1 || h1.hasAttribute('data-brand-applied')) return;
+    h1.setAttribute('data-brand-applied', '1');
+    // Brand name span.
+    const brandSpan = document.createElement('span');
+    brandSpan.textContent = brand.name;
+    brandSpan.style.cssText = `font-family: '${brand.lockup_font || 'Georgia'}', Georgia, serif; color: ${brand.accent || 'inherit'}; font-weight: 500; font-style: normal;`;
+    // Separator span.
+    const sepSpan = document.createElement('span');
+    sepSpan.textContent = '×';
+    sepSpan.style.cssText = 'color: var(--text2); padding: 0 2px; font-style: normal; font-weight: 400;';
+    h1.prepend(sepSpan);
+    h1.prepend(brandSpan);
 }
 
 async function doLogin() {
@@ -2509,6 +2544,10 @@ function renderArtistDetail(c) {
                 <div class="ad-card-head"><i class="ph ph-link"></i> Intake link (artist upload portal)</div>
                 <div id="adIntakeBody"><div class="ad-empty">Loading…</div></div>
             </div>
+            <div class="ad-card">
+                <div class="ad-card-head"><i class="ph ph-key"></i> Handover link</div>
+                <div id="adHandoverBody"><div class="ad-empty">Loading…</div></div>
+            </div>
             <div class="ad-card ad-assets-card">
                 <div class="ad-card-head" style="display:flex;align-items:center;justify-content:space-between">
                     <span><i class="ph ph-folder-open"></i> Assets</span>
@@ -2519,6 +2558,7 @@ function renderArtistDetail(c) {
         </div>
     `;
     loadArtistIntake(c.slug);
+    loadArtistHandover(c.slug);
     loadArtistAssets(c.slug);
 }
 
@@ -2584,6 +2624,84 @@ async function revokeIntakeToken(slug) {
     if (r.ok) {
         document.getElementById('adIntakeBody').innerHTML =
             `<p style="font-size:13px;color:var(--text2)">No intake token. <button class="btn btn-sm btn-primary" onclick="loadArtistIntake('${esc(slug)}')"><i class="ph ph-plus"></i> Mint one</button></p>`;
+        showToast('Token revoked');
+    } else showToast('Revoke failed', true);
+}
+
+// ── Handover-link card ────────────────────────────────────────────────────
+async function loadArtistHandover(slug) {
+    const el = document.getElementById('adHandoverBody');
+    if (!el) return;
+    try {
+        const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/handover-token`,
+            { headers: { 'X-Admin-Token': adminToken } });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        renderHandoverCard(slug, data);
+    } catch (err) {
+        el.innerHTML = `<div class="ad-empty">Couldn't load handover link — ${esc(String(err.message||err))}</div>`;
+    }
+}
+
+function renderHandoverCard(slug, data) {
+    const el = document.getElementById('adHandoverBody');
+    if (!el) return;
+    if (!data || !data.token) {
+        el.innerHTML = `<p style="font-size:13px;color:var(--text2)">No handover token. <button class="btn btn-sm btn-primary" onclick="mintHandoverToken('${esc(slug)}')"><i class="ph ph-plus"></i> Generate link</button></p>`;
+        return;
+    }
+    const url = location.origin + (data.url || `/handover/${slug}/${data.token}`);
+    el.innerHTML = `
+        <p style="font-size:13px;color:var(--text2);margin:0 0 10px">
+            Private page with the artist's login details — replaces credentials on the intake link.
+        </p>
+        <div class="ad-intake-url">
+            <input id="adHandoverInput" type="text" readonly value="${esc(url)}">
+            <button class="btn btn-sm btn-primary" onclick="copyHandoverLink()"><i class="ph ph-copy"></i> Copy link</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+            <a class="btn btn-sm" href="${esc(url)}" target="_blank"><i class="ph ph-arrow-square-out"></i> Open</a>
+            <button class="btn btn-sm" onclick="rotateHandoverToken('${esc(slug)}')"><i class="ph ph-arrows-clockwise"></i> Rotate (invalidate old link)</button>
+            <button class="btn btn-sm" onclick="revokeHandoverToken('${esc(slug)}')" style="color:var(--danger,#b00020)"><i class="ph ph-x"></i> Revoke</button>
+        </div>
+    `;
+}
+
+async function copyHandoverLink() {
+    const inp = document.getElementById('adHandoverInput');
+    if (!inp) return;
+    try {
+        await navigator.clipboard.writeText(inp.value);
+        inp.select();
+        showToast('Handover link copied');
+    } catch {
+        inp.select(); document.execCommand('copy');
+        showToast('Handover link copied');
+    }
+}
+
+async function mintHandoverToken(slug) {
+    const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/handover-token`,
+        { method: 'POST', headers: { 'X-Admin-Token': adminToken } });
+    if (r.ok) { renderHandoverCard(slug, await r.json()); showToast('Handover link generated'); }
+    else showToast('Generate failed', true);
+}
+
+async function rotateHandoverToken(slug) {
+    if (!confirm('Rotate this handover token? Any existing link you sent will stop working.')) return;
+    const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/handover-token`,
+        { method: 'POST', headers: { 'X-Admin-Token': adminToken } });
+    if (r.ok) { renderHandoverCard(slug, await r.json()); showToast('Token rotated'); }
+    else showToast('Rotate failed', true);
+}
+
+async function revokeHandoverToken(slug) {
+    if (!confirm('Revoke this handover token entirely? The link will return 403 until you re-mint.')) return;
+    const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/handover-token`,
+        { method: 'DELETE', headers: { 'X-Admin-Token': adminToken } });
+    if (r.ok) {
+        document.getElementById('adHandoverBody').innerHTML =
+            `<p style="font-size:13px;color:var(--text2)">No handover token. <button class="btn btn-sm btn-primary" onclick="mintHandoverToken('${esc(slug)}')"><i class="ph ph-plus"></i> Generate link</button></p>`;
         showToast('Token revoked');
     } else showToast('Revoke failed', true);
 }

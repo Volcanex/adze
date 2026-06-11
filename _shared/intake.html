@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Send your work — Adze</title>
+<title>Send your work — {{BRAND_NAME}}</title>
 <meta name="theme-color" content="#1a1a1e">
-<link rel="icon" type="image/png" href="/api/adze/favicon.png">
+<link rel="icon" type="image/png" href="{{BRAND_FAVICON_URL}}">
 <script>
 // Apply theme before paint so the attractor backdrop renders in the right palette.
 // Dark is the default — only go light if the visitor explicitly chose it. Shared
@@ -18,6 +18,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+{{BRAND_CSS_LINK}}
 <style>
     /* Adze intake portal — styled as a sibling of the adze.studio landing
        (_shared/home.html): live de Jong strange-attractor backdrop, dark by
@@ -393,7 +394,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 <div class="bg-layer" aria-hidden="true"><canvas id="noise"></canvas></div>
 
 <header class="site-header">
-    <a href="https://adze.studio/" class="logo" title="Adze"><img src="/static/ADZE.png" alt="Adze"></a>
+    <a href="https://adze.studio/" class="logo" title="Adze"><img src="{{BRAND_LOGO_URL}}" alt="{{BRAND_NAME}}"></a>
     <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
         <i class="ph ph-moon"></i>
     </button>
@@ -402,7 +403,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 <div class="wrap">
     <header class="intake-head">
         <h1>Send your work to {{ARTIST_NAME}}</h1>
-        <p class="subtitle">Adze · Artist intake portal</p>
+        <p class="subtitle">{{BRAND_SUBTITLE}}</p>
     </header>
 
     <div class="drop" id="drop">
@@ -425,10 +426,8 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     </div>
 
     <div class="welcome" id="welcome">
-        <h2>Welcome to the Adze Studio</h2>
-        <p>Built by Gabriel for friends and the clients of <strong>LastPlace</strong>.
-           This portal is your way in — drop work above, or sign into the editor to
-           shape your site directly.</p>
+        <h2>{{BRAND_WELCOME_HEADING}}</h2>
+        <p>{{BRAND_WELCOME_COPY}}</p>
         <div class="login-block">
             <div class="creds">
                 <div class="cred-field">
@@ -480,7 +479,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     <h2>What you've uploaded</h2>
     <div id="items"><div class="empty">Nothing yet.</div></div>
 
-    <footer>Powered by Adze · This link is private to you.</footer>
+    <footer>{{BRAND_FOOTER}}</footer>
 </div>
 
 <div class="toast" id="toast"></div>

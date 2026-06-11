@@ -12,9 +12,11 @@ import subprocess
 import time as _time
 import threading as _threading
 import logging
+import mimetypes
 from pathlib import Path
 from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context, make_response
 from werkzeug.utils import secure_filename
+from brands import brand_json, brand_asset_path
 import sys
 
 
@@ -1903,6 +1905,46 @@ def serve_favicon_ico():
     return send_file(ico_path, mimetype='image/x-icon')
 
 
+@bp.route('/brand/<workspace>/<path:filename>')
+def serve_brand_asset(workspace, filename):
+    """Serve a brand pack asset (brand.css or assets/<filename>). No auth — UI chrome."""
+    asset_path = brand_asset_path(workspace, filename)
+    if asset_path is None:
+        abort(404)
+    mimetype, _ = mimetypes.guess_type(str(asset_path))
+    if not mimetype:
+        mimetype = 'application/octet-stream'
+    response = send_file(str(asset_path), mimetype=mimetype)
+    response.headers['Cache-Control'] = 'public, max-age=86400'
+    return response
+
+
+@bp.route('/brand-info')
+def brand_info():
+    """Return brand pack metadata for the current workspace. No pack → {}."""
+    from auth import current_admin_identity
+    ws = None
+    # Try artist auth first
+    artist_slug = get_authenticated_artist()
+    if artist_slug:
+        try:
+            _, cfg = _read_artist_config(artist_slug)
+            ws = _artist_workspace(cfg)
+        except Exception:
+            ws = None
+    # Fall back to admin identity
+    if not ws:
+        ident = current_admin_identity()
+        if ident and ident.get('workspaces'):
+            ws = ident['workspaces'][0]
+    if not ws:
+        return jsonify({})
+    brand = brand_json(ws)
+    if not brand:
+        return jsonify({})
+    return jsonify({**brand, 'workspace': ws, 'asset_base_url': f'/api/adze/brand/{ws}/'})
+
+
 @bp.route('/robots.txt')
 def serve_robots():
     """adze.studio robots.txt. nginx maps the site-root /robots.txt here.
@@ -2866,6 +2908,48 @@ def _intake_validate(slug, token):
     return cfg, get_artist_path(slug)
 
 
+def _brand_substitutions(cfg):
+    """Return a dict of {{BRAND_*}} placeholder → value for a given artist config.
+    Reused by intake_portal and handover routes."""
+    ws = _artist_workspace(cfg)
+    brand = brand_json(ws)
+    asset_base = f'/api/adze/brand/{ws}/'
+
+    if brand.get('logo_asset'):
+        logo_url = f'{asset_base}{brand["logo_asset"]}'
+    else:
+        logo_url = '/static/ADZE.png'
+
+    if brand.get('favicon_asset'):
+        favicon_url = f'{asset_base}{brand["favicon_asset"]}'
+    else:
+        favicon_url = '/api/adze/favicon.png'
+
+    if brand.get('name'):
+        footer = f'Managed by {brand["name"]} · This link is private to you.'
+    else:
+        footer = 'Powered by Adze · This link is private to you.'
+
+    if brand:
+        css_link = f'<link rel="stylesheet" href="{asset_base}brand.css">'
+    else:
+        css_link = ''
+
+    return {
+        '{{BRAND_NAME}}': brand.get('name') or 'Adze',
+        '{{BRAND_LOGO_URL}}': logo_url,
+        '{{BRAND_FAVICON_URL}}': favicon_url,
+        '{{BRAND_SUBTITLE}}': brand.get('tagline') or 'Adze · Artist intake portal',
+        '{{BRAND_FOOTER}}': footer,
+        '{{BRAND_WELCOME_HEADING}}': brand.get('welcome_heading') or 'Welcome to the Adze Studio',
+        '{{BRAND_WELCOME_COPY}}': (brand.get('welcome_copy') or
+            'Built by Gabriel for friends and the clients of <strong>LastPlace</strong>. '
+            'This portal is your way in — drop work above, or sign into the editor to '
+            'shape your site directly.'),
+        '{{BRAND_CSS_LINK}}': css_link,
+    }
+
+
 # Public portal HTML — token-gated, no admin auth.
 @bp.route('/intake/<slug>/<token>')
 def intake_portal(slug, token):
@@ -2874,16 +2958,81 @@ def intake_portal(slug, token):
     if not portal_path.exists():
         return 'Portal not found', 404
     html = portal_path.read_text(encoding='utf-8')
-    # The intake link doubles as the artist's onboarding link: it exposes
-    # their editor login (admin_token) so they can sign straight into the
-    # dashboard. Anyone holding the intake link already has write access to
-    # the artist's library, so this widens that same trust boundary by design.
-    html = (html
-            .replace('{{ARTIST_NAME}}', cfg.get('name') or slug)
-            .replace('{{ARTIST_SLUG}}', slug)
-            .replace('{{INTAKE_TOKEN}}', token)
-            .replace('{{ADMIN_TOKEN}}', cfg.get('admin_token') or ''))
+    subs = {
+        '{{ARTIST_NAME}}': cfg.get('name') or slug,
+        '{{ARTIST_SLUG}}': slug,
+        '{{INTAKE_TOKEN}}': token,
+        '{{ADMIN_TOKEN}}': '',
+        **_brand_substitutions(cfg),
+    }
+    for placeholder, value in subs.items():
+        html = html.replace(placeholder, value)
     return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
+
+
+def _handover_validate(slug, token):
+    """Constant-time compare token against the artist's stored handover_token.
+    Returns (cfg, artist_dir) or aborts."""
+    import hmac
+    cfg_path, cfg = _read_artist_config(slug)
+    stored = cfg.get('handover_token') or ''
+    if not stored or not hmac.compare_digest(stored, token):
+        abort(403, description='Invalid handover link')
+    return cfg, get_artist_path(slug)
+
+
+@bp.route('/handover/<slug>/<token>')
+def handover_portal(slug, token):
+    """Public handover page — carries editor credentials + intake link."""
+    cfg, _ = _handover_validate(slug, token)
+    handover_path = Path(__file__).parent / 'handover.html'
+    if not handover_path.exists():
+        return 'Handover page not found', 404
+    html = handover_path.read_text(encoding='utf-8')
+    ws = _artist_workspace(cfg)
+    brand = brand_json(ws)
+    intake_url = (f'/intake/{slug}/{cfg["intake_token"]}'
+                  if cfg.get('intake_token') else '')
+    subs = {
+        '{{ARTIST_NAME}}': cfg.get('name') or slug,
+        '{{ARTIST_SLUG}}': slug,
+        '{{ADMIN_TOKEN}}': cfg.get('admin_token') or '',
+        '{{DOMAIN}}': cfg.get('domain') or '',
+        '{{INTAKE_URL}}': intake_url,
+        '{{CONTACT_EMAIL}}': brand.get('contact_email') or 'hello@adze.studio',
+        '{{HOW_IT_WORKS}}': (brand.get('how_it_works') or
+            'Your site is built and managed by Adze. '
+            'Use the details below to sign into your editor.'),
+        **_brand_substitutions(cfg),
+    }
+    for placeholder, value in subs.items():
+        html = html.replace(placeholder, value)
+    return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
+
+
+@bp.route('/admin/artists/<slug>/handover-token', methods=['GET', 'POST', 'DELETE'])
+def admin_handover_token(slug):
+    """GET: return the current token (mint one lazily if missing).
+    POST: rotate (mint a new one, invalidating any link with the old).
+    DELETE: clear the token so the link stops working."""
+    from auth import is_admin_token
+    import secrets
+    token = request.headers.get('X-Admin-Token', '')
+    if not is_admin_token(token):
+        abort(403)
+    cfg_path, cfg = _read_artist_config(slug)
+    if request.method == 'DELETE':
+        cfg.pop('handover_token', None)
+        _write_artist_config(cfg_path, cfg)
+        return jsonify({'success': True, 'token': None})
+    if request.method == 'POST' or not cfg.get('handover_token'):
+        cfg['handover_token'] = secrets.token_urlsafe(24)
+        _write_artist_config(cfg_path, cfg)
+    return jsonify({
+        'success': True,
+        'token': cfg['handover_token'],
+        'url': f'/handover/{slug}/{cfg["handover_token"]}',
+    })
 
 
 # Allowed intake MIME types — narrower than the admin's allowlist; artists

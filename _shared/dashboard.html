@@ -1406,7 +1406,7 @@
         <div class="header-bar">
             <div style="display:flex;align-items:baseline;gap:10px;">
                 <img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:21px;width:auto;align-self:center;">
-                <h1 style="font-family:var(--heading-font);font-weight:700;letter-spacing:-0.02em;color:var(--text);font-size:21px;"><span style="color:var(--accent);font-weight:400">[</span>Adze<span style="color:var(--accent);font-weight:400">]</span> Studio</h1>
+                <h1 id="headerLockup" style="font-family:var(--heading-font);font-weight:700;letter-spacing:-0.02em;color:var(--text);font-size:21px;"><span style="color:var(--accent);font-weight:400">[</span>Adze<span style="color:var(--accent);font-weight:400">]</span> Studio</h1>
                 <span class="welcome-dash" style="color:var(--text2);margin-left:6px;">–</span>
                 <span class="welcome-text" style="font-family:var(--mono);color:var(--text2);font-size:11px;margin-left:5px;">Welcome back, <span id="artistName" style="color:var(--text2);"></span></span>
             </div>
@@ -2372,6 +2372,10 @@ function _initDashboard(info) {
     isAdminMode = !!info.is_admin;
     renderAdminMode();
     applyDashboardOverrides(artistConfig);
+    fetch('/api/adze/brand-info', { headers: { 'X-Artist-Slug': currentArtist, 'X-Admin-Token': currentToken } })
+        .then(r => r.ok ? r.json() : null)
+        .then(brand => { if (brand && brand.name) _applyBrandLockup(brand); })
+        .catch(() => {});
     // Detect external (remote Seed) artists. The dashboard adapts the preview
     // iframe and the default-hidden tab list when this flag is present.
     apiFetch('/api/adze/external-manifest')
@@ -2501,6 +2505,63 @@ function applyExternalDefaults(config) {
     for (const name of EXTERNAL_HIDDEN_DEFAULTS) {
         document.querySelectorAll(`.tab[data-tab="${name}"]`).forEach(el => { el.style.display = 'none'; });
     }
+}
+
+function _applyBrandLockup(brand) {
+    const h1 = document.getElementById('headerLockup');
+    if (!h1) return;
+
+    // Inject @font-face once if brand supplies a font
+    if (brand.lockup_font && brand.asset_base_url) {
+        const fontId = 'brand-lockup-font';
+        if (!document.getElementById(fontId)) {
+            const base = brand.asset_base_url;
+            // Filename contains literal brackets — URL-encode them
+            const regular = base + 'Cormorant%5Bwght%5D.ttf';
+            const italic  = base + 'Cormorant-Italic%5Bwght%5D.ttf';
+            const styleEl = document.createElement('style');
+            styleEl.id = fontId;
+            styleEl.textContent = [
+                `@font-face {`,
+                `  font-family: '${brand.lockup_font}';`,
+                `  src: url('${regular}') format('truetype');`,
+                `  font-weight: 300 700;`,
+                `  font-style: normal;`,
+                `  font-display: swap;`,
+                `}`,
+                `@font-face {`,
+                `  font-family: '${brand.lockup_font}';`,
+                `  src: url('${italic}') format('truetype');`,
+                `  font-weight: 300 700;`,
+                `  font-style: italic;`,
+                `  font-display: swap;`,
+                `}`
+            ].join('\n');
+            document.head.appendChild(styleEl);
+        }
+    }
+
+    const accentColor = brand.accent || 'var(--accent)';
+    const fontFamily  = brand.lockup_font ? `'${brand.lockup_font}', Georgia, serif` : 'Georgia, serif';
+
+    const brandSpan = document.createElement('span');
+    brandSpan.style.cssText = `font-family:${fontFamily};color:${accentColor};font-weight:500;font-size:26px;letter-spacing:-0.01em;`;
+    brandSpan.textContent = brand.name;
+
+    const sep = document.createElement('span');
+    sep.style.cssText = 'color:var(--text2);font-weight:400;padding:0 6px;font-family:var(--heading-font);font-size:21px;';
+    sep.textContent = '×';
+
+    // Preserve existing [Adze] Studio markup
+    const originalHTML = h1.innerHTML;
+    h1.innerHTML = '';
+    h1.appendChild(brandSpan);
+    h1.appendChild(sep);
+    const adzeWrap = document.createElement('span');
+    adzeWrap.innerHTML = originalHTML;
+    h1.appendChild(adzeWrap);
+
+    document.title = `${brand.name} × Adze Studio`;
 }
 
 // Admin-controlled dashboard overrides: hide T1 tabs and apply theme CSS.
