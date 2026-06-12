@@ -5,14 +5,14 @@
 
 @font-face {
     font-family: 'Cormorant';
-    src: url('/api/adze/brand/lastplace/Cormorant[wght].ttf') format('truetype');
+    src: url('/api/adze/brand/lastplace/Cormorant%5Bwght%5D.ttf') format('truetype');
     font-weight: 300 700;
     font-style: normal;
     font-display: swap;
 }
 @font-face {
     font-family: 'Cormorant';
-    src: url('/api/adze/brand/lastplace/Cormorant-Italic[wght].ttf') format('truetype');
+    src: url('/api/adze/brand/lastplace/Cormorant-Italic%5Bwght%5D.ttf') format('truetype');
     font-weight: 300 700;
     font-style: italic;
     font-display: swap;
@@ -37,20 +37,22 @@
     --body-font: 'Cormorant', Georgia, serif;
 }
 
-/* Last Place is a light, paper-and-ink identity — pin the same values in
-   dark mode so the theme toggle doesn't half-revert to the Adze dark palette. */
+/* Dark mode is the straight inversion of the identity: ink ground, paper
+   text, the mark knocked to white. Accent lifts off pure #0000ff for
+   legibility on black. */
 [data-theme="dark"] {
-    --accent: #0000ff;
-    --accent-soft: #5050d0;
-    --accent-hover: #0000c0;
+    --accent: #4d4dff;
+    --accent-soft: #7070e0;
+    --accent-hover: #6a6aff;
     --accent-text: #ffffff;
-    --bg: oklch(0.97 0.012 80);
-    --bg2: oklch(0.94 0.012 80);
-    --surface: #ffffff;
-    --surface2: oklch(0.96 0.008 80);
-    --border: #000000;
-    --text: #000000;
-    --text2: oklch(0.35 0 0);
+    --bg: #000000;
+    --bg2: #0c0c0e;
+    --surface: #111113;
+    --surface2: #1a1a1d;
+    --border: oklch(0.97 0.012 80);
+    --text: oklch(0.97 0.012 80);
+    --text2: oklch(0.72 0.008 80);
     --shadow-sm: none;
     --shadow-md: none;
+    --logo-dark-filter: brightness(0) invert(1);
 }

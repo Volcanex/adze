@@ -1300,8 +1300,15 @@ function _applyAdminBrandLockup(brand) {
         const brandLogo = document.createElement('img');
         brandLogo.src = brand.asset_base_url + encodeURIComponent(brand.lockup_logo_asset);
         brandLogo.alt = brand.name;
+        brandLogo.className = 'brand-lockup-logo';
         brandLogo.style.cssText = 'height:20px;width:auto;';
         headerLeft.insertBefore(brandLogo, adzeImg);
+        if (!document.getElementById('brand-lockup-dark')) {
+            const darkStyle = document.createElement('style');
+            darkStyle.id = 'brand-lockup-dark';
+            darkStyle.textContent = '[data-theme="dark"] .brand-lockup-logo { filter: brightness(0) invert(1); }';
+            document.head.appendChild(darkStyle);
+        }
     }
     const brandSpan = document.createElement('span');
     brandSpan.textContent = brand.name;

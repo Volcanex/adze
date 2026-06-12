@@ -2939,7 +2939,10 @@ def _brand_substitutions(cfg):
         '{{BRAND_NAME}}': brand.get('name') or 'Adze',
         '{{BRAND_LOGO_URL}}': logo_url,
         '{{BRAND_FAVICON_URL}}': favicon_url,
-        '{{BRAND_SUBTITLE}}': brand.get('tagline') or 'Adze · Artist intake portal',
+        '{{BRAND_SUBTITLE}}': (brand.get('intake_subtitle') or brand.get('tagline')
+                               or 'Adze · Artist intake portal'),
+        '{{BRAND_INTAKE_HEADING}}': (brand.get('intake_heading')
+                                     or 'Send your work to {{ARTIST_NAME}}'),
         '{{BRAND_FOOTER}}': 'This link is private to you.',
         '{{BRAND_SITE_URL}}': site_url,
         '{{BRAND_WELCOME_HEADING}}': brand.get('welcome_heading') or 'Welcome to the Adze Studio',

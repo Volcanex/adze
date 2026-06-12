@@ -1,6 +1,8 @@
 {
     "name": "Last Place",
     "tagline": "Last Place · Artist intake portal",
+    "intake_heading": "Hey {{ARTIST_NAME}}",
+    "intake_subtitle": "Can you drop any assets we might need to construct your site here?",
     "accent": "#0000ff",
     "link_domain": "lastplace.co.uk",
     "lockup_font": "Cormorant",
@@ -8,7 +10,7 @@
     "logo_asset": "lastplacelogo.png",
     "lockup_logo_asset": "lastplacelogo.png",
     "favicon_asset": null,
-    "welcome_heading": "Hey {{ARTIST_NAME}}",
-    "welcome_copy": "Put your assets, links and anything else here — we'll use them to construct your site.",
+    "welcome_heading": "How it works",
+    "welcome_copy": "Everything you drop here lands with us at Last Place — we'll use it to construct your site. Add links for anything that lives online.",
     "how_it_works": "Your site is built and looked after by Last Place. Use the details below to sign into your editor, and the intake link to send us new work. If anything is unclear, just reply to us — that is what we are here for."
 }

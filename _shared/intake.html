@@ -104,7 +104,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     .site-header .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .site-header .logo img { height: 22px; display: block; }
     .brand-wordmark { font-family: var(--heading-font); font-size: 18px; color: var(--text); font-weight: 700; letter-spacing: -0.02em; }
-    [data-theme="dark"] .site-header .logo img { filter: invert(1) hue-rotate(180deg) brightness(1.1); }
+    [data-theme="dark"] .site-header .logo img { filter: var(--logo-dark-filter, invert(1) hue-rotate(180deg) brightness(1.1)); }
     .theme-toggle {
         background: transparent; border: none; border-radius: var(--radius);
         width: 34px; height: 34px; margin-right: -10px;
@@ -405,7 +405,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 
 <div class="wrap">
     <header class="intake-head">
-        <h1>Send your work to {{ARTIST_NAME}}</h1>
+        <h1>{{BRAND_INTAKE_HEADING}}</h1>
         <p class="subtitle">{{BRAND_SUBTITLE}}</p>
     </header>
 
