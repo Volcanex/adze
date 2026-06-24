@@ -31,17 +31,7 @@
     "slack_figma_msg_ts": "1779932544.910159",
     "favicon": "favicon.svg",
     "platform_widgets": [
-        "image-pipeline",
         "loom"
     ],
-    "features": {
-        "image_pipeline": {
-            "mode": "progressive",
-            "blur": 12,
-            "transitionStyle": "zoom",
-            "transitionSpeed": "300",
-            "transitionEasing": "ease-in",
-            "transitionBlur": 12
-        }
-    }
+    "features": {}
 }

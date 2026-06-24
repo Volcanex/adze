@@ -29,9 +29,9 @@ html, body {
   line-height: 1.43;
 }
 .ab-nav a { text-decoration: none; color: #000; white-space: nowrap; }
-.ab-nav a:hover { color: #0800FF; }
+.ab-nav a:hover { color: #C64646; }
 .ab-brand {
-  color: #0800FF !important;
+  color: #C64646 !important;
   margin-left: clamp(28px, 19vw, 400px);   /* sits left-of-centre, per mockup */
 }
 .ab-info { margin-left: auto; }            /* pushed to the right edge */
@@ -62,7 +62,7 @@ html, body {
 .ab-contact { margin: 0; }
 .ab-contact .ab-line { display: block; }
 .ab-contact a { color: #000; text-decoration: none; }
-.ab-contact a:hover { color: #0800FF; }
+.ab-contact a:hover { color: #C64646; }
 
 /* ── Portrait ── */
 .ab-figure {
