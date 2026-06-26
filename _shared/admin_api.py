@@ -3012,6 +3012,38 @@ def _strip_domain_scheme(domain):
     return d.rstrip('/')
 
 
+# Fallback for a custom dashboard whose feature module doesn't describe itself.
+DEFAULT_DASHBOARD_INFO = {
+    'name': 'Your dashboard',
+    'blurb': 'Your day-to-day dashboard for updating your site.',
+    'can': [],
+}
+
+
+def _dashboard_info(cfg):
+    """A custom dashboard's self-description, for the handover page.
+
+    Any `*_admin` feature module may export `DASHBOARD_INFO = {name, blurb,
+    can: [...]}`. The handover route reads it here, so the moment an agent
+    builds a new custom dash and gives it a DASHBOARD_INFO, the handover page
+    explains it automatically — no per-artist config. Missing fields fall back
+    to DEFAULT_DASHBOARD_INFO. Returns None when there is no custom dashboard."""
+    import importlib
+    features = cfg.get('features') or []
+    name = next((f for f in features if f.endswith('_admin')), None)
+    if not name:
+        return None
+    info = dict(DEFAULT_DASHBOARD_INFO)
+    try:
+        mod = importlib.import_module(f'features.{name}')
+        custom = getattr(mod, 'DASHBOARD_INFO', None)
+        if isinstance(custom, dict):
+            info.update({k: v for k, v in custom.items() if k in info})
+    except Exception:
+        pass
+    return info
+
+
 @bp.route('/handover/<slug>/<token>')
 def handover_portal(slug, token):
     """Public handover page — carries editor credentials + intake link."""
@@ -3031,8 +3063,10 @@ def handover_portal(slug, token):
         show_custom_dash = 'false'
     if flags['has_custom_dashboard']:
         custom_dash_url = f'https://{_strip_domain_scheme(cfg.get("domain"))}/admin'
+        dash_info = _dashboard_info(cfg)
     else:
         custom_dash_url = ''
+        dash_info = None
     subs = {
         '{{ARTIST_NAME}}': cfg.get('name') or slug,
         '{{ARTIST_SLUG}}': slug,
@@ -3046,6 +3080,7 @@ def handover_portal(slug, token):
         '{{SHOW_CUSTOM_DASH}}': show_custom_dash,
         '{{SHOW_ADZE_LOGIN}}': 'true' if flags['include_adze_login'] else 'false',
         '{{CUSTOM_DASH_URL}}': custom_dash_url,
+        '{{DASH_INFO_JSON}}': json.dumps(dash_info),
         **_brand_substitutions(cfg),
     }
     for placeholder, value in subs.items():

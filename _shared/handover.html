@@ -134,7 +134,20 @@ if (localStorage.getItem('adze-theme') === 'dark') {
         font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.025em;
         color: var(--text); text-transform: none;
     }
-    .dash-card p { margin: 0 0 18px; font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+    .dash-card p { margin: 0 0 14px; font-size: 13.5px; color: var(--text2); line-height: 1.6; }
+    .dash-can {
+        list-style: none; margin: 0 0 20px; padding: 0;
+        display: flex; flex-direction: column; gap: 7px;
+    }
+    .dash-can:empty { display: none; }
+    .dash-can li {
+        position: relative; padding-left: 24px; font-size: 13px; color: var(--text);
+        line-height: 1.5;
+    }
+    .dash-can li::before {
+        content: "\2713"; position: absolute; left: 0; top: 0;
+        color: var(--accent); font-weight: 700;
+    }
     .dash-link-btn {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 11px 20px; border: 0; border-radius: var(--radius);
@@ -257,12 +270,20 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 
     <!-- Dashboard card: shown when SHOW_CUSTOM_DASH -->
     <div class="dash-card" id="dashCard">
-        <h2>Your dashboard</h2>
-        <p>Your day-to-day dashboard for updating your site:</p>
-        <a class="dash-link-btn" id="dashLink" href="#"><i class="ph ph-layout"></i> Go to your dashboard</a>
+        <h2 id="dashName">Your dashboard</h2>
+        <p id="dashBlurb">Your day-to-day dashboard for updating your site.</p>
+        <ul class="dash-can" id="dashCan"></ul>
+        <a class="dash-link-btn" id="dashLink" href="#" target="_blank" rel="noopener"><i class="ph ph-layout"></i> Go to your dashboard</a>
         <div class="dash-token-row">
             <div class="cred-field">
-                <div class="cred-label dash-token-label">Login token</div>
+                <div class="cred-label dash-token-label">Web address</div>
+                <div class="cred-value">
+                    <span id="credDashUrl"></span>
+                    <button class="cred-copy" title="Copy" onclick="copyCred('credDashUrl')"><i class="ph ph-copy"></i></button>
+                </div>
+            </div>
+            <div class="cred-field">
+                <div class="cred-label dash-token-label">Password</div>
                 <div class="cred-value">
                     <span id="credTokenDash"></span>
                     <button class="cred-copy" title="Copy" onclick="copyCred('credTokenDash')"><i class="ph ph-copy"></i></button>
@@ -487,17 +508,31 @@ const BRAND_FOOTER  = '{{BRAND_FOOTER}}';
 const SHOW_ADZE_LOGIN  = {{SHOW_ADZE_LOGIN}};
 const SHOW_CUSTOM_DASH = {{SHOW_CUSTOM_DASH}};
 const CUSTOM_DASH_URL  = '{{CUSTOM_DASH_URL}}';
+const DASH_INFO        = {{DASH_INFO_JSON}};
 
 // Populate credentials
 document.getElementById('credSlug').textContent       = ARTIST_SLUG;
 document.getElementById('credToken').textContent      = ADMIN_TOKEN;
 document.getElementById('credTokenDash').textContent  = ADMIN_TOKEN;
+document.getElementById('credDashUrl').textContent    = CUSTOM_DASH_URL;
 
 // Dashboard card
 const dashCard = document.getElementById('dashCard');
 if (SHOW_CUSTOM_DASH) {
-    const dashLink = document.getElementById('dashLink');
-    dashLink.href = CUSTOM_DASH_URL;
+    document.getElementById('dashLink').href = CUSTOM_DASH_URL;
+    // The dashboard describes itself (DASHBOARD_INFO in its feature module);
+    // the handover route forwards that here so this section stays accurate for
+    // whatever custom dash the artist has, with no copy hard-coded per artist.
+    if (DASH_INFO) {
+        if (DASH_INFO.name)  document.getElementById('dashName').textContent  = DASH_INFO.name;
+        if (DASH_INFO.blurb) document.getElementById('dashBlurb').textContent = DASH_INFO.blurb;
+        const canEl = document.getElementById('dashCan');
+        (DASH_INFO.can || []).forEach(c => {
+            const li = document.createElement('li');
+            li.textContent = c;
+            canEl.appendChild(li);
+        });
+    }
 } else {
     dashCard.style.display = 'none';
 }
