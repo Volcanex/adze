@@ -3081,6 +3081,8 @@ def handover_portal(slug, token):
         '{{SHOW_ADZE_LOGIN}}': 'true' if flags['include_adze_login'] else 'false',
         '{{CUSTOM_DASH_URL}}': custom_dash_url,
         '{{DASH_INFO_JSON}}': json.dumps(dash_info),
+        '{{PASSWORD_CHANGED}}': 'true' if cfg.get('password_changed') else 'false',
+        '{{HANDOVER_PW_URL}}': f'/api/adze/handover/{slug}/{token}/password',
         **_brand_substitutions(cfg),
     }
     for placeholder, value in subs.items():
@@ -3088,16 +3090,43 @@ def handover_portal(slug, token):
     return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
 
 
+HANDOVER_MIN_PASSWORD_LEN = 6
+
+
+@bp.route('/handover/<slug>/<token>/password', methods=['POST'])
+def handover_set_password(slug, token):
+    """One-time password change from the handover page, for any artist.
+
+    Authed by possession of the handover link (same token as the page itself).
+    Replaces `admin_token` — the single credential for both the custom dashboard
+    and the Adze editor — and locks via a `password_changed` flag so it's a
+    deliberate one-time action. A super-admin can clear the flag to allow
+    another change."""
+    cfg, _ = _handover_validate(slug, token)
+    if cfg.get('password_changed'):
+        return jsonify({'error': 'Your password has already been changed.'}), 409
+    body = request.get_json(silent=True) or {}
+    new = (body.get('new_password') or '').strip()
+    confirm = (body.get('confirm') or '').strip()
+    if len(new) < HANDOVER_MIN_PASSWORD_LEN:
+        return jsonify({'error': f'Password must be at least {HANDOVER_MIN_PASSWORD_LEN} characters.'}), 400
+    if new != confirm:
+        return jsonify({'error': 'The two passwords do not match.'}), 400
+    cfg_path = get_artist_path(slug) / 'config.json'
+    cfg['admin_token'] = new
+    cfg['password_changed'] = True
+    _write_artist_config(cfg_path, cfg)
+    return jsonify({'ok': True, 'password': new})
+
+
 @bp.route('/admin/artists/<slug>/handover-token', methods=['GET', 'POST', 'DELETE'])
 def admin_handover_token(slug):
     """GET: return the current token (mint one lazily if missing).
     POST: rotate (mint a new one, invalidating any link with the old).
     DELETE: clear the token so the link stops working."""
-    from auth import is_admin_token
     import secrets
-    token = request.headers.get('X-Admin-Token', '')
-    if not is_admin_token(token):
-        abort(403)
+    # Header-or-cookie auth so cookie-only sessions (workspace subdomains) work.
+    _require_super_admin()
     cfg_path, cfg = _read_artist_config(slug)
     if request.method == 'DELETE':
         cfg.pop('handover_token', None)

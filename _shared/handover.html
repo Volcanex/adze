@@ -162,6 +162,33 @@ if (localStorage.getItem('adze-theme') === 'dark') {
     }
     .dash-token-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); }
 
+    /* One-time password change */
+    .pw-card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 20px 24px 18px; margin-bottom: 22px; box-shadow: var(--shadow-sm);
+    }
+    .pw-card h2 {
+        margin: 0 0 6px; font-family: var(--heading-font); font-style: normal; font-weight: 700;
+        font-size: 18px; letter-spacing: -0.02em; color: var(--text); text-transform: none;
+    }
+    .pw-card p { margin: 0 0 14px; font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .pw-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .pw-input {
+        flex: 1; min-width: 150px; font-family: var(--mono); font-size: 13px; color: var(--text);
+        background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 9px 11px;
+    }
+    .pw-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+    .pw-msg { font-size: 12px; margin-top: 10px; min-height: 1em; }
+    .pw-msg.err { color: var(--danger); }
+    .pw-msg.ok { color: var(--success); }
+    .pw-done {
+        background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--success);
+        border-radius: var(--radius); padding: 14px 18px; margin-bottom: 22px;
+        font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 10px;
+        box-shadow: var(--shadow-sm);
+    }
+    .pw-done i { color: var(--success); font-size: 18px; }
+
     /* Editor login card — secondary / advanced */
     .welcome {
         background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -317,6 +344,21 @@ if (localStorage.getItem('adze-theme') === 'dark') {
                 <i class="ph ph-pencil-simple"></i> Open the editor
             </button>
         </div>
+    </div>
+
+    <!-- One-time password change — shown on every handover doc -->
+    <div class="pw-card" id="pwCard">
+        <h2>Set your own password</h2>
+        <p>Replace the password above with one you'll remember. You can do this <strong>once</strong>.</p>
+        <div class="pw-row">
+            <input type="password" class="pw-input" id="pwNew" placeholder="New password" autocomplete="new-password">
+            <input type="password" class="pw-input" id="pwConfirm" placeholder="Confirm password" autocomplete="new-password">
+            <button class="login-btn" id="pwBtn" onclick="changePassword()"><i class="ph ph-key"></i> Save</button>
+        </div>
+        <div class="pw-msg" id="pwMsg"></div>
+    </div>
+    <div class="pw-done" id="pwDone" style="display:none">
+        <i class="ph ph-check-circle"></i> Your password has been set — use it to sign in from now on.
     </div>
 
     <div class="info-rows">
@@ -509,6 +551,8 @@ const SHOW_ADZE_LOGIN  = {{SHOW_ADZE_LOGIN}};
 const SHOW_CUSTOM_DASH = {{SHOW_CUSTOM_DASH}};
 const CUSTOM_DASH_URL  = '{{CUSTOM_DASH_URL}}';
 const DASH_INFO        = {{DASH_INFO_JSON}};
+const PW_CHANGED       = {{PASSWORD_CHANGED}};
+const HANDOVER_PW_URL  = '{{HANDOVER_PW_URL}}';
 
 // Populate credentials
 document.getElementById('credSlug').textContent       = ARTIST_SLUG;
@@ -611,6 +655,53 @@ async function loginToEditor() {
         toast(err.message || 'Could not sign in', true);
         btn.disabled = false;
         btn.innerHTML = '<i class="ph ph-pencil-simple"></i> Open the editor';
+    }
+}
+
+// ── One-time password change ──
+(function () {
+    if (PW_CHANGED) {
+        document.getElementById('pwCard').style.display = 'none';
+        document.getElementById('pwDone').style.display = '';
+    }
+})();
+
+function setPwMsg(text, kind) {
+    const m = document.getElementById('pwMsg');
+    m.textContent = text;
+    m.className = 'pw-msg' + (kind ? ' ' + kind : '');
+}
+
+async function changePassword() {
+    const n = document.getElementById('pwNew').value;
+    const c = document.getElementById('pwConfirm').value;
+    if (n.length < 6) return setPwMsg('Use at least 6 characters.', 'err');
+    if (n !== c) return setPwMsg('The two passwords do not match.', 'err');
+    if (!confirm('Set this as your password? You can only do this once.')) return;
+    const btn = document.getElementById('pwBtn');
+    btn.disabled = true;
+    setPwMsg('Saving…');
+    try {
+        const r = await fetch(HANDOVER_PW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ new_password: n, confirm: c }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Could not save');
+        // Reflect the new password in the credential boxes, then swap to the done state.
+        if (d.password) {
+            ['credToken', 'credTokenDash'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = d.password;
+            });
+        }
+        document.getElementById('pwCard').style.display = 'none';
+        document.getElementById('pwDone').style.display = '';
+        toast('Password set');
+    } catch (err) {
+        setPwMsg(err.message || 'Could not save', 'err');
+        btn.disabled = false;
     }
 }
 </script>

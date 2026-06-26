@@ -56,8 +56,6 @@ THUMBS_DIR = IMAGES_DIR / 'thumbs'
 
 ALLOWED_EXTS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
 THUMB_MAX_W = 800
-MIN_PASSWORD_LEN = 6
-CONFIG_PATH = ARTIST_DIR / 'config.json'
 
 # Mirrors the taxonomy in assets/works-grid.js (minus 'all' and the 'about'
 # nav link). 'selected' is the flag that surfaces a work on the home landing.
@@ -263,46 +261,6 @@ def upload_image(wid):
     return jsonify(work)
 
 
-@bp.route('/api/lydia-admin/account')
-@_auth_required
-def get_account():
-    """Whether the one-time password change is still available."""
-    try:
-        cfg = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
-    except (OSError, json.JSONDecodeError):
-        cfg = {}
-    return jsonify({'password_changed': bool(cfg.get('password_changed'))})
-
-
-@bp.route('/api/lydia-admin/password', methods=['POST'])
-@_auth_required
-def change_password():
-    """Let the artist set their own password — once. Tracked by a
-    `password_changed` flag in config.json; after that it's locked (a
-    super-admin can clear the flag to allow another change). Re-sets the auth
-    cookie to the new token so the current session stays signed in."""
-    try:
-        cfg = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
-    except (OSError, json.JSONDecodeError):
-        return jsonify({'error': 'Could not read account'}), 500
-    if cfg.get('password_changed'):
-        return jsonify({'error': 'Your password has already been changed.'}), 409
-    body = request.get_json(silent=True) or {}
-    new = (body.get('new_password') or '').strip()
-    confirm = (body.get('confirm') or '').strip()
-    if len(new) < MIN_PASSWORD_LEN:
-        return jsonify({'error': f'Password must be at least {MIN_PASSWORD_LEN} characters.'}), 400
-    if new != confirm:
-        return jsonify({'error': 'The two passwords do not match.'}), 400
-    cfg['admin_token'] = new
-    cfg['password_changed'] = True
-    CONFIG_PATH.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding='utf-8')
-    resp = jsonify({'ok': True})
-    resp.set_cookie(admin.cookie, new, httponly=True, samesite='Strict',
-                    max_age=60 * 60 * 24 * 30)
-    return resp
-
-
 @bp.route('/api/lydia-admin/asset/<path:filename>')
 @_auth_required
 def serve_asset(filename):
@@ -392,9 +350,6 @@ body {
 
 .publish-block { margin-top: 40px; padding-top: 22px; border-top: 1px solid #000; }
 .publish-block p { font-size: 13px; color: #555; margin-bottom: 14px; line-height: 1.5; }
-.account-block { margin-top: 28px; padding-top: 22px; border-top: 1px solid #eee; max-width: 460px; }
-.account-block h3 { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
-.account-block p { font-size: 13px; color: #555; margin-bottom: 14px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -423,21 +378,6 @@ body {
     <p>Changes are saved as you go. Hit Publish to push them live to your site.</p>
     <button class="btn" id="publish-btn">Publish to site</button>
     <span class="status-msg" id="publish-msg" style="margin-left:10px;display:none"></span>
-  </div>
-
-  <div class="account-block" id="accountBlock" style="display:none">
-    <h3>Set your password</h3>
-    <p>Choose your own password to log in with from now on. You can do this <strong>once</strong>, so pick something memorable.</p>
-    <div class="form-row">
-      <div class="field"><label>New password</label><input type="password" id="pw-new" autocomplete="new-password"></div>
-      <div class="field"><label>Confirm password</label><input type="password" id="pw-confirm" autocomplete="new-password"></div>
-    </div>
-    <button class="btn btn-ghost btn-sm" id="pw-save-btn">Save password</button>
-    <span class="status-msg" id="pw-msg" style="margin-left:8px"></span>
-  </div>
-  <div class="account-block" id="accountDone" style="display:none">
-    <h3>Your password</h3>
-    <p>Your password is set. Use it to log in from now on — keep it somewhere safe.</p>
   </div>
 </div>
 
@@ -528,7 +468,6 @@ async function loadList(){
   works.sort((a,b) => (b.date||'').localeCompare(a.date||''));
   renderGrid();
   show('list');
-  loadAccount();
 }
 function renderGrid(){
   const g = $('works-grid'); g.innerHTML = '';
@@ -659,32 +598,6 @@ $('publish-btn').addEventListener('click', async () => {
   btn.disabled = false; btn.textContent='Publish to site'; msg.style.display='';
   if (r && r.ok){ msg.textContent='Published — your site is live.'; msg.className='status-msg ok'; }
   else { msg.textContent='Something went wrong — try again.'; msg.className='status-msg err'; }
-});
-
-// ── account / password (one-time) ──
-async function loadAccount(){
-  const r = await fetch(API + '/account');
-  if (!r.ok) return;
-  const a = await r.json();
-  $('accountBlock').style.display = a.password_changed ? 'none' : '';
-  $('accountDone').style.display  = a.password_changed ? '' : 'none';
-}
-$('pw-save-btn').addEventListener('click', async () => {
-  const msg = $('pw-msg');
-  const pw = $('pw-new').value, cf = $('pw-confirm').value;
-  if (pw.length < 6){ msg.textContent='At least 6 characters'; msg.className='status-msg err'; return; }
-  if (pw !== cf){ msg.textContent='The two passwords do not match'; msg.className='status-msg err'; return; }
-  if (!confirm('Set this as your password? You can only do this once.')) return;
-  msg.textContent='Saving…'; msg.className='status-msg';
-  const r = await api('POST','/password',{ new_password: pw, confirm: cf });
-  if (r && r.ok){
-    $('pw-new').value=''; $('pw-confirm').value='';
-    $('accountBlock').style.display='none'; $('accountDone').style.display='';
-    msg.textContent='';
-  } else {
-    const e = r ? await r.json().catch(()=>({})) : {};
-    msg.textContent = e.error || 'Could not save'; msg.className='status-msg err';
-  }
 });
 
 // ── init ──
