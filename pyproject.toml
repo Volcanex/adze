@@ -18,4 +18,5 @@ dependencies = [
 ]
 
 [tool.gcore]
+depends = ["openrouter", "stripe", "slack", "purelymail"]
 starter = "gseed-app"
