@@ -297,71 +297,6 @@ a { color: inherit; text-decoration: none; }
 }
 @keyframes bob { 0%,100%{ transform: translate(-50%,0);} 50%{ transform: translate(-50%,8px);} }
 
-/* ── Parallax text boxes ── */
-.stage-clips {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    pointer-events: none;
-}
-.clip {
-    position: absolute;
-    border: 1px solid rgba(11,13,26,0.35);
-    background: rgba(244,243,238,0.72);
-    padding: 10px 14px;
-    max-width: 200px;
-    pointer-events: auto;
-    backdrop-filter: blur(2px);
-}
-.clip-inner {
-    font-family: var(--body);
-    font-weight: 700;
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--ink);
-    line-height: 1.5;
-}
-.clip-inner .clip-pub {
-    font-weight: 400;
-    font-size: 9px;
-    letter-spacing: 0.16em;
-    color: var(--muted);
-    display: block;
-    margin-top: 5px;
-}
-.clip:nth-child(1) { top: 18%; right: 28%; transform: rotate(-1.5deg); }
-.clip:nth-child(2) { top: 42%; right: 14%; transform: rotate(1.2deg); }
-.clip:nth-child(3) { top: 28%; right: 10%; transform: rotate(-0.8deg); }
-.clip:nth-child(4) { top: 62%; right: 26%; transform: rotate(2deg); }
-
-/* Magazine background strips behind hero */
-.clip.bg-strip {
-    border: none;
-    background: rgba(244,243,238,0.55);
-    padding: 8px 12px;
-    max-width: 280px;
-    backdrop-filter: blur(1px);
-    z-index: 1;
-}
-.clip.bg-strip .clip-inner {
-    font-size: 9px;
-    font-weight: 400;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    opacity: 0.7;
-    line-height: 1.4;
-}
-.clip.bg-strip .clip-pub { display: none; }
-.clip.bg-strip:nth-child(5) { top: 8%; left: 12%; transform: rotate(-0.5deg); }
-.clip.bg-strip:nth-child(6) { top: 28%; left: 8%; transform: rotate(1.8deg); }
-.clip.bg-strip:nth-child(7) { top: 50%; left: 14%; transform: rotate(-1.2deg); }
-.clip.bg-strip:nth-child(8) { top: 68%; left: 10%; transform: rotate(0.8deg); }
-
-@media (max-width: 800px) {
-    .stage-clips { display: none; }
-}
-
 /* ── Editorial content ── */
 .sheet {
     position: relative;
@@ -513,8 +448,8 @@ a { color: inherit; text-decoration: none; }
     <a href="../home/" class="brand">Jack Dennison Thompson</a>
     <nav class="top-nav">
         <a href="../about/">About</a>
-        <a href="../music/">Music</a>
         <a href="../writing/">Writing</a>
+        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -522,52 +457,6 @@ a { color: inherit; text-decoration: none; }
     <div class="stage-bg" data-parallax="0.12"></div>
     <div class="stage-paper"></div>
     <div class="stage-veil"></div>
-    <div class="stage-clips" data-parallax="0.06">
-        <div class="clip">
-            <div class="clip-inner">
-                The Sound of Protest
-                <span class="clip-pub">Clash Music &mdash; 2024</span>
-            </div>
-        </div>
-        <div class="clip">
-            <div class="clip-inner">
-                Deputy Multimedia Editor
-                <span class="clip-pub">GTFO Magazine</span>
-            </div>
-        </div>
-        <div class="clip">
-            <div class="clip-inner">
-                Culture &amp; Politics
-                <span class="clip-pub">MA Magazine Journalism, City</span>
-            </div>
-        </div>
-        <div class="clip">
-            <div class="clip-inner">
-                Folk &amp; Honey &mdash; Campaign UK
-                <span class="clip-pub">Contributing Writer</span>
-            </div>
-        </div>
-        <div class="clip bg-strip">
-            <div class="clip-inner">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-            </div>
-        </div>
-        <div class="clip bg-strip">
-            <div class="clip-inner">
-                Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat duis aute irure.
-            </div>
-        </div>
-        <div class="clip bg-strip">
-            <div class="clip-inner">
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur excepteur sint occaecat.
-            </div>
-        </div>
-        <div class="clip bg-strip">
-            <div class="clip-inner">
-                Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum sed ut perspiciatis.
-            </div>
-        </div>
-    </div>
     <div class="hero" data-parallax="-0.12">
          <h1>
         <span class="nm">Jack</span>
@@ -610,7 +499,7 @@ a { color: inherit; text-decoration: none; }
 
 <footer class="foot">
     <div class="big">Get in touch</div>
-    <a href="mailto:">Email Jack &rarr;</a>
+    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
 </footer>
 
 <script>

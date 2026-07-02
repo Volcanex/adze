@@ -8,7 +8,7 @@
     "lead": {
         "active": false,
         "contact": "Self",
-        "stage": "1",
+        "stage": "discovery",
         "fish_size": "s",
         "instagram": "jjjjjjjakob",
         "work": "Re-do",
@@ -24,5 +24,6 @@
     "slack_channel_id": "C0B6P0Y0189",
     "slack_pinned_ts": "1779930840.420679",
     "slack_announced": true,
-    "intake_token": "WVud_rCGP3QKf9iUfMHLlaqekLL6EOVj"
+    "intake_token": "WVud_rCGP3QKf9iUfMHLlaqekLL6EOVj",
+    "handover_token": "nJl6u6cpGRJupidpBoTwxnTAEK0LGDNf"
 }

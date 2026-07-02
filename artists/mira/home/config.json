@@ -2,5 +2,6 @@
     "title": "exopta",
     "slug": "artists/mira/home",
     "description": "mira — music, art, animation",
-    "categories": []
+    "categories": [],
+    "hidden": false
 }

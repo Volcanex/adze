@@ -27,9 +27,12 @@
       "year": 2021,
       "medium": "Oil on canvas",
       "dimensions": "160 x 140 cm",
-      "status": "missing",
-      "image": null,
-      "source": null
+      "status": "live",
+      "image": "work-wise-man.jpg",
+      "source": null,
+      "images": [
+        "work-wise-man.jpg"
+      ]
     },
     {
       "slug": "worship",
@@ -37,9 +40,12 @@
       "year": 2021,
       "medium": "Monoprint",
       "dimensions": "A4",
-      "status": "missing",
-      "image": null,
-      "source": null
+      "status": "live",
+      "image": "work-worship.jpg",
+      "source": null,
+      "images": [
+        "work-worship.jpg"
+      ]
     },
     {
       "slug": "pin-mill",
@@ -47,9 +53,12 @@
       "year": 2021,
       "medium": "Oil on calico",
       "dimensions": "180 x 120 cm",
-      "status": "missing",
-      "image": null,
-      "source": null
+      "status": "live",
+      "image": "work-pin-mill.jpg",
+      "source": null,
+      "images": [
+        "work-pin-mill.jpg"
+      ]
     },
     {
       "slug": "keeper-of-the-egg",
@@ -120,10 +129,13 @@
       "title": "Cormorant",
       "year": 2022,
       "medium": "Drawing animation film; oil on ceramic tile",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-cormorant.jpg",
+      "source": null,
+      "images": [
+        "work-cormorant.jpg"
+      ]
     },
     {
       "slug": "skip-kids",
@@ -171,91 +183,94 @@
       "slug": "night-fishing-2",
       "title": "Night fishing 2",
       "year": 2022,
-      "medium": null,
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "medium": "",
+      "dimensions": "",
+      "status": "live",
+      "image": "work-night-fishing-2.jpg",
+      "source": null,
+      "images": [
+        "work-night-fishing-2.jpg",
+        "work-night-fishing-2-2.jpg"
+      ]
     },
     {
       "slug": "my-mothers-hum",
       "title": "My Mothers Hum",
       "year": 2023,
       "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-my-mothers-hum.jpg",
+      "source": null,
+      "images": [
+        "work-my-mothers-hum.jpg",
+        "work-my-mothers-hum-2.jpg"
+      ]
     },
     {
       "slug": "estuary",
       "title": "Estuary",
       "year": 2023,
       "medium": "Dry point etch",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-estuary.jpg",
+      "source": null,
+      "images": [
+        "work-estuary.jpg"
+      ]
     },
     {
       "slug": "math-equation",
       "title": "Math Equation",
       "year": 2023,
       "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-math-equation-2.jpg",
+      "source": null,
+      "images": [
+        "work-math-equation-2.jpg"
+      ]
     },
     {
       "slug": "what-did-it-mean-to-fly",
       "title": "What did it mean to fly",
       "year": 2023,
       "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
-    },
-    {
-      "slug": "tokyo-park",
-      "title": "Tokyo park",
-      "year": 2024,
-      "medium": "Drawing series",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-what-did-it-mean-to-fly.jpg",
+      "source": null,
+      "images": [
+        "work-what-did-it-mean-to-fly.jpg"
+      ]
     },
     {
       "slug": "drive-thru",
       "title": "Drive thru",
       "year": 2024,
       "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-drive-thru.jpg",
+      "source": null,
+      "images": [
+        "work-drive-thru.jpg"
+      ]
     },
     {
       "slug": "a-shooting-star-from-atop-a-slide",
       "title": "A shooting star from atop a slide and gold waiting below",
       "year": 2024,
       "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
-    },
-    {
-      "slug": "mount-fuji-is-pregnant",
-      "title": "Mount fuji is pregnant",
-      "year": 2024,
-      "medium": "Oil on canvas",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-a-shooting-star-from-atop-a-slide.jpg",
+      "source": null,
+      "images": [
+        "work-a-shooting-star-from-atop-a-slide.jpg"
+      ]
     },
     {
       "slug": "marsh-at-sunset",
@@ -282,10 +297,13 @@
       "title": "Wondering women",
       "year": 2024,
       "medium": "Oil on MDF",
-      "dimensions": null,
-      "status": "missing",
-      "image": null,
-      "source": null
+      "dimensions": "",
+      "status": "live",
+      "image": "work-wondering-women.jpg",
+      "source": null,
+      "images": [
+        "work-wondering-women.jpg"
+      ]
     },
     {
       "slug": "bed",
@@ -316,6 +334,65 @@
       "status": "live",
       "image": "work-paddle-for-dear-life.jpg",
       "source": "Assets/work_2025_Paddle_for_dear_life.jpg"
+    },
+    {
+      "slug": "tara",
+      "title": "Tara",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "107x127",
+      "status": "live",
+      "image": "work-tara.jpg",
+      "source": null,
+      "images": [
+        "work-tara.jpg"
+      ]
+    },
+    {
+      "slug": "her-bed",
+      "title": "Her Bed",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "out-the-front-door",
+      "title": "Out the Front Door",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "220X190",
+      "status": "live",
+      "image": "work-out-the-front-door.jpg",
+      "source": null,
+      "images": [
+        "work-out-the-front-door.jpg"
+      ]
+    },
+    {
+      "slug": "swimmers",
+      "title": "Swimmers",
+      "year": 2025,
+      "medium": "Oil on MDF",
+      "dimensions": "",
+      "status": "live",
+      "image": "work-swimmers.jpg",
+      "source": null,
+      "images": [
+        "work-swimmers.jpg"
+      ]
+    },
+    {
+      "slug": "sparrow",
+      "title": "sparrow",
+      "year": 2025,
+      "medium": "Oil on MDF",
+      "dimensions": "",
+      "status": "missing",
+      "image": null,
+      "source": null
     }
   ],
   "exhibitions": [

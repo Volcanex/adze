@@ -219,28 +219,6 @@ h1 {
     color: var(--blue);
 }
 
-.note {
-    margin-top: 56px;
-    padding: 30px 32px;
-    border: 2px solid var(--blue);
-    background: var(--paper);
-    font-family: var(--body);
-    font-weight: 200;
-    font-size: 17px;
-    line-height: 1.7;
-    color: #24272f;
-}
-.note strong {
-    display: block;
-    font-family: var(--display);
-    font-weight: 400;
-    font-size: 24px;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--blue);
-    margin-bottom: 10px;
-}
-
 .foot {
     text-align: center;
     padding: 60px 32px;
@@ -260,7 +238,6 @@ h1 {
 .eyebrow,
 .entry .meta,
 .entry .more,
-.note strong,
 .entry:hover .title,
 .foot a {
     background-image:
@@ -288,8 +265,8 @@ h1 {
     <a href="../home/" class="brand">Jack Dennison Thompson</a>
     <nav class="top-nav">
         <a href="../about/">About</a>
-        <a href="../music/">Music</a>
         <a href="../writing/" class="active">Writing</a>
+        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -298,35 +275,72 @@ h1 {
     <h1>Writing</h1>
 
     <div class="grid">
-        <a class="entry" href="#">
-            <div class="meta">Clash Music &middot; Feb 2026</div>
-            <div class="title">The New Sound of London</div>
-            <p class="excerpt">Exploring the underground electronic scene reshaping the city's nightlife, from warehouse raves to experimental noise collectives.</p>
+        <a class="entry" href="https://thecoldmagazine.co.uk/khakikid-is-making-irish-rap-as-an-excuse-to-hang-out/" target="_blank" rel="noopener">
+            <div class="meta">The Cold Magazine · May 2026</div>
+            <div class="title">KhakiKid Is Making Irish Rap ‘as an Excuse to Hang Out’</div>
+            <p class="excerpt">The Irish-Libyan rapper treats music as an excuse to hang out — prizing collaboration and creative freedom over the commercial machine.</p>
             <div class="more">Read Article &rarr;</div>
         </a>
 
-        <a class="entry" href="#">
-            <div class="meta">GTFO Magazine &middot; Jan 2026</div>
-            <div class="title">Gonzo in the Digital Age</div>
-            <p class="excerpt">How Hunter S. Thompson's legacy lives on in modern music journalism, and why truth is stranger than fiction in 2026.</p>
+        <a class="entry" href="https://thecoldmagazine.co.uk/geese-psyop/" target="_blank" rel="noopener">
+            <div class="meta">The Cold Magazine · May 2026</div>
+            <div class="title">The Geese ‘Psyop’ Marks the Death of Indie</div>
+            <p class="excerpt">The outrage over Geese’s manufactured rise lays bare a deeper anxiety: indie authenticity dying in the streaming era’s algorithm-driven industry.</p>
             <div class="more">Read Article &rarr;</div>
         </a>
 
-        <a class="entry" href="#">
-            <div class="meta">The Indiependent &middot; Dec 2025</div>
-            <div class="title">Aphex Twin at 50</div>
-            <p class="excerpt">A retrospective on Richard D. James' influence on experimental electronic music and the artists carrying his torch forward.</p>
+        <a class="entry" href="https://thecoldmagazine.co.uk/ruby-roberts/" target="_blank" rel="noopener">
+            <div class="meta">The Cold Magazine · May 2026</div>
+            <div class="title">Ruby Roberts Is an Artist of Dreamlike Spontaneity</div>
+            <p class="excerpt">The Somerset alt-pop singer builds fluid, genre-defying songs out of spontaneous late-night jam sessions and an ever-shifting sense of self.</p>
             <div class="more">Read Article &rarr;</div>
         </a>
-    </div>
 
-    <div class="note">
-        <strong>This page can pull from any source</strong>
-        We can integrate WordPress, Notion, Google Sheets, or a custom API to populate articles automatically — with category filters, search, or a dynamic feature slot for your latest work.
+        <a class="entry" href="https://www.clashmusic.com/live/thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station/" target="_blank" rel="noopener">
+            <div class="meta">Clash Music · Live · Mar 2026</div>
+            <div class="title">Thundercat Transforms O2 Academy Brixton Into a South London Space Station</div>
+            <p class="excerpt">A futuristic, avant-garde Thundercat turns Brixton into an interstellar nightclub — funkadelic, six-string bass in hand, too unearthly for any normal stage.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/reviews/ms-banks-south-ldn-lover-girl/" target="_blank" rel="noopener">
+            <div class="meta">Clash Music · Review · Mar 2026</div>
+            <div class="title">Ms Banks — SOUTH LDN LOVER GIRL</div>
+            <p class="excerpt">The debut balances feel-good anthems with a bracing origin story — Afrobeats, rap and R&amp;B from a true voice of the streets.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
+
+        <a class="entry" href="https://jackdennisonthompson.substack.com/p/jason-williamson-the-working-class" target="_blank" rel="noopener">
+            <div class="meta">Substack · Mar 2026</div>
+            <div class="title">Jason Williamson: The Working-Class Hero Who Made His Own Cage</div>
+            <p class="excerpt">The sober Sleaford Mods frontman on how his working-class roots shaped his music — and his reluctant, controversial political identity.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/reviews/moby-future-quiet/" target="_blank" rel="noopener">
+            <div class="meta">Clash Music · Review · Feb 2026</div>
+            <div class="title">Moby — Future Quiet</div>
+            <p class="excerpt">An album of ambient-piano therapy — a rescue from insomnia and anxiety, offered to the world by one of electronic music’s great producers.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/features/remember-me-chet-faker-interviewed/" target="_blank" rel="noopener">
+            <div class="meta">Clash Music · Feature</div>
+            <div class="title">Remember Me: Chet Faker Interviewed</div>
+            <p class="excerpt">Five years on from ‘Hotel Surrender’, Chet Faker confronts loss, heartache and industry disenchantment on an album grounded in communal warmth.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/next-wave/next-wave-1179-pollyfromthedirt/" target="_blank" rel="noopener">
+            <div class="meta">Clash Music · Next Wave</div>
+            <div class="title">Next Wave #1179: Pollyfromthedirt</div>
+            <p class="excerpt">Darlington’s masked, anti-industry talent honours his Northern roots on instinct alone — never chasing trends, just figuring out who he is in real time.</p>
+            <div class="more">Read Article &rarr;</div>
+        </a>
     </div>
 </section>
 
 <footer class="foot">
-    <a href="mailto:">Email Jack &rarr;</a>
+    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
 </footer>
 </html>

@@ -14,7 +14,7 @@ body {
     overflow-x: hidden;
 }
 
-.page { max-width: 414px; margin: 0 auto; position: relative; min-height: 100vh; padding-top: 54px; padding-bottom: 120px; }
+.page { max-width: 414px; margin: 0 auto; position: relative; min-height: 100vh; padding-top: 140px; padding-bottom: 120px; }
 
 .header {
     height: 54px; background: #fff;
@@ -46,43 +46,40 @@ body {
 .menu-icon[aria-expanded="true"] span:nth-child(2) { transform: rotate(-32.26deg); }
 .menu-icon[aria-expanded="true"] span:nth-child(3) { transform: rotate(-11.9deg); }
 
-/* Open menu — coloured links stacked under the hamburger (left) */
+/* Open menu — 2x2 grid (Works/About top, Exhibitions/Contact bottom) sliding in on a conveyor */
 .menu-overlay {
     position: fixed;
-    top: 56px; left: 13px;
+    top: 56px; left: 0; right: 0;
     z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    text-align: left;
-    background: #fff;
-    padding: 10px 18px 12px;
-    border-radius: 2px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: min-content;
+    row-gap: 4px;
+    padding: 6px 13px 0;
+    pointer-events: none;
 }
-.menu-overlay.open { opacity: 1; visibility: visible; transform: translateY(0); transition: opacity 0.22s ease, transform 0.22s ease; }
 .menu-overlay a {
-    font-weight: 400; font-size: 26px; line-height: 1.3;
+    font-weight: 400; font-size: 32px; line-height: 1.05;
     text-decoration: none; white-space: nowrap;
-    transition: opacity 0.15s ease;
+    will-change: transform;
+    transition: transform 0.32s cubic-bezier(.5,0,.2,1), opacity 0.18s ease;
+    z-index: 3;
 }
 .menu-overlay a:hover { opacity: 0.55; }
-.menu-overlay .m-works       { color: #0000FF; }
-.menu-overlay .m-about       { color: #FF0033; }
-.menu-overlay .m-exhibitions { color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
-.menu-overlay .m-contact     { color: #8C00FF; }
-
-.section-title {
-    font-weight: 400; font-size: 36px; line-height: 60px;
-    color: var(--contact);
-    padding: 24px 13px 0;
-    text-align: right;
-}
+.menu-overlay .m-works       { color: #0000FF; grid-column: 1; grid-row: 1; }
+.menu-overlay .m-about       { color: #FF0033; grid-column: 2; grid-row: 1; justify-self: end; text-align: right; }
+.menu-overlay .m-exhibitions { color: #1AFF00; grid-column: 1; grid-row: 2; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
+.menu-overlay .m-contact     { color: #8C00FF; grid-column: 2; grid-row: 2; justify-self: end; text-align: right; }
+/* closed: only the current page's word shows (it is the page title); the rest wait off-canvas */
+.menu-overlay a:not(.is-current) { opacity: 0; pointer-events: none; }
+.menu-overlay .m-works:not(.is-current),
+.menu-overlay .m-about:not(.is-current)       { transform: translateX(120vw); }
+.menu-overlay .m-exhibitions:not(.is-current),
+.menu-overlay .m-contact:not(.is-current)     { transform: translateX(-120vw); }
+/* current page's word: always in place; the sliding words pass in front of it */
+.menu-overlay a.is-current { opacity: 1; pointer-events: auto; transform: none; z-index: 1; }
+/* open: every word slides home */
+.menu-overlay.open a:not(.is-current) { opacity: 1; transform: translateX(0); pointer-events: auto; }
 
 .intro {
     padding: 80px 15px 0;
@@ -116,20 +113,13 @@ body {
     .page { max-width: 880px; padding-top: 72px; padding-bottom: 160px; }
     .header { padding: 0 32px; height: 72px; }
     .brand { font-size: 44px; }
-    .menu-overlay { top: 80px; left: 32px; }
-    .section-title { font-size: 64px; padding: 48px 32px 0; }
+    .menu-overlay { top: 80px; padding: 8px 32px 0; }
+    .menu-overlay a { font-size: 44px; }
     .intro { padding: 120px 32px 0; font-size: 22px; line-height: 28px; }
     .details { padding: 40px 32px 0; font-size: 22px; line-height: 32px; }
     .details p { margin-bottom: 12px; }
     .footer { padding: 20px 32px 32px; font-size: 16px; }
 }
-
-/* Title drifts gently downward on load */
-@keyframes title-drift {
-    from { transform: translateY(0); }
-    to   { transform: translateY(10px); }
-}
-.section-title { animation: title-drift 2.2s ease-out forwards; }
 
 /* loading veil: opaque white over the whole page until the hero image is ready */
 #page-veil {
@@ -159,10 +149,8 @@ body {
         <a class="m-works" href="/works/">Works</a>
         <a class="m-exhibitions" href="/exhibitions/">Exhibitions</a>
         <a class="m-about" href="/about/">About</a>
-        <a class="m-contact" href="/contact/">Contact</a>
+        <a class="m-contact is-current" href="/contact/">Contact</a>
     </nav>
-
-    <h1 class="section-title">Contact</h1>
 
     <div class="intro">For enquiries</div>
 

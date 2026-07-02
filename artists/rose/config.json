@@ -9,7 +9,7 @@
     "lead": {
         "active": true,
         "contact": "Self",
-        "stage": "6",
+        "stage": "hosting",
         "fish_size": "s",
         "instagram": "",
         "work": "",
@@ -20,14 +20,18 @@
         "contacted": true,
         "original_lead_id": "63068ce0-2081-4667-aba2-192bd0a40ce3",
         "created_at": 1778224727,
-        "updated_at": 1780484302
+        "updated_at": 1782309445
     },
     "intake_token": "XaBGJCVR6k_hkGkNp9MNFQRU05SSlflt",
     "slack_channel_id": "C0B7FED349E",
     "slack_pinned_ts": "1779930848.335239",
     "slack_announced": true,
-    "figma_url": "",
+    "figma_url": "https://www.figma.com/design/ZRm8pcQMQoStQBoogrFhl7/Rose-Portfolio?node-id=0-1&p=f&t=3Eztwiag6Cgq7tVP-0",
     "last_login": 1780762947,
     "last_login_ip": "148.252.147.214",
-    "features": ["rose_admin"]
+    "features": [
+        "rose_admin"
+    ],
+    "handover_token": "wW2VrDkKJhwT2FEU9dEULbVNxPCw31Uy",
+    "slack_figma_msg_ts": "1782309445.249019"
 }

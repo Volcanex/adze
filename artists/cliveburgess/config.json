@@ -16,7 +16,7 @@
     "lead": {
         "active": false,
         "contact": "",
-        "stage": "6",
+        "stage": "hosting",
         "fish_size": null,
         "instagram": "",
         "work": "",
@@ -29,5 +29,7 @@
         "created_at": 1779960834,
         "updated_at": 1779960834
     },
-    "favicon": "favicon.svg"
+    "favicon": "favicon.svg",
+    "intake_token": "hdqLh3rhMn89dkqAfW4SKlo_ptAOqG3z"
+}
 }

@@ -8,8 +8,14 @@
     "lead": {
         "active": true,
         "contact": "Whatsapp",
-        "stage": "4",
+        "stage": "handover",
         "fish_size": "s",
+        "job_fee": 0.0,
+        "sourced_by": null,
+        "fish_override": true,
+        "discovery_fee": 0.0,
+        "discovery_fee_credited": false,
+        "billed_period": null,
         "instagram": "",
         "work": "",
         "discount": "",
@@ -19,7 +25,7 @@
         "contacted": true,
         "original_lead_id": "94a24aec-b093-4047-bad0-a26780e1ca61",
         "created_at": 1779807288,
-        "updated_at": 1780859514
+        "updated_at": 1782399680
     },
     "slack_channel_id": "C0B6M5XTS1G",
     "slack_pinned_ts": "1779930830.254669",
@@ -31,5 +37,8 @@
     ],
     "last_login": 1780859594,
     "last_login_ip": "82.33.103.61",
-    "features": ["alfie_admin"]
+    "features": [
+        "alfie_admin"
+    ],
+    "handover_token": "988EF5j8n36yDxiwYz7-tOJOZ3nSlR5y"
 }

@@ -4,7 +4,9 @@
     "slug": "mariaslaughter",
     "domain": "mariaslaughter.online",
     "admin_token": "adele",
-    "features": ["maria_admin"],
+    "features": [
+        "maria_admin"
+    ],
     "description": "Dark Arts & Photography - Digital Necropolis",
     "contact_email": "fallenangelselvatica@gmail.com",
     "last_login": 1780568067,
@@ -17,7 +19,7 @@
     "lead": {
         "active": true,
         "contact": "",
-        "stage": "4",
+        "stage": "s03",
         "fish_size": null,
         "instagram": "",
         "work": "",
@@ -29,5 +31,6 @@
         "original_lead_id": null,
         "created_at": 1780484261,
         "updated_at": 1780611405
-    }
+    },
+    "handover_token": "W9y5Ky3ue9jCEtKoGJb6-q6Ei_6_uSDV"
 }

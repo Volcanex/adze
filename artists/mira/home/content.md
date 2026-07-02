@@ -173,6 +173,7 @@ ul.recents .date { color: var(--muted); margin-left: auto; font-variant-numeric:
     body { padding: 20px; }
 }
 </style>
+
 <html>
 <a href="../home/" class="site-name">exopta</a>
 
@@ -210,7 +211,7 @@ ul.recents .date { color: var(--muted); margin-left: auto; font-variant-numeric:
 
     <div class="right-col">
         <div class="landscape">
-            <img src="../assets/images/gif_placeholder.png" alt="">
+            <img src="../assets/images/bg_site.gif" alt="">
         </div>
     </div>
 </section>

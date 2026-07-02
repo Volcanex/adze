@@ -4,12 +4,16 @@
     "domain": "jackdt.com",
     "admin_token": "jack123",
     "description": "Journalism portfolio",
-    "contact_email": "",
-    "last_login": 1776864761,
-    "last_login_ip": "113.185.85.55",
+    "contact_email": "jackdt26@outlook.com",
+    "features": [
+        "jack_admin"
+    ],
+    "last_login": 1782736934,
+    "last_login_ip": "86.104.22.79",
     "slack_channel_id": "C0B7FEC5LHE",
     "slack_pinned_ts": "1779930838.530469",
     "slack_announced": true,
     "intake_token": "vCXRfGPWVqL3gDox_V1VXUl-uyAV19eH",
-    "figma_url": ""
+    "figma_url": "",
+    "handover_token": "ITxGTZbanL6zoDKRxMYcxVRgPGucT2Rd"
 }

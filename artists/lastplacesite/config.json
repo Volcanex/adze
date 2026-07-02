@@ -3,6 +3,9 @@
     "slug": "lastplacesite",
     "domain": "lastplace.co.uk",
     "admin_token": "grandstar",
+    "platform_widgets": [
+        "email"
+    ],
     "description": "Websites for artists, musicians, and cultural projects. Made once, made properly.",
     "contact_email": "hello@lastplace.co.uk",
     "last_login": 1777777885,
@@ -15,7 +18,7 @@
     "lead": {
         "active": false,
         "contact": "",
-        "stage": "6",
+        "stage": "hosting",
         "fish_size": null,
         "instagram": "",
         "work": "",
@@ -27,5 +30,6 @@
         "original_lead_id": null,
         "created_at": 1780484254,
         "updated_at": 1780484254
-    }
+    },
+    "handover_token": "wWNv5K1b0eLI891EZAHcDSVBop23k4Cc"
 }

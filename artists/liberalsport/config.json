@@ -13,7 +13,7 @@
     "lead": {
         "active": true,
         "contact": "Will Munroe",
-        "stage": "1",
+        "stage": "discovery",
         "fish_size": "l",
         "instagram": "liberalsport_uk",
         "work": "",
@@ -25,5 +25,6 @@
         "original_lead_id": null,
         "created_at": 1781085870,
         "updated_at": 1781085870
-    }
+    },
+    "intake_token": "rPb9N9hQX5m1eQ6h7HO28M9zmaq57rap"
 }

@@ -10,5 +10,7 @@
     "slack_channel_id": "C0B6P0V1S9X",
     "slack_pinned_ts": "1779930833.348689",
     "slack_announced": true,
-    "figma_url": ""
+    "figma_url": "",
+    "intake_token": "ZQPW7C3oeP0WodOZjlZ7wN6XoKy8yHrZ",
+    "handover_token": "vr3MS-8wxLwDx8tiQFSs1-xgU_tu6Vus"
 }

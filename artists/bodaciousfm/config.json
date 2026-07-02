@@ -16,7 +16,7 @@
     "lead": {
         "active": false,
         "contact": "",
-        "stage": "2",
+        "stage": "s01",
         "fish_size": null,
         "instagram": "",
         "work": "",
@@ -28,5 +28,6 @@
         "original_lead_id": null,
         "created_at": 1780497180,
         "updated_at": 1780497180
-    }
+    },
+    "handover_token": "peAsuwY9_o7NvfEhJyNFNEucEvpqg8Nv"
 }

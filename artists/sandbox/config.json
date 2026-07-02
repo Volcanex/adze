@@ -8,7 +8,7 @@
     "lead": {
         "active": false,
         "contact": "",
-        "stage": "1",
+        "stage": "discovery",
         "fish_size": "xs",
         "instagram": "",
         "work": "",
@@ -25,5 +25,6 @@
     "slack_channel_id": "C0B6HQ0BHJ9",
     "slack_pinned_ts": "1779930849.297109",
     "slack_announced": true,
-    "figma_url": ""
+    "figma_url": "",
+    "handover_token": "hLAfOzNMuTLXzilnQftMaYuYfeuh788J"
 }

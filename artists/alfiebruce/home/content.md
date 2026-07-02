@@ -58,7 +58,6 @@ a { color: inherit; text-decoration: none; }
     object-fit: cover;
     filter: grayscale(8%) brightness(0.78);
     will-change: transform;
-    pointer-events: none;
 }
 .hero::after {
     content: '';
@@ -112,11 +111,14 @@ a { color: inherit; text-decoration: none; }
     background: var(--panel);
 }
 .card img {
-    width: 100%; height: 100%;
+    position: absolute;
+    top: -8%; left: 0;
+    width: 100%; height: 116%;
     object-fit: cover;
     object-position: center 50%;
     filter: grayscale(10%) brightness(0.82);
     transition: filter 0.6s ease;
+    will-change: transform;
 }
 .card::after {
     content: '';
@@ -180,7 +182,7 @@ footer { padding: 30px 34px; font-size: 11px; letter-spacing: 0.18em; text-trans
 </div>
 
 <section class="hero" id="top">
-    <video class="hero-bg" autoplay muted playsinline id="hero-video" poster="../assets/poster-9413e3f36daf481cbe922b0dfc3c79be.jpg"></video>
+    <video class="hero-bg" autoplay muted playsinline id="hero-video"></video>
     <div class="title">
         <h1>Alfie<br>Bruce</h1>
     </div>
@@ -238,7 +240,7 @@ footer { padding: 30px 34px; font-size: 11px; letter-spacing: 0.18em; text-trans
             if (r.bottom < 0 || r.top > vh) continue;
             var p = 1 - (r.top + r.height / 2) / (vh / 2);
             p = Math.max(-1, Math.min(1, p));
-            img.style.objectPosition = 'center ' + (50 + p * 14) + '%';
+            img.style.transform = 'translateY(' + (p * 6) + '%)';
         }
         ticking = false;
     }
@@ -259,16 +261,15 @@ footer { padding: 30px 34px; font-size: 11px; letter-spacing: 0.18em; text-trans
     var stallTimer = null;
     var v = document.getElementById('hero-video');
     if (!v) return;
-    function tryPlay() { var p = v.play(); if (p && p.catch) p.catch(function(){}); }
     v.src = videos[idx];
     v.load();
-    tryPlay();
+    v.play();
     function advance() {
         if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
         idx = (idx + 1) % videos.length;
         v.src = videos[idx];
         v.load();
-        tryPlay();
+        v.play();
     }
     function armStallGuard() {
         if (stallTimer) clearTimeout(stallTimer);

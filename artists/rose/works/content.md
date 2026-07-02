@@ -17,7 +17,7 @@ body {
     overflow-x: hidden;
 }
 
-.page { max-width: 414px; margin: 0 auto; position: relative; padding-top: 54px; padding-bottom: 120px; min-height: 100vh; }
+.page { max-width: 414px; margin: 0 auto; position: relative; padding-top: 140px; padding-bottom: 120px; min-height: 100vh; }
 
 .header {
     height: 54px;
@@ -59,44 +59,40 @@ body {
 .menu-icon[aria-expanded="true"] span:nth-child(2) { transform: rotate(-32.26deg); }
 .menu-icon[aria-expanded="true"] span:nth-child(3) { transform: rotate(-11.9deg); }
 
-/* Open menu — coloured links stacked under the hamburger (left) */
+/* Open menu — 2x2 grid (Works/About top, Exhibitions/Contact bottom) sliding in on a conveyor */
 .menu-overlay {
     position: fixed;
-    top: 56px; left: 13px;
+    top: 56px; left: 0; right: 0;
     z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    text-align: left;
-    background: #fff;
-    padding: 10px 18px 12px;
-    border-radius: 2px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity 0.22s ease, transform 0.22s ease, visibility 0s linear 0.22s;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: min-content;
+    row-gap: 4px;
+    padding: 6px 13px 0;
+    pointer-events: none;
 }
-.menu-overlay.open { opacity: 1; visibility: visible; transform: translateY(0); transition: opacity 0.22s ease, transform 0.22s ease; }
 .menu-overlay a {
-    font-weight: 400; font-size: 26px; line-height: 1.3;
+    font-weight: 400; font-size: 32px; line-height: 1.05;
     text-decoration: none; white-space: nowrap;
-    transition: opacity 0.15s ease;
+    will-change: transform;
+    transition: transform 0.32s cubic-bezier(.5,0,.2,1), opacity 0.18s ease;
+    z-index: 3;
 }
 .menu-overlay a:hover { opacity: 0.55; }
-.menu-overlay .m-works       { color: #0000FF; }
-.menu-overlay .m-about       { color: #FF0033; }
-.menu-overlay .m-exhibitions { color: #1AFF00; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
-.menu-overlay .m-contact     { color: #8C00FF; }
-
-.section-title {
-    font-weight: 400;
-    font-size: 36px;
-    line-height: 60px;
-    color: var(--works);
-    padding: 24px 0 0 37px;
-}
+.menu-overlay .m-works       { color: #0000FF; grid-column: 1; grid-row: 1; }
+.menu-overlay .m-about       { color: #FF0033; grid-column: 2; grid-row: 1; justify-self: end; text-align: right; }
+.menu-overlay .m-exhibitions { color: #1AFF00; grid-column: 1; grid-row: 2; text-shadow: 0 0 1px rgba(0,0,0,0.5); }
+.menu-overlay .m-contact     { color: #8C00FF; grid-column: 2; grid-row: 2; justify-self: end; text-align: right; }
+/* closed: only the current page's word shows (it is the page title); the rest wait off-canvas */
+.menu-overlay a:not(.is-current) { opacity: 0; pointer-events: none; }
+.menu-overlay .m-works:not(.is-current),
+.menu-overlay .m-about:not(.is-current)       { transform: translateX(120vw); }
+.menu-overlay .m-exhibitions:not(.is-current),
+.menu-overlay .m-contact:not(.is-current)     { transform: translateX(-120vw); }
+/* current page's word: always in place; the sliding words pass in front of it */
+.menu-overlay a.is-current { opacity: 1; pointer-events: auto; transform: none; z-index: 1; }
+/* open: every word slides home */
+.menu-overlay.open a:not(.is-current) { opacity: 1; transform: translateX(0); pointer-events: auto; }
 
 .year-row {
     display: flex; align-items: center; gap: 12px;
@@ -141,8 +137,8 @@ body {
     .page { max-width: 880px; padding-top: 72px; padding-bottom: 160px; }
     .header { padding: 0 32px; height: 72px; }
     .brand { font-size: 44px; }
-    .menu-overlay { top: 80px; left: 32px; }
-    .section-title { font-size: 56px; padding: 48px 0 0 64px; }
+    .menu-overlay { top: 80px; padding: 8px 32px 0; }
+    .menu-overlay a { font-size: 44px; }
     .year-row { padding: 0 32px; margin: 56px 0 12px; }
     .year-row .year { font-size: 24px; }
     .works-list { padding: 0 64px; columns: 2; column-gap: 64px; }
@@ -150,13 +146,6 @@ body {
     .works-list li a { font-size: 24px; line-height: 28px; padding: 14px 0; }
     .footer { padding: 20px 32px 32px; font-size: 16px; }
 }
-
-/* Title drifts gently downward on load */
-@keyframes title-drift {
-    from { transform: translateY(0); }
-    to   { transform: translateY(10px); }
-}
-.section-title { animation: title-drift 2.2s ease-out forwards; }
 
 /* loading veil: opaque white over the whole page until the hero image is ready */
 #page-veil {
@@ -183,27 +172,28 @@ body {
     </header>
 
     <nav id="site-menu" class="menu-overlay" aria-hidden="true">
-        <a class="m-works" href="/works/">Works</a>
+        <a class="m-works is-current" href="/works/">Works</a>
         <a class="m-exhibitions" href="/exhibitions/">Exhibitions</a>
         <a class="m-about" href="/about/">About</a>
         <a class="m-contact" href="/contact/">Contact</a>
     </nav>
-
-    <h1 class="section-title">Works</h1>
 
     <div class="year-row"><div class="rule"></div><div class="year">2025</div><div class="rule"></div></div>
     <ul class="works-list">
         <li><a href="/works/bed/">Bed</a></li>
         <li><a href="/works/my-inner-child/">My Inner Child</a></li>
         <li><a href="/works/paddle-for-dear-life/">Paddle for dear life</a></li>
+        <li><a href="/works/tara/">Tara</a></li>
+        <li><a href="/works/her-bed/">Her Bed</a></li>
+        <li><a href="/works/out-the-front-door/">Out the Front Door</a></li>
+        <li><a href="/works/swimmers/">Swimmers</a></li>
+        <li><a href="/works/sparrow/">sparrow</a></li>
     </ul>
 
     <div class="year-row"><div class="rule"></div><div class="year">2024</div><div class="rule"></div></div>
     <ul class="works-list">
-        <li><a href="/works/tokyo-park/">Tokyo park</a></li>
         <li><a href="/works/drive-thru/">Drive thru</a></li>
         <li><a href="/works/a-shooting-star-from-atop-a-slide/">A shooting star from atop a slide and gold waiting below</a></li>
-        <li><a href="/works/mount-fuji-is-pregnant/">Mount fuji is pregnant</a></li>
         <li><a href="/works/marsh-at-sunset/">Marsh at sunset</a></li>
         <li><a href="/works/moonlit-sea/">Moonlit Sea</a></li>
         <li><a href="/works/wondering-women/">Wondering women</a></li>

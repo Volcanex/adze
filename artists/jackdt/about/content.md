@@ -263,8 +263,8 @@ p a,
     <a href="../home/" class="brand">Jack Dennison Thompson</a>
     <nav class="top-nav">
         <a href="../about/" class="active">About</a>
-        <a href="../music/">Music</a>
         <a href="../writing/">Writing</a>
+        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -288,6 +288,6 @@ p a,
 </article>
 
 <footer class="foot">
-    <a href="mailto:">Email Jack &rarr;</a>
+    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
 </footer>
 </html>
