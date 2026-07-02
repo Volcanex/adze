@@ -337,17 +337,17 @@ class AdzeCompiler:
         # Sort newest first, stable on title
         exhibitions = sorted(exhibitions, key=lambda e: -e.get('year', 0))
 
-        lines = []
+        entries = []
         for e in exhibitions:
-            year = str(e.get('year', ''))
+            year = html.escape(str(e.get('year', '')))
             title = e.get('title', '')
             etype = (e.get('type') or '').lower()
             location = e.get('location', '')
-            suffix = ', '.join(p for p in [etype, location] if p)
-            text = f"{year} — {title}, {suffix}" if suffix else f"{year} — {title}"
-            lines.append(f'        <p>{html.escape(text)}</p>')
+            rest = ', '.join(p for p in [title, etype, location] if p)
+            entries.append(f'<span class="exh-year">{year}</span> {html.escape(rest)}')
 
-        block = '\n'.join(lines)
+        sep = ' <span class="exh-sep">/</span> '
+        block = '        <p class="exh-list">' + sep.join(entries) + '</p>'
         return html_content.replace('<!-- EXHIBITIONS_BLOCK -->', block)
 
     def _inject_loom(self, html, artist_config):

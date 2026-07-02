@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
     <script src="/api/adze/asset-tree.js"></script>
     <style>
         :root {
@@ -88,6 +90,23 @@
         .ad-stat { padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
         .ad-stat-val { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.1; }
         .ad-stat-lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+
+        /* Pay breakdown card */
+        .ad-pay-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; border-bottom: 1px dashed var(--border); }
+        .ad-pay-row:last-of-type { border-bottom: none; }
+        .ad-pay-label { color: var(--text2); }
+        .ad-pay-val { font-variant-numeric: tabular-nums; color: var(--text); white-space: nowrap; }
+        .ad-pay-sub { font-size: 10px; color: var(--text2); }
+        .ad-pay-warn { font-size: 10px; color: var(--danger, #b00020); }
+        .ad-pay-total { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 600; }
+        .ad-pay-total .ad-pay-label { color: var(--text); }
+        .ad-pay-pos { color: var(--success, #2e7d32); }
+        .ad-pay-neg { color: var(--danger, #b00020); }
+        .ad-pay-actions { margin-top: 10px; }
+        .pot-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .pot-table th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text2); font-weight: 600; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--border); }
+        .pot-table td { padding: 6px 8px 6px 0; border-bottom: 1px dashed var(--border); font-variant-numeric: tabular-nums; vertical-align: middle; }
+        .pot-table tr:last-child td { border-bottom: none; }
 
         .ad-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
         .ad-card { padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
@@ -385,18 +404,39 @@
 
         /* ── Stage pills ── */
         .stage-pill { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; white-space: nowrap; }
-        .stage-1 { background: #f3e8fd; color: #7c3aed; }
-        .stage-2 { background: #e3effa; color: #1C4F82; }
-        .stage-3 { background: #fff3cd; color: #92620a; }
-        .stage-4 { background: #fff8e6; color: #b45309; }
-        .stage-5 { background: #e8f5e9; color: #2e7d32; }
-        .stage-6 { background: #e0eef0; color: #1c5a66; }
-        [data-theme="dark"] .stage-1 { background: #2e1a4a; color: #c084fc; }
-        [data-theme="dark"] .stage-2 { background: #1a2a3a; color: #99cdff; }
-        [data-theme="dark"] .stage-3 { background: #2a2210; color: #e0c060; }
-        [data-theme="dark"] .stage-4 { background: #2a2010; color: #f0a040; }
-        [data-theme="dark"] .stage-5 { background: #1b3a20; color: #6dca8a; }
-        [data-theme="dark"] .stage-6 { background: #102a2e; color: #6dc6d6; }
+        /* LP 8-stage pipeline: contact -> discovery -> s01 -> s02 -> s03 ->
+           revisions -> handover -> hosting. */
+        .stage-contact   { background: #eef0f2; color: #5b6470; }
+        .stage-discovery { background: #f3e8fd; color: #7c3aed; }
+        .stage-s01       { background: #e3effa; color: #1C4F82; }
+        .stage-s02       { background: #fff3cd; color: #92620a; }
+        .stage-s03       { background: #fff8e6; color: #b45309; }
+        .stage-revisions { background: #fde8ef; color: #b0306a; }
+        .stage-handover  { background: #e8f5e9; color: #2e7d32; }
+        .stage-hosting   { background: #e0eef0; color: #1c5a66; }
+        [data-theme="dark"] .stage-contact   { background: #23272e; color: #aab4c0; }
+        [data-theme="dark"] .stage-discovery { background: #2e1a4a; color: #c084fc; }
+        [data-theme="dark"] .stage-s01       { background: #1a2a3a; color: #99cdff; }
+        [data-theme="dark"] .stage-s02       { background: #2a2210; color: #e0c060; }
+        [data-theme="dark"] .stage-s03       { background: #2a2010; color: #f0a040; }
+        [data-theme="dark"] .stage-revisions { background: #3a1a28; color: #f0a0c0; }
+        [data-theme="dark"] .stage-handover  { background: #1b3a20; color: #6dca8a; }
+        [data-theme="dark"] .stage-hosting   { background: #102a2e; color: #6dc6d6; }
+        /* Pipeline stage loop (artist detail) */
+        .ad-stage-card { grid-column: 1 / -1; }
+        .ad-stage-loop-wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; }
+        .ad-stage-svg-wrap { flex: 0 0 auto; width: 300px; max-width: 100%; margin: 0 auto; }
+        .ad-stage-svg { width: 100%; height: auto; overflow: visible; }
+        .ad-stage-center { font-family: 'Cormorant','Cormorant Garamond',Georgia,serif; font-size: 17px; font-style: italic; fill: var(--text2); }
+        .ad-stage-label { font-size: 12px; fill: var(--text2); opacity: 0.55; }
+        .ad-stage-label.reached { fill: var(--text); opacity: 1; }
+        .ad-stage-node:hover { stroke: #0000EE; }
+        .ad-stage-controls { flex: 1 1 240px; display: flex; flex-direction: column; gap: 12px; }
+        .ad-stage-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ad-stage-btn { font: inherit; font-size: 11px; padding: 5px 11px; border-radius: 14px; border: 1px solid var(--border,#dcdce3); background: var(--surface,#fff); color: var(--text2); cursor: pointer; transition: all .12s; }
+        .ad-stage-btn:hover { border-color: #0000EE; color: #0000EE; }
+        .ad-stage-btn.active { background: #0000EE; border-color: #0000EE; color: #fff; }
+        .ad-stage-owner { font-size: 11px; color: var(--text2); }
 
         /* ── Fish size chips ── */
         .fish-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 500; }
@@ -756,6 +796,8 @@
         <div class="tab" data-tab-slug="leads" onclick="switchTab('leads')">Leads</div>
         <div class="tab" data-tab-slug="todos" onclick="switchTab('todos')">To-dos</div>
         <div class="tab" data-tab-slug="hours" onclick="switchTab('hours')">Hours</div>
+        <div class="tab" data-tab-slug="pot" onclick="switchTab('pot')">Pot</div>
+        <div class="tab" data-tab-slug="templates" onclick="switchTab('templates')">Templates</div>
         <div class="tab" data-tab-slug="slack">Slack</div>
         <div class="tab" data-tab-slug="extras" onclick="switchTab('extras')">Extras</div>
     </div>
@@ -1045,7 +1087,68 @@
             <div class="result-box" id="createResult"></div>
         </div>
 
+        <div id="tab-pot" class="panel">
+            <div class="section-header" style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+                <h2>Pot &amp; monthly pay</h2>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <input type="month" id="potPeriod" onchange="loadPot()" style="padding:6px 9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px">
+                    <button class="btn btn-sm btn-primary" onclick="runReconciliation()"><i class="ph ph-check-circle"></i> Run &amp; snapshot</button>
+                </div>
+            </div>
+            <p style="font-size:11px;color:var(--text2);margin:-4px 0 14px;max-width:680px">
+                A job settles in the month it's marked <strong>billed</strong> (fee − its hours × £25 − 15%×2 − commission → pot).
+                Until then its hours are paid from the pot, like non-job work. Hours come from the Hours log.
+            </p>
+            <div id="potBody"><div class="ad-empty">Pick a month to compute.</div></div>
+        </div>
+
+        <div id="tab-templates" class="panel">
+            <div class="section-header" style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+                <h2>Email templates</h2>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <select id="etWorkspace" onchange="loadTemplates()" style="padding:6px 9px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:12px">
+                        <option value="lastplace">LastPlace</option>
+                        <option value="personal">Personal</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary" onclick="saveTemplates()"><i class="ph ph-floppy-disk"></i> Save all</button>
+                </div>
+            </div>
+            <p style="font-size:11px;color:var(--text2);margin:-4px 0 12px;max-width:680px">
+                One set of stage templates, shared across this workspace's artists. You write them; placeholders
+                fill in per artist when you draft. Insert a token with the buttons below.
+            </p>
+            <div id="etStageTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+            <div class="form-field" style="margin-bottom:8px"><label>Subject</label>
+                <input type="text" id="etSubject" placeholder="Subject line — tokens allowed">
+            </div>
+            <div id="etPalette" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px"></div>
+            <textarea id="etBody"></textarea>
+            <div id="etStatus" style="font-size:11px;color:var(--text2);margin-top:8px"></div>
+        </div>
+
     </div><!-- /content -->
+
+    <!-- ── Draft email modal ── -->
+    <div id="draftModal" class="modal-overlay">
+        <div class="modal-box" style="max-width:640px">
+            <div class="modal-header">
+                <h2 id="draftTitle">Draft email</h2>
+                <button class="modal-close" onclick="closeDraftModal()">&times;</button>
+            </div>
+            <div class="form-field" style="margin-bottom:8px"><label>Subject</label>
+                <input type="text" id="draftSubject" readonly style="width:100%">
+            </div>
+            <div class="form-field"><label>Body</label>
+                <textarea id="draftBody" readonly rows="12" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg);color:var(--text);font-family:var(--body-font);resize:vertical"></textarea>
+            </div>
+            <div id="draftNote" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-ghost" onclick="closeDraftModal()">Close</button>
+                <button class="btn btn-sm btn-ghost" onclick="copyDraft()"><i class="ph ph-copy"></i> Copy</button>
+                <a id="draftMailto" class="btn btn-sm btn-primary" href="#" style="text-decoration:none"><i class="ph ph-envelope"></i> Open in mail client</a>
+            </div>
+        </div>
+    </div>
 </div><!-- /dashboard -->
 
 <!-- ── Artist + Lead Modal (merged edit) ── -->
@@ -1084,23 +1187,42 @@
                 <div class="form-field"><label>Stage</label>
                     <select id="lmStage">
                         <option value="">— none —</option>
-                        <option value="1">1 — Meetings</option>
-                        <option value="2">2 — Outline</option>
-                        <option value="3">3 — Build</option>
-                        <option value="4">4 — Finishing</option>
-                        <option value="5">5 — Fin</option>
-                        <option value="6">6 — Maintenance</option>
+                        <option value="contact">Contacted</option>
+                        <option value="discovery">Discovery</option>
+                        <option value="s01">Stage 01</option>
+                        <option value="s02">Stage 02</option>
+                        <option value="s03">Stage 03</option>
+                        <option value="revisions">Revisions</option>
+                        <option value="handover">Handover</option>
+                        <option value="hosting">Hosting</option>
                     </select>
                 </div>
-                <div class="form-field"><label>Size of Fish</label>
-                    <select id="lmFish">
-                        <option value="">—</option>
-                        <option value="xs">XS — Minnow (tiny project, likely unpaid)</option>
-                        <option value="s">S — Perch (small project)</option>
-                        <option value="m">M — Mackerel (standard)</option>
-                        <option value="l">L — Ray (big project)</option>
-                        <option value="xl">XL — Shark (major client)</option>
+                <div class="form-field"><label>Job fee (£)</label>
+                    <input type="number" id="lmJobFee" min="0" step="1" placeholder="0" oninput="onJobFeeInput()">
+                </div>
+                <div class="form-field"><label>Sourced by <span style="color:var(--text2);font-weight:400;text-transform:none">(commission)</span></label>
+                    <select id="lmSourcedBy">
+                        <option value="">— unassigned —</option>
+                        <option value="clive">Clive</option>
+                        <option value="gabriel">Gabriel</option>
                     </select>
+                </div>
+                <div class="form-field"><label>Size of Fish
+                        <span style="color:var(--text2);font-weight:400;text-transform:none;margin-left:6px">
+                            <input type="checkbox" id="lmFishOverride" onchange="onFishOverrideToggle()" style="vertical-align:-1px"> override
+                        </span>
+                    </label>
+                    <select id="lmFish" disabled>
+                        <option value="">—</option>
+                        <option value="xs">XS — Minnow (£0, unpaid · 0%)</option>
+                        <option value="s">S — Perch (≤£260 · 4%)</option>
+                        <option value="m">M — Mackerel (≤£650 · 8%)</option>
+                        <option value="l">L — Ray (≤£2,000 · 12%)</option>
+                        <option value="xl">XL — Shark (£2,000+ · 16%)</option>
+                    </select>
+                </div>
+                <div class="form-field"><label>Discovery fee (£) <span style="color:var(--text2);font-weight:400;text-transform:none">(non-refundable)</span></label>
+                    <input type="number" id="lmDiscoveryFee" min="0" step="1" placeholder="0">
                 </div>
                 <div class="form-field"><label>Work</label><input type="text" id="lmWork" placeholder="Type of work"></div>
                 <div class="form-field"><label>Discount?</label><input type="text" id="lmDiscount" placeholder="Exchange / 20% / —"></div>
@@ -1186,9 +1308,30 @@ let _pipelineFilter = 'manual';
 let _pipelineLayout = 'grid';   // 'grid' | 'queue' — vertical single-column view
 let _pipelineSortable = null;   // Sortable instance, or array of instances in split mode
 
-const STAGE_CLASS = { '1':'stage-1','2':'stage-2','3':'stage-3','4':'stage-4','5':'stage-5','6':'stage-6' };
-const STAGE_LABEL = { '1':'Meetings','2':'Outline','3':'Build','4':'Finishing','5':'Fin','6':'Maintenance' };
-let _pipelineStageFilter = null;  // null = all stages; '1'..'6' = that stage; 'none' = no stage set
+// LP 8-stage pipeline (canonical). owner tags whose stage it is in the studio
+// workflow; angle places the node on the circular loop (artist detail).
+const STAGES = [
+    { id:'contact',   label:'Contacted', short:'Contact',   owner:null,      angle:-90  },
+    { id:'discovery', label:'Discovery', short:'Discovery', owner:'both',    angle:-45  },
+    { id:'s01',       label:'Stage 01',  short:'S01',       owner:'clive',   angle:0    },
+    { id:'s02',       label:'Stage 02',  short:'S02',       owner:'gabriel', angle:45   },
+    { id:'s03',       label:'Stage 03',  short:'S03',       owner:'both',    angle:90   },
+    { id:'revisions', label:'Revisions', short:'Rev',       owner:null,      angle:135  },
+    { id:'handover',  label:'Handover',  short:'Handover',  owner:'gabriel', angle:180  },
+    { id:'hosting',   label:'Hosting',   short:'Hosting',   owner:null,      angle:-135 },
+];
+const STAGE_LABEL = Object.fromEntries(STAGES.map(s => [s.id, s.label]));
+const STAGE_SHORT = Object.fromEntries(STAGES.map(s => [s.id, s.short]));
+const STAGE_CLASS = Object.fromEntries(STAGES.map(s => [s.id, 'stage-' + s.id]));
+// Back-compat: any legacy 1-6 value still in flight resolves to its new stage.
+const NUMERIC_TO_STAGE = { '1':'discovery','2':'s01','3':'s02','4':'s03','5':'handover','6':'hosting' };
+function resolveStage(raw) {
+    if (!raw) return null;
+    const s = String(raw).toLowerCase().trim();
+    if (STAGE_LABEL[s]) return s;
+    return NUMERIC_TO_STAGE[s] || null;
+}
+let _pipelineStageFilter = null;  // null = all stages; a stage id = that stage; 'none' = no stage set
 
 // Fish images — drop new URLs in here as the user provides them.
 const FISH_IMAGE = {
@@ -1200,24 +1343,46 @@ const FISH_IMAGE = {
 };
 // Slight per-fish rotation — angled background art, not flat icons.
 const FISH_ANGLE = { xs: 20, s: 18, m: -22, l: 14, xl: -10 };
+
+// Canonical fish bands (Articles of Agreement). Fish size IS defined by total
+// job cost; each band carries the lead-gen commission paid to the sourcer.
+// Inclusive upper bound: fee <= maxFee picks the band; fee <= 0 → Minnow.
+// MIRRORED server-side in admin_api.py (FISH_BANDS / _fish_for_fee) — keep in sync.
+const FISH_BANDS = [
+    { size:'xs', label:'Minnow',   maxFee:0,        commission:0.00 },
+    { size:'s',  label:'Perch',    maxFee:260,      commission:0.04 },
+    { size:'m',  label:'Mackerel', maxFee:650,      commission:0.08 },
+    { size:'l',  label:'Ray',      maxFee:2000,     commission:0.12 },
+    { size:'xl', label:'Shark',    maxFee:Infinity, commission:0.16 },
+];
+function fishForFee(fee) {
+    const f = Number(fee) || 0;
+    if (f <= 0) return 'xs';
+    return (FISH_BANDS.find(b => f <= b.maxFee) || FISH_BANDS[FISH_BANDS.length - 1]).size;
+}
+function fishBand(size)      { return FISH_BANDS.find(b => b.size === size) || null; }
+function commissionPct(size) { return (fishBand(size) || {}).commission || 0; }
+function fishBandLabel(size) { return (fishBand(size) || {}).label || size; }
+// Hours log writes person 'gabe'; Articles/sourced_by use 'gabriel'. Normalise.
+function personKey(p) { return p === 'gabe' ? 'gabriel' : p; }
+const DIRECTOR_RATE = 25;   // £/hr, flat for both directors
+const DIRECTOR_FLAT = 0.15; // each director's cut of the full fee
 const SCOPE_CAT_LABELS = {
     outreach:'Client Outreach', admin:'Admin', meetings:'Meetings', design:'Design',
     infra:'Infrastructure Dev', features:'New Features', maintenance:'Maintenance', bugfix:'Client Bugfix',
+    // Pot (non-job) categories — paid from the pot at the hourly rate (Articles).
+    leadgen:'Lead gen', networking:'Networking', lp_dev:'Adze × LP dev', hosted_edits:'Hosted-site edits',
 };
+// Scopes counted as pot-funded non-job work in reconciliation: anything not
+// prefixed artist:/lead:. These four are the canonical Articles categories.
+const POT_CATEGORIES = ['leadgen','networking','lp_dev','hosted_edits'];
 
-// Fish size chips — no emoji, Phosphor fish icon
+// Fish size chips — no emoji, Phosphor fish icon. Label from canonical FISH_BANDS.
 function fishChip(size) {
     if (!size) return '<span style="color:var(--text2)">—</span>';
-    const map = {
-        xs: { label:'XS — Minnow',  cls:'fish-xs' },
-        s:  { label:'S — Perch',   cls:'fish-s'  },
-        m:  { label:'M — Mackerel', cls:'fish-m'  },
-        l:  { label:'L — Ray',     cls:'fish-l'  },
-        xl: { label:'XL — Shark',   cls:'fish-xl' },
-    };
-    const f = map[size];
-    if (!f) return esc(size);
-    return `<span class="fish-chip ${f.cls}"><i class="ph ph-fish"></i>${esc(f.label)}</span>`;
+    const band = fishBand(size);
+    if (!band) return esc(size);
+    return `<span class="fish-chip fish-${size}"><i class="ph ph-fish"></i>${size.toUpperCase()} — ${esc(band.label)}</span>`;
 }
 
 // ── Slack ─────────────────────────────────────────────────────────────────
@@ -1244,6 +1409,15 @@ let adminIdentity = null;
 
 function _applyIdentity(ident) {
     adminIdentity = ident;
+    // Non-super users belong in their workspace hub, not the full Adze admin.
+    if (!ident?.super && Array.isArray(ident?.workspaces) && ident.workspaces.length === 1) {
+        const ws = ident.workspaces[0];
+        const dest = `https://${ws}.adze.studio`;
+        if (window.location.hostname !== `${ws}.adze.studio`) {
+            window.location.href = dest;
+            return true; // signals callers: redirect in progress, stop
+        }
+    }
     const w = document.getElementById('adminWelcome');
     if (w && ident?.name) w.textContent = `Welcome back, ${ident.name}`;
     // Workspace label in the title: "Adze admin — LastPlace" / "— Personal".
@@ -1333,7 +1507,7 @@ async function doLogin() {
         localStorage.setItem('admin-token',pw);
         localStorage.setItem('admin-user',username);
         const data = await r.json().catch(()=>({}));
-        _applyIdentity(data);
+        if (_applyIdentity(data)) return;
         showDashboard();
     } else {
         document.getElementById('loginErr').style.display='block';
@@ -1361,10 +1535,21 @@ async function init() {
         });
         if (r.ok) {
             const data = await r.json().catch(()=>({}));
-            _applyIdentity(data);
+            if (_applyIdentity(data)) return;
             showDashboard();
             return;
         }
+    }
+    // No localStorage token on this origin (e.g. landed on lastplace.adze.studio
+    // via the cross-subdomain redirect). The .adze.studio session cookie still
+    // carries the identity — admin API calls fall back to it server-side, so a
+    // cookie-only session is fully functional. Resolve identity via whoami.
+    const w = await fetch('/api/adze/admin/whoami');
+    if (w.ok) {
+        const data = await w.json().catch(()=>({}));
+        if (_applyIdentity(data)) return;
+        showDashboard();
+        return;
     }
     document.getElementById('loginScreen').style.display='flex';
 }
@@ -1441,6 +1626,8 @@ function switchTab(name) {
     else if (name==='leads')    { loadPipeline().then(renderLeads); }
     else if (name==='hours')    loadHours();
     else if (name==='todos')    loadTodos();
+    else if (name==='pot')      loadPot();
+    else if (name==='templates') loadTemplates();
 }
 
 // ── Overview ──────────────────────────────────────────────────────────────
@@ -1500,6 +1687,7 @@ async function loadArtists() {
             <td style="font-family:var(--mono);font-size:10px"><span style="cursor:pointer" onclick="copyToken(this,'${esc(a.admin_token||'')}')">${a.admin_token?esc(a.admin_token):'—'}</span></td>
             <td style="white-space:nowrap;font-size:11px">
                 <a href="/dashboard?slug=${esc(a.slug)}" target="_blank">Dashboard</a>
+                ${a.has_custom_admin && a.domain ? `· <a href="https://${esc(a.domain)}/admin" target="_blank">Custom Admin</a>` : ''}
                 · <a href="#" onclick="openDashboardConfig('${esc(a.slug)}');return false">Config</a>
                 · <a class="link-danger" onclick="openDeleteArtist('${esc(a.slug)}','${esc(a.name)}');return false">Delete</a>
             </td>
@@ -1565,6 +1753,12 @@ function _buildScopeOptions(includeLeads) {
         <option value="features">New Features</option>
         <option value="maintenance">Maintenance</option>
         <option value="bugfix">Client Bugfix</option>
+        </optgroup>
+        <optgroup label="Pot (non-job)">
+        <option value="leadgen">Lead gen</option>
+        <option value="networking">Networking</option>
+        <option value="lp_dev">Adze × LP dev</option>
+        <option value="hosted_edits">Hosted-site edits</option>
         </optgroup>`;
     const artistGroup = _allArtists.length
         ? `<optgroup label="Artists">${_allArtists.map(a=>`<option value="artist:${esc(a.slug)}">${esc(a.name)}</option>`).join('')}</optgroup>`
@@ -1600,7 +1794,7 @@ async function loadHours() {
                 client: c.name,
             }));
     }
-    if (hoursData?.entries)   _allHours   = hoursData.entries;
+    if (hoursData?.entries) { _allHours = hoursData.entries; _hoursLoaded = true; }
 
     // Always populate the form — even if API not yet live
     const scopeOpts = _buildScopeOptions(true);
@@ -1974,9 +2168,9 @@ function renderPipelineStageFilter() {
     // Count cards per stage so we can show "(3)" next to each chip and hide
     // stages with nothing in them — keeps the bar tight on small workspaces.
     const counts = { none: 0 };
-    for (let i = 1; i <= 6; i++) counts[String(i)] = 0;
+    for (const st of STAGES) counts[st.id] = 0;
     for (const c of _pipelineCards) {
-        const k = c.stage ? String(c.stage) : 'none';
+        const k = resolveStage(c.stage) || 'none';
         if (k in counts) counts[k]++;
     }
     const total = _pipelineCards.length;
@@ -1988,9 +2182,8 @@ function renderPipelineStageFilter() {
         return `<button class="pl-stage-chip ${cls} ${active}" data-id="${id===null?'':id}">${esc(label)} ${countHtml}</button>`;
     };
     const parts = [`<span class="pl-stages-label">Stage:</span>`, chip(null, 'All', total, '')];
-    for (let i = 1; i <= 6; i++) {
-        const s = String(i);
-        parts.push(chip(s, `${s} — ${STAGE_LABEL[s]}`, counts[s], STAGE_CLASS[s]));
+    for (const st of STAGES) {
+        parts.push(chip(st.id, st.label, counts[st.id], STAGE_CLASS[st.id]));
     }
     parts.push(chip('none', 'No stage', counts.none, ''));
     el.innerHTML = parts.join('');
@@ -2008,7 +2201,7 @@ function orderedCards() {
     let cards = _pipelineCards.slice();
     if (_pipelineStageFilter) {
         cards = cards.filter(c => {
-            const s = c.stage ? String(c.stage) : 'none';
+            const s = resolveStage(c.stage) || 'none';
             return s === _pipelineStageFilter;
         });
     }
@@ -2090,8 +2283,9 @@ function tileHtml(c) {
     const isManual  = _pipelineFilter === 'manual' ? 'is-manual' : '';
     const inactive  = (c.has_lead && !c.active) ? 'is-inactive' : '';
     const stubCls   = c.is_stub ? 'is-stub' : '';
-    const stageChip = c.stage ? `<span class="stage-pill ${STAGE_CLASS[c.stage]||''}" style="font-size:9px">${esc(c.stage)}</span>` : '';
-    const fishLabel = ({xs:'Minnow',s:'Perch',m:'Mackerel',l:'Manta Ray',xl:'Basking Shark'})[fs] || fs;
+    const _st = resolveStage(c.stage);
+    const stageChip = _st ? `<span class="stage-pill ${STAGE_CLASS[_st]||''}" style="font-size:9px">${esc(STAGE_SHORT[_st]||_st)}</span>` : '';
+    const fishLabel = fishBandLabel(fs);
     const activeDot = c.has_lead
         ? (c.active ? '<span title="Active" style="color:var(--success)">●</span>'
                     : '<span title="Inactive" style="color:var(--text2)">○</span>')
@@ -2330,7 +2524,8 @@ function renderLeads() {
     }
     tbody.innerHTML = leadCards.map(c => {
         const l = c.lead || {};
-        const stage  = c.stage ? `<span class="stage-pill ${STAGE_CLASS[c.stage]||''}">${esc(c.stage)}</span>` : '<span style="color:var(--text2)">—</span>';
+        const _st = resolveStage(c.stage);
+        const stage  = _st ? `<span class="stage-pill ${STAGE_CLASS[_st]||''}">${esc(STAGE_LABEL[_st]||_st)}</span>` : '<span style="color:var(--text2)">—</span>';
         const active = c.active ? '<span style="color:var(--success)"><i class="ph ph-check"></i></span>' : '<span style="color:var(--text2)">—</span>';
         const ig     = l.instagram ? `<a href="https://instagram.com/${esc(l.instagram)}" target="_blank" style="font-size:11px">@${esc(l.instagram)}</a>` : '';
         return `<tr>
@@ -2431,7 +2626,7 @@ window.addEventListener('popstate', _routeFromUrl);
 function renderArtistDetail(c) {
     const lead = c.lead || {};
     const fs = c.fish_size || 'xs';
-    const fishLabel = ({xs:'Minnow',s:'Perch',m:'Mackerel',l:'Manta Ray',xl:'Basking Shark'})[fs] || fs;
+    const fishLabel = fishBandLabel(fs);
     const fishImg   = FISH_IMAGE[fs];
     const fishAngle = FISH_ANGLE[fs] || 0;
 
@@ -2474,7 +2669,7 @@ function renderArtistDetail(c) {
     const addL = (l, v, o) => { if (v !== '' && v !== null && v !== undefined) leadFields.push({ label: l, value: v, ...(o||{}) }); };
     if (lead.instagram) addL('Instagram', `<a href="https://instagram.com/${esc(lead.instagram)}" target="_blank">@${esc(lead.instagram)}</a>`);
     if (lead.contact)   addL('Contact via', esc(lead.contact));
-    if (c.stage)        addL('Stage', `<span class="stage-pill ${STAGE_CLASS[c.stage]||''}">${esc(c.stage)}</span>`);
+    // Stage is shown by the loop card below; not duplicated as a field.
     if (lead.fish_size) addL('Fish size', fishLabel);
     if (lead.work)      addL('Work', esc(lead.work));
     if (lead.discount)  addL('Discount', esc(lead.discount));
@@ -2547,6 +2742,10 @@ function renderArtistDetail(c) {
         ${numbersHtml}
 
         <div class="ad-cards">
+            <div class="ad-card ad-stage-card">
+                <div class="ad-card-head"><i class="ph ph-flow-arrow"></i> Pipeline stage</div>
+                <div id="adStageLoop" class="ad-stage-loop-wrap"></div>
+            </div>
             <div class="ad-card">
                 <div class="ad-card-head"><i class="ph ph-user"></i> Artist</div>
                 ${renderFields(artistFields)}
@@ -2554,6 +2753,10 @@ function renderArtistDetail(c) {
             <div class="ad-card">
                 <div class="ad-card-head"><i class="ph ph-flag"></i> Lead / Pipeline</div>
                 ${c.has_lead ? renderFields(leadFields) : '<div class="ad-empty">No lead/pipeline entry for this artist.</div>'}
+            </div>
+            <div class="ad-card ad-pay-card">
+                <div class="ad-card-head"><i class="ph ph-coins"></i> Pay breakdown</div>
+                <div id="adPayBody"><div class="ad-empty">Loading…</div></div>
             </div>
             ${notesHtml}
             ${spark}
@@ -2574,9 +2777,393 @@ function renderArtistDetail(c) {
             </div>
         </div>
     `;
+    renderArtistStageLoop(c);
+    loadArtistPay(c);
     loadArtistIntake(c.slug);
     loadArtistHandover(c.slug);
     loadArtistAssets(c.slug);
+}
+
+// ── Per-job pay breakdown (Articles of Agreement) ───────────────────────────
+let _hoursLoaded = false;
+function gbp(x) {
+    const v = Math.round((Number(x) || 0) * 100) / 100;
+    return '£' + v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+// Job hours for an artist = log rows scoped to artist:<slug> or lead:<original_lead_id>.
+// The orphaned lead.clive_hours/gabe_hours scalars are intentionally ignored.
+function jobHoursFor(c) {
+    const slug = c.slug, lid = c.lead && c.lead.original_lead_id;
+    let clive = 0, gabriel = 0;
+    for (const e of _allHours) {
+        const s = e.scope || '';
+        if (s === 'artist:' + slug || (lid && s === 'lead:' + lid)) {
+            const pk = personKey(e.person);
+            if (pk === 'clive') clive += e.hours || 0;
+            else if (pk === 'gabriel') gabriel += e.hours || 0;
+        }
+    }
+    return { clive, gabriel };
+}
+async function loadArtistPay(c) {
+    if (!_hoursLoaded) {
+        const h = await api('/api/adze/admin/hours');
+        if (h && h.entries) { _allHours = h.entries; _hoursLoaded = true; }
+    }
+    const el = document.getElementById('adPayBody');
+    if (el) el.innerHTML = renderPayBreakdown(c);
+}
+function renderPayBreakdown(c) {
+    const lead = c.lead || {};
+    const fee  = Number(lead.job_fee) || 0;
+    const size = c.fish_size || lead.fish_size || 'xs';
+    const band = fishBand(size) || { label: size, commission: 0 };
+    const pct  = band.commission;
+    const { clive, gabriel } = jobHoursFor(c);
+    const hoursPay   = (clive + gabriel) * DIRECTOR_RATE;
+    const flatEach   = DIRECTOR_FLAT * fee;
+    const flatTotal  = 2 * flatEach;
+    const commission = pct * fee;
+    const potDelta   = fee - (hoursPay + flatTotal + commission);
+    const srcName    = { clive: 'Clive', gabriel: 'Gabriel' }[lead.sourced_by] || null;
+
+    if (!fee && !clive && !gabriel) {
+        return `<div class="ad-empty">No job fee set. Add one in <a href="#" onclick="openLeadModal(null,'${esc(c.slug)}');return false">Edit</a> — fish size and pay derive from it.</div>`;
+    }
+    const row = (label, val, opts) => {
+        const o = opts || {};
+        return `<div class="ad-pay-row${o.total ? ' ad-pay-total' : ''}">
+            <span class="ad-pay-label">${label}</span>
+            <span class="ad-pay-val${o.cls ? ' ' + o.cls : ''}">${val}</span></div>`;
+    };
+    const commissionLine = srcName
+        ? `${gbp(commission)} <span class="ad-pay-sub">→ ${srcName}</span>`
+        : `${gbp(commission)} <span class="ad-pay-warn" title="Set 'Sourced by' to attribute commission">⚠ no sourcer</span>`;
+    const deltaCls = potDelta >= 0 ? 'ad-pay-pos' : 'ad-pay-neg';
+    const deltaLbl = potDelta >= 0 ? 'to pot' : 'from pot';
+
+    return `<div class="ad-pay">
+        ${row('Job fee', `${gbp(fee)} <span class="ad-pay-sub">${esc(band.label)} · ${Math.round(pct*100)}%</span>`)}
+        ${row(`Commission (${Math.round(pct*100)}%)`, commissionLine)}
+        ${row('Directors’ cut (15% × 2)', gbp(flatTotal))}
+        ${row(`Hours (C ${clive}h + G ${gabriel}h × £${DIRECTOR_RATE})`, gbp(hoursPay))}
+        ${row('Pot delta', `${gbp(potDelta)} <span class="ad-pay-sub">${deltaLbl}</span>`, { total: true, cls: deltaCls })}
+        <div class="ad-pay-actions">
+            <button class="btn btn-sm btn-ghost" onclick="logHoursForJob('${esc(c.slug)}')"><i class="ph ph-clock"></i> Log hours for this job</button>
+            <button class="btn btn-sm btn-ghost" onclick="draftStageEmail('${esc(c.slug)}')"><i class="ph ph-envelope"></i> Draft stage email</button>
+        </div>
+    </div>`;
+}
+function logHoursForJob(slug) {
+    switchTab('hours');
+    setTimeout(() => {
+        const sc = document.getElementById('hScope');
+        if (sc) sc.value = 'artist:' + slug;
+        const d = document.getElementById('hDesc');
+        if (d) d.focus();
+    }, 60);
+}
+
+// ── Pot / monthly reconciliation ────────────────────────────────────────────
+async function loadPot() {
+    const inp = document.getElementById('potPeriod');
+    if (inp && !inp.value) inp.value = new Date().toISOString().slice(0, 7);
+    const period = inp ? inp.value : '';
+    const body = document.getElementById('potBody');
+    if (!period) { body.innerHTML = '<div class="ad-empty">Pick a month.</div>'; return; }
+    body.innerHTML = '<div class="ad-empty">Computing…</div>';
+    // Always refresh leads — pot math + bill/un-bill act on the live lead blocks.
+    await loadPipeline();
+    const rec = await api('/api/adze/admin/reconciliations/preview?period=' + encodeURIComponent(period));
+    if (!rec) { body.innerHTML = '<div class="ad-empty">Failed to compute.</div>'; return; }
+    body.innerHTML = renderPot(rec);
+}
+function _potRow(label, val, cls, total) {
+    return `<div class="ad-pay-row${total ? ' ad-pay-total' : ''}"><span class="ad-pay-label">${label}</span><span class="ad-pay-val${cls ? ' ' + cls : ''}">${val}</span></div>`;
+}
+function _dirCard(name, d) {
+    return `<div class="ad-card">
+        <div class="ad-card-head"><i class="ph ph-user"></i> ${name}</div>
+        <div class="ad-pay">
+            ${_potRow('15% of billed fees', gbp(d.flat15))}
+            ${_potRow('Commission', gbp(d.commission))}
+            ${_potRow('Job hours (billed)', gbp(d.job_hours_pay))}
+            ${_potRow('Pot hours (non-job/unbilled)', gbp(d.pot_hours_pay))}
+            ${_potRow('Total owed', gbp(d.total), '', true)}
+        </div></div>`;
+}
+function renderPot(rec) {
+    const period = rec.period;
+    const short = rec.pot_short ? ` <span class="ad-pay-neg" style="font-weight:600">⚠ short by ${gbp(-rec.pot_balance_after)}</span>` : '';
+    const potStrip = `<div class="ad-card" style="margin-bottom:14px">
+        <div class="ad-card-head"><i class="ph ph-vault"></i> Pot — ${esc(period)}</div>
+        <div class="ad-pay">
+            ${_potRow('Brought forward', gbp(rec.pot_balance_before))}
+            ${_potRow('Job surpluses in', gbp(rec.pot_in), 'ad-pay-pos')}
+            ${_potRow('Job shortfalls out', '−' + gbp(rec.pot_job_shortfall), 'ad-pay-neg')}
+            ${_potRow('Non-job / unbilled hours out', '−' + gbp(rec.pot_hours_paid), 'ad-pay-neg')}
+            ${_potRow('Carried forward', gbp(rec.pot_balance_after) + short, '', true)}
+        </div></div>`;
+
+    const dirs = `<div class="ad-cards" style="margin-bottom:14px">
+        ${_dirCard('Clive', rec.directors.clive)}
+        ${_dirCard('Gabriel', rec.directors.gabriel)}
+    </div>`;
+
+    const jobsRows = rec.jobs.length ? rec.jobs.map(j => `<tr>
+        <td>${esc(j.name)}</td><td>${gbp(j.fee)} <span class="ad-pay-sub">${esc(fishBandLabel(j.fish))}</span></td>
+        <td>${gbp(j.commission)}${j.sourced_by ? ' <span class="ad-pay-sub">→ ' + (j.sourced_by === 'clive' ? 'C' : 'G') + '</span>' : ' <span class="ad-pay-warn">⚠</span>'}</td>
+        <td>${j.hours_clive}h / ${j.hours_gabriel}h</td>
+        <td class="${j.pot_delta >= 0 ? 'ad-pay-pos' : 'ad-pay-neg'}">${gbp(j.pot_delta)}</td>
+        <td><button class="btn btn-sm btn-ghost" onclick="billJob('${esc(j.slug)}',null)">Un-bill</button></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="color:var(--text2)">No jobs billed this month.</td></tr>';
+    const jobsTable = `<div class="ad-card" style="margin-bottom:14px"><div class="ad-card-head"><i class="ph ph-briefcase"></i> Jobs billed in ${esc(period)}</div>
+        <table class="pot-table"><thead><tr><th>Job</th><th>Fee</th><th>Commission</th><th>Hrs C/G</th><th>Pot Δ</th><th></th></tr></thead><tbody>${jobsRows}</tbody></table></div>`;
+
+    const unbilled = (_pipelineCards || []).filter(c => c.lead && (Number(c.lead.job_fee) || 0) > 0 && c.lead.billed_period !== period);
+    const unbilledHtml = unbilled.length ? `<div class="ad-card" style="margin-bottom:14px"><div class="ad-card-head"><i class="ph ph-receipt"></i> Unbilled jobs with a fee</div>
+        <table class="pot-table"><tbody>${unbilled.map(c => `<tr><td>${esc(c.name)}</td><td>${gbp(c.lead.job_fee)} <span class="ad-pay-sub">${esc(fishBandLabel(c.fish_size))}</span></td>
+        <td>${c.lead.billed_period ? '<span class="ad-pay-sub">billed ' + esc(c.lead.billed_period) + '</span>' : ''}</td>
+        <td><button class="btn btn-sm btn-primary" onclick="billJob('${esc(c.slug)}','${esc(period)}')">Bill in ${esc(period)}</button></td></tr>`).join('')}</tbody></table></div>` : '';
+
+    const njRows = rec.nonjob.length ? rec.nonjob.map(n => `<tr><td>${esc(n.category)}</td><td>${n.person === 'clive' ? 'Clive' : 'Gabriel'}</td><td>${n.hours}h</td><td>${gbp(n.pay)}</td></tr>`).join('') : '<tr><td colspan="4" style="color:var(--text2)">No non-job hours this month.</td></tr>';
+    const njTable = `<div class="ad-card"><div class="ad-card-head"><i class="ph ph-clock"></i> Pot-funded hours in ${esc(period)}</div>
+        <table class="pot-table"><thead><tr><th>Category</th><th>Who</th><th>Hours</th><th>Pay</th></tr></thead><tbody>${njRows}</tbody></table></div>`;
+
+    return potStrip + dirs + jobsTable + unbilledHtml + njTable;
+}
+async function billJob(slug, period) {
+    const c = _pipelineCards.find(x => x.slug === slug);
+    if (!c || !c.lead) return;
+    const r = await fetch(`/api/adze/admin/artists/${slug}/lead`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+        body: JSON.stringify({ ...c.lead, billed_period: period }),
+    });
+    if (!r.ok) { alert('Failed to update billing (HTTP ' + r.status + ')'); return; }
+    c.lead.billed_period = period;
+    loadPot();
+}
+async function runReconciliation() {
+    const period = document.getElementById('potPeriod').value;
+    if (!period) return;
+    if (!confirm(`Snapshot the reconciliation for ${period}? This records the pot balance carried forward.`)) return;
+    const r = await fetch('/api/adze/admin/reconciliations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+        body: JSON.stringify({ period }),
+    });
+    if (!r.ok) { alert('Snapshot failed (HTTP ' + r.status + ')'); return; }
+    alert(`Snapshot saved for ${period}.`);
+    loadPot();
+}
+
+// ── Email templates ─────────────────────────────────────────────────────────
+const TEMPLATE_TOKENS = ['{{ARTIST_NAME}}','{{FEE}}','{{FISH}}','{{STAGE}}','{{INTAKE_URL}}','{{HANDOVER_URL}}','{{CONTACT_EMAIL}}','{{BRAND_NAME}}'];
+let _mde = null;                 // EasyMDE instance (lazy)
+let _emailTemplates = {};        // stage id → {subject, body}
+let _etStage = STAGES[0].id;     // currently-edited stage
+
+function _etStashCurrent() {
+    if (!_mde) return;
+    _emailTemplates[_etStage] = {
+        subject: document.getElementById('etSubject').value,
+        body: _mde.value(),
+    };
+}
+function _etRenderStageTabs() {
+    document.getElementById('etStageTabs').innerHTML = STAGES.map(s => {
+        const filled = _emailTemplates[s.id] && (_emailTemplates[s.id].subject || _emailTemplates[s.id].body);
+        return `<button class="pl-stage-chip${s.id === _etStage ? ' is-active' : ''}" onclick="selectTemplateStage('${s.id}')">${esc(s.label)}${filled ? ' •' : ''}</button>`;
+    }).join('');
+}
+function _etLoadStageIntoEditor() {
+    const t = _emailTemplates[_etStage] || { subject: '', body: '' };
+    document.getElementById('etSubject').value = t.subject || '';
+    if (_mde) _mde.value(t.body || '');
+}
+function selectTemplateStage(id) {
+    _etStashCurrent();
+    _etStage = id;
+    _etRenderStageTabs();
+    _etLoadStageIntoEditor();
+}
+async function loadTemplates() {
+    const ws = document.getElementById('etWorkspace').value;
+    const data = await api('/api/adze/admin/email-templates?workspace=' + encodeURIComponent(ws));
+    if (!data) return;
+    _emailTemplates = data.templates || {};
+    if (!_mde) {
+        _mde = new EasyMDE({
+            element: document.getElementById('etBody'),
+            spellChecker: false, status: false,
+            toolbar: ['bold','italic','heading','|','unordered-list','ordered-list','|','link','preview','guide'],
+            placeholder: 'Write the email body in Markdown. Use the token buttons above to insert {{placeholders}}.',
+        });
+    }
+    // Palette buttons insert at cursor.
+    document.getElementById('etPalette').innerHTML = TEMPLATE_TOKENS.map(tok =>
+        `<button class="ad-stage-btn" onclick="insertToken('${tok}')">${esc(tok)}</button>`).join('');
+    _etStage = STAGES[0].id;
+    _etRenderStageTabs();
+    _etLoadStageIntoEditor();
+    document.getElementById('etStatus').textContent = '';
+}
+function insertToken(tok) {
+    if (!_mde) return;
+    const cm = _mde.codemirror;
+    cm.replaceSelection(tok);
+    cm.focus();
+}
+async function saveTemplates() {
+    _etStashCurrent();
+    const ws = document.getElementById('etWorkspace').value;
+    const r = await fetch('/api/adze/admin/email-templates', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+        body: JSON.stringify({ workspace: ws, templates: _emailTemplates }),
+    });
+    const status = document.getElementById('etStatus');
+    if (!r.ok) { status.textContent = 'Save failed (HTTP ' + r.status + ').'; return; }
+    status.textContent = 'Saved.';
+    _etRenderStageTabs();
+}
+
+// ── Draft email (per artist, current stage) ─────────────────────────────────
+let _draftData = null;
+async function draftStageEmail(slug) {
+    const c = _pipelineCards.find(x => x.slug === slug);
+    const stage = c && resolveStage(c.stage);
+    if (!stage) { alert('Set a pipeline stage for this artist first.'); return; }
+    const d = await api(`/api/adze/admin/artists/${encodeURIComponent(slug)}/draft-email?stage=${stage}`);
+    if (!d) return;
+    _draftData = d;
+    document.getElementById('draftTitle').textContent = `Draft — ${STAGE_LABEL[stage] || stage}`;
+    document.getElementById('draftSubject').value = d.subject || '';
+    document.getElementById('draftBody').value = d.body || '';
+    const note = document.getElementById('draftNote');
+    note.textContent = d.has_template ? '' : 'No template for this stage yet — add one in the Templates tab.';
+    const to = d.contact_email || '';
+    document.getElementById('draftMailto').href =
+        `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(d.subject || '')}&body=${encodeURIComponent(d.body || '')}`;
+    document.getElementById('draftModal').classList.add('show');
+}
+function closeDraftModal() { document.getElementById('draftModal').classList.remove('show'); }
+async function copyDraft() {
+    if (!_draftData) return;
+    const text = (_draftData.subject ? _draftData.subject + '\n\n' : '') + (_draftData.body || '');
+    try { await navigator.clipboard.writeText(text); document.getElementById('draftNote').textContent = 'Copied to clipboard.'; }
+    catch (e) { document.getElementById('draftNote').textContent = 'Copy failed — select the text manually.'; }
+}
+
+// ── Pipeline stage loop (artist detail) ────────────────────────────────────
+// Circular 8-stage LP pipeline. Nodes up to the current stage read as
+// "reached"; clicking a node (or a button) advances this artist's stage,
+// persisted to the lead block. Shared STAGES model drives both this and the
+// dashboard stage filter, so they never drift.
+const OWNER_LABELS = { clive: 'Clive', gabriel: 'Gabriel', both: 'Clive + Gabriel' };
+
+function renderArtistStageLoop(c) {
+    const host = document.getElementById('adStageLoop');
+    if (!host) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const cx = 160, cy = 160, r = 112;
+    const toRad = d => d * Math.PI / 180;
+    const nodePos = a => ({ x: cx + r * Math.cos(toRad(a)), y: cy + r * Math.sin(toRad(a)) });
+    const curId = resolveStage(c.stage);
+    const curIdx = STAGES.findIndex(s => s.id === curId); // -1 when no stage
+
+    const svg = document.createElementNS(NS, 'svg');
+    // viewBox is wider than the 320 node field so the outer labels (notably
+    // end-anchored "Handover" at angle 180) sit inside the box instead of
+    // bleeding past the card's left edge. Centred on cx=160.
+    svg.setAttribute('viewBox', '-44 0 408 320');
+    svg.setAttribute('class', 'ad-stage-svg');
+    const mk = (tag, attrs) => {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+    };
+
+    svg.appendChild(mk('circle', { cx, cy, r, fill: 'none', stroke: 'rgba(127,127,140,0.28)', 'stroke-width': 1.5 }));
+
+    // Progress arc from contact (top, -90) clockwise to the current node.
+    if (curIdx > 0) {
+        const start = nodePos(-90), end = nodePos(STAGES[curIdx].angle);
+        let sweep = STAGES[curIdx].angle - (-90);
+        if (sweep <= 0) sweep += 360;
+        svg.appendChild(mk('path', {
+            d: `M ${start.x} ${start.y} A ${r} ${r} 0 ${sweep > 180 ? 1 : 0} 1 ${end.x} ${end.y}`,
+            fill: 'none', stroke: '#0000EE', 'stroke-width': 2.5,
+        }));
+    }
+
+    const center = mk('text', { x: cx, y: cy + 5, 'text-anchor': 'middle', class: 'ad-stage-center' });
+    center.textContent = curIdx >= 0 ? STAGES[curIdx].label : 'Not in pipeline';
+    svg.appendChild(center);
+
+    STAGES.forEach((st, i) => {
+        const pos = nodePos(st.angle);
+        const reached = curIdx >= 0 && i <= curIdx;
+        const isCurrent = i === curIdx;
+        if (isCurrent) {
+            svg.appendChild(mk('circle', { cx: pos.x, cy: pos.y, r: 15, fill: 'none', stroke: '#0000EE', 'stroke-width': 1.5, opacity: 0.5 }));
+        }
+        const node = mk('circle', {
+            cx: pos.x, cy: pos.y, r: 10,
+            fill: reached ? '#0000EE' : 'var(--surface2, #e9e9ee)',
+            stroke: 'var(--surface, #fff)', 'stroke-width': 2, class: 'ad-stage-node',
+        });
+        node.style.cursor = 'pointer';
+        node.addEventListener('click', () => setArtistStage(c.slug, st.id));
+        svg.appendChild(node);
+
+        const labelR = r + 28;
+        const lx = cx + labelR * Math.cos(toRad(st.angle));
+        const ly = cy + labelR * Math.sin(toRad(st.angle));
+        const cosA = Math.cos(toRad(st.angle));
+        const label = mk('text', {
+            x: lx, y: ly + 4,
+            'text-anchor': cosA > 0.3 ? 'start' : (cosA < -0.3 ? 'end' : 'middle'),
+            class: 'ad-stage-label' + (reached ? ' reached' : ''),
+        });
+        label.textContent = st.short;
+        svg.appendChild(label);
+    });
+
+    const owner = (curIdx >= 0 && STAGES[curIdx].owner) ? OWNER_LABELS[STAGES[curIdx].owner] : '';
+    const btns = STAGES.map(s =>
+        `<button class="ad-stage-btn${s.id === curId ? ' active' : ''}" data-stage="${s.id}">${esc(s.label)}</button>`
+    ).join('');
+
+    host.innerHTML = '';
+    const svgWrap = document.createElement('div');
+    svgWrap.className = 'ad-stage-svg-wrap';
+    svgWrap.appendChild(svg);
+    host.appendChild(svgWrap);
+    const controls = document.createElement('div');
+    controls.className = 'ad-stage-controls';
+    controls.innerHTML = `
+        <div class="ad-stage-btns">${btns}</div>
+        ${owner ? `<div class="ad-stage-owner"><i class="ph ph-user-focus"></i> Owner at this stage: <strong>${esc(owner)}</strong></div>` : ''}
+    `;
+    controls.querySelectorAll('.ad-stage-btn').forEach(b =>
+        b.addEventListener('click', () => setArtistStage(c.slug, b.dataset.stage)));
+    host.appendChild(controls);
+}
+
+async function setArtistStage(slug, stageId) {
+    const c = _pipelineCards.find(x => x.slug === slug);
+    if (!c) return;
+    const existing = c.lead || {};
+    const r = await fetch(`/api/adze/admin/artists/${encodeURIComponent(slug)}/lead`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+        body: JSON.stringify({ ...existing, stage: stageId, active: true }),
+    });
+    if (!r.ok) { alert('Failed to update stage (HTTP ' + r.status + ')'); return; }
+    if (!c.lead) c.lead = {};
+    c.lead.stage = stageId;
+    c.stage = stageId;
+    c.has_lead = true;
+    renderArtistStageLoop(c);
 }
 
 // ── Intake-link card ───────────────────────────────────────────────────────
@@ -3215,6 +3802,20 @@ function showToast(msg, isErr) {
 // existing artist's lead block; openLeadModal() with no args creates a new
 // artist + lead. The leading `id` arg is kept null for back-compat (old call
 // sites passed a lead UUID).
+// Fish size is defined by job fee (Articles): keep lmFish in lockstep with the
+// fee unless the user ticks "override" for a pre-quote estimate.
+function applyFishOverrideState() {
+    const ov = document.getElementById('lmFishOverride').checked;
+    const fish = document.getElementById('lmFish');
+    fish.disabled = !ov;
+    if (!ov) fish.value = fishForFee(document.getElementById('lmJobFee').value);
+}
+function onJobFeeInput() {
+    if (!document.getElementById('lmFishOverride').checked)
+        document.getElementById('lmFish').value = fishForFee(document.getElementById('lmJobFee').value);
+}
+function onFishOverrideToggle() { applyFishOverrideState(); }
+
 function openLeadModal(_legacyId, slug, emphasis) {
     _editingLeadId = null;
     _editingSlug   = slug || null;
@@ -3261,7 +3862,12 @@ function openLeadModal(_legacyId, slug, emphasis) {
         document.getElementById('lmFigma').value       = card.figma_url    || '';
         document.getElementById('lmContact').value     = l.contact        || '';
         document.getElementById('lmStage').value       = card.stage       || '';
+        document.getElementById('lmJobFee').value      = l.job_fee        || '';
+        document.getElementById('lmSourcedBy').value   = l.sourced_by     || '';
+        document.getElementById('lmDiscoveryFee').value = l.discovery_fee || '';
+        document.getElementById('lmFishOverride').checked = !!l.fish_override;
         document.getElementById('lmFish').value        = (l.fish_size)    || '';
+        applyFishOverrideState();
         document.getElementById('lmInstagram').value   = l.instagram      || '';
         document.getElementById('lmWork').value        = l.work           || '';
         document.getElementById('lmDiscount').value    = l.discount       || '';
@@ -3281,8 +3887,10 @@ function openLeadModal(_legacyId, slug, emphasis) {
             slackLink.style.display = 'none';
         }
     } else {
-        ['lmClient','lmSlug','lmDomain','lmDescription','lmEmail','lmFigma','lmContact','lmInstagram','lmWork','lmDiscount','lmNotes'].forEach(i=>document.getElementById(i).value='');
+        ['lmClient','lmSlug','lmDomain','lmDescription','lmEmail','lmFigma','lmContact','lmInstagram','lmWork','lmDiscount','lmNotes','lmJobFee','lmDiscoveryFee'].forEach(i=>document.getElementById(i).value='');
         document.getElementById('lmStage').value=''; document.getElementById('lmFish').value='';
+        document.getElementById('lmSourcedBy').value=''; document.getElementById('lmFishOverride').checked=false;
+        applyFishOverrideState();
         document.getElementById('lmContacted').value=''; document.getElementById('lmActive').value='true';
         slugInput.readOnly = false; slugInput.style.opacity = '1';
         dashLink.style.display = 'none';
@@ -3310,6 +3918,10 @@ async function saveLead() {
         contact:   document.getElementById('lmContact').value.trim(),
         stage:     document.getElementById('lmStage').value || '',
         fish_size: document.getElementById('lmFish').value || '',
+        job_fee:   parseFloat(document.getElementById('lmJobFee').value) || 0,
+        sourced_by: document.getElementById('lmSourcedBy').value || null,
+        fish_override: document.getElementById('lmFishOverride').checked,
+        discovery_fee: parseFloat(document.getElementById('lmDiscoveryFee').value) || 0,
         instagram: document.getElementById('lmInstagram').value.trim().replace(/^@/, ''),
         work:      document.getElementById('lmWork').value.trim(),
         discount:  document.getElementById('lmDiscount').value.trim(),
@@ -3317,8 +3929,13 @@ async function saveLead() {
     };
 
     // Field-presence detection — what does the user want this entry to be?
+    // fish_size is auto-derived (always set), so it can't signal lead intent —
+    // detect on the fields the user actually fills.
     const wantsArtist = Object.values(artistFields).some(v => v);
-    const wantsLead   = Object.values(leadFields).some(v => v) ||
+    const wantsLead   = !!(leadFields.contact || leadFields.stage || leadFields.instagram ||
+                        leadFields.work || leadFields.discount || leadFields.notes ||
+                        leadFields.job_fee || leadFields.sourced_by || leadFields.fish_override ||
+                        leadFields.discovery_fee) ||
                         document.getElementById('lmContacted').value === 'yes';
 
     if (!wantsArtist && !wantsLead) {

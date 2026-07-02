@@ -13,7 +13,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
 {{BRAND_CSS_LINK}}
 <style>
@@ -35,7 +35,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
         --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
         --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
         --mono: 'JetBrains Mono','Monaco','Menlo','Courier New',monospace;
-        --heading-font: 'JetBrains Mono','Monaco','Menlo',monospace;
+        --heading-font: 'Cormorant','Cormorant Garamond','Times New Roman',Georgia,serif;
         --body-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
@@ -274,6 +274,36 @@ if (localStorage.getItem('adze-theme') === 'dark') {
         .creds { gap: 12px; }
         .login-btn { width: 100%; justify-content: center; }
     }
+
+    @media print {
+        /* Print as a clean credentials sheet — drop screen chrome and
+           interactive controls that mean nothing on paper. */
+        :root { --bg: #fff; --text: #000; --text2: #444; }
+        body { background: #fff; color: #000; }
+        .bg-layer, #theme-toggle, #print-btn, .theme-toggle,
+        .login-btn, .dash-link-btn, .cred-copy, .toast, #pwCard, #pwDone { display: none !important; }
+        .site-header { border-bottom: 1px solid #ccc; }
+        .wrap { padding: 0; max-width: 100%; }
+        .welcome, .dash-card, .info-row { box-shadow: none; border: 1px solid #ccc; }
+        .cred-value { max-width: 100%; }
+        a { color: #000; text-decoration: none; }
+        .editor-advanced[open] > summary { display: none; }
+        @page { margin: 18mm; }
+    }
+
+    /* When the artist has their own dashboard, the Adze editor is the advanced
+       path: collapsed and tucked under the info rows so the dashboard leads. */
+    .editor-advanced { margin: 26px 0 0; border-top: 1px solid var(--border); padding-top: 14px; }
+    .editor-advanced > summary {
+        cursor: pointer; list-style: none; user-select: none;
+        display: flex; align-items: center; gap: 8px;
+        font-size: 13px; color: var(--text2);
+    }
+    .editor-advanced > summary::-webkit-details-marker { display: none; }
+    .editor-advanced > summary .chev { transition: transform 0.15s; font-size: 14px; }
+    .editor-advanced[open] > summary .chev { transform: rotate(90deg); }
+    .editor-advanced > summary:hover { color: var(--text); }
+    .editor-advanced .welcome { margin: 14px 0 0; }
 </style>
 </head>
 <body>
@@ -282,9 +312,14 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 
 <header class="site-header">
     <a href="{{BRAND_SITE_URL}}" class="logo"><img src="{{BRAND_LOGO_URL}}" alt=""><span class="brand-wordmark">{{BRAND_NAME}}</span></a>
-    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
-        <i class="ph ph-moon"></i>
-    </button>
+    <span style="display:flex;align-items:center;gap:4px">
+        <button id="print-btn" class="theme-toggle" type="button" aria-label="Print this page" title="Print" onclick="window.print()">
+            <i class="ph ph-printer"></i>
+        </button>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <i class="ph ph-moon"></i>
+        </button>
+    </span>
 </header>
 
 <div class="wrap">
@@ -586,8 +621,20 @@ const editorCard = document.getElementById('editorCard');
 const editorCopy = document.getElementById('editorCopy');
 if (SHOW_ADZE_LOGIN) {
     if (SHOW_CUSTOM_DASH) {
+        // The artist has their own dashboard — Adze is the advanced path.
+        // Demote it: collapse it and tuck it under the info rows so the
+        // dashboard above is clearly the main way in.
         editorCopy.innerHTML = 'If you want to, you can also use our custom design software — Adze — to make edits to your site directly. This is more complex than using your dashboard and should be done with care.';
+        const details = document.createElement('details');
+        details.className = 'editor-advanced';
+        const summary = document.createElement('summary');
+        summary.innerHTML = '<i class="ph ph-caret-right chev"></i> Advanced: edit directly with Adze';
+        details.appendChild(summary);
+        details.appendChild(editorCard);  // relocate the existing card inside
+        document.querySelector('.info-rows').insertAdjacentElement('afterend', details);
     } else {
+        // No custom dashboard — the Adze editor is the only way in, so it
+        // stays the prominent card.
         editorCopy.innerHTML = 'Sign in here to make edits to your site.';
     }
 } else {

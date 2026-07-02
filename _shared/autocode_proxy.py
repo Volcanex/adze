@@ -55,7 +55,6 @@ SERVE_PORT = 4096
 SERVE_USER = 'opencode'
 READY_TIMEOUT_S = 25
 IDLE_EVICT_SECONDS = 30 * 60
-KEEPALIVE_SECONDS = 15
 
 _log = logging.getLogger('adze.autocode')
 
@@ -293,14 +292,8 @@ class AutocodeServeManager:
 
         import json as _json
 
-        last_send = time.time()
         try:
             for raw in r.iter_lines(decode_unicode=True):
-                if raw is None:
-                    if time.time() - last_send > KEEPALIVE_SECONDS:
-                        last_send = time.time()
-                        yield b': keepalive\n\n'
-                    continue
                 if not raw:
                     continue
                 if not raw.startswith('data: '):
@@ -314,7 +307,6 @@ class AutocodeServeManager:
                     out = _json.dumps(payload, separators=(',', ':'))
                 except Exception:
                     out = body
-                last_send = time.time()
                 yield ('data: ' + out + '\n\n').encode('utf-8')
         except requests.RequestException as exc:
             _log.info(f'[{slug}] SSE stream closed: {exc}')
@@ -731,6 +723,46 @@ def restart():
     except Exception as exc:
         return _err(502, 'restart failed', str(exc))
     return ('', 204)
+
+
+@bp.post('/compile')
+def compile_artist():
+    """Recompile the artist's static site after auto-code edits.
+
+    Called by the dashboard after session.idle when files were edited.
+    Runs compile.py --artist <slug> in the Flask working directory.
+    External (remote Seed) artists are skipped — their compile lives
+    on the remote host.
+    """
+    import json as _json
+    import subprocess as _sub
+
+    slug, err = _require_slug()
+    if err:
+        return err
+
+    # Skip external artists — no local compile.
+    cfg = Path.cwd() / 'artists' / slug / 'config.json'
+    try:
+        if cfg.exists() and _json.loads(cfg.read_text()).get('remote'):
+            return jsonify({'ok': True, 'skipped': 'external'})
+    except Exception:
+        pass
+
+    compile_script = Path.cwd() / 'compile.py'
+    if not compile_script.exists():
+        return _err(500, 'compile.py not found')
+
+    try:
+        result = _sub.run(
+            ['python3', str(compile_script), '--artist', slug],
+            capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode == 0:
+            return jsonify({'ok': True})
+        return jsonify({'ok': False, 'error': (result.stderr or result.stdout or '').strip()[:500]})
+    except Exception as exc:
+        return _err(500, f'compile failed: {exc}')
 
 
 # ─── Registration ────────────────────────────────────────────────────────

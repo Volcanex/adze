@@ -2559,12 +2559,13 @@ function _applyBrandLockup(brand) {
         if (!document.getElementById('brand-lockup-dark')) {
             const darkStyle = document.createElement('style');
             darkStyle.id = 'brand-lockup-dark';
-            darkStyle.textContent = '[data-theme="dark"] .brand-lockup-logo { filter: brightness(0) invert(1); }';
+            darkStyle.textContent = '[data-theme="dark"] .brand-lockup-logo { filter: brightness(0) invert(1); }\n[data-theme="dark"] .brand-lockup-name { color: #fff !important; }';
             document.head.appendChild(darkStyle);
         }
     }
 
     const brandSpan = document.createElement('span');
+    brandSpan.className = 'brand-lockup-name';
     brandSpan.style.cssText = `font-family:${fontFamily};color:${accentColor};font-weight:500;font-size:26px;letter-spacing:-0.01em;`;
     brandSpan.textContent = brand.name;
     container.insertBefore(brandSpan, adzeImg);
@@ -8725,6 +8726,7 @@ const AutoCode = (() => {
             busySince: 0,
             inputTokens: 0,
             cachedTokens: 0,
+            filesEditedThisTurn: false,
         };
     }
 
@@ -9258,7 +9260,23 @@ const AutoCode = (() => {
                 // tool-based edits, but a `bash rm`/`mv` deletion emits no such
                 // event — refresh here so the preview (and a now-deleted active
                 // page) gets reconciled once the turn settles.
-                if (!isWorktreeTab(tab)) schedulePreviewRefresh();
+                if (!isWorktreeTab(tab)) {
+                    schedulePreviewRefresh();
+                    // Compile & publish if files were edited this turn so
+                    // the live site updates, not just the preview.
+                    if (tab.state.filesEditedThisTurn) {
+                        tab.state.filesEditedThisTurn = false;
+                        setStatus('idle', 'publishing…', tab);
+                        apiFetchAC('/compile', { method: 'POST' })
+                            .then(r => r.json().catch(() => ({})))
+                            .then(j => {
+                                if (j && !j.ok && j.error)
+                                    appendSystem(tab, `Compile error: ${j.error}`);
+                            })
+                            .catch(() => {})
+                            .finally(() => setStatus('idle', 'idle', tab));
+                    }
+                }
                 // Auto-commit a worktree tab after each turn so the branch
                 // carries usable history for merge/rollback.
                 if (isWorktreeTab(tab) && tab.directory) {
@@ -9287,7 +9305,10 @@ const AutoCode = (() => {
             case 'permission.asked':   return renderPermissionAsked(tab, evt);
             case 'permission.replied': return resolvePermissionCard(tab, evt);
             case 'file.edited':
-                if (!isWorktreeTab(tab)) schedulePreviewRefresh();
+                if (!isWorktreeTab(tab)) {
+                    tab.state.filesEditedThisTurn = true;
+                    schedulePreviewRefresh();
+                }
                 return;
         }
     }

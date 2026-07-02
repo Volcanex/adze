@@ -21,6 +21,16 @@ WORKSPACES = {
             # channels instead of needing auto-invite.
             'announce_channel': os.environ.get('LASTPLACE_SLACK_ANNOUNCE_CHANNEL', 'adze'),
         },
+        'email': {
+            # One Purelymail account hosts mail for every workspace domain.
+            # Account-level token; manages mailboxes + forwarding via api/v0.
+            'purelymail_token': os.environ.get('PURELYMAIL_API_TOKEN', ''),
+            # Constant Purelymail client settings, surfaced per-mailbox in
+            # the dashboard Email panel so connection docs are self-serve.
+            'imap_host': 'imap.purelymail.com', 'imap_port': 993,
+            'pop_host': 'pop3.purelymail.com', 'pop_port': 995,
+            'smtp_host': 'smtp.purelymail.com', 'smtp_port': 465,
+        },
     },
     'personal': {
         # No integrations yet. Add a slack block here if you ever want

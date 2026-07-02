@@ -1,0 +1,9 @@
+{
+    "name": "email",
+    "description": "Business email for your domain — create mailboxes and forwards, with ready-made Gmail / IMAP / POP setup for each address.",
+    "icon": "envelope-simple",
+    "author": "Adze Studio",
+    "version": "1.0",
+    "marketplace": false,
+    "category": "communication"
+}

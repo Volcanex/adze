@@ -778,6 +778,11 @@ def admin_login():
         return jsonify({'error': 'Invalid credentials'}), 401
 
     is_https = request.headers.get('X-Forwarded-Proto') == 'https'
+    # Span the session across *.adze.studio so a Clive login on adze.studio
+    # carries through the redirect to lastplace.adze.studio without a second
+    # login. Host-only otherwise (localhost dev, artist domains).
+    host = (request.host or '').split(':')[0]
+    cookie_domain = '.adze.studio' if host == 'adze.studio' or host.endswith('.adze.studio') else None
     resp = make_response(jsonify({
         'ok': True,
         'name': ident['name'],
@@ -787,7 +792,7 @@ def admin_login():
     }))
     resp.set_cookie('adze_admin_session', ident['password'],
                     httponly=True, samesite='Lax', secure=is_https,
-                    max_age=7 * 24 * 3600, path='/')
+                    max_age=7 * 24 * 3600, path='/', domain=cookie_domain)
     return resp
 
 
@@ -1203,6 +1208,74 @@ _HOURS_FILE = _STUDIO_DATA_DIR / 'hours.json'
 _LEADS_FILE = _STUDIO_DATA_DIR / 'leads.json'  # legacy; preserved for the table sub-view
 _PINNED_ORDER_FILE = _STUDIO_DATA_DIR / 'pinned_order.json'
 _TODOS_FILE = _STUDIO_DATA_DIR / 'todos.json'
+_RECON_FILE = _STUDIO_DATA_DIR / 'reconciliations.json'
+
+# Canonical fish bands (Articles of Agreement). Fish size IS defined by total
+# job cost; each band carries the lead-gen commission paid to the sourcer.
+# Inclusive upper bound: fee <= max_fee picks the band; fee <= 0 → Minnow.
+# MIRRORED client-side in admin.html (FISH_BANDS / fishForFee) — keep in sync.
+FISH_BANDS = [
+    {'size': 'xs', 'label': 'Minnow',   'max_fee': 0,             'commission': 0.00},
+    {'size': 's',  'label': 'Perch',    'max_fee': 260,           'commission': 0.04},
+    {'size': 'm',  'label': 'Mackerel', 'max_fee': 650,           'commission': 0.08},
+    {'size': 'l',  'label': 'Ray',      'max_fee': 2000,          'commission': 0.12},
+    {'size': 'xl', 'label': 'Shark',    'max_fee': float('inf'),  'commission': 0.16},
+]
+DIRECTOR_RATE = 25      # £/hr, flat for both directors
+DIRECTOR_FLAT = 0.15    # each director's cut of the full fee
+
+
+def _fish_for_fee(fee):
+    f = float(fee or 0)
+    if f <= 0:
+        return 'xs'
+    for b in FISH_BANDS:
+        if f <= b['max_fee']:
+            return b['size']
+    return FISH_BANDS[-1]['size']
+
+
+def _commission_pct(size):
+    for b in FISH_BANDS:
+        if b['size'] == size:
+            return b['commission']
+    return 0.0
+
+
+def _person_key(p):
+    """Hours log writes 'gabe'; Articles/sourced_by use 'gabriel'."""
+    return 'gabriel' if p == 'gabe' else p
+
+
+# Canonical pipeline stages (mirror of STAGES in admin.html).
+STAGE_IDS = ['contact', 'discovery', 's01', 's02', 's03', 'revisions', 'handover', 'hosting']
+STAGE_LABELS = {
+    'contact': 'Contacted', 'discovery': 'Discovery', 's01': 'Stage 01', 's02': 'Stage 02',
+    's03': 'Stage 03', 'revisions': 'Revisions', 'handover': 'Handover', 'hosting': 'Hosting',
+}
+
+
+def _email_templates_path(ws):
+    return _STUDIO_DATA_DIR / f'email_templates_{ws}.json'
+
+
+def _read_email_templates(ws):
+    p = _email_templates_path(ws)
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding='utf-8'))
+        except Exception:
+            pass
+    return {}
+
+
+def _write_email_templates(ws, data):
+    _email_templates_path(ws).write_text(json.dumps(data, indent=2) + '\n', encoding='utf-8')
+
+
+def _fmt_gbp(v):
+    v = float(v or 0)
+    return ('£{:,.0f}'.format(v) if v == int(v) else '£{:,.2f}'.format(v))
 
 
 def _read_studio_json(path):
@@ -1632,11 +1705,28 @@ def admin_artist_lead_update(slug):
         return jsonify({'ok': True})
     data = request.get_json() or {}
     existing = cfg.get('lead') or {}
+    job_fee = float(data.get('job_fee', existing.get('job_fee', 0)) or 0)
+    fish_override = bool(data.get('fish_override', existing.get('fish_override', False)))
+    sourced_by = data.get('sourced_by', existing.get('sourced_by'))
+    if sourced_by not in ('clive', 'gabriel'):
+        sourced_by = None
+    # Fish size IS defined by job fee (Articles): derive it unless the user has
+    # explicitly overridden it for a pre-quote estimate.
+    if fish_override:
+        fish_size = data.get('fish_size', existing.get('fish_size')) or None
+    else:
+        fish_size = _fish_for_fee(job_fee)
     block = {
         'active': bool(data.get('active', existing.get('active', True))),
         'contact': data.get('contact', existing.get('contact', '')) or '',
         'stage': data.get('stage', existing.get('stage')) or None,
-        'fish_size': data.get('fish_size', existing.get('fish_size')) or None,
+        'fish_size': fish_size,
+        'job_fee': job_fee,
+        'sourced_by': sourced_by,
+        'fish_override': fish_override,
+        'discovery_fee': float(data.get('discovery_fee', existing.get('discovery_fee', 0)) or 0),
+        'discovery_fee_credited': bool(data.get('discovery_fee_credited', existing.get('discovery_fee_credited', False))),
+        'billed_period': (data.get('billed_period', existing.get('billed_period')) or None),
         'instagram': data.get('instagram', existing.get('instagram', '')) or '',
         'work': data.get('work', existing.get('work', '')) or '',
         'discount': data.get('discount', existing.get('discount', '')) or '',
@@ -1665,6 +1755,270 @@ def admin_pipeline_order():
         return jsonify({'error': 'order must be a list'}), 400
     _write_studio_json(_PINNED_ORDER_FILE, [str(s) for s in order])
     return jsonify({'ok': True, 'order': order})
+
+
+# ── Pot / monthly reconciliation (Articles of Agreement) ─────────────────────
+# Fee recognition is explicit: a job settles in the month its lead.billed_period
+# matches (fee − all its hours·£25 − 15%×2 − commission → pot). Until billed, a
+# job's hours are paid from the pot like any non-job work. Pot shortfall is
+# surfaced as a warning (pro-rata/rollover deferred).
+
+def _iter_leads():
+    """Yield (slug, name, lead) for every artist carrying a lead block."""
+    artists_dir = Path('artists')
+    if not artists_dir.exists():
+        return
+    for item in sorted(artists_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith('_') or item.name == 'example-artist':
+            continue
+        cfg_path = item / 'config.json'
+        if not cfg_path.exists():
+            continue
+        try:
+            cfg = json.loads(cfg_path.read_text())
+        except Exception:
+            continue
+        lead = cfg.get('lead')
+        if lead:
+            yield item.name, (cfg.get('name') or item.name), lead
+
+
+def _job_hours_by_person(slug, lead, hours, period=None):
+    """Sum hours for a job (scope artist:<slug> or lead:<original_lead_id>),
+    optionally restricted to a YYYY-MM period. Returns {clive, gabriel}."""
+    lid = lead.get('original_lead_id')
+    out = {'clive': 0.0, 'gabriel': 0.0}
+    for e in hours:
+        scope = e.get('scope', '')
+        if scope == f'artist:{slug}' or (lid and scope == f'lead:{lid}'):
+            if period and not str(e.get('date', '')).startswith(period):
+                continue
+            pk = _person_key(e.get('person'))
+            if pk in out:
+                out[pk] += float(e.get('hours') or 0)
+    return out
+
+
+def _compute_reconciliation(period):
+    """Compute the pay/pot picture for a YYYY-MM period. Pure function over the
+    hours log + artist lead blocks + prior snapshots."""
+    hours = _read_studio_json(_HOURS_FILE) or []
+    snapshots = _read_studio_json(_RECON_FILE) or []
+    # Carry-forward: most recent snapshot for a period strictly before this one.
+    prior = [s for s in snapshots if s.get('period', '') < period]
+    prior.sort(key=lambda s: s.get('period', ''))
+    balance_before = round(prior[-1]['pot_balance_after'], 2) if prior else 0.0
+
+    directors = {p: {'flat15': 0.0, 'commission': 0.0, 'job_hours_pay': 0.0,
+                     'pot_hours_pay': 0.0, 'total': 0.0} for p in ('clive', 'gabriel')}
+    jobs, pot_in, pot_job_shortfall = [], 0.0, 0.0
+
+    billed_slugs = set()
+    for slug, name, lead in _iter_leads():
+        fee = float(lead.get('job_fee') or 0)
+        if fee <= 0 and lead.get('billed_period') != period:
+            continue
+        if lead.get('billed_period') != period:
+            continue  # only jobs billed THIS period settle here
+        billed_slugs.add(slug)
+        size = lead.get('fish_size') or _fish_for_fee(fee)
+        pct = _commission_pct(size)
+        h = _job_hours_by_person(slug, lead, hours)  # lifetime hours settle at billing
+        hours_pay = (h['clive'] + h['gabriel']) * DIRECTOR_RATE
+        flat_each = DIRECTOR_FLAT * fee
+        commission = pct * fee
+        pot_delta = fee - (hours_pay + 2 * flat_each + commission)
+        src = lead.get('sourced_by') if lead.get('sourced_by') in directors else None
+        for p in directors:
+            directors[p]['flat15'] += flat_each
+            directors[p]['job_hours_pay'] += h[p] * DIRECTOR_RATE
+        if src:
+            directors[src]['commission'] += commission
+        if pot_delta >= 0:
+            pot_in += pot_delta
+        else:
+            pot_job_shortfall += -pot_delta
+        jobs.append({'slug': slug, 'name': name, 'fee': round(fee, 2), 'fish': size,
+                     'commission': round(commission, 2), 'sourced_by': src,
+                     'hours_clive': h['clive'], 'hours_gabriel': h['gabriel'],
+                     'hours_pay': round(hours_pay, 2), 'flat_total': round(2 * flat_each, 2),
+                     'pot_delta': round(pot_delta, 2)})
+
+    # Pot-funded hours dated in this period: non-job categories + hours on jobs
+    # not (yet) billed. Paid from the pot.
+    nonjob = []
+    pot_hours_total = 0.0
+    job_scopes = {}
+    for slug, name, lead in _iter_leads():
+        lid = lead.get('original_lead_id')
+        job_scopes[f'artist:{slug}'] = (slug, lead)
+        if lid:
+            job_scopes[f'lead:{lid}'] = (slug, lead)
+    by_cat = {}
+    for e in hours:
+        if not str(e.get('date', '')).startswith(period):
+            continue
+        scope = e.get('scope', '')
+        owner = _person_key(e.get('person'))
+        hrs = float(e.get('hours') or 0)
+        if scope in job_scopes:
+            slug, lead = job_scopes[scope]
+            if slug in billed_slugs:
+                continue  # already settled via the fee this period
+            cat = f'job (unbilled): {slug}'
+        else:
+            cat = SCOPE_CAT_LABEL.get(scope, scope or 'uncategorised')
+        pay = hrs * DIRECTOR_RATE
+        pot_hours_total += pay
+        if owner in directors:
+            directors[owner]['pot_hours_pay'] += pay
+        key = (cat, owner)
+        by_cat[key] = by_cat.get(key, 0.0) + hrs
+    for (cat, owner), hrs in sorted(by_cat.items()):
+        nonjob.append({'category': cat, 'person': owner, 'hours': round(hrs, 2),
+                       'pay': round(hrs * DIRECTOR_RATE, 2)})
+
+    pot_out = pot_job_shortfall + pot_hours_total
+    balance_after = balance_before + pot_in - pot_out
+    for p in directors:
+        d = directors[p]
+        d['total'] = round(d['flat15'] + d['commission'] + d['job_hours_pay'] + d['pot_hours_pay'], 2)
+        for k in ('flat15', 'commission', 'job_hours_pay', 'pot_hours_pay'):
+            d[k] = round(d[k], 2)
+
+    return {
+        'period': period, 'rate': DIRECTOR_RATE,
+        'pot_in': round(pot_in, 2), 'pot_job_shortfall': round(pot_job_shortfall, 2),
+        'pot_hours_paid': round(pot_hours_total, 2),
+        'pot_balance_before': round(balance_before, 2),
+        'pot_balance_after': round(balance_after, 2),
+        'pot_short': balance_after < 0,
+        'directors': directors, 'jobs': jobs, 'nonjob': nonjob,
+    }
+
+
+# Server-side mirror of SCOPE_CAT_LABELS (admin.html) for reconciliation labels.
+SCOPE_CAT_LABEL = {
+    'outreach': 'Client Outreach', 'admin': 'Admin', 'meetings': 'Meetings', 'design': 'Design',
+    'infra': 'Infrastructure Dev', 'features': 'New Features', 'maintenance': 'Maintenance', 'bugfix': 'Client Bugfix',
+    'leadgen': 'Lead gen', 'networking': 'Networking', 'lp_dev': 'Adze × LP dev', 'hosted_edits': 'Hosted-site edits',
+}
+
+
+@bp.route('/admin/reconciliations')
+def admin_reconciliations_list():
+    _require_super_admin()
+    return jsonify({'snapshots': _read_studio_json(_RECON_FILE) or []})
+
+
+@bp.route('/admin/reconciliations/preview')
+def admin_reconciliation_preview():
+    _require_super_admin()
+    period = (request.args.get('period') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}$', period):
+        return jsonify({'error': 'period must be YYYY-MM'}), 400
+    return jsonify(_compute_reconciliation(period))
+
+
+@bp.route('/admin/reconciliations', methods=['POST'])
+def admin_reconciliation_create():
+    _require_super_admin()
+    data = request.get_json() or {}
+    period = (data.get('period') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}$', period):
+        return jsonify({'error': 'period must be YYYY-MM'}), 400
+    import uuid
+    snap = _compute_reconciliation(period)
+    snap['id'] = uuid.uuid4().hex
+    snap['created_at'] = int(_time.time())
+    snap['notes'] = (data.get('notes') or '')
+    snapshots = _read_studio_json(_RECON_FILE) or []
+    # One snapshot per period: replace any existing for this period.
+    snapshots = [s for s in snapshots if s.get('period') != period]
+    snapshots.append(snap)
+    snapshots.sort(key=lambda s: s.get('period', ''))
+    _write_studio_json(_RECON_FILE, snapshots)
+    return jsonify(snap)
+
+
+# ── Email templates (studio-wide per workspace) ──────────────────────────────
+# Author-written stage templates, stored verbatim. NEVER transformed/generated —
+# the Articles forbid AI in client comms. "Drafting" is pure placeholder
+# substitution; sending is the user's job (copy / mailto).
+
+def _resolve_template_workspace(requested):
+    """Pick the workspace to read/write. Super sees any; others are pinned to
+    their own workspace(s)."""
+    ws_list = _current_workspaces()
+    if requested and (_is_super() or requested in ws_list):
+        return requested
+    return ws_list[0] if ws_list else 'lastplace'
+
+
+@bp.route('/admin/email-templates')
+def admin_email_templates_get():
+    _require_super_admin()
+    ws = _resolve_template_workspace((request.args.get('workspace') or '').strip())
+    return jsonify({'workspace': ws, 'stages': STAGE_IDS, 'stage_labels': STAGE_LABELS,
+                    'templates': _read_email_templates(ws)})
+
+
+@bp.route('/admin/email-templates', methods=['PUT'])
+def admin_email_templates_put():
+    _require_super_admin()
+    data = request.get_json() or {}
+    ws = _resolve_template_workspace((data.get('workspace') or '').strip())
+    incoming = data.get('templates') or {}
+    if not isinstance(incoming, dict):
+        return jsonify({'error': 'templates must be an object'}), 400
+    clean = {}
+    for stage, tpl in incoming.items():
+        if stage not in STAGE_IDS or not isinstance(tpl, dict):
+            continue
+        clean[stage] = {'subject': str(tpl.get('subject', '')), 'body': str(tpl.get('body', ''))}
+    _write_email_templates(ws, clean)
+    return jsonify({'workspace': ws, 'templates': clean})
+
+
+@bp.route('/admin/artists/<slug>/draft-email')
+def admin_draft_email(slug):
+    """Render a stage template for an artist: pure {{token}} substitution over
+    the brand subs plus pricing/stage/link tokens. Returns {subject, body}."""
+    _require_super_admin()
+    stage = (request.args.get('stage') or '').strip()
+    if stage not in STAGE_IDS:
+        return jsonify({'error': 'unknown stage'}), 400
+    cfg_path, cfg = _read_artist_config(slug)
+    ws = _artist_workspace(cfg)
+    tpl = (_read_email_templates(ws) or {}).get(stage) or {}
+    subject, body = tpl.get('subject', ''), tpl.get('body', '')
+
+    lead = cfg.get('lead') or {}
+    fee = lead.get('job_fee') or 0
+    size = lead.get('fish_size') or _fish_for_fee(fee)
+    fish_label = next((b['label'] for b in FISH_BANDS if b['size'] == size), size)
+    intake_url = (brand_link_base(ws) + f'/intake/{slug}/{cfg["intake_token"]}') if cfg.get('intake_token') else ''
+    handover_url = (brand_link_base(ws) + f'/handover/{slug}/{cfg["handover_token"]}') if cfg.get('handover_token') else ''
+
+    subs = dict(_brand_substitutions(cfg))
+    subs.update({
+        '{{ARTIST_NAME}}': cfg.get('name') or slug,
+        '{{CONTACT_EMAIL}}': cfg.get('contact_email', ''),
+        '{{FEE}}': _fmt_gbp(fee),
+        '{{FISH}}': fish_label,
+        '{{STAGE}}': STAGE_LABELS.get(stage, stage),
+        '{{INTAKE_URL}}': intake_url,
+        '{{HANDOVER_URL}}': handover_url,
+    })
+
+    def apply(text):
+        for k, v in subs.items():
+            text = text.replace(k, str(v))
+        return text
+
+    return jsonify({'subject': apply(subject), 'body': apply(body),
+                    'contact_email': cfg.get('contact_email', ''),
+                    'has_template': bool(subject or body)})
 
 
 # ── Docs ──────────────────────────────────────────────────────────────────────
@@ -2863,11 +3217,10 @@ def admin_intake_token(slug):
     """GET: return the current token (mint one lazily if missing).
     POST: rotate (mint a new one, invalidating any link with the old).
     DELETE: clear the token so the link stops working."""
-    from auth import is_admin_token
     import secrets
-    token = request.headers.get('X-Admin-Token', '')
-    if not is_admin_token(token):
-        abort(403)
+    # Header-or-cookie auth so cookie-only sessions (Clive on
+    # lastplace.adze.studio) work, same as every other admin endpoint.
+    _require_super_admin()
     cfg_path, cfg = _read_artist_config(slug)
     changed = False
     if request.method == 'DELETE':
@@ -2967,11 +3320,15 @@ def intake_portal(slug, token):
     if not portal_path.exists():
         return 'Portal not found', 404
     html = portal_path.read_text(encoding='utf-8')
+    # The intake link doubles as the artist's onboarding link: it exposes
+    # their editor login (admin_token) so they can sign straight into the
+    # dashboard. Anyone holding the intake link already has write access to
+    # the artist's library, so this widens that same trust boundary by design.
     subs = {
         '{{ARTIST_NAME}}': cfg.get('name') or slug,
         '{{ARTIST_SLUG}}': slug,
         '{{INTAKE_TOKEN}}': token,
-        '{{ADMIN_TOKEN}}': '',
+        '{{ADMIN_TOKEN}}': cfg.get('admin_token') or '',
         **_brand_substitutions(cfg),
     }
     for placeholder, value in subs.items():
@@ -3151,10 +3508,8 @@ def admin_handover_token(slug):
 @bp.route('/admin/artists/<slug>/handover-config', methods=['POST'])
 def admin_handover_config(slug):
     """Persist optional booleans controlling what the handover page shows."""
-    from auth import is_admin_token
-    token = request.headers.get('X-Admin-Token', '')
-    if not is_admin_token(token):
-        abort(403)
+    # Header-or-cookie auth so cookie-only sessions (workspace subdomains) work.
+    _require_super_admin()
     cfg_path, cfg = _read_artist_config(slug)
     body = request.get_json(silent=True) or {}
     handover = cfg.get('handover') or {}
@@ -3543,6 +3898,9 @@ def _check_label_access(slug):
     token = request.headers.get('X-Admin-Token', '')
     if is_admin_token(token):
         return True
+    # Cookie-only admin sessions (workspace subdomains) carry no header token.
+    if is_admin_token(request.cookies.get('adze_admin_session', '')):
+        return True
     cfg = get_artist_config(slug) if slug else None
     if cfg and cfg.get('admin_token') == token:
         return True
@@ -3620,10 +3978,8 @@ def admin_asset_thumb(slug, rel):
 @bp.route('/admin/artists/<slug>/asset-meta', methods=['PATCH'])
 def admin_set_asset_meta(slug):
     """Update metadata for a single asset. Body: {path, tags?, notes?}."""
-    from auth import is_admin_token
-    token = request.headers.get('X-Admin-Token', '')
-    if not is_admin_token(token):
-        abort(403)
+    # Header-or-cookie auth (cookie-only sessions on workspace subdomains).
+    _require_super_admin()
     data = request.get_json() or {}
     rel = (data.get('path') or '').strip()
     if not rel:
