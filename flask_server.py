@@ -513,17 +513,8 @@ window.addEventListener('pagehide',send);
         except Exception as e:
             print(f"Error loading artist admin API: {e}")
 
-        # Register the Terminal Access WebSocket bridge (tmux/pty per artist).
-        try:
-            import terminal_bridge
-            terminal_bridge.register(self.socketio)
-            print("Registered Terminal Access WebSocket bridge on /terminal")
-        except Exception as e:
-            print(f"Error registering terminal bridge: {e}")
-
         # Register the Auto-Code HTTP+SSE proxy — runs `opencode serve`
-        # inside each per-artist sandbox and reverse-proxies it. Replaces
-        # the previous TUI-in-xterm WebSocket bridge.
+        # inside each per-artist sandbox and reverse-proxies it.
         try:
             import autocode_proxy
             autocode_proxy.register(self.app)

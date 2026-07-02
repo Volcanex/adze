@@ -5,7 +5,7 @@ Music & culture journalist. Portfolio site: home / about / writing / music.
 ## Writing page is GENERATED — do not hand-edit
 `writing/content.md` is rebuilt from **`posts.json`** (the source of truth) by
 `_shared/features/jack_admin.py` → `_render()`. It is listed in
-`.generated.json`, so `/edit-page` and Terminal Access refuse direct edits, and
+`.generated.json`, so `/edit-page` and Auto-Code refuse direct edits, and
 the next publish overwrites anything written to it by hand. To change articles,
 edit `posts.json` or use the dashboard. Each post: `{title, meta, excerpt, url}`
 (`meta` is the small-caps "Publication · Section · Date" line; store real

@@ -12,7 +12,6 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   Purelymail account (`integrations/purelymail.py`, workspace 'email' config).
 - `features/` — modular site-wide capabilities (e.g. `bookings.py`). See
   `features/CLAUDE.md`.
-- `terminal_bridge.py` — Socket.IO/tmux bridge for Terminal Access.
 - `autocode_proxy.py` — Flask reverse-proxy for the Auto-Code chat tab.
   Spawns `opencode serve` inside each per-artist sandbox container and
   forwards REST + `/global/event` SSE under `/api/adze/autocode/*`. The
@@ -39,19 +38,21 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   (`injectCSS`). Each page keeps its own tile/label markup; only the new
   folder code is shared.
 - `sandbox.py` — shared container-lifecycle helpers (name, network,
-  volume mounts, `ensure_terminal_container`). Used by `autocode_proxy`;
-  `terminal_bridge` still has its own copy — fold them later.
-- `docs/` — the **Terminal Access / Claude Code context**. Load-bearing.
+  volume mounts, `ensure_terminal_container`). Used by `autocode_proxy`
+  and `artist_repos`. Container naming (`adze-terminal-<slug>`) is
+  historical — it predates Terminal Access's retirement (see below) and
+  is now Auto-Code's sandbox only.
+- `docs/` — the **Auto-Code / opencode context**. Load-bearing.
 
 ## `docs/` is load-bearing — do not delete
 
-`terminal_bridge.py` builds a per-artist context from `_shared/docs/*.md`
-(in filename order), then appends artist config/page information before
-launching Claude Code inside the artist tmux session. Legacy
-`admin_api.py` prompt helpers may still read these docs too. This is how
-Terminal Access learns Adze conventions.
+`autocode_proxy.py` (`_build_system_prompt`) builds a per-artist context
+from `_shared/docs/*.md` (in filename order), then appends artist
+config/page information before launching `opencode serve` inside the
+artist's sandbox container. This is how Auto-Code learns Adze
+conventions.
 
-- **To update Terminal Access behaviour:** edit or add a numbered file
+- **To update Auto-Code's behaviour:** edit or add a numbered file
   (`NN-name.md`) in `_shared/docs/`. See `_shared/docs/DOCS_GUIDE.md`.
 - **Do not** rename, reorder, or delete `_shared/docs/*.md` files
   without updating the code path too.
@@ -65,9 +66,20 @@ See the relevant CLAUDE.md:
 - New platform-wide feature → `_shared/features/CLAUDE.md`
 
 Widgets run with admin auth and can write to artist pages; they are
-Gabriel-only tooling. Terminal Access is scoped to the artist site and
+Gabriel-only tooling. Auto-Code is scoped to the artist site and
 should not create dashboard widgets unless Gabriel explicitly changes
 that boundary — see `_shared/docs/00-behaviour.md` lines 31–37 for why.
+
+## Terminal Access — retired 2026-07
+
+The tmux/Claude-Code-CLI "Terminal Access" tab (`terminal_bridge.py`, the
+`/terminal` Socket.IO namespace, `_claude_sessions`/`claude-stream*`
+endpoints in `admin_api.py`, and the corresponding dashboard.html panel)
+was removed. **Auto-Code is the surviving AI-editing feature** and now the
+sole consumer of the shared per-artist sandbox container
+(`sandbox.py`/`artist_repos.py`). If you find a stray reference to
+Terminal Access, tmux sessions, or `previewFrameClaude`/`claudeInput`
+elsewhere, it's stale — flag and remove it.
 
 ## Workspace subdomains ({workspace}.adze.studio)
 

@@ -11,12 +11,6 @@
     <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"></noscript>
     <!-- Phosphor icons (per design-language/project/Adze Design Language.html) -->
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
-    <!-- xterm.js terminal + Socket.IO client for the Claude Code pty bridge -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-webgl@0.18.0/lib/addon-webgl.min.js" defer></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
     <!-- Auto-Code chat renderer: markdown + sanitiser. Loaded sync (no defer)
          so AutoCode init can use them without race against later <script> tags. -->
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
@@ -880,360 +874,6 @@
 
         .unsaved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); display: none; margin-left: 6px; box-shadow: 0 0 6px rgba(200,168,64,0.4); }
 
-        /* ── Terminal Access Terminal ──────────────────────────────────────────
-           This pane runs always-dark even in light dashboard mode. Tokens
-           below scope locally so children can use var(--…) and stay aligned
-           with /design-language/project/Adze Design Language.html. */
-        .claude-terminal {
-            /* Local always-dark token scope */
-            --bg: #1a1a1e;
-            --bg2: #222226;
-            --surface: #2c2c30;
-            --surface2: #343438;
-            --border: #3e3e44;
-            --text: #e8e6e0;
-            --text2: #9a978e;
-            --accent: #99cdff;
-            --accent-soft: #7ea3c4;
-            --accent-hover: #b8ddff;
-            --accent-text: #1a1a1e;
-            --warn: #c8a840;
-            --danger: #e74c3c;
-            --success: #6dca8a;
-            --radius: 4px;
-            /* Layout */
-            display: flex; flex-direction: column; flex: 1; min-height: 0;
-            overflow: hidden; background: var(--bg); height: 100%;
-            position: relative; --vc-scale: 1;
-        }
-        .claude-term-output { flex: 1; overflow-y: auto; padding: 16px 20px; font-family: var(--mono); font-size: calc(13px * var(--vc-scale)); line-height: 1.65; color: var(--text); white-space: pre-wrap; word-wrap: break-word; }
-        .vc-fs-controls { position: absolute; top: 6px; right: 10px; z-index: 5; display: flex; gap: 2px; background: rgba(34,34,38,0.85); backdrop-filter: blur(4px); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px; }
-        .vc-fs-controls button { background: transparent; color: var(--text); border: none; width: 22px; height: 22px; border-radius: 3px; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--body-font, sans-serif); line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; }
-        .vc-fs-controls button:hover { background: var(--surface2); color: #fff; }
-        .vc-fs-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
-        .vc-fs-controls .vc-fs-label { color: var(--text2); font-size: 10px; padding: 0 4px; align-self: center; min-width: 28px; text-align: center; font-family: var(--body-font, sans-serif); user-select: none; }
-        .claude-term-output::-webkit-scrollbar { width: 6px; }
-        .claude-term-output::-webkit-scrollbar-track { background: var(--bg2); }
-        .claude-term-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .claude-term-line { margin-bottom: 3px; font-size: calc(10px * var(--vc-scale)); padding: 2px 0; }
-        .claude-term-line.user-input { color: var(--accent); font-weight: 600; font-size: calc(12px * var(--vc-scale)); }
-        .claude-term-line.user-input::before { content: '❯ '; color: var(--accent); }
-        .claude-term-line.queued { opacity: 0.5; }
-        .claude-term-line.queued::after { content: ' (queued)'; font-weight: 400; font-size: calc(9px * var(--vc-scale)); color: var(--text2); }
-        .claude-term-line.system { color: var(--text2); font-style: italic; font-size: calc(9px * var(--vc-scale)); opacity: 0.75; }
-        .claude-term-line.error { color: var(--danger); font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.thinking { color: var(--text2); font-style: italic; font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.thinking::before { content: ''; }
-        .claude-term-line.tool-use { color: var(--text2); font-size: calc(10px * var(--vc-scale)); padding: 6px 8px; margin: 6px 0; background: rgba(255,255,255,0.03); border-radius: 4px; border-left: 2px solid var(--border); }
-        .claude-term-line.tool-use .tool-header { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--warn); font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.tool-use .tool-header i { font-size: calc(13px * var(--vc-scale)); color: var(--warn); }
-        .claude-term-line.tool-use .tool-header svg { width: 11px; height: 11px; stroke: var(--warn); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
-        .claude-term-line.tool-use .tool-args { font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: var(--text2); margin-top: 2px; word-break: break-all; opacity: 0.75; }
-        .claude-term-line.result-text { color: var(--text); font-size: calc(10px * var(--vc-scale)); line-height: 1.5; margin-top: 6px; }
-        .claude-term-line.result-text strong { color: #fff; }
-        .claude-term-line.result-text em { color: var(--text2); font-style: italic; }
-        .claude-term-line.result-text code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: calc(9px * var(--vc-scale)); color: var(--accent-soft); }
-        .claude-term-line.result-text a { color: var(--accent); text-decoration: underline; }
-        /* Diff card emitted by the server when an Edit/Write tool fires. */
-        .claude-term-line.diff-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin: 8px 0; padding: 0; overflow: hidden; font-size: calc(10px * var(--vc-scale)); }
-        .claude-term-line.diff-card .diff-head { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--surface); border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: calc(9px * var(--vc-scale)); color: var(--text2); cursor: pointer; user-select: none; }
-        .claude-term-line.diff-card .diff-head i { font-size: calc(12px * var(--vc-scale)); color: var(--accent); }
-        .claude-term-line.diff-card .diff-head .diff-path { color: var(--text); font-weight: 600; }
-        .claude-term-line.diff-card .diff-head .diff-stat { margin-left: auto; font-size: calc(8.5px * var(--vc-scale)); }
-        .claude-term-line.diff-card .diff-head .diff-stat .add { color: var(--success); }
-        .claude-term-line.diff-card .diff-head .diff-stat .rem { color: var(--danger); }
-        .claude-term-line.diff-card .diff-body { display: none; padding: 8px 10px; max-height: 240px; overflow-y: auto; font-family: var(--mono); white-space: pre; line-height: 1.4; }
-        .claude-term-line.diff-card.expanded .diff-body { display: block; }
-        .claude-term-line.diff-card .diff-body .ln-add { color: var(--success); display: block; }
-        .claude-term-line.diff-card .diff-body .ln-rem { color: var(--danger); display: block; opacity: 0.85; }
-        .claude-term-line.diff-card .diff-body .ln-ctx { color: var(--text2); display: block; opacity: 0.6; }
-        .claude-term-code-block { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin: 8px 0; overflow-x: auto; font-size: 12px; line-height: 1.5; color: var(--text); }
-        .claude-term-code-block .code-lang { color: var(--text2); font-size: 10px; text-transform: uppercase; margin-bottom: 6px; display: block; }
-        .claude-term-separator { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-        .claude-term-input-bar { display: flex; gap: 5px; padding: 8px 10px; background: var(--bg2); border-top: 1px solid var(--border); flex-shrink: 0; align-items: center; position: relative; }
-        .claude-term-input-bar input { flex: 1; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; font-family: var(--mono); font-size: 11px; outline: none; }
-        .claude-term-input-bar input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(153,205,255,0.18); }
-        .claude-term-input-bar input::placeholder { color: var(--text2); opacity: 0.6; }
-        .claude-term-input-bar button { padding: 6px 11px; border-radius: var(--radius); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-        .claude-term-input-bar button i { font-size: 14px; }
-        .claude-term-input-bar .claude-send { background: var(--accent); color: var(--accent-text); border: 1px solid var(--accent); }
-        .claude-term-input-bar .claude-send:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-        .claude-term-input-bar .claude-send:disabled { opacity: 0.4; }
-        .claude-term-input-bar .claude-halt { background: var(--danger); color: #fff; border: 1px solid var(--danger); }
-        .claude-term-input-bar .claude-halt:hover { filter: brightness(1.15); }
-        /* Cost meter pill — sits beside the input. Updates per result event. */
-        .claude-cost-pill { font-family: var(--mono); font-size: 10px; color: var(--text2); padding: 4px 8px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); white-space: nowrap; cursor: default; user-select: none; opacity: 0; transition: opacity 0.25s; }
-        .claude-cost-pill.show { opacity: 1; }
-        .claude-cost-pill .cost-val { color: var(--accent); font-weight: 600; }
-        .claude-cost-pill .tok-val { color: var(--text); margin-left: 6px; }
-        .claude-cost-pill .ctx-bar { display: inline-block; width: 28px; height: 4px; background: var(--bg2); border-radius: 999px; margin-left: 6px; vertical-align: middle; overflow: hidden; }
-        .claude-cost-pill .ctx-bar > span { display: block; height: 100%; background: var(--accent-soft); transition: width 0.3s; }
-        /* Slash command + @-mention popovers — same shape, anchored above the input bar. */
-        .claude-popover { position: absolute; left: 10px; right: 10px; bottom: calc(100% + 4px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,0.4); max-height: 240px; overflow-y: auto; z-index: 50; display: none; }
-        .claude-popover.show { display: block; }
-        .claude-popover .pop-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-size: 11px; color: var(--text2); cursor: pointer; transition: background 0.1s; }
-        .claude-popover .pop-item:hover, .claude-popover .pop-item.active { background: var(--surface2); color: var(--text); }
-        .claude-popover .pop-item i { font-size: 13px; color: var(--accent); flex-shrink: 0; }
-        .claude-popover .pop-item .pop-name { font-family: var(--mono); font-weight: 600; color: var(--text); }
-        .claude-popover .pop-item .pop-desc { font-size: 10px; color: var(--text2); margin-left: auto; opacity: 0.75; }
-        .claude-popover .pop-empty { padding: 10px; font-size: 11px; color: var(--text2); font-style: italic; text-align: center; opacity: 0.6; }
-        /* Terminal Access presence badge — shown when another browser tab is editing the same artist */
-        .vibe-presence-badge { display: none; align-items: center; gap: 8px; padding: 6px 10px; background: #2a2a1e; border-top: 1px solid #5c5230; color: #d9c78a; font-size: 11px; flex-shrink: 0; }
-        .vibe-presence-badge.show { display: flex; }
-        .vibe-presence-badge .vp-dot { width: 6px; height: 6px; border-radius: 50%; background: #d9c78a; flex-shrink: 0; box-shadow: 0 0 0 0 rgba(217,199,138,0.6); animation: vpPulse 2s ease-in-out infinite; }
-        @keyframes vpPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(217,199,138,0.6); } 50% { box-shadow: 0 0 0 5px rgba(217,199,138,0); } }
-        .vibe-presence-badge .vp-msg { flex: 1; }
-        .vibe-presence-badge .vp-takeover { background: transparent; color: #d9c78a; border: 1px solid #5c5230; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: 500; }
-        .vibe-presence-badge .vp-takeover:hover { background: #d9c78a; color: #1a1a1a; }
-        /* Takeover overlay — shown when another tab took over this session */
-        .vibe-takeover-overlay { display: none; position: fixed; inset: 0; background: rgba(10,10,12,0.92); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .vibe-takeover-overlay.show { display: flex; }
-        .vibe-takeover-overlay .vto-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 32px 36px; max-width: 420px; text-align: center; color: var(--text); font-family: var(--mono); }
-        .vibe-takeover-overlay h3 { margin: 0 0 10px; font-family: var(--heading-font); font-weight: 700; font-size: 21px; color: var(--accent); letter-spacing: -0.01em; text-transform: none; }
-        .vibe-takeover-overlay p { margin: 0 0 22px; font-size: 13px; line-height: 1.5; color: var(--text2); }
-        .vibe-takeover-overlay button { background: var(--accent); color: var(--accent-text); border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
-        .vibe-takeover-overlay button:hover { background: var(--accent-hover); }
-        .claude-tools-toggle { width: 26px; flex-shrink: 0; background: var(--surface); color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-weight: 300; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 6px 0; line-height: 1; box-sizing: border-box; }
-        .claude-tools-toggle:hover { color: var(--text); border-color: var(--accent); }
-        .claude-tools-toggle.open { background: var(--accent); color: var(--accent-text); border-color: var(--accent); transform: rotate(45deg); }
-        .claude-term-tools { display: flex; }
-        .claude-tool-btn { background: transparent; color: var(--text2); border: 1px solid var(--border); padding: 8px 10px; font-size: 11px; border-radius: var(--radius); white-space: nowrap; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 5px; }
-        .claude-tool-btn i { font-size: 13px; }
-        .claude-tool-btn:hover { color: var(--accent); border-color: var(--accent); }
-        .claude-tool-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(153,205,255,0.1); }
-        .claude-term-welcome { padding: 30px 20px; text-align: center; }
-        .claude-term-welcome h2 { font-family: var(--heading-font); font-weight: 700; color: var(--accent); font-size: 26px; margin-bottom: 8px; letter-spacing: -0.01em; text-transform: none; }
-        .claude-term-welcome p { color: var(--text2); font-size: 13px; line-height: 1.3; max-width: 500px; margin: 0 auto; }
-        .claude-term-welcome .vc-line1 { font-size: 13px; }
-        .claude-term-welcome .vc-line2 { font-size: 11.5px; margin-top: 1px; }
-        .claude-term-welcome .vc-line3 { font-size: 10px; margin-top: 1px; }
-        .claude-term-welcome .vc-line4 { font-size: 8.5px; margin-top: 1px; }
-        .claude-term-welcome .vc-try { margin-top: 14px; }
-        .claude-term-welcome kbd { background: var(--surface); padding: 2px 6px; border-radius: 3px; font-family: var(--mono); font-size: 11px; color: var(--text2); border: 1px solid var(--border); transition: opacity 0.25s, transform 0.25s; cursor: pointer; }
-        .claude-term-welcome kbd:hover { color: var(--text); border-color: var(--text2); }
-        @keyframes vcFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        .vc-suggestion { display: inline-block; animation: vcFadeIn 0.3s ease; }
-        .claude-thinking-indicator { display: inline-flex; align-items: center; gap: 6px; color: var(--text2); font-style: italic; font-size: 13px; padding: 4px 0; }
-        /* ── Turn cards (rebuilt v3 — design-language editorial chat) ──────
-           One vc-turn per user/assistant turn. Italic Cardo author label,
-           mono meta, Inter body. Tool calls become compact inline tiles
-           inside the assistant turn's body; diff cards live alongside.
-           Calm 240ms fade-in. Streaming text appends per-chunk spans that
-           opacity-fade so the prose grows softly instead of snapping. */
-        .claude-term-output { scroll-behavior: smooth; }
-        /* Assistant turn = charcoal card. User turn = plain prose with an
-           accent-left-border (no card). The card-vs-no-card contrast makes
-           the speaker obvious without needing a label at the top. */
-        .vc-turn {
-            animation: vcTurnIn 240ms cubic-bezier(.2,.7,.2,1);
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        @keyframes vcTurnIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        .vc-turn.assistant {
-            background: #1f1f23;
-            border: 1px solid #2c2c30;
-            border-radius: var(--radius);
-            padding: 12px 16px;
-            margin: 0 0 12px;
-        }
-        .vc-turn.user {
-            background: transparent;
-            border: none;
-            border-left: 2px solid var(--accent);
-            padding: 2px 0 2px 12px;
-            margin: 4px 0 8px;
-            gap: 0;
-        }
-        .vc-turn.user .vc-prose {
-            color: var(--text);
-            font-family: var(--body-font);
-            font-size: calc(13px * var(--vc-scale));
-            line-height: 1.5;
-            opacity: 0.88;
-        }
-        /* Queued: user message waiting for the current turn to finish */
-        .vc-turn.user.queued {
-            opacity: 0.55;
-            border-left-color: var(--text2);
-            border-left-style: dashed;
-        }
-        .vc-turn.user.queued .vc-prose::after {
-            content: ' (queued)';
-            font-family: var(--mono);
-            font-size: calc(10px * var(--vc-scale));
-            color: var(--text2);
-            opacity: 0.7;
-            font-weight: 400;
-            margin-left: 6px;
-        }
-        .vc-turn-body {
-            font-family: var(--body-font);
-            font-size: calc(13px * var(--vc-scale));
-            line-height: 1.6;
-            color: var(--text);
-            display: flex; flex-direction: column; gap: 8px;
-        }
-        .vc-prose { white-space: pre-wrap; word-wrap: break-word; }
-        .vc-prose .vc-chunk { animation: vcChunkFade 320ms ease-out backwards; }
-        @keyframes vcChunkFade { from { opacity: 0; } to { opacity: 1; } }
-        .vc-prose strong { color: #fff; font-weight: 600; }
-        .vc-prose em { color: var(--text2); font-style: italic; }
-        .vc-prose code {
-            font-family: var(--mono); font-size: calc(11px * var(--vc-scale));
-            background: var(--bg2); padding: 1px 5px; border-radius: 3px;
-            color: var(--accent-soft);
-        }
-        .vc-prose a { color: var(--accent); text-decoration: underline; }
-        .vc-prose pre {
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: var(--radius); padding: 10px 12px;
-            margin: 6px 0; overflow-x: auto;
-            font-family: var(--mono); font-size: 11px; line-height: 1.5;
-        }
-        .vc-prose p { margin: 0 0 8px; }
-        .vc-prose p:last-child { margin-bottom: 0; }
-
-        /* Thinking dot — single pulsing dot before any text/tool arrives */
-        .vc-thinking { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 11px; font-style: italic; padding: 2px 0; }
-        .vc-thinking .vc-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: vcDotPulse 1.4s ease-in-out infinite; }
-        @keyframes vcDotPulse { 0%,100% { opacity: 0.3; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
-
-        /* Tool tile — compact inline state-aware row */
-        .vc-tool {
-            display: flex; align-items: center; gap: 8px;
-            padding: 6px 10px;
-            background: var(--bg2);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            font-family: var(--mono);
-            font-size: 11px;
-            color: var(--text2);
-            animation: vcToolIn 180ms ease-out;
-            transition: border-color 0.2s, background 0.2s;
-        }
-        @keyframes vcToolIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
-        .vc-tool .vc-tool-state {
-            width: 14px; height: 14px;
-            display: inline-flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-        }
-        .vc-tool .vc-tool-state .vc-spin {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            border: 1.5px solid var(--accent);
-            border-top-color: transparent;
-            animation: vcSpin 0.7s linear infinite;
-        }
-        @keyframes vcSpin { to { transform: rotate(360deg); } }
-        .vc-tool .vc-tool-state i { font-size: 13px; }
-        .vc-tool[data-state="done"] .vc-tool-state i  { color: var(--success); }
-        .vc-tool[data-state="error"] .vc-tool-state i { color: var(--danger); }
-        .vc-tool .vc-tool-name { color: var(--text); font-weight: 600; }
-        .vc-tool .vc-tool-args { color: var(--text2); opacity: 0.7; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .vc-tool[data-state="done"]  { border-color: rgba(109,202,138,0.25); }
-        .vc-tool[data-state="error"] { border-color: rgba(231,76,60,0.4); background: rgba(231,76,60,0.06); }
-
-        /* Diff card — sits inside assistant turn body. Compact when collapsed
-           so the head matches a tool tile in size; expands on click. */
-        .vc-diff {
-            border: 1px solid #2c2c30;
-            border-radius: 4px;
-            background: #1a1a1e;
-            overflow: hidden;
-            font-family: var(--mono);
-            font-size: 11px;
-            animation: vcToolIn 200ms ease-out;
-        }
-        .vc-diff .diff-head {
-            display: flex; align-items: center; gap: 6px;
-            padding: 4px 10px;
-            background: transparent;
-            color: var(--text2);
-            cursor: pointer; user-select: none;
-            transition: background 0.15s;
-            font-size: 11px;
-            line-height: 1.5;
-        }
-        .vc-diff.expanded .diff-head { border-bottom: 1px solid #2c2c30; }
-        .vc-diff .diff-head:hover { background: #1f1f23; }
-        .vc-diff .diff-head > i { font-size: 12px; color: var(--accent); }
-        .vc-diff .diff-head .diff-path { color: var(--text); font-weight: 600; }
-        .vc-diff .diff-head .diff-tool { font-size: 9px; opacity: 0.55; text-transform: lowercase; }
-        .vc-diff .diff-head .diff-stat { margin-left: auto; font-size: 10px; }
-        .vc-diff .diff-head .diff-stat .add { color: var(--success); }
-        .vc-diff .diff-head .diff-stat .rem { color: var(--danger); }
-        .vc-diff .diff-head .diff-chev { font-size: 9px; color: var(--text2); transition: transform 0.2s; opacity: 0.55; }
-        .vc-diff.expanded .diff-head .diff-chev { transform: rotate(90deg); }
-        .vc-diff .diff-body {
-            display: none;
-            padding: 4px 0;
-            max-height: 320px; overflow: auto;
-            background: #16161a;
-            font-family: var(--mono); font-size: 11px;
-            white-space: pre; line-height: 1.55;
-        }
-        .vc-diff.expanded .diff-body { display: block; }
-        /* Each line: 3px colored left bar + subtle bg tint, no +/- prefix
-           character (the bar communicates it). Source indentation is
-           preserved because we strip just the leading marker. */
-        .vc-diff .diff-body > span {
-            display: block;
-            padding: 0 12px 0 9px;
-            border-left: 3px solid transparent;
-        }
-        .vc-diff .diff-body .ln-add {
-            border-left-color: var(--success);
-            background: rgba(74,154,106,0.10);
-            color: #c5e0cd;
-        }
-        .vc-diff .diff-body .ln-rem {
-            border-left-color: var(--danger);
-            background: rgba(192,57,43,0.10);
-            color: #d8a8a3;
-        }
-        .vc-diff .diff-body .ln-ctx {
-            color: var(--text2);
-            opacity: 0.55;
-        }
-
-        /* Per-turn footer — author label moved here (was at the top), with
-           timestamp and the cost / tokens / total-time meta */
-        .vc-turn-foot {
-            display: flex; gap: 10px; align-items: center;
-            font-family: var(--mono); font-size: 10px;
-            color: var(--text2);
-            border-top: 1px solid #2c2c30;
-            padding-top: 8px;
-            margin-top: 4px;
-            animation: vcFadeIn 250ms ease-out;
-            letter-spacing: 0.04em;
-        }
-        .vc-turn-foot .vc-foot-who {
-            color: var(--accent-soft);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-        .vc-turn-foot .vc-foot-time { opacity: 0.55; }
-        .vc-turn-foot > span:not(.vc-foot-who):not(.vc-foot-time) { opacity: 0.65; }
-        .vc-turn-foot .vc-cost { color: var(--accent-soft); opacity: 0.85; }
-
-        /* Inline error inside a turn */
-        .vc-error {
-            color: var(--danger); font-size: 11px;
-            padding: 6px 10px; border-radius: 4px;
-            background: rgba(231,76,60,0.08);
-            border: 1px solid rgba(231,76,60,0.25);
-        }
-
-        /* System note — inline between turns, not a card */
-        .vc-system {
-            font-family: var(--mono); font-size: 10px;
-            color: var(--text2); font-style: italic;
-            text-align: center; padding: 4px 0;
-            animation: vcFadeIn 200ms ease-out;
-            opacity: 0.7;
-        }
         .claude-thinking-indicator .dots span { animation: dotPulse 1.4s infinite; opacity: 0.3; }
         .claude-thinking-indicator .dots span:nth-child(2) { animation-delay: 0.2s; }
         .claude-thinking-indicator .dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -1325,15 +965,6 @@
                overflow next to the 220px tree, so scope an override here. */
             #panel-edit .file-tree-pane { width: 38%; min-width: 92px; max-width: 150px; }
             #panel-edit .editor-pane { width: auto !important; min-width: 0; flex: 1; }
-
-            /* Adjust Claude terminal for mobile — ensure input stays visible */
-            .claude-terminal { font-size: 10px; display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
-            .claude-term-output { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-            .claude-term-input-bar { padding: 8px; gap: 5px; flex-shrink: 0; background: #222226; border-top: 1px solid #333; position: sticky; bottom: 0; }
-            .claude-term-input-bar input { font-size: 13px; padding: 8px 10px; }
-            .claude-term-input-bar button { padding: 6px 11px; font-size: 11px; }
-            .claude-tool-btn { font-size: 9px; padding: 5px 7px; }
-            .panel-claude .editor-pane { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 
             /* Adjust editor split */
             .editor-split { flex-direction: column; }
@@ -1452,9 +1083,6 @@
                 <!-- Tab bar -->
                 <div class="tab-bar" id="tabBar" style="display:none;">
                     <button class="tab" data-tab="edit" onclick="switchTab('edit', this)"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span class="tab-label">Manual Edit</span></button>
-                    <!-- Terminal tab shelved — entry point hidden; panel-claude + terminal code left intact so programmatic switches still work. Uncomment to restore.
-                    <button class="tab" data-tab="claude" onclick="switchTab('claude', this)"><svg viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg><span class="tab-label">Terminal</span></button>
-                    -->
                     <button class="tab active" data-tab="autocode" onclick="switchTab('autocode', this)"><img src="/api/adze/logo.png" alt="" class="adze-logo" style="height:10px;width:auto;vertical-align:middle;margin-right:2px;position:relative;top:-1px;"><span class="tab-label">Auto-Code</span></button>
                     <button class="tab" data-tab="config" onclick="switchTab('config', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="tab-label">Settings</span></button>
                     <button class="tab" data-tab="styles" onclick="switchTab('styles', this)"><svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg><span class="tab-label">Styles</span></button>
@@ -1563,70 +1191,6 @@
                                 </div>
                             </div>
                             <iframe id="previewFrame" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Claude Terminal Tab -->
-                <div class="tab-panel" id="panel-claude">
-                    <div class="split-pane">
-                        <div class="editor-pane" id="claudeEditorPane">
-                            <div class="claude-terminal" id="claudeTerminal">
-                                <div class="vc-fs-controls" role="group" aria-label="Terminal Access text size">
-                                    <button type="button" onclick="vcFontSize(-1)" id="vcFsMinus" title="Smaller text" aria-label="Decrease text size">A−</button>
-                                    <span class="vc-fs-label" id="vcFsLabel">100%</span>
-                                    <button type="button" onclick="vcFontSize(1)" id="vcFsPlus" title="Larger text" aria-label="Increase text size">A+</button>
-                                </div>
-                                <div class="claude-term-output" id="claudeOutput" style="padding:0;overflow:hidden;background:#1a1a1e;min-height:0;display:flex;flex-direction:column;">
-                                    <div id="vcXtermHost" style="flex:1;min-height:0;min-width:0;overflow:hidden;background:#1a1a1e;position:relative;">
-                                        <div id="vcXtermBoot" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5a5750;font-family:Menlo,Monaco,monospace;font-size:11px;opacity:0.5;">
-                                            <span class="vc-boot-dot"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="claude-term-tools" id="claudeToolsRow" style="display:flex;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--border);gap:6px;flex-shrink:0;flex-wrap:wrap;">
-                                    <button class="claude-tool-btn" onclick="vcInsertAssetIntoTerminal()" title="Pick an asset to inject its path"><i class="ph ph-image"></i> Asset</button>
-                                    <button class="claude-tool-btn" id="claudePointerBtn" onclick="toggleClaudePointer()" title="Pick an element on the preview"><i class="ph ph-cursor"></i> Pointer</button>
-                                    <button class="claude-tool-btn" onclick="vcTerminalClear()" title="Clear Claude Code chat history (/clear)"><i class="ph ph-broom"></i> Clear</button>
-                                </div>
-                                <div class="vibe-presence-badge" id="vibePresenceBadge" role="status">
-                                    <span class="vp-dot"></span>
-                                    <span class="vp-msg" id="vibePresenceMsg">Another tab is attached to this terminal.</span>
-                                    <button type="button" class="vp-takeover" onclick="vibeTakeover()">Take over</button>
-                                </div>
-                                <div class="claude-term-input-bar" style="display:none;">
-                                    <div class="claude-popover" id="claudePopover"></div>
-                                    <input type="text" id="claudeInput" placeholder="Ask, or / for commands, @ to attach a file…" onkeydown="onClaudeInputKeydown(event)" oninput="onClaudeInputChange(event)">
-                                    <span class="claude-cost-pill" id="claudeCostPill" title="This conversation: cost · tokens · context fill">
-                                        <span class="cost-val" id="ccPillCost">$0.00</span>
-                                        <span class="tok-val" id="ccPillTok">0 tok</span>
-                                        <span class="ctx-bar"><span id="ccPillCtxBar" style="width:0%"></span></span>
-                                    </span>
-                                    <button class="claude-tools-toggle" onclick="toggleClaudeTools()" title="Tools" aria-label="Tools"><i class="ph ph-plus"></i></button>
-                                    <button class="claude-send" onclick="sendClaudeMessage()" id="claudeSendBtn" aria-label="Send"><i class="ph ph-paper-plane-tilt"></i></button>
-                                    <button class="claude-halt" onclick="haltClaude()" id="claudeHaltBtn" style="display:none;" title="Stop Terminal" aria-label="Stop"><i class="ph ph-stop"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pane-resizer" data-target="claudeEditorPane"></div>
-                        <div class="preview-pane">
-                            <div class="pane-header">
-                                <span>Preview</span>
-                                <div class="pane-actions">
-                                    <button class="btn-sm btn-ghost" id="textEditBtn" onclick="toggleTextEdit()" title="Click text in the preview to edit it inline"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Text Edit</button>
-                                    <button class="btn-sm btn-ghost" onclick="refreshPreview()" title="Reload preview from server"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Refresh</button>
-                                    <button class="btn-sm btn-ghost" onclick="toggleFullscreen()"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Fullscreen</button>
-                                </div>
-                            </div>
-                            <div id="previewErrorBar" style="display:none;background:#2d1b1b;border-bottom:1px solid #5a2d2d;padding:6px 12px;font-size:12px;color:#e8a0a0;flex-shrink:0;align-items:center;gap:8px;">
-                                <span id="previewErrorCount" style="font-weight:600;"></span>
-                                <span id="previewErrorSummary" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c88;"></span>
-                                <button onclick="dismissErrors()" style="background:none;border:none;color:#886;cursor:pointer;font-size:14px;padding:2px 4px;">✕</button>
-                            </div>
-                            <iframe id="previewFrameClaude" class="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
-                            <div class="pointer-overlay" id="claudePointerOverlay"></div>
-                            <div class="pointer-highlight" id="claudePointerHighlight" style="display:none;"></div>
-                            <div class="pointer-label" id="claudePointerLabel" style="display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -1852,7 +1416,7 @@
                                 <div class="snapshot-actions">
                                     <button onclick="createServerSnapshot()">Save Snapshot</button>
                                 </div>
-                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. The latest <em>Save</em> is always kept as a one-step <strong>autosave</strong> (pinned at the top). Named snapshots roll over after 10. A snapshot is also auto-created before each new Terminal Access session.</p>
+                                <p style="font-size:11px;color:var(--text2);margin:-8px 0 12px;line-height:1.5;">Snapshots save all your pages, config, and backend code. Assets (images, fonts) are <strong>not</strong> included — they're managed separately and won't be affected by restores. The latest <em>Save</em> is always kept as a one-step <strong>autosave</strong> (pinned at the top). Named snapshots roll over after 10.</p>
                                 <ul class="snapshot-list" id="snapshotList"></ul>
                             </div>
                         </div>
@@ -2100,15 +1664,6 @@
 
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer"></div>
-
-    <!-- Terminal Access takeover overlay — shown when another tab has taken the session -->
-    <div class="vibe-takeover-overlay" id="vibeTakeoverOverlay" role="dialog" aria-modal="true">
-        <div class="vto-box">
-            <h3>Session taken over</h3>
-            <p>Someone else has taken over this editing session. Reload to continue.</p>
-            <button type="button" onclick="location.reload()">Reload</button>
-        </div>
-    </div>
 
     <!-- Create Page Modal -->
     <div class="modal" id="createPageModal">
@@ -2397,7 +1952,6 @@ function _initDashboard(info) {
     loadAssets().then(() => loadWidgets());
     loadDefaultStylesForPreview();
     loadArtistFiles();
-    startVibePresence();
     // Auto-Code is the initial active tab; switchTab won't fire on first
     // load, so kick the chat init manually now that currentArtist is set.
     AutoCode.init();
@@ -2439,64 +1993,15 @@ function switchAdminArtist(slug) {
     location.href = url.pathname + url.search;
 }
 
-// ── Terminal Access presence (per browser-tab awareness) ──────────────────────────
-// Each tab heartbeats to the server so we can warn when two tabs are attached
-// to the same artist terminal. "Take over" makes this tab the primary presence
-// owner, but does not kick the other tab; tmux is shared and attachable.
-// SSH / direct filesystem edits are intentionally invisible here.
-const vibeTabId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
-let _vibePresenceTimer = null;
-
-async function _vibeHeartbeat() {
-    if (!currentArtist) return;
-    try {
-        const r = await apiFetch('/api/adze/vibe-presence/heartbeat', {
-            method: 'POST',
-            body: { tab_id: vibeTabId },
-        });
-        if (!r.ok) return;
-        const data = await r.json();
-        const badge = document.getElementById('vibePresenceBadge');
-        if (!badge) return;
-        if (data.others && data.others.length > 0) {
-            badge.classList.add('show');
-        } else {
-            badge.classList.remove('show');
-        }
-    } catch (e) { /* network hiccup — retry next tick */ }
-}
-
-function startVibePresence() {
-    if (_vibePresenceTimer) return;
-    _vibeHeartbeat();
-    _vibePresenceTimer = setInterval(_vibeHeartbeat, 5000);
-}
-
-async function vibeTakeover() {
-    if (!currentArtist) return;
-    try {
-        const r = await apiFetch('/api/adze/vibe-presence/takeover', {
-            method: 'POST',
-            body: { tab_id: vibeTabId },
-        });
-        if (!r.ok) { toast('Take over failed', 'error'); return; }
-        await r.json();
-        document.getElementById('vibePresenceBadge').classList.remove('show');
-        toast('You are now the primary terminal tab', 'info');
-    } catch (e) {
-        toast('Take over failed: ' + e.message, 'error');
-    }
-}
-
 // External (remote Seed) artists default to a stripped-down dashboard:
-// only the Terminal Access, Pages, Preview, and Settings tabs make sense without
-// the Adze-side machinery (assets pipeline, snapshots, marketplace, etc.).
+// only the Pages and Settings tabs make sense without the Adze-side
+// machinery (assets pipeline, snapshots, marketplace, etc.).
 // The artist can still un-hide individual tabs by setting
 // config.dashboard.hidden_widgets explicitly.
-// Visible by default for external artists: 'claude' (Terminal Access), 'edit'
-// (Manual Edit / pages), 'config' (Settings). The Preview iframe lives
-// inside those tabs, not as a separate tab. Everything else is Adze-side
-// machinery that doesn't apply to a remote Seed deployment.
+// Visible by default for external artists: 'edit' (Manual Edit / pages),
+// 'config' (Settings). The Preview iframe lives inside those tabs, not as
+// a separate tab. Everything else is Adze-side machinery that doesn't
+// apply to a remote Seed deployment.
 const EXTERNAL_HIDDEN_DEFAULTS = ['assets', 'snapshots', 'analytics', 'extensions', 'domain', 'export', 'fonts', 'share', 'styles', 'api', 'about'];
 
 function applyExternalDefaults(config) {
@@ -2655,7 +2160,7 @@ let currentWidget = null;    // currently editing in widget editor mode
 let sidebarMode = 'pages';   // kept for compat; sidebar now shows both sections always
 let _extData = null;          // cached extensions data
 let _widgetPreviewDebounce = null;
-// Terminal Access addon registry — populated exclusively by widget closures via ctx.registerVibeAddon()
+// Auto-Code addon registry — populated exclusively by widget closures via ctx.registerVibeAddon()
 // A vibe addon cannot exist without a widget; it is an arm of the widget that registers it.
 // When a widget is unloaded/replaced, its addon stays until the page reloads (acceptable).
 const vibeAddons = {};       // id → { id, label, pick() }
@@ -2987,8 +2492,8 @@ function openWidgetEditor(w) {
         document.getElementById('jsEditorAutoSaveLabel').textContent = '';
     }
 
-    // Switch to Terminal Access tab and show widget preview
-    switchTab('claude');
+    // Widget editing lives in the Manual Edit tab's editor pane
+    switchTab('edit');
     setUnsaved(false);
     scheduleWidgetPreview(0);
 }
@@ -3096,7 +2601,7 @@ function updateWidgetPreview() {
     if (!currentWidget) return;
     const jsCode = document.getElementById('jsEditor').value;
     const srcdoc = _buildWidgetPreviewSrcdoc(currentWidget.name, jsCode);
-    // Push to edit-tab preview AND Terminal Access preview so both stay in sync
+    // Push to edit-tab preview AND Auto-Code preview so both stay in sync
     ['previewFrame', 'previewFrameClaude', 'previewFrameAutocode'].forEach(id => {
         const f = document.getElementById(id);
         if (f) f.srcdoc = srcdoc;
@@ -3401,7 +2906,7 @@ async function loadStylesTab() {
     _stylesVars = _parseRootVars(_stylesCss);
 
     if (!_stylesVars.length) {
-        editor.innerHTML = '<p style="color:var(--text2);font-size:13px;">No CSS custom properties found. Use the Terminal Access to create your site first — it will generate default styles automatically.</p>';
+        editor.innerHTML = '<p style="color:var(--text2);font-size:13px;">No CSS custom properties found. Use Auto-Code to create your site first — it will generate default styles automatically.</p>';
         return;
     }
 
@@ -3888,7 +3393,7 @@ function renderApiEndpoints() {
         html += `<div class="api-empty-custom">
             <p style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;">No custom features yet</p>
             <p>Features like bookings, print shops, or custom tools can be added using this. These are the tendons of the site.</p>
-            <p style="margin-top:4px;">Also I can make custom dashboard components pretty easily for you that can call these API endpoints. So say you had a booking system, you could see it visually on the dashboard. But this is further embedded in the dashboard infrastructure, which is separate from your site (which is sandboxed). So you can't do it all from the Terminal Access. I might change this later.</p>
+            <p style="margin-top:4px;">Also I can make custom dashboard components pretty easily for you that can call these API endpoints. So say you had a booking system, you could see it visually on the dashboard. But this is further embedded in the dashboard infrastructure, which is separate from your site (which is sandboxed). So you can't do it all from Auto-Code. I might change this later.</p>
         </div>`;
     }
 
@@ -3998,6 +3503,9 @@ async function apiTryGet(url, resultId) {
 
 // ── Tab Switching ──
 function switchTab(tab, btn) {
+    // Ignore switches to a tab whose panel doesn't exist (e.g. stale callers
+    // targeting a retired tab) — bail before deactivating the current one.
+    if (!document.getElementById('panel-' + tab)) return;
     // Activate the tab and panel first — so even if a loader throws, the UI updates
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -4018,11 +3526,9 @@ function switchTab(tab, btn) {
         if (tab === 'share') loadShareTab();
         if (tab === 'extensions') loadExtensionsTab();
         if (tab === 'styles') loadStylesTab();
-        if (tab === 'claude') vcInitTerminal();
         if (tab === 'autocode') AutoCode.init();
-        // Keep widget editor state when switching to Terminal Access (preview stays as widget)
         // Exit widget editor for all other tabs
-        if (tab !== 'edit' && tab !== 'claude') exitWidgetEditorMode();
+        if (tab !== 'edit') exitWidgetEditorMode();
     } catch(e) {
         console.error('Tab load error:', e);
     }
@@ -4037,12 +3543,7 @@ function switchTab(tab, btn) {
         } else {
             toggleBtn.classList.remove('show-mobile');
         }
-        // Elevate button on Terminal Access tab to avoid covering controls
-        if (tab === 'claude') {
-            toggleBtn.classList.add('elevated');
-        } else {
-            toggleBtn.classList.remove('elevated');
-        }
+        toggleBtn.classList.remove('elevated');
     }
 
     // Sync all preview frames
@@ -4197,13 +3698,6 @@ window.addEventListener('message', (e) => {
     }
 });
 
-function sendErrorsToVibeCoder() {
-    if (previewErrors.length === 0) return;
-    const errorText = previewErrors.map((e, i) => `${i + 1}. [${e.type}] ${e.message}`).join('\n');
-    vcPasteIntoTerminal(`The live preview has ${previewErrors.length} error(s) in the browser console:\n\n${errorText}\n\nPlease fix these.\n`);
-    dismissErrors();
-}
-
 function dismissErrors() {
     previewErrors = [];
     const bar = document.getElementById('previewErrorBar');
@@ -4338,7 +3832,7 @@ async function refreshPreview(quiet = false) {
         const r = await apiFetch(`/api/adze/get-page-content?page_slug=${currentPage.slug}`);
         if (r.status === 404) {
             // The active page was deleted out from under us — e.g. Auto-Code
-            // or Terminal Access removed it. Don't keep re-rendering a 404;
+            // or Auto-Code removed it. Don't keep re-rendering a 404;
             // reload the list and switch to a surviving page.
             await handleCurrentPageGone(quiet);
             return;
@@ -5294,11 +4788,6 @@ function copyAssetUrl(path) {
         : `${location.origin}/artists/${currentArtist}/assets/${path}`;
     navigator.clipboard.writeText(url);
     toast('Copied URL', 'info');
-}
-
-function sendAssetToVibeCoder(path) {
-    switchTab('claude');
-    vcPasteIntoTerminal(`../assets/${path} `);
 }
 
 async function deleteSingleAsset(path) {
@@ -7724,20 +7213,20 @@ function renderAbout() {
     if (s) {
         html += `
             <p>You can change anything about how your site looks and what it says. Every page, every colour, every image — it's all yours to shape however you want.</p>
-            <p>The <strong>Terminal Access</strong> tab is the easiest way to make changes. Describe what you want in plain English and it does it — "make my gallery bigger", "change the font", "add a new page called Press", whatever you need.</p>
+            <p>The <strong>Auto-Code</strong> tab is the easiest way to make changes. Describe what you want in plain English and it does it — "make my gallery bigger", "change the font", "add a new page called Press", whatever you need.</p>
             <p>You can also use <strong>Manual Edit</strong> if you want to tweak the code directly, or browse <strong>Assets</strong> to manage your images and files.</p>
         `;
     } else if (m) {
         html += `
             <p>You have full creative control. Each page is a folder containing a <code>content.md</code> file (your HTML + CSS) and a <code>config.json</code> (title, description, metadata).</p>
-            <p>You can edit these directly in the <strong>Manual Edit</strong> tab, or use the <strong>Terminal Access</strong> — an AI assistant that can read and write all your site files. It can edit multiple pages at once, create new pages, restructure your nav, and more.</p>
+            <p>You can edit these directly in the <strong>Manual Edit</strong> tab, or use <strong>Auto-Code</strong> — an AI assistant that can read and write all your site files. It can edit multiple pages at once, create new pages, restructure your nav, and more.</p>
             <p>Your assets (images, fonts, files) live in an <code>assets/</code> folder and are referenced with relative paths like <code>../assets/images/photo.jpg</code>.</p>
         `;
     } else {
         html += `
             <p>Each page is a directory under <code>pages/artists/${currentArtist}/</code> containing <code>content.md</code> and <code>config.json</code>. The content.md format is <code>&lt;style&gt;CSS&lt;/style&gt;\\n&lt;html&gt;HTML&lt;/html&gt;</code>.</p>
             <p>When you click <strong>Save</strong>, the server runs <code>compile.py</code> which reads every page's content.md, wraps it in a base HTML template, and writes static .html files to <code>output/artists/${currentArtist}/</code>. These are served directly by nginx — no server-side rendering at request time.</p>
-            <p>You can also create an <code>api.py</code> (Flask Blueprint) for custom backend endpoints. The Terminal Access can write this for you. Routes register at <code>/api/artists/${currentArtist}/...</code>.</p>
+            <p>You can also create an <code>api.py</code> (Flask Blueprint) for custom backend endpoints. Auto-Code can write this for you. Routes register at <code>/api/artists/${currentArtist}/...</code>.</p>
         `;
     }
     html += `</div>`;
@@ -7753,14 +7242,14 @@ function renderAbout() {
                 <span class="flow-you">Assets</span> — Your images, fonts, and files
                 <br><br>
                 <span class="flow-label">This dashboard</span>
-                <span class="flow-gab">Terminal Access</span> — AI that makes changes for you
+                <span class="flow-gab">Auto-Code</span> — AI that makes changes for you
                 <br>
                 <span class="flow-gab">Manual Edit</span> — For when you want to get hands-on with the code
                 <br>
                 <span class="flow-gab">History</span> — Snapshots of your site you can roll back to
                 <br><br>
                 <span class="flow-label">How changes go live</span>
-                Make a change (Terminal Access or Manual Edit)
+                Make a change (Auto-Code or Manual Edit)
                 <span class="flow-arrow">→</span> Click Save
                 <span class="flow-arrow">→</span> Site updates within seconds
             </div>
@@ -7778,7 +7267,7 @@ function renderAbout() {
                 <span class="flow-you">API</span> — Optional backend for dynamic features
                 <br><br>
                 <span class="flow-label">The dashboard (shared infrastructure)</span>
-                <span class="flow-gab">Terminal Access</span> — AI that edits your site files
+                <span class="flow-gab">Auto-Code</span> — AI that edits your site files
                 <br>
                 <span class="flow-gab">Widgets</span> — Custom tools (e.g. booking manager)
                 <br>
@@ -7897,113 +7386,16 @@ function renderAbout() {
     }
     html += `</div>`;
 
-    // ── Terminal Access ──
-    html += `<hr class="about-divider"><div class="about-section"><h3>The Terminal Access</h3>`;
-    if (s) {
-        html += `
-            <p>Terminal Access opens a shell for your site and starts Claude Code. A developer can log in with their own Claude Code subscription and edit pages, create new ones, change layouts, update the nav, add forms or galleries.</p>
-            <p>It starts inside <strong>your site's files only</strong> and is scoped to the selected artist. Every new session should begin from a snapshot in the <strong>History</strong> tab, so you can roll back.</p>
-            <p>If it gets slow after a long conversation, hit <strong>Clear Memory</strong> to start fresh.</p>
-        `;
-    } else if (m) {
-        html += `
-            <p>Terminal Access is a tmux-backed shell that launches Claude Code in your site directory. It can read and write your pages, assets, config, and even create a custom <code>api.py</code> backend.</p>
-            <p>It's scoped to the selected artist directory and should not modify dashboard widgets or shared infrastructure.</p>
-            <p>Sessions persist in tmux. If Claude Code exits, the shell stays open so you can run <code>claude</code> again or complete login.</p>
-        `;
-    } else {
-        html += `
-            <div class="about-flow">
-                <span class="flow-label">Terminal Access process lifecycle</span>
-                <br>
-                Browser opens Terminal Access
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Socket.IO namespace /terminal
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Flask attaches to tmux:
-                <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;<span class="flow-you">tmux new-session -A -s adze-${currentArtist}</span>
-                <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cwd: artists/${currentArtist}/
-                <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;starts: claude --permission-mode acceptEdits
-                <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allowedTools: curated filesystem/shell list
-                <br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;append-system-prompt: _shared/docs + artist config/pages
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> xterm.js streams raw pty input/output
-                <br>
-                &nbsp;&nbsp;<span class="flow-arrow">↓</span> Claude Code or the shell reads/writes files in artist dir
-            </div>
-
-            <div class="about-flow">
-                <span class="flow-label">Session management</span>
-                <br>
-                Sessions stored in: <span class="flow-gab">tmux session adze-${currentArtist}</span>
-                <br>
-                Multiple browser tabs can attach to the same artist shell.
-                <br><br>
-                First tab <span class="flow-arrow">→</span> creates tmux session + launches Claude Code
-                <br>
-                Subsequent tabs <span class="flow-arrow">→</span> attach to that session
-                <br>
-                Clear <span class="flow-arrow">→</span> sends Claude Code's native /clear command
-                <br><br>
-                <span class="flow-label">System prompt (generated per-artist)</span>
-                <br>
-                Includes: artist name, slug, description
-                <br>
-                Includes: current page list (scanned at prompt time)
-                <br>
-                Includes: api.py awareness (exists? features enabled?)
-                <br>
-                Includes: guardrails (slug format, sandbox, widgets off-limits)
-            </div>
-
-            <div class="about-flow">
-                <span class="flow-label">Sandboxing model</span>
-                <br>
-                <span style="color:var(--warn);font-weight:600;">Directory-scoped workflow, not a hardened VM.</span>
-                <br><br>
-                Terminal Access starts in the artist directory and Claude Code receives a curated allowedTools list.
-                <br><br>
-                What Claude <span class="flow-you">CAN</span> touch:
-                <br>
-                &nbsp;&nbsp;✓ */content.md, */config.json (pages)
-                <br>
-                &nbsp;&nbsp;✓ assets/ (images, fonts)
-                <br>
-                &nbsp;&nbsp;✓ api.py (custom backend)
-                <br>
-                &nbsp;&nbsp;✓ config.json (artist config)
-                <br><br>
-                What Terminal Access should not touch:
-                <br>
-                &nbsp;&nbsp;✗ widgets/ (dashboard privileges)
-                <br>
-                &nbsp;&nbsp;✗ _shared/ (infrastructure)
-                <br>
-                &nbsp;&nbsp;✗ other artists' directories
-                <br>
-                &nbsp;&nbsp;✗ system files, server config
-            </div>
-
-            <p>The practical failure mode is corrupted files within the artist directory. Use History snapshots and targeted file reads before overwriting live work.</p>
-        `;
-    }
-    html += `</div>`;
-
     // ── API & Features ──
     html += `<hr class="about-divider"><div class="about-section"><h3>API &amp; features</h3>`;
     if (s) {
         html += `
             <p>Your site can have backend features — things like a booking form that saves enquiries, a print shop, or anything that needs to store and process data. The <strong>API</strong> tab shows what's currently set up.</p>
-            <p>The Terminal Access can build custom backend endpoints for you. If you want a pre-built feature like bookings, text me — most take about 30 seconds to enable.</p>
+            <p>Auto-Code can build custom backend endpoints for you. If you want a pre-built feature like bookings, text me — most take about 30 seconds to enable.</p>
         `;
     } else if (m) {
         html += `
-            <p>Your site can have a backend — an <code>api.py</code> file that defines custom endpoints. For example, a booking form on your site can POST to your own API, which saves the data to a JSON file. The Terminal Access can create and edit this for you.</p>
+            <p>Your site can have a backend — an <code>api.py</code> file that defines custom endpoints. For example, a booking form on your site can POST to your own API, which saves the data to a JSON file. Auto-Code can create and edit this for you.</p>
             <p>There's also a <strong>feature system</strong> — opt-in modules like bookings that are pre-built. These are enabled in your <code>config.json</code> and show up in the API tab. Text me to enable one.</p>
             <p>The API tab shows all endpoints available to your site, with friendly descriptions and a developer view for testing.</p>
         `;
@@ -8052,7 +7444,7 @@ function renderAbout() {
                 <br>
                 Routes at: <code>/api/artists/{slug}/bookings/*</code>
             </div>
-            <p>Data storage is JSON files — no database. Server restart required after api.py changes (features are also loaded at startup). The Terminal Access can create both the backend and the frontend that calls it.</p>
+            <p>Data storage is JSON files — no database. Server restart required after api.py changes (features are also loaded at startup). Auto-Code can create both the backend and the frontend that calls it.</p>
         `;
     }
     html += `</div>`;
@@ -8064,16 +7456,16 @@ function renderAbout() {
             <p>Widgets are custom tools that appear as extra tabs in this dashboard — like a "Manage Bookings" tab for viewing and responding to enquiries, or a gallery manager for drag-and-drop image ordering.</p>
             <p>Text me if you want one — they take about 30 seconds to wire up, especially if you've already got an API feature running.</p>
             <div class="about-callout">
-                <strong>Can the Terminal Access make widgets?</strong> Not currently. Widgets run inside the dashboard with elevated access, so they're set up separately. This might change later. You <em>can</em> however build your own admin tools as a page on your actual site — the Terminal Access can help with that.
+                <strong>Can Auto-Code make widgets?</strong> Not currently. Widgets run inside the dashboard with elevated access, so they're set up separately. This might change later. You <em>can</em> however build your own admin tools as a page on your actual site — Auto-Code can help with that.
             </div>
         `;
     } else if (m) {
         html += `
             <p>Widgets are JavaScript files in your <code>widgets/</code> folder. Each one gets its own tab in the dashboard and receives a <code>ctx</code> object with access to the dashboard API — authenticated fetch, page editing, asset management, etc.</p>
-            <p>They're powerful: a widget can read/write any of your pages, call your API endpoints, and render custom UI. That's why <strong>the Terminal Access can't create them</strong> — widgets run with dashboard privileges, not site privileges.</p>
+            <p>They're powerful: a widget can read/write any of your pages, call your API endpoints, and render custom UI. That's why <strong>Auto-Code can't create them</strong> — widgets run with dashboard privileges, not site privileges.</p>
             <p>Text me to set one up. If you already have an API, I can wire up a visual dashboard for it in about 30 seconds.</p>
             <div class="about-callout">
-                <strong>Want your own admin panel?</strong> You could also build a custom dashboard <em>inside your site itself</em> — just a page with a password form and JavaScript that calls your api.py endpoints. The Terminal Access <em>can</em> help with that since it's just a regular page. It wouldn't have dashboard features, but it's fully under your control.
+                <strong>Want your own admin panel?</strong> You could also build a custom dashboard <em>inside your site itself</em> — just a page with a password form and JavaScript that calls your api.py endpoints. Auto-Code <em>can</em> help with that since it's just a regular page. It wouldn't have dashboard features, but it's fully under your control.
             </div>
         `;
     } else {
@@ -8087,8 +7479,8 @@ function renderAbout() {
                 <li><code>ctx.token</code> — raw auth token</li>
                 <li><code>ctx.assetList</code>, <code>ctx.loadAssets()</code>, <code>ctx.toast()</code>, etc.</li>
             </ul>
-            <p>Because widgets have full dashboard API access (including destructive operations like <code>delete-page</code>), the Terminal Access is blocked from creating them. The sandboxing boundary is: Terminal Access can edit site files + api.py, but not widgets or dashboard infrastructure.</p>
-            <p>Alternative: build a self-contained admin page within the site. Just a regular page with client-side JS that calls your api.py endpoints directly, protected by a password you implement yourself. The Terminal Access can build this.</p>
+            <p>Because widgets have full dashboard API access (including destructive operations like <code>delete-page</code>), Auto-Code is blocked from creating them. The sandboxing boundary is: Auto-Code can edit site files + api.py, but not widgets or dashboard infrastructure.</p>
+            <p>Alternative: build a self-contained admin page within the site. Just a regular page with client-side JS that calls your api.py endpoints directly, protected by a password you implement yourself. Auto-Code can build this.</p>
         `;
     }
     html += `</div>`;
@@ -8097,13 +7489,13 @@ function renderAbout() {
     html += `<hr class="about-divider"><div class="about-section"><h3>History &amp; snapshots</h3>`;
     if (s) {
         html += `
-            <p>The <strong>History</strong> tab keeps snapshots of your site — compressed backups of all your pages, config, and backend code. A snapshot is automatically created every time you start a new Terminal Access session, so you can always roll back if something goes wrong.</p>
-            <p>You can also save manual snapshots anytime. Restoring a snapshot replaces your pages and code, but <strong>never touches your images or fonts</strong> — those are safe.</p>
+            <p>The <strong>History</strong> tab keeps snapshots of your site — compressed backups of all your pages, config, and backend code. Save one anytime so you can always roll back if something goes wrong.</p>
+            <p>Restoring a snapshot replaces your pages and code, but <strong>never touches your images or fonts</strong> — those are safe.</p>
         `;
     } else if (m) {
         html += `
             <p>Snapshots are compressed <code>.tar.gz</code> archives stored in a <code>.snapshots/</code> folder inside your site directory. They contain all your pages (content.md + config.json), your artist config, api.py, and any data files. Assets and widgets are excluded to keep them small.</p>
-            <p>Auto-snapshots are created before each new Terminal Access session. Manual snapshots can be created from the History tab. Restoring a snapshot auto-saves the current state first, so you can always undo a restore. Max 30 snapshots are kept.</p>
+            <p>Manual snapshots can be created from the History tab. Restoring a snapshot auto-saves the current state first, so you can always undo a restore. Max 30 snapshots are kept.</p>
         `;
     } else {
         html += `
@@ -8124,535 +7516,6 @@ function renderAbout() {
 
 // Render about on first tab switch
 // (handled in switchTab)
-
-// ── Terminal Access Suggestion Rotation ──
-const vcSuggestions = [
-    'update the nav on all pages',
-    'add a new gallery page',
-    'make the fonts larger across the site',
-    'change the background colour to something warmer',
-    'add a contact form to the about page',
-    'reformat the whole site with a new layout',
-    'search the web for articles about me and compile a bio',
-    'add smooth fade-in animations to all pages',
-    'create a prints page with a price list',
-    'make the site look great on mobile',
-    'add a dark mode toggle',
-    'build me a CV page from my about page',
-];
-let vcSuggestionIdx = 0;
-let vcSuggestionTimer = null;
-
-function startVcSuggestionRotation() {
-    if (vcSuggestionTimer) clearInterval(vcSuggestionTimer);
-    vcSuggestionIdx = Math.floor(Math.random() * vcSuggestions.length);
-    vcSuggestionTimer = setInterval(() => {
-        const el = document.getElementById('vcSuggestion');
-        if (!el) { clearInterval(vcSuggestionTimer); return; }
-        vcSuggestionIdx = (vcSuggestionIdx + 1) % vcSuggestions.length;
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(4px)';
-        setTimeout(() => {
-            el.textContent = vcSuggestions[vcSuggestionIdx];
-            el.style.opacity = '1';
-            el.style.transform = 'translateY(0)';
-        }, 250);
-    }, 3500);
-}
-
-// Start rotation on load
-setTimeout(startVcSuggestionRotation, 500);
-
-// Make suggestions clickable — paste into input
-document.addEventListener('click', (e) => {
-    if (e.target.id === 'vcSuggestion' || e.target.closest('#vcSuggestion')) {
-        const input = document.getElementById('claudeInput');
-        if (input) { input.value = e.target.textContent; input.focus(); }
-    }
-});
-
-// ── Claude Terminal ──────────────────────────────────────────────────────
-let claudeIsStreaming = false;
-let claudeFirstMessage = true;
-let claudeMessageQueue = [];
-
-function _toolIcon(name) {
-    const L = (inner) => `<svg viewBox="0 0 24 24">${inner}</svg>`;
-    const icons = {
-        Read: L('<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
-        Write: L('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
-        Edit: L('<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
-        Bash: L('<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>'),
-        Glob: L('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'),
-        Grep: L('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
-        WebFetch: L('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
-        WebSearch: L('<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
-        TodoWrite: L('<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>'),
-    };
-    const svg = icons[name] || icons.Bash;
-    return svg;
-}
-
-function claudeAppendLine(text, className = '') {
-    const output = document.getElementById('claudeOutput');
-    const line = document.createElement('div');
-    line.className = 'claude-term-line' + (className ? ' ' + className : '');
-    line.innerHTML = text;
-    output.appendChild(line);
-    output.scrollTop = output.scrollHeight;
-    return line;
-}
-
-function claudeAppendRaw(html) {
-    const output = document.getElementById('claudeOutput');
-    const el = document.createElement('div');
-    el.innerHTML = html;
-    while (el.firstChild) output.appendChild(el.firstChild);
-    output.scrollTop = output.scrollHeight;
-}
-
-function claudeStripAnsi(str) {
-    // Strip ANSI escape codes
-    return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\x1b\[\d*[A-Za-z]/g, '');
-}
-
-function claudeRenderMarkdown(text) {
-    // Strip ANSI codes first, then render markdown
-    text = claudeStripAnsi(text);
-    let html = escHtml(text);
-    // Code blocks
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-        return `</div><div class="claude-term-code-block">${lang ? `<span class="code-lang">${lang}</span>` : ''}${code}</div><div class="claude-term-line result-text">`;
-    });
-    // Inline code
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    // Bold
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    // Italic
-    html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    // Links
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-    // Line breaks
-    html = html.replace(/\n/g, '<br>');
-    return html;
-}
-
-async function sendClaudeMessage() {
-    const input = document.getElementById('claudeInput');
-    const msg = input.value.trim();
-    if (!msg || !currentPage) return;
-
-    input.value = '';
-
-    // Terminal Access is now a live Claude Code shell. Keep the old prompt box
-    // useful by sending its text to xterm instead of the retired API-credit
-    // streaming endpoint.
-    if (typeof vcPasteIntoTerminal === 'function' && _vcXterm) {
-        vcPasteIntoTerminal(msg + '\n');
-        return;
-    }
-
-    if (claudeIsStreaming) {
-        claudeMessageQueue.push(msg);
-        const queuedTurn = vcUserTurn(msg);
-        queuedTurn.el.classList.add('queued');
-        toast(`Message queued (${claudeMessageQueue.length} waiting)`, 'info');
-        return;
-    }
-
-    claudeIsStreaming = true;
-    document.getElementById('claudeHaltBtn').style.display = '';
-
-    // Clear welcome on first message
-    if (claudeFirstMessage) {
-        document.getElementById('claudeOutput').innerHTML = '';
-        claudeFirstMessage = false;
-    }
-
-    // Render user turn + start assistant turn (turn cards instead of log lines)
-    vcUserTurn(msg);
-    let currentTurn = vcAssistantTurn();
-    let resultData = null;
-    // Client-side timing — reveals whether the gap is in the LLM call itself or
-    // somewhere else in the pipeline (network, Werkzeug, system-prompt build).
-    const tSendStart = performance.now();
-    let tFirstByte = null;
-    let tFirstEvent = null;
-
-    try {
-        const response = await fetch('/api/adze/claude-stream', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Artist-Slug': currentArtist,
-                'X-Admin-Token': currentToken,
-            },
-            body: JSON.stringify({ prompt: msg })
-        });
-
-        if (!response.ok) {
-            const errMsg = (response.status === 409)
-                ? "Terminal Access is currently in use by another session. Try again when it's free."
-                : 'Error: ' + response.statusText;
-            vcRenderError(currentTurn, errMsg);
-            claudeIsStreaming = false;
-            document.getElementById('claudeHaltBtn').style.display = 'none';
-            return;
-        }
-
-        tFirstByte = performance.now();
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (tFirstEvent === null) tFirstEvent = performance.now();
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-
-            for (const line of lines) {
-                if (!line.startsWith('data: ')) continue;
-                const dataStr = line.slice(6).trim();
-                if (!dataStr) continue;
-
-                try {
-                    const data = JSON.parse(dataStr);
-
-                    if (data.type === 'error') {
-                        vcRenderError(currentTurn, data.error || 'Unknown error');
-                        continue;
-                    }
-                    if (data.type === 'system_message') {
-                        vcRenderSystem(data.text || '');
-                        continue;
-                    }
-                    if (data.type === 'stream_end') continue;
-
-                    // Streaming text — append a chunk span to the prose; no re-render
-                    if (data.type === 'content_block_delta' || (data.type === 'stream_event' && data.event?.type === 'content_block_delta')) {
-                        const delta = data.event?.delta || data.delta;
-                        if (delta?.type === 'text_delta' && delta.text) {
-                            vcAppendDelta(currentTurn, delta.text);
-                        }
-                    }
-
-                    // Assistant message — render any tool_use blocks (text was already streamed)
-                    if (data.type === 'assistant' && data.message?.content) {
-                        for (const block of data.message.content) {
-                            if (block.type === 'tool_use') {
-                                vcRenderTool(currentTurn, block);
-                            }
-                            if (block.type === 'text' && block.text && !currentTurn.streamedText) {
-                                // Non-streaming providers send full text here — synthesize a delta
-                                vcAppendDelta(currentTurn, block.text);
-                            }
-                        }
-                    }
-
-                    // Tool result — flip tile to done/error and render any diff
-                    if (data.type === 'tool_result') {
-                        vcMarkToolDone(currentTurn, data.tool_use_id, !!data.is_error);
-                        if (data.meta && data.meta.diff) {
-                            vcRenderDiff(currentTurn, data.meta);
-                        }
-                    }
-
-                    // Result — finalize text (markdown render), update cost pill, footer
-                    if (data.type === 'result') {
-                        resultData = data;
-                        if (data.result) {
-                            vcFinalizeText(currentTurn, data.result);
-                        }
-                        if (typeof data.cost_usd === 'number') claudeCost += data.cost_usd;
-                        if (typeof data.tokens === 'number' && data.tokens > 0) claudeTokens = data.tokens;
-                        claudeUpdateCostPill();
-                    }
-
-                } catch (parseErr) {
-                    // Skip unparseable lines
-                }
-            }
-        }
-
-        vcDropThinking(currentTurn);
-        if (resultData) {
-            const tEnd = performance.now();
-            vcAddTurnFooter(currentTurn, resultData, {
-                total_ms: Math.round(tEnd - tSendStart),
-                ttfb_ms: tFirstByte != null ? Math.round(tFirstByte - tSendStart) : null,
-                stream_ms: tFirstEvent != null ? Math.round(tEnd - tFirstEvent) : null,
-            });
-        }
-
-        // Reload pages/assets in case Claude changed things
-        loadPages();
-        loadAssets();
-
-        // Re-fetch content and auto-refresh preview to pick up any changes Claude made
-        if (currentPage) {
-            await refreshPreview();
-        }
-
-        // Re-fetch widget code and refresh preview if a widget is open in the editor
-        if (currentWidget && currentWidget.tier !== 'platform') {
-            const wr = await apiFetch('/api/adze/get-widget?name=' + encodeURIComponent(currentWidget.name));
-            if (wr.ok) {
-                const wdata = await wr.json();
-                if (wdata.code !== undefined) {
-                    currentWidget.code = wdata.code;
-                    if (loadedWidgetMeta[currentWidget.name]) {
-                        loadedWidgetMeta[currentWidget.name].code = wdata.code;
-                    }
-                    const editor = document.getElementById('jsEditor');
-                    if (editor && !hasUnsavedChanges) {
-                        editor.value = wdata.code;
-                        setUnsaved(false);
-                        updateWidgetPreview();
-                    }
-                }
-            }
-        }
-
-    } catch (err) {
-        vcRenderError(currentTurn, 'Connection error: ' + err.message);
-    }
-
-    claudeIsStreaming = false;
-    document.getElementById('claudeHaltBtn').style.display = 'none';
-    document.getElementById('claudeSendBtn').disabled = false;
-    document.getElementById('claudeInput').focus();
-
-    // Process queued messages
-    if (claudeMessageQueue.length > 0) {
-        const next = claudeMessageQueue.shift();
-        document.getElementById('claudeInput').value = next;
-        sendClaudeMessage();
-    }
-}
-
-function toggleClaudeTools() {
-    const row = document.getElementById('claudeToolsRow');
-    const btn = document.querySelector('.claude-tools-toggle');
-    const isOpen = row.style.display === 'flex';
-    row.style.display = isOpen ? 'none' : 'flex';
-    btn.classList.toggle('open', !isOpen);
-}
-
-async function haltClaude() {
-    try {
-        await apiFetch('/api/adze/claude-halt', { method: 'POST' });
-        claudeIsStreaming = false;
-        document.getElementById('claudeHaltBtn').style.display = 'none';
-        // Add a halted indicator in the chat
-        claudeAppendLine('<em>Stopped.</em>', 'system');
-        toast('Terminal Access stopped', 'info');
-    } catch (e) {
-        toast('Failed to stop: ' + e.message, 'error');
-    }
-}
-
-// ── Terminal Access v3: Claude Code over xterm.js + Socket.IO pty bridge ────────────────
-// xterm.js renders the live Claude Code session in the pane. The Flask /terminal
-// namespace bridges a pty subprocess running Claude Code per artist.
-let _vcXterm = null;
-let _vcXtermFit = null;
-let _vcXtermSocket = null;
-let _vcXtermInitTries = 0;
-
-function _vcBootMsg(msg, isError) {
-    const el = document.getElementById('vcXtermBoot');
-    if (el) {
-        el.textContent = msg;
-        if (isError) el.style.color = '#e74c3c';
-    }
-}
-
-// Send a /clear to the running Claude Code session (its native command).
-function vcTerminalClear() {
-    if (!_vcXtermSocket || !_vcXtermSocket.connected) return;
-    _vcXtermSocket.emit('terminal:input', { data: '/clear\n' });
-    if (_vcXterm) _vcXterm.focus();
-}
-
-// Asset-picker shortcut — opens the existing modal in "claude mode" so the
-// existing claudeInsertSelectedAssets path picks the chosen URLs and routes
-// through insertIntoClaudeInput (which we've redirected to the terminal).
-function vcInsertAssetIntoTerminal() {
-    if (typeof openClaudeAssetModal === 'function') {
-        openClaudeAssetModal();
-    }
-}
-
-function vcInitTerminal() {
-    if (_vcXterm) {
-        // Already running — just refit on tab return
-        try { _vcXtermFit && _vcXtermFit.fit(); } catch(e) {}
-        return;
-    }
-    if (typeof Terminal === 'undefined' || typeof FitAddon === 'undefined' || typeof io === 'undefined') {
-        // CDN scripts haven't loaded yet (deferred). Try again shortly.
-        if (_vcXtermInitTries++ < 50) {
-            setTimeout(vcInitTerminal, 200);
-            return;
-        }
-        const missing = [];
-        if (typeof Terminal === 'undefined') missing.push('xterm');
-        if (typeof FitAddon === 'undefined') missing.push('addon-fit');
-        if (typeof io === 'undefined') missing.push('socket.io');
-        _vcBootMsg('failed to load: ' + missing.join(', ') + ' — check network / CDN', true);
-        console.error('[terminal-access] terminal init aborted, missing:', missing);
-        return;
-    }
-    const host = document.getElementById('vcXtermHost');
-    if (!host) return;
-    if (!currentArtist) {
-        // Login not complete yet — try again when it is. currentToken can
-        // legitimately be '' for cookie-session users; only artist matters.
-        if (_vcXtermInitTries++ < 50) {
-            setTimeout(vcInitTerminal, 200);
-        }
-        return;
-    }
-    // Drop the boot placeholder
-    const boot = document.getElementById('vcXtermBoot');
-    if (boot) boot.remove();
-
-    _vcXterm = new Terminal({
-        cursorBlink: true,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-        fontSize: 13,
-        scrollback: 5000,
-        theme: {
-            background: '#1a1a1e',
-            foreground: '#e8e6e0',
-            cursor: '#99cdff',
-            cursorAccent: '#1a1a1e',
-            selectionBackground: 'rgba(153,205,255,0.25)',
-            black: '#1a1a1e',
-            red: '#e74c3c',
-            green: '#6dca8a',
-            yellow: '#e0c060',
-            blue: '#7ea3c4',
-            magenta: '#c4a37e',
-            cyan: '#7ec4c4',
-            white: '#e8e6e0',
-            brightBlack: '#5a5750',
-            brightRed: '#ff7361',
-            brightGreen: '#8fdfa6',
-            brightYellow: '#f0d077',
-            brightBlue: '#99cdff',
-            brightMagenta: '#d8b78e',
-            brightCyan: '#9adada',
-            brightWhite: '#ffffff',
-        },
-    });
-    _vcXtermFit = new FitAddon.FitAddon();
-    _vcXterm.loadAddon(_vcXtermFit);
-    // Clipboard: copy-on-selection + Cmd/Ctrl+Shift shortcuts. See Auto-Code init.
-    _vcXterm.onSelectionChange(() => {
-        const sel = _vcXterm.getSelection();
-        if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-    });
-    _vcXterm.attachCustomKeyEventHandler((e) => {
-        if (e.type !== 'keydown') return true;
-        const isCopy  = ((e.metaKey && !e.ctrlKey) || (e.ctrlKey && e.shiftKey)) && (e.key === 'C' || e.key === 'c');
-        const isPaste = ((e.metaKey && !e.ctrlKey) || (e.ctrlKey && e.shiftKey)) && (e.key === 'V' || e.key === 'v');
-        if (isCopy) {
-            const sel = _vcXterm.getSelection();
-            if (sel) navigator.clipboard.writeText(sel).catch(() => {});
-            e.preventDefault();
-            return false;
-        }
-        if (isPaste) {
-            navigator.clipboard.readText().then(txt => {
-                if (txt && _vcXtermSocket && _vcXtermSocket.connected) {
-                    _vcXtermSocket.emit('terminal:input', { data: txt });
-                }
-            }).catch(() => {});
-            e.preventDefault();
-            return false;
-        }
-        return true;
-    });
-    _vcXterm.open(host);
-    // Fit after each of the next two paint frames so we measure real layout,
-    // not the zero-height state that exists before the browser first renders.
-    const safeFit = () => {
-        if (!_vcXtermFit || !_vcXterm) return;
-        try { _vcXtermFit.fit(); } catch(e) { return; }
-        if (_vcXtermSocket && _vcXtermSocket.connected) {
-            _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
-        }
-    };
-    requestAnimationFrame(() => { safeFit(); requestAnimationFrame(safeFit); });
-
-    _vcXtermSocket = io('/terminal', {
-        auth: { artist_slug: currentArtist, token: currentToken || '' },
-        transports: ['polling', 'websocket'],
-        withCredentials: true,  // send adze_session cookie for cookie-auth fallback
-    });
-
-    // Suppress noisy reconnect-attempt errors (WS upgrade can flap during
-    // initial handshake and Socket.IO retries automatically — only surface
-    // after several consecutive failures).
-    let _vcConnectErrors = 0;
-    _vcXtermSocket.on('connect', () => {
-        _vcConnectErrors = 0;
-        _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
-    });
-    _vcXtermSocket.on('terminal:output', (data) => {
-        _vcXterm.write(data);
-    });
-    _vcXtermSocket.on('terminal:exit', () => {
-        _vcXterm.write('\r\n\x1b[33m[adze] Terminal session ended. Switch tabs and back to reattach.\x1b[0m\r\n');
-    });
-    _vcXtermSocket.on('disconnect', (reason) => {
-        if (reason !== 'io client disconnect') {
-            console.warn('[terminal-access] socket disconnect:', reason);
-        }
-    });
-    _vcXtermSocket.on('connect_error', (err) => {
-        _vcConnectErrors += 1;
-        console.warn('[terminal-access] connect error:', err.message || err);
-        if (_vcConnectErrors >= 5) {
-            _vcXterm.write(`\r\n\x1b[31m[adze] persistent connect error: ${err.message || err}\x1b[0m\r\n`);
-            _vcConnectErrors = 0;  // reset so we don't spam
-        }
-    });
-
-    _vcXterm.onData((data) => {
-        if (_vcXtermSocket && _vcXtermSocket.connected) {
-            _vcXtermSocket.emit('terminal:input', { data });
-        }
-    });
-
-    // Refit on container resize. Observe both the xterm host and the outer
-    // editor pane — the tab-bar appearing after loadPages() only changes the
-    // outer pane's dimensions, not the absolutely-positioned host.
-    if (typeof ResizeObserver !== 'undefined') {
-        let _rafId = null;
-        const roCallback = () => {
-            // Debounce via rAF so we measure after layout settles
-            if (_rafId) cancelAnimationFrame(_rafId);
-            _rafId = requestAnimationFrame(() => {
-                _rafId = null;
-                if (!_vcXtermFit || !_vcXterm) return;
-                try { _vcXtermFit.fit(); } catch(e) { return; }
-                if (_vcXtermSocket && _vcXtermSocket.connected) {
-                    _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
-                }
-            });
-        };
-        const ro = new ResizeObserver(roCallback);
-        ro.observe(host);
-        const editorPane = document.getElementById('claudeEditorPane');
-        if (editorPane) ro.observe(editorPane);
-    }
-}
 
 // ── Auto-Code (opencode-serve chat client) ───────────────────────────────
 // Talks to /api/adze/autocode/* (Flask proxy → opencode serve in the
@@ -9717,929 +8580,9 @@ const AutoCode = (() => {
     return { init: activate, send, abort, restart, setMode, dismissNote, newTab };
 })();
 
-// Buttons that paste into the running terminal (Asset modal callback etc.).
-function vcPasteIntoTerminal(text) {
-    if (!_vcXterm) return;
-    if (_vcXtermSocket && _vcXtermSocket.connected) {
-        _vcXtermSocket.emit('terminal:input', { data: text });
-    }
-    _vcXterm.focus();
-}
-
-// ── Terminal Access v2: cost meter, slash + @ popover, diff cards ─────────────────
-let claudeCost = 0;
-let claudeTokens = 0;
-const VIBE_CONTEXT_TOKENS = 1_000_000;  // Gemini 2.5 Flash 1M context
-
-function claudeUpdateCostPill() {
-    const pill = document.getElementById('claudeCostPill');
-    if (!pill) return;
-    document.getElementById('ccPillCost').textContent = '$' + claudeCost.toFixed(4);
-    document.getElementById('ccPillTok').textContent =
-        (claudeTokens >= 1000 ? (claudeTokens/1000).toFixed(1) + 'K' : claudeTokens) + ' tok';
-    const pct = Math.min(100, (claudeTokens / VIBE_CONTEXT_TOKENS) * 100);
-    document.getElementById('ccPillCtxBar').style.width = pct + '%';
-    pill.classList.add('show');
-}
-function claudeResetCostMeter() {
-    claudeCost = 0;
-    claudeTokens = 0;
-    const pill = document.getElementById('claudeCostPill');
-    if (!pill) return;
-    pill.classList.remove('show');
-    document.getElementById('ccPillCost').textContent = '$0.00';
-    document.getElementById('ccPillTok').textContent = '0 tok';
-    document.getElementById('ccPillCtxBar').style.width = '0%';
-}
-
-const VIBE_SLASH_COMMANDS = [
-    {name: '/clear',    desc: 'Clear memory',          icon: 'ph-broom',                  action: () => resetClaudeSession()},
-    {name: '/snapshot', desc: 'Save restore point',    icon: 'ph-floppy-disk',            action: () => slashSnapshot()},
-    {name: '/restore',  desc: 'Browse snapshots',      icon: 'ph-clock-counter-clockwise',action: () => slashRestore()},
-    {name: '/copy',     desc: 'Download as markdown',  icon: 'ph-clipboard-text',         action: () => slashCopy()},
-    {name: '/help',     desc: 'Show shortcuts',        icon: 'ph-question',               action: () => slashHelp()},
-];
-
-let _vibePopItems = [];
-let _vibePopIdx = -1;
-let _vibePopMode = null;
-let _vibeMentionFiles = null;
-
-function onClaudeInputKeydown(e) {
-    const popover = document.getElementById('claudePopover');
-    if (popover && popover.classList.contains('show')) {
-        if (e.key === 'ArrowDown') { e.preventDefault(); navigatePopover(1); return; }
-        if (e.key === 'ArrowUp')   { e.preventDefault(); navigatePopover(-1); return; }
-        if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); selectPopoverItem(); return; }
-        if (e.key === 'Escape')    { hidePopover(); return; }
-    }
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendClaudeMessage();
-    }
-}
-function onClaudeInputChange(e) {
-    const val = e.target.value;
-    if (val.startsWith('/')) { showSlashPopover(val); return; }
-    const cursorPos = e.target.selectionStart || val.length;
-    const before = val.slice(0, cursorPos);
-    const m = before.match(/(?:^|\s)@([^\s]*)$/);
-    if (m) {
-        showMentionPopover(m[1]);
-    } else {
-        hidePopover();
-    }
-}
-function showSlashPopover(query) {
-    const q = query.toLowerCase();
-    const items = VIBE_SLASH_COMMANDS
-        .filter(c => c.name.startsWith(q) || q === '/')
-        .map(c => ({icon: c.icon, name: c.name, desc: c.desc, onSelect: c.action}));
-    _vibePopMode = 'slash';
-    renderPopover(items);
-}
-async function showMentionPopover(query) {
-    if (_vibeMentionFiles === null) {
-        try {
-            const r = await apiFetch('/api/adze/list-vibe-files');
-            const d = await r.json();
-            _vibeMentionFiles = d.files || [];
-        } catch (e) {
-            _vibeMentionFiles = [];
-        }
-    }
-    const q = query.toLowerCase();
-    const items = _vibeMentionFiles
-        .filter(f => f.toLowerCase().includes(q))
-        .slice(0, 12)
-        .map(f => ({
-            icon: f.endsWith('.md')   ? 'ph-file-text'
-                : f.endsWith('.json') ? 'ph-brackets-curly'
-                : f.endsWith('.py')   ? 'ph-file-code'
-                : f.endsWith('.html') ? 'ph-file-html'
-                : f.endsWith('.css')  ? 'ph-file-css'
-                : 'ph-file',
-            name: f,
-            desc: '',
-            onSelect: () => insertMention(f),
-        }));
-    _vibePopMode = 'mention';
-    renderPopover(items);
-}
-function renderPopover(items) {
-    const popover = document.getElementById('claudePopover');
-    if (items.length === 0) {
-        popover.innerHTML = '<div class="pop-empty">No matches</div>';
-    } else {
-        popover.innerHTML = items.map((it, i) =>
-            `<div class="pop-item ${i===0?'active':''}" data-idx="${i}">
-                <i class="ph ${it.icon}"></i>
-                <span class="pop-name">${escHtml(it.name)}</span>
-                ${it.desc ? `<span class="pop-desc">${escHtml(it.desc)}</span>` : ''}
-            </div>`).join('');
-        popover.querySelectorAll('.pop-item').forEach((el, i) => {
-            el.addEventListener('mouseenter', () => { _vibePopIdx = i; updatePopoverActive(); });
-            el.addEventListener('mousedown', (ev) => { ev.preventDefault(); _vibePopIdx = i; selectPopoverItem(); });
-        });
-    }
-    popover.classList.add('show');
-    _vibePopItems = items;
-    _vibePopIdx = items.length > 0 ? 0 : -1;
-}
-function navigatePopover(dir) {
-    if (_vibePopItems.length === 0) return;
-    _vibePopIdx = (_vibePopIdx + dir + _vibePopItems.length) % _vibePopItems.length;
-    updatePopoverActive();
-}
-function updatePopoverActive() {
-    document.querySelectorAll('.claude-popover .pop-item').forEach((el, i) => {
-        el.classList.toggle('active', i === _vibePopIdx);
-    });
-    const active = document.querySelector('.claude-popover .pop-item.active');
-    if (active) active.scrollIntoView({block: 'nearest'});
-}
-function selectPopoverItem() {
-    if (_vibePopIdx < 0 || _vibePopIdx >= _vibePopItems.length) { hidePopover(); return; }
-    const item = _vibePopItems[_vibePopIdx];
-    item.onSelect();
-    hidePopover();
-}
-function hidePopover() {
-    const popover = document.getElementById('claudePopover');
-    if (popover) popover.classList.remove('show');
-    _vibePopItems = [];
-    _vibePopIdx = -1;
-    _vibePopMode = null;
-}
-function insertMention(filePath) {
-    const input = document.getElementById('claudeInput');
-    const val = input.value;
-    const cursorPos = input.selectionStart || val.length;
-    const before = val.slice(0, cursorPos);
-    const after = val.slice(cursorPos);
-    const newBefore = before.replace(/(@[^\s]*)$/, '@' + filePath + ' ');
-    input.value = newBefore + after;
-    input.focus();
-    const newPos = newBefore.length;
-    input.setSelectionRange(newPos, newPos);
-}
-
-async function slashSnapshot() {
-    document.getElementById('claudeInput').value = '';
-    try {
-        const r = await apiFetch('/api/adze/create-snapshot', { method: 'POST' });
-        if (r.ok) {
-            toast('Snapshot saved', 'success');
-            claudeAppendLine('Snapshot saved.', 'system');
-        } else {
-            toast('Snapshot failed', 'error');
-        }
-    } catch (e) { toast('Snapshot error: ' + e.message, 'error'); }
-}
-async function slashRestore() {
-    document.getElementById('claudeInput').value = '';
-    try {
-        const r = await apiFetch('/api/adze/list-snapshots');
-        const d = await r.json();
-        const snaps = d.snapshots || [];
-        if (snaps.length === 0) { claudeAppendLine('No snapshots to restore.', 'system'); return; }
-        const list = snaps.slice(0, 10).map((s, i) => `${i+1}. ${s.name || s.timestamp || s.id}`).join('\n');
-        const choice = prompt(`Choose a snapshot to restore (1-${Math.min(10, snaps.length)}):\n\n${list}`);
-        if (!choice) return;
-        const idx = parseInt(choice, 10) - 1;
-        if (isNaN(idx) || !snaps[idx]) { toast('Invalid choice', 'error'); return; }
-        const target = snaps[idx];
-        if (!confirm(`Restore "${target.name || target.id}"? Current files in the artist's directory will be overwritten.`)) return;
-        const rr = await apiFetch('/api/adze/restore-snapshot', { method: 'POST', body: { name: target.name || target.id } });
-        if (rr.ok) {
-            toast('Restored', 'success');
-            claudeAppendLine(`Restored snapshot: ${target.name || target.id}.`, 'system');
-            try { loadPages(); loadAssets(); if (currentPage) refreshPreview(); } catch(e) {}
-        } else {
-            toast('Restore failed', 'error');
-        }
-    } catch (e) { toast('Restore error: ' + e.message, 'error'); }
-}
-function slashCopy() {
-    document.getElementById('claudeInput').value = '';
-    const output = document.getElementById('claudeOutput');
-    if (!output) return;
-    const lines = [];
-    output.querySelectorAll('.claude-term-line').forEach(el => {
-        if (el.classList.contains('user-input')) {
-            lines.push('### You\n\n' + el.textContent.replace(/^❯\s*/, ''));
-        } else if (el.classList.contains('result-text')) {
-            lines.push('### Terminal Access\n\n' + el.textContent);
-        } else if (el.classList.contains('tool-use')) {
-            const header = el.querySelector('.tool-header')?.textContent.trim() || 'Tool';
-            const args = el.querySelector('.tool-args')?.textContent.trim() || '';
-            lines.push('> _' + header + (args ? ' — ' + args : '') + '_');
-        }
-    });
-    const md = `# Terminal Access conversation\n\n_${currentArtist} · ${new Date().toISOString()}_\n\n` + lines.join('\n\n');
-    const blob = new Blob([md], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `terminal-access-${currentArtist}-${new Date().toISOString().slice(0,10)}.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast('Conversation downloaded', 'success');
-}
-function slashHelp() {
-    document.getElementById('claudeInput').value = '';
-    const html = `<div style="line-height:1.7;">
-        <div style="font-weight:600;color:var(--accent);margin-bottom:6px;">Terminal Access shortcuts</div>
-        <div><b>/clear</b> · clear memory</div>
-        <div><b>/snapshot</b> · save a restore point</div>
-        <div><b>/restore</b> · browse snapshots</div>
-        <div><b>/copy</b> · download as markdown</div>
-        <div><b>/help</b> · this</div>
-        <div style="margin-top:6px;"><b>@filepath</b> · attach a file by name</div>
-        <div><b>@flash</b> / <b>@pro</b> / <b>@lite</b> · pick model for one turn</div>
-        <div style="margin-top:6px;opacity:0.7;font-size:10px;">Enter sends · ↑↓ navigates popover · Esc closes</div>
-    </div>`;
-    claudeAppendLine(html, 'system');
-}
-
-// Turn rendering — design-language editorial cards.
-// Each call to sendClaudeMessage creates one user vc-turn (the prompt) and
-// one assistant vc-turn (the reply, including any tool calls + diff cards).
-function vcChatScroll() {
-    const out = document.getElementById('claudeOutput');
-    if (out) out.scrollTop = out.scrollHeight;
-}
-function vcTimeStamp() {
-    return new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-}
-function vcStartTurn(role) {
-    const out = document.getElementById('claudeOutput');
-    // First message: drop the welcome screen
-    const welcome = document.getElementById('vcWelcome');
-    if (welcome) welcome.remove();
-    const el = document.createElement('div');
-    el.className = 'vc-turn ' + role;
-    el.innerHTML = `<div class="vc-turn-body"></div>`;
-    out.appendChild(el);
-    vcChatScroll();
-    return {
-        el,
-        body: el.querySelector('.vc-turn-body'),
-        textEl: null,
-        thinkingEl: null,
-        tools: new Map(),
-        streamedText: '',
-        startedAt: vcTimeStamp(),  // captured for the footer
-    };
-}
-function vcUserTurn(text) {
-    const turn = vcStartTurn('user');
-    const p = document.createElement('div');
-    p.className = 'vc-prose';
-    p.textContent = text;
-    turn.body.appendChild(p);
-    return turn;
-}
-function vcAssistantTurn() {
-    const turn = vcStartTurn('assistant');
-    vcEnsureThinkingAtEnd(turn);
-    return turn;
-}
-function vcDropThinking(turn) {
-    if (turn && turn.thinkingEl) {
-        turn.thinkingEl.remove();
-        turn.thinkingEl = null;
-    }
-}
-function vcEnsureThinkingAtEnd(turn) {
-    // Keep a persistent "Thinking" dot at the bottom of the assistant card
-    // whenever the agent is between events (waiting on the model). It hides
-    // during text streaming (the prose itself signals progress) and during
-    // a running tool call (the tile's spinner is the signal); it returns
-    // between iterations so users don't see a blank silent gap.
-    if (!turn) return;
-    if (!turn.thinkingEl || !turn.thinkingEl.parentNode) {
-        const dot = document.createElement('div');
-        dot.className = 'vc-thinking';
-        dot.innerHTML = '<span class="vc-dot"></span><span>Thinking</span>';
-        turn.thinkingEl = dot;
-    }
-    turn.body.appendChild(turn.thinkingEl);  // appendChild moves if already in DOM
-}
-function vcAppendDelta(turn, deltaText) {
-    if (!turn) return;
-    vcDropThinking(turn);
-    if (!turn.textEl) {
-        turn.textEl = document.createElement('div');
-        turn.textEl.className = 'vc-prose';
-        turn.body.appendChild(turn.textEl);
-    }
-    const span = document.createElement('span');
-    span.className = 'vc-chunk';
-    span.textContent = deltaText;
-    turn.textEl.appendChild(span);
-    turn.streamedText += deltaText;
-    vcChatScroll();
-}
-function vcFinalizeText(turn, fullText) {
-    if (!turn || !fullText) return;
-    vcDropThinking(turn);
-    if (!turn.textEl) {
-        turn.textEl = document.createElement('div');
-        turn.textEl.className = 'vc-prose';
-        turn.body.appendChild(turn.textEl);
-    }
-    // Replace plain-text chunks with markdown-rendered HTML once at end.
-    turn.textEl.innerHTML = claudeRenderMarkdown(fullText);
-}
-function vcToolIconFor(name) {
-    return ({
-        Read: 'ph-eye',
-        Write: 'ph-pencil-simple-line',
-        Edit: 'ph-pencil',
-        Glob: 'ph-magnifying-glass',
-        Grep: 'ph-magnifying-glass-plus',
-        Bash: 'ph-terminal-window',
-        WebFetch: 'ph-globe',
-    })[name] || 'ph-wrench';
-}
-function vcToolArgSummary(name, input) {
-    if (!input || typeof input !== 'object') return '';
-    const fp = input.file_path || input.path || input.pattern || input.url || input.command || '';
-    if (fp) return String(fp);
-    const keys = Object.keys(input);
-    if (keys.length === 0) return '';
-    const v = String(input[keys[0]] || '');
-    return keys[0] + ': ' + (v.length > 80 ? v.slice(0, 77) + '…' : v);
-}
-function vcRenderTool(turn, toolBlock) {
-    if (!turn) return;
-    vcDropThinking(turn);
-    const name = toolBlock.name || 'tool';
-    const summary = vcToolArgSummary(name, toolBlock.input);
-    const tile = document.createElement('div');
-    tile.className = 'vc-tool';
-    tile.dataset.state = 'running';
-    tile.dataset.toolId = toolBlock.id || '';
-    tile.innerHTML = `
-        <span class="vc-tool-state"><span class="vc-spin"></span></span>
-        <span class="vc-tool-name">${escHtml(name)}</span>
-        <span class="vc-tool-args">${escHtml(summary)}</span>
-    `;
-    turn.body.appendChild(tile);
-    turn.tools.set(toolBlock.id, tile);
-    vcChatScroll();
-    return tile;
-}
-function vcMarkToolDone(turn, toolUseId, isError) {
-    if (!turn) return;
-    const tile = turn.tools.get(toolUseId);
-    if (!tile) return;
-    tile.dataset.state = isError ? 'error' : 'done';
-    const state = tile.querySelector('.vc-tool-state');
-    if (state) {
-        state.innerHTML = isError
-            ? '<i class="ph ph-x-circle"></i>'
-            : '<i class="ph ph-check"></i>';
-    }
-    // Tool finished; agent may now be thinking about the next step. Show the
-    // thinking dot at the bottom so the silent gap before the next event has
-    // a visible signal.
-    vcEnsureThinkingAtEnd(turn);
-}
-function vcRenderDiff(turn, meta) {
-    if (!turn) return;
-    const path = meta.path || '(file)';
-    const tool = (meta.tool || 'Edit').toLowerCase();
-    const added = meta.added || 0;
-    const removed = meta.removed || 0;
-    const diffText = meta.diff || '';
-    // Skip file headers (---/+++) and hunk markers (@@). Strip the leading
-    // marker character (+ / - / space) from each remaining line — the colored
-    // left-bar + bg tint communicates the change; source indentation is
-    // preserved without prefix noise.
-    const linesHtml = diffText.split('\n').filter(ln =>
-        !ln.startsWith('+++') && !ln.startsWith('---') && !ln.startsWith('@@')
-    ).map(ln => {
-        if (ln.startsWith('+')) return `<span class="ln-add">${escHtml(ln.slice(1))}</span>`;
-        if (ln.startsWith('-')) return `<span class="ln-rem">${escHtml(ln.slice(1))}</span>`;
-        if (ln.startsWith(' ')) return `<span class="ln-ctx">${escHtml(ln.slice(1))}</span>`;
-        return `<span class="ln-ctx">${escHtml(ln)}</span>`;
-    }).join('');
-    const stat = (added > 0 ? `<span class="add">+${added}</span>` : '')
-               + (removed > 0 ? ` <span class="rem">−${removed}</span>` : '');
-    const card = document.createElement('div');
-    card.className = 'vc-diff';
-    card.innerHTML = `
-        <div class="diff-head" onclick="this.parentElement.classList.toggle('expanded')">
-            <i class="ph ph-git-diff"></i>
-            <span class="diff-path">${escHtml(path)}</span>
-            <span class="diff-tool">${escHtml(tool)}</span>
-            <span class="diff-stat">${stat}</span>
-            <i class="ph ph-caret-right diff-chev"></i>
-        </div>
-        <div class="diff-body">${linesHtml}</div>
-    `;
-    turn.body.appendChild(card);
-    vcEnsureThinkingAtEnd(turn);  // keep thinking dot below the diff
-    vcChatScroll();
-}
-function vcRenderError(turn, msg) {
-    if (!turn) {
-        // No turn yet — drop a freestanding error card
-        const out = document.getElementById('claudeOutput');
-        const div = document.createElement('div');
-        div.className = 'vc-turn assistant';
-        div.innerHTML = `
-            <div class="vc-turn-head"><span class="vc-who">Terminal Access</span><span class="vc-meta">${escHtml(vcTimeStamp())}</span></div>
-            <div class="vc-turn-body"><div class="vc-error">${escHtml(msg)}</div></div>
-        `;
-        out.appendChild(div);
-        vcChatScroll();
-        return;
-    }
-    vcDropThinking(turn);
-    const div = document.createElement('div');
-    div.className = 'vc-error';
-    div.textContent = msg;
-    turn.body.appendChild(div);
-    vcChatScroll();
-}
-function vcRenderSystem(text) {
-    const out = document.getElementById('claudeOutput');
-    const div = document.createElement('div');
-    div.className = 'vc-system';
-    div.textContent = text;
-    out.appendChild(div);
-    vcChatScroll();
-}
-function vcAddTurnFooter(turn, data, timings) {
-    if (!turn) return;
-    const cost = typeof data.cost_usd === 'number' ? data.cost_usd : null;
-    const toks = typeof data.tokens === 'number' ? data.tokens : null;
-    const dur  = typeof data.duration_ms === 'number' ? data.duration_ms : null;
-    const parts = [];
-    // No author label — the card itself is the signal that it's the agent.
-    parts.push(`<span class="vc-foot-time">${escHtml(turn.startedAt || vcTimeStamp())}</span>`);
-    if (timings && timings.total_ms != null) {
-        const breakdown = [];
-        if (timings.ttfb_ms != null) breakdown.push(`ttfb ${(timings.ttfb_ms/1000).toFixed(1)}s`);
-        if (dur != null)             breakdown.push(`llm ${(dur/1000).toFixed(1)}s`);
-        const tooltip = breakdown.join(' · ');
-        parts.push(`<span title="${escHtml(tooltip)}">${(timings.total_ms/1000).toFixed(1)}s</span>`);
-    } else if (dur !== null) {
-        parts.push(`<span>${(dur/1000).toFixed(1)}s</span>`);
-    }
-    if (toks !== null) parts.push(`<span>${toks >= 1000 ? (toks/1000).toFixed(1) + 'K' : toks} tok</span>`);
-    if (cost !== null) parts.push(`<span class="vc-cost">$${cost.toFixed(4)}</span>`);
-    const foot = document.createElement('div');
-    foot.className = 'vc-turn-foot';
-    foot.innerHTML = parts.join('');
-    turn.el.appendChild(foot);
-}
-// ── /Terminal Access v2 ────────────────────────────────────────────────────────────
-
-async function resetClaudeSession() {
-    if (claudeIsStreaming) return;
-    if (!confirm('Clear memory and start fresh?\n\nThis wipes the conversation so the Terminal Access forgets everything from this session. It can also speed things up if responses have gotten slow.')) return;
-    try {
-        await apiFetch('/api/adze/claude-reset', { method: 'POST' });
-        document.getElementById('claudeOutput').innerHTML = '';
-        claudeResetCostMeter();
-        claudeFirstMessage = true;
-        const output = document.getElementById('claudeOutput');
-        output.innerHTML = `<div class="claude-term-welcome" id="vcWelcome">
-            <h2>Terminal Access</h2>
-            <p class="vc-line1">Session reset. Start a fresh conversation.</p>
-            <p class="vc-try">Try: <kbd class="vc-suggestion" id="vcSuggestion">update the nav on all pages</kbd></p>
-        </div>`;
-        startVcSuggestionRotation();
-        toast('Terminal Access session reset', 'info');
-    } catch (e) {
-        toast('Failed to reset: ' + e.message, 'error');
-    }
-}
-
-// ── Terminal Access text size (accessibility) ──
-const VC_FS_STEPS = [0.85, 1, 1.15, 1.3, 1.5, 1.75, 2];
-function vcFontSizeApply(scale) {
-    const term = document.getElementById('claudeTerminal');
-    if (!term) return;
-    term.style.setProperty('--vc-scale', scale);
-    const label = document.getElementById('vcFsLabel');
-    if (label) label.textContent = Math.round(scale * 100) + '%';
-    const minus = document.getElementById('vcFsMinus');
-    const plus = document.getElementById('vcFsPlus');
-    if (minus) minus.disabled = scale <= VC_FS_STEPS[0] + 0.001;
-    if (plus) plus.disabled = scale >= VC_FS_STEPS[VC_FS_STEPS.length - 1] - 0.001;
-    try { localStorage.setItem('adze-vc-scale', String(scale)); } catch (e) {}
-    // Also update the live xterm.js terminal and refit so cols/rows stay accurate
-    if (_vcXterm) {
-        _vcXterm.options.fontSize = Math.round(13 * scale);
-        try { _vcXtermFit && _vcXtermFit.fit(); } catch(e) {}
-        if (_vcXtermSocket && _vcXtermSocket.connected) {
-            _vcXtermSocket.emit('terminal:resize', { cols: _vcXterm.cols, rows: _vcXterm.rows });
-        }
-    }
-}
-function vcFontSize(delta) {
-    const current = parseFloat(
-        getComputedStyle(document.getElementById('claudeTerminal')).getPropertyValue('--vc-scale')
-    ) || 1;
-    // Find nearest step, then move by delta
-    let idx = 0, bestDiff = Infinity;
-    VC_FS_STEPS.forEach((s, i) => { const d = Math.abs(s - current); if (d < bestDiff) { bestDiff = d; idx = i; } });
-    idx = Math.max(0, Math.min(VC_FS_STEPS.length - 1, idx + delta));
-    vcFontSizeApply(VC_FS_STEPS[idx]);
-}
-(function restoreVcScale() {
-    let saved = 1;
-    try { const v = parseFloat(localStorage.getItem('adze-vc-scale')); if (v > 0) saved = v; } catch (e) {}
-    // Defer until the terminal element exists
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => vcFontSizeApply(saved));
-    } else {
-        vcFontSizeApply(saved);
-    }
-})();
-
-// ── Claude Pointer Pick ──
-let claudePointerActive = false;
-
-function toggleClaudePointer() {
-    claudePointerActive = !claudePointerActive;
-    const overlay = document.getElementById('claudePointerOverlay');
-    const btn = document.getElementById('claudePointerBtn');
-    const highlight = document.getElementById('claudePointerHighlight');
-    const label = document.getElementById('claudePointerLabel');
-
-    if (claudePointerActive) {
-        overlay.classList.add('active');
-        btn.classList.add('active');
-        overlay.onmousemove = claudePointerHover;
-        overlay.onmouseout = () => { highlight.style.display = 'none'; label.style.display = 'none'; };
-        overlay.onclick = claudePointerClick;
-        // On mobile, auto-switch to preview so user can see & tap elements
-        if (window.innerWidth <= 768) {
-            const splitPane = document.querySelector('.tab-panel.active .split-pane');
-            if (splitPane && !splitPane.classList.contains('preview-mode')) {
-                toggleMobilePreview();
-            }
-            // Also close the tools row
-            const toolsRow = document.getElementById('claudeToolsRow');
-            const toolsBtn = document.querySelector('.claude-tools-toggle');
-            if (toolsRow) toolsRow.style.display = 'none';
-            if (toolsBtn) toolsBtn.classList.remove('open');
-        }
-    } else {
-        overlay.classList.remove('active');
-        btn.classList.remove('active');
-        highlight.style.display = 'none';
-        label.style.display = 'none';
-        overlay.onmousemove = null;
-        overlay.onclick = null;
-        // On mobile, switch back to editor after picking
-        if (window.innerWidth <= 768) {
-            const splitPane = document.querySelector('.tab-panel.active .split-pane');
-            if (splitPane && splitPane.classList.contains('preview-mode')) {
-                toggleMobilePreview();
-            }
-        }
-    }
-}
-
-function getClaudeIframeElementAt(clientX, clientY) {
-    const iframe = document.getElementById('previewFrameClaude');
-    if (!iframe || !iframe.contentDocument) return null;
-    const iframeRect = iframe.getBoundingClientRect();
-    const x = clientX - iframeRect.left;
-    const y = clientY - iframeRect.top;
-    if (x < 0 || y < 0 || x > iframeRect.width || y > iframeRect.height) return null;
-    const el = iframe.contentDocument.elementFromPoint(x, y);
-    if (!el || el === iframe.contentDocument.documentElement || el === iframe.contentDocument.body) return null;
-    return { element: el, iframeX: Math.round(x), iframeY: Math.round(y), iframeRect };
-}
-
-function claudePointerHover(e) {
-    const info = getClaudeIframeElementAt(e.clientX, e.clientY);
-    const highlight = document.getElementById('claudePointerHighlight');
-    const label = document.getElementById('claudePointerLabel');
-    const iframe = document.getElementById('previewFrameClaude');
-
-    if (!info) { highlight.style.display = 'none'; label.style.display = 'none'; return; }
-
-    const elRect = info.element.getBoundingClientRect();
-    const iframeRect = iframe.getBoundingClientRect();
-    const previewPane = iframe.parentElement;
-    const paneRect = previewPane.getBoundingClientRect();
-
-    const hLeft = iframeRect.left - paneRect.left + elRect.left;
-    const hTop = iframeRect.top - paneRect.top + elRect.top;
-
-    highlight.style.display = 'block';
-    highlight.style.left = hLeft + 'px';
-    highlight.style.top = hTop + 'px';
-    highlight.style.width = elRect.width + 'px';
-    highlight.style.height = elRect.height + 'px';
-
-    const desc = describeElement(info.element);
-    label.textContent = desc;
-    label.style.display = 'block';
-    label.style.left = hLeft + 'px';
-    label.style.top = (hTop - 20) + 'px';
-    if (hTop - 20 < 0) label.style.top = (hTop + elRect.height + 4) + 'px';
-}
-
-function claudePointerClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    const info = getClaudeIframeElementAt(e.clientX, e.clientY);
-    if (!info) return;
-
-    const desc = describeElement(info.element);
-    const token = `[Point: ${desc} at (${info.iframeX}, ${info.iframeY})]`;
-
-    insertIntoClaudeInput(token);
-    toggleClaudePointer();
-}
-
-// ── Claude Asset Picker ──
-// ── Claude Asset Picker (multi-select) ──
-window._claudeAssetMode = false;
-window._claudeSelectedAssets = new Set();
-
-// ── Inline Text Editor ──
-let textEditActive = false;
-let textEditCleanup = null;
-
-function toggleTextEdit() {
-    textEditActive = !textEditActive;
-    const btn = document.getElementById('textEditBtn');
-    const iframe = document.getElementById('previewFrameClaude');
-
-    if (textEditActive) {
-        btn.style.color = 'var(--accent)';
-        btn.style.fontWeight = '700';
-        enableTextEdit(iframe);
-    } else {
-        btn.style.color = '';
-        btn.style.fontWeight = '';
-        disableTextEdit();
-    }
-}
-
-function enableTextEdit(iframe) {
-    try {
-        const doc = iframe.contentDocument;
-        if (!doc) return;
-
-        // Style for hover highlight
-        const style = doc.createElement('style');
-        style.id = 'adze-text-edit-style';
-        style.textContent = `
-            .adze-text-hover { outline: 2px dashed var(--accent, #1C4F82) !important; outline-offset: 2px; cursor: text !important; }
-            .adze-text-editing { outline: 2px solid #1C4F82 !important; outline-offset: 2px; background: rgba(28,79,130,0.05) !important; }
-        `;
-        doc.head.appendChild(style);
-
-        const isTextNode = (el) => {
-            const tag = el.tagName?.toLowerCase();
-            if (['script','style','iframe','img','svg','video','audio','canvas','br','hr','input','select','textarea'].includes(tag)) return false;
-            // Only allow elements whose children are all text nodes — mixing
-            // inline tags (<em>, <a>, etc.) means textContent can't be mapped
-            // back to a single substring of the source.
-            let hasText = false;
-            for (const child of el.childNodes) {
-                if (child.nodeType === 1) return false;
-                if (child.nodeType === 3 && child.textContent.trim()) hasText = true;
-            }
-            return hasText;
-        };
-
-        let hoveredEl = null;
-
-        const onMouseOver = (e) => {
-            const el = e.target;
-            if (!isTextNode(el)) return;
-            if (el.contentEditable === 'true') return;
-            if (hoveredEl) hoveredEl.classList.remove('adze-text-hover');
-            el.classList.add('adze-text-hover');
-            hoveredEl = el;
-        };
-
-        const onMouseOut = (e) => {
-            if (hoveredEl) {
-                hoveredEl.classList.remove('adze-text-hover');
-                hoveredEl = null;
-            }
-        };
-
-        const onClick = (e) => {
-            const el = e.target;
-            if (!isTextNode(el)) return;
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Remove hover
-            el.classList.remove('adze-text-hover');
-            el.classList.add('adze-text-editing');
-
-            const originalText = el.textContent;
-            el.contentEditable = 'true';
-            el.focus();
-
-            const onBlur = () => {
-                el.contentEditable = 'false';
-                el.classList.remove('adze-text-editing');
-                const newText = el.textContent;
-                if (newText !== originalText) {
-                    // Update the HTML editor with the change
-                    applyTextEditToSource(originalText, newText);
-                }
-                el.removeEventListener('blur', onBlur);
-                el.removeEventListener('keydown', onKey);
-            };
-
-            const onKey = (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
-                if (e.key === 'Escape') { el.textContent = originalText; el.blur(); }
-            };
-
-            el.addEventListener('blur', onBlur);
-            el.addEventListener('keydown', onKey);
-        };
-
-        doc.addEventListener('mouseover', onMouseOver, true);
-        doc.addEventListener('mouseout', onMouseOut, true);
-        doc.addEventListener('click', onClick, true);
-
-        textEditCleanup = () => {
-            doc.removeEventListener('mouseover', onMouseOver, true);
-            doc.removeEventListener('mouseout', onMouseOut, true);
-            doc.removeEventListener('click', onClick, true);
-            const s = doc.getElementById('adze-text-edit-style');
-            if (s) s.remove();
-            if (hoveredEl) hoveredEl.classList.remove('adze-text-hover');
-        };
-    } catch(e) {
-        console.warn('Text edit failed:', e);
-    }
-}
-
-function disableTextEdit() {
-    if (textEditCleanup) {
-        textEditCleanup();
-        textEditCleanup = null;
-    }
-}
-
-let _textEditAutosaveTimer = null;
-function scheduleTextEditAutosave(delay = 1200) {
-    clearTimeout(_textEditAutosaveTimer);
-    _textEditAutosaveTimer = setTimeout(() => {
-        _textEditAutosaveTimer = null;
-        if (typeof hasUnsavedChanges !== 'undefined' && !hasUnsavedChanges) return;
-        savePage();
-    }, delay);
-}
-
-function applyTextEditToSource(oldText, newText) {
-    // Find and replace in the HTML editor
-    const htmlEditor = document.getElementById('htmlEditor');
-    if (!htmlEditor) return;
-
-    const html = htmlEditor.value;
-    let idx = html.indexOf(oldText);
-    let matchLen = oldText.length;
-    if (idx === -1) {
-        // DOM textContent collapses whitespace; source may have newlines,
-        // tabs, or runs of spaces. Retry with a whitespace-tolerant regex.
-        const trimmed = oldText.trim();
-        if (trimmed) {
-            const pattern = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-            const m = html.match(new RegExp(pattern));
-            if (m) { idx = m.index; matchLen = m[0].length; }
-        }
-    }
-    if (idx === -1) {
-        toast('Could not locate text in source — edit not saved', 'warn');
-        return;
-    }
-    const escapedNew = newText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    htmlEditor.value = html.substring(0, idx) + escapedNew + html.substring(idx + matchLen);
-    schedulePreview(0);
-    setUnsaved(true);
-    scheduleTextEditAutosave();
-}
-
-function openClaudeAssetModal() {
-    document.getElementById('aiAssetSearch').value = '';
-    window._claudeAssetMode = true;
-    window._claudeSelectedAssets.clear();
-    populateAiAssetGrid(assetList);
-    // Show the "Insert Selected" button
-    updateClaudeAssetDoneBtn();
-    showModal('aiAssetModal');
-}
-
-function updateClaudeAssetDoneBtn() {
-    let btn = document.getElementById('claudeAssetDoneBtn');
-    if (!window._claudeAssetMode) {
-        if (btn) btn.style.display = 'none';
-        return;
-    }
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'claudeAssetDoneBtn';
-        btn.style.cssText = 'margin-right:auto;';
-        btn.onclick = claudeInsertSelectedAssets;
-        document.querySelector('#aiAssetModal .modal-actions').prepend(btn);
-    }
-    const count = window._claudeSelectedAssets.size;
-    btn.textContent = count ? `Insert ${count} asset${count > 1 ? 's' : ''}` : 'Select assets...';
-    btn.disabled = count === 0;
-    btn.style.display = '';
-}
-
-function claudeInsertSelectedAssets() {
-    const tokens = [...window._claudeSelectedAssets].map(url => `[Asset: ${url}]`).join(' ');
-    if (tokens) insertIntoClaudeInput(tokens);
-    window._claudeAssetMode = false;
-    window._claudeSelectedAssets.clear();
-    hideModal('aiAssetModal');
-}
-
-// Override the asset insertion — check if we're in Claude mode
-const _originalInsertAssetToken = insertAssetToken;
-insertAssetToken = function(url) {
-    if (window._claudeAssetMode) {
-        // Toggle selection
-        if (window._claudeSelectedAssets.has(url)) {
-            window._claudeSelectedAssets.delete(url);
-        } else {
-            window._claudeSelectedAssets.add(url);
-        }
-        // Update card visuals
-        document.querySelectorAll('#aiAssetGrid .ai-asset-card').forEach(card => {
-            if (card._assetUrl === url) {
-                card.classList.toggle('selected', window._claudeSelectedAssets.has(url));
-            }
-        });
-        updateClaudeAssetDoneBtn();
-        return; // Don't close modal
-    }
-    _originalInsertAssetToken(url);
-};
-
-function insertIntoClaudeInput(token) {
-    // Route to the live Claude Code terminal if it's connected. Tokens arrive
-    // here from the Pointer ("[Point: ...]") and Asset ("[Asset: ...]")
-    // helpers; Claude Code doesn't understand the bracket wrapping, so strip
-    // it and just inject the inner path/selector.
-    const stripped = token
-        .replace(/\[Point:\s*([^\]]+?)(?:\s+at\s+\([^)]+\))?\]/g, (_, sel) => sel.trim())
-        .replace(/\[Asset:\s*([^\]]+)\]/g, (_, p) => p.trim());
-
-    if (_vcXterm && _vcXtermSocket && _vcXtermSocket.connected) {
-        _vcXtermSocket.emit('terminal:input', { data: stripped + ' ' });
-        _vcXterm.focus();
-        return;
-    }
-
-    // Legacy fallback: write into the (hidden) input field
-    const input = document.getElementById('claudeInput');
-    if (!input) return;
-    const pos = input.selectionStart || input.value.length;
-    const before = input.value.slice(0, pos);
-    const after = input.value.slice(pos);
-    const needSpaceBefore = before.length > 0 && !before.endsWith(' ');
-    const needSpaceAfter = after.length > 0 && !after.startsWith(' ');
-    input.value = before + (needSpaceBefore ? ' ' : '') + stripped + (needSpaceAfter ? ' ' : '') + after;
-    input.focus();
-    const newPos = pos + (needSpaceBefore ? 1 : 0) + stripped.length + (needSpaceAfter ? 1 : 0);
-    input.setSelectionRange(newPos, newPos);
-}
-
-// Clear Claude asset mode when modal closes
-const _originalHideModal = hideModal;
-hideModal = function(id) {
-    if (id === 'aiAssetModal') {
-        window._claudeAssetMode = false;
-        window._claudeSelectedAssets.clear();
-        if (typeof updateClaudeAssetDoneBtn === 'function') updateClaudeAssetDoneBtn();
-        window._acAssetMode = false;
-        if (window._acSelectedAssets) window._acSelectedAssets.clear();
-        if (typeof updateAcAssetDoneBtn === 'function') updateAcAssetDoneBtn();
-    }
-    _originalHideModal(id);
-};
-
-
 // ── Auto-Code: Pointer + Asset insertion ─────────────────────────────────
-// Parallel to the Terminal-tab pointer/asset helpers above; targets the
-// Auto-Code preview iframe + composer textarea instead.
+// Element-picker and asset-insertion helpers for the Auto-Code preview
+// iframe + composer textarea.
 
 let _acPointerActive = false;
 
@@ -10772,9 +8715,7 @@ function acInsertSelectedAssets() {
     hideModal('aiAssetModal');
 }
 
-// Tap into the existing asset-grid click path so the same modal serves both
-// Terminal and Auto-Code multi-select modes. The Claude override above
-// already wraps insertAssetToken; we wrap once more for the Auto-Code mode.
+// Tap into the existing asset-grid click path for Auto-Code's multi-select mode.
 (function wrapInsertAssetTokenForAutoCode() {
     if (typeof insertAssetToken !== 'function') return;
     const prev = insertAssetToken;

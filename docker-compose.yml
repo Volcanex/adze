@@ -20,8 +20,8 @@ services:
       - ./uploads:/app/uploads    # admin-uploaded assets (images, files)
       - ./_vibe_sessions:/app/_vibe_sessions  # vibe_agent conversation history
       - ./nginx/sites-available:/app/nginx/sites-available
-      - claude_auth:/root/.claude
-      # Lets the terminal bridge create per-artist sandbox containers.
+      # Lets Auto-Code (sandbox.py/artist_repos.py) create/manage the
+      # per-artist adze-terminal-<slug> sandbox containers.
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - DEV_ADMIN_TOKEN=${DEV_ADMIN_TOKEN}
@@ -35,7 +35,3 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ADZE_HOST_ROOT=/home/gabriel/adze
-
-
-volumes:
-  claude_auth:    # claude login session — survives container rebuilds

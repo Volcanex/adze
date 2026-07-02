@@ -38,11 +38,14 @@ config skeleton, the per-deployment SSH key (`ssh_key`, gitignored),
 and the manifest cache. Bootstrap a new one with
 `scripts/add-external-artist.sh <slug> <host> <remote-path>`.
 
-Filesystem ops route through `_shared/remote_fs.py`. Terminal Access opens a
-per-artist shell/Claude Code tmux session rooted at the artist directory.
-The dashboard auto-detects external artists via `/api/adze/external-manifest` and
+Filesystem ops route through `_shared/remote_fs.py`. The dashboard
+auto-detects external artists via `/api/adze/external-manifest` and
 applies a stripped-down tab list + points the preview iframe at the
-manifest's `preview_url`.
+manifest's `preview_url`. **External artists have no AI-assisted editing
+tab** — Auto-Code explicitly rejects `remote` artists (`autocode_proxy.py`
+returns 400 for tabs on external artists), and Terminal Access (which used
+to cover this gap) was retired 2026-07. Manual Edit (SSH-backed via
+`remote_fs.py`) is their only editing path today.
 
 **Auth boundary.** Adze SSHes into the Seed box as a filesystem user.
 That identity is **distinct** from Seed's own web admin (`ADMIN_PASSWORD`
@@ -50,14 +53,16 @@ in Seed's `core/api/admin.py`). Adze External bypasses Seed's web admin
 entirely — it operates at the filesystem layer. Don't add Seed admin
 gates expecting them to apply to external Adze sessions.
 
-## ⚠ Concurrent edits with Terminal Access
-The dashboard ships Terminal Access that another developer/Claude Code session can use to edit `artists/<slug>/` files live. **Both you and Terminal Access write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
+## ⚠ Concurrent edits with Auto-Code
+The dashboard's Auto-Code tab runs an agent that can edit `artists/<slug>/` files live in a per-artist sandbox container. **Both you and Auto-Code write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
 
 ```
-tmux ls | grep "adze-<slug>"
+docker ps --filter label=adze.artist_slug=<slug> --format '{{.Names}}'
 ```
 
-If there is a live terminal session, read the live files first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
+If that artist's sandbox container is running, read the live files first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
+
+(Terminal Access, a separate tmux/Claude-Code-CLI feature, was retired 2026-07 — ignore any stale references to it elsewhere.)
 
 ### Index
 
@@ -74,12 +79,12 @@ hand-edit between the markers.
 | `_shared/features/CLAUDE.md` | Features — Site-wide capability modules |
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
 | `_shared/widgets/loom/CLAUDE.md` | Loom — visual synth (flagship T2 widget) |
-| `artists/CLAUDE.md` | Artists — coordination with Terminal Access |
+| `artists/CLAUDE.md` | Artists — coordination with Auto-Code |
 | `artists/jackdt/CLAUDE.md` | Jack Dennison-Thompson (jackdt) — jackdt.com |
 | `artists/rose/CLAUDE.md` | Rose Jones — generated from information.json |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 | `shared/CLAUDE.md` | shared/ — legacy stub, do not use |
 
-_Auto-compiled 2026-06-24 21:53 UTC — 12 doc(s) found._
+_Auto-compiled 2026-07-02 07:20 UTC — 12 doc(s) found._
 <!-- DOCS:END -->

@@ -35,7 +35,7 @@ The framework gives you, from the artist's `config.json` alone:
 
 `render()` must return the list of page slugs it generates (rel to the artist
 dir, posix, e.g. `'works/cormorant'`). Those pages are then **read-only** to the
-dashboard editor and Terminal Access — `/edit-page` refuses direct edits to a
+dashboard editor and Auto-Code — `/edit-page` refuses direct edits to a
 generated page, because the next rebuild would overwrite them. The data file is
 the source of truth; the pages are derived.
 
