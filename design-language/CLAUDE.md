@@ -1,56 +1,39 @@
 # Design Language — canonical reference
 
-Bundle exported from claude.ai/design and dropped here as the source of truth for Adze visual style. **Read `project/Adze Design Language.html` in full before changing any chrome in `_shared/portal.html`, `_shared/admin.html`, or `_shared/dashboard.html`.**
+Two design systems live here:
 
-## What's here
-- `project/Adze Design Language.html` — the design system itself (colour tokens, type scale, geometry, components, voice). Open in a browser to see; read the source for exact values.
-- `project/_shared/` and `project/static/` — the brand assets the design page references (logo, favicon).
-- `chats/chat1.md` — the conversation that produced the design language. Useful for understanding *why* a choice was made (e.g. why the wordmark is upright bold instead of italic — see "Looks better sharper and cleaner").
-- `README.md` — the upstream handoff README.
+**`project/`** — the **Last Place** design system (current). This is the brand used for the lastplace workspace: handover portals, client-facing pages. Exported from claude.ai/design, source of truth for anything branded Last Place.
 
-## ⚠ Chrome moved to the "mono" direction (2026-06-03)
+**Adze chrome** (`_shared/portal.html`, `_shared/admin.html`, `_shared/dashboard.html`) uses a separate mono/technical identity — see the note below. Don't confuse the two.
 
-The live chrome (`home.html` — the adze.studio landing page, served at
-`/api/adze/home` — plus `portal.html`, `admin.html`, `dashboard.html`) has been
-migrated off the original Cardo-serif-italic identity to a **mono / technical**
-direction ("Alt 2"). The `project/Adze Design Language.html` export here still documents the
-**old** Cardo look and is now behind — treat it as historical until re-exported.
+## Last Place design system (`project/`)
 
-What changed in all three `:root` blocks:
-- `--heading-font: 'JetBrains Mono', 'Monaco', 'Menlo', monospace` (was `'Cardo', Georgia, serif`)
-- `--mono` now leads with `'JetBrains Mono'`
-- `--radius: 4px` (was 6px admin/dashboard, 8px portal)
-- All heading `font-style: italic` removed → upright; section headers are uppercase + tracked
-- Wordmark lockup is `[Adze]` (accent-coloured brackets)
-- Font imports add `JetBrains+Mono:wght@400;500;700`
+Hyperlink blue `#0000EE`, black ink, white space, Cormorant serif. A lino-print plant mark is the visual signature.
 
-Comparison mockups live in `static/design-language-*.html` and are linked from the
-admin **Extras** tab:
-- `design-language.html` — live reference (now reflects mono, parses chrome CSS)
-- `design-language-1-legacy.html` — **frozen** Cardo-italic archive (static on purpose)
-- `design-language-2-mono.html` — the adopted direction
-- `design-language-3-clean.html` / `-4-editorial.html` — unused explorations
+- `project/tokens/` — CSS custom properties: `colors.css`, `typography.css`, `spacing.css`, `base.css`, `fonts.css`
+- `project/styles.css` — single `@import` entry point
+- `project/assets/` — `plant-mark-blue.png`, `plant-mark-blue-knockout.png`
+- `project/cards/` — specimen HTML cards (colours, type, spacing, brand mark)
+- `project/components/` — `Button`, `Card`, `Tag`, `TextLink`, `Field`, `Checkbox`, `Switch` (JSX + HTML previews)
+- `project/ui_kits/studio-site/` — full Last Place studio site (home, work, studio, contact) as a click-through
+- `project/templates/studio-page/` — blank page scaffold with tokens wired up
+- `project/readme.md` — voice, visual rules, full index
+- `project/SKILL.md` — agent skill entry point for this system
+- `README.md` — upstream handoff README
 
-Tabs and toasts were left untouched (still "preserved by user request", below).
+**Use for:** `_shared/handover.html`, `_shared/portal.html` (lastplace workspace), client-facing handover slides.
 
-## How it relates to the live code
+## Adze chrome identity
 
-The design language was distilled **from** `_shared/portal.html` and `_shared/admin.html`, then refined. So the live files mostly already match canon. The three live files each carry their own copy of the tokens (`:root` and `[data-theme="dark"]` blocks) — keep them in sync with this file. Each `:root` block has a comment pointing back here.
+The live chrome (adze.studio landing, `admin.html`, `dashboard.html`) uses the **mono/technical** direction:
+- `--heading-font: 'JetBrains Mono', monospace` (upright, not italic)
+- `--radius: 4px`, uppercase + tracked section headers, `[Adze]` wordmark in accent brackets
 
-### Intentional divergences
+This is separate from the Last Place brand. Don't cross-apply. The three chrome files each carry their own `:root` tokens; keep them in sync with each other, not with `project/`.
 
-`_shared/dashboard.html` runs denser than the canon:
-- `--radius: 6px` (canon is 8px)
-- `--text2: #5a5750` light / `#aaa79e` dark (canon is `#6b6860` / `#9a978e`)
-- adds `--bg3` for API-method badge backgrounds
-
-These are deliberate adaptations for the admin tool's smaller fonts (10–13px). Don't homogenise.
-
-## Preserved by user request
-
-- **Tabs** — current tab styling across all three files is loved as-is. Don't restyle.
+### Preserved by user request
+- **Tabs** — current tab styling across all three files. Don't restyle.
 - **Toast notifications** — `portal.html:321-334` and `dashboard.html:451-457`. Don't restyle.
 
-## Tokens beyond the live files
-
-`--accent-soft: #6b8cae` (light) / `#7ea3c4` (dark) — the dusty steel-blue from the logo. Defined in all three files but not yet used. Per canon, the **portal** surface should use this softer accent; the **admin/dashboard** surfaces use the deeper `--accent: #1C4F82`. Switching portal to `--accent-soft` is a visible behavioural change — do not flip without user OK.
+### Intentional chrome divergences
+`dashboard.html` runs denser than `portal.html` / `admin.html` (smaller fonts, 10–13px). Don't homogenise `--radius` or colour values between them.

@@ -1,0 +1,99 @@
+<!-- @template name="Studio landing page" description="A Last Place marketing page: quiet hero, selected works, contact band — built from the DS components." -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Last Place — Studio landing page</title>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="./ds-base.js"></script>
+<style>
+  html, body { margin: 0; background: var(--surface-page); }
+  #app { max-width: 1600px; margin: 0 auto; }
+  .bar { display: flex; align-items: center; justify-content: space-between; padding: 20px var(--page-margin); border-bottom: 1px solid var(--border-hairline); }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .mono { width: 34px; height: 34px; background: var(--lp-blue); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--font-serif); font-weight: 300; font-size: 20px; }
+  .word { font-family: var(--font-serif); font-size: 21px; }
+  .nav { display: flex; gap: 32px; }
+  .nav a { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; }
+  .hero { display: grid; grid-template-columns: 1.25fr .75fr; gap: 48px; align-items: center; padding: var(--space-10) var(--page-margin) var(--space-9); }
+  .eyebrow { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 28px; }
+  .h1 { font-family: var(--font-serif); font-weight: 300; font-size: 92px; line-height: .88; letter-spacing: -.02em; margin: 0 0 28px; }
+  .lede { font-family: var(--font-serif); font-size: 23px; line-height: 1.5; max-width: 40ch; margin: 0 0 36px; }
+  .cta { display: flex; gap: 16px; align-items: center; }
+  .art { display: flex; justify-content: center; }
+  .art img { width: 100%; max-width: 360px; }
+  .worksHead { display: flex; justify-content: space-between; align-items: baseline; padding: var(--space-7) var(--page-margin) 0; border-top: 1px solid var(--border-hairline); }
+  .worksTitle { font-family: var(--font-serif); font-size: 32px; letter-spacing: -.01em; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; padding: var(--space-6) var(--page-margin) var(--space-10); }
+  .band { background: var(--lp-blue); color: #fff; padding: var(--space-9) var(--page-margin); display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+  .band h2 { font-family: var(--font-serif); font-weight: 300; font-size: 52px; line-height: .94; letter-spacing: -.02em; margin: 0; max-width: 16ch; }
+</style>
+</head>
+<body>
+  <div id="app"></div>
+  <script type="text/babel" data-presets="react">
+    function mount() {
+      const NS = window.LastPlaceDesignSystem_2f29fe;
+      if (!NS) { return setTimeout(mount, 60); }
+      const { Button, TextLink, Tag, Card } = NS;
+      const works = [
+        { t: "Onwards Norfolk", k: "Branding · Web", m: "2025 — Norfolk BIDs", bg: "var(--lp-blue)", c: "#fff", i: "ON" },
+        { t: "Marsh & Co.", k: "Identity", m: "2025 — Marsh & Co.", bg: "var(--lp-black)", c: "#fff", i: "M&" },
+        { t: "Verge Garden Co.", k: "Branding · Web", m: "2023 — Verge", bg: "var(--lp-paper)", c: "var(--lp-blue)", i: "VG" },
+      ];
+      function Page() {
+        return (
+          <React.Fragment>
+            <header className="bar">
+              <div className="brand"><div className="word">Last Place</div></div>
+              <nav className="nav">
+                <TextLink href="#">Work</TextLink>
+                <TextLink href="#">Studio</TextLink>
+                <TextLink href="#">Contact</TextLink>
+              </nav>
+            </header>
+
+            <section className="hero">
+              <div>
+                <div className="eyebrow">Web design studio — est. 2022</div>
+                <h1 className="h1">We are<br/>Last <span style={{color:'var(--lp-blue)'}}>Place</span>.</h1>
+                <p className="lede">A small studio that likes a lot of white space, a single confident blue, and websites that age well.</p>
+                <div className="cta">
+                  <Button variant="primary">Start a project</Button>
+                  <Button variant="link">see selected work</Button>
+                </div>
+              </div>
+              <div className="art"><img src="../../assets/plant-mark-blue-knockout.png" alt="Last Place plant mark" /></div>
+            </section>
+
+            <div className="worksHead">
+              <span className="worksTitle">Selected works</span>
+              <TextLink href="#" arrow>The full index</TextLink>
+            </div>
+            <section className="grid">
+              {works.map((w) => (
+                <Card key={w.t} href="#" eyebrow={w.k} title={w.t} meta={w.m} mediaBg={w.bg}
+                  media={<div style={{background:w.bg,color:w.c,width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'var(--font-serif)',fontWeight:300,fontSize:72,border:w.bg==='var(--lp-paper)'?'1px solid var(--border-hairline)':'none'}}>{w.i}</div>}>
+                  A representative project for the studio.
+                </Card>
+              ))}
+            </section>
+
+            <section className="band">
+              <h2>Let's make something quiet and good.</h2>
+              <Button variant="secondary" style={{borderColor:'#fff', color:'#fff'}}>Say hello</Button>
+            </section>
+          </React.Fragment>
+        );
+      }
+      ReactDOM.createRoot(document.getElementById("app")).render(<Page />);
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", mount);
+    } else { mount(); }
+  </script>
+</body>
+</html>

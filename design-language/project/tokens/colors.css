@@ -1,0 +1,62 @@
+/* ===========================================================================
+   LAST PLACE — Colour
+   A web-native palette: hyperlink blue, black ink, white space.
+   Forest green is the rare second voice. Everything else is restraint.
+   =========================================================================== */
+
+:root {
+  /* --- Base palette ------------------------------------------------------ */
+  --lp-blue:          #0000EE;  /* hyperlink blue — the signature */
+  --lp-blue-pure:     #0000FF;  /* the lino-print blue used in artwork */
+  --lp-blue-deep:     #0000A8;  /* pressed / active link */
+  --lp-visited:       #551A8B;  /* the old web "visited" violet, used sparingly */
+
+  --lp-black:         #0B0B0C;  /* ink — near-black, never pure */
+  --lp-true-black:    #000000;  /* reserved for print marks */
+  --lp-white:         #FFFFFF;  /* page */
+  --lp-paper:         #FBFBF9;  /* faintly warm off-white alt surface */
+
+  --lp-green:         #14432B;  /* forest green — secondary highlight (rare) */
+  --lp-green-bright:  #1B6B43;  /* forest, one shade up for small accents */
+
+  /* --- Ink tints (black at alpha) --------------------------------------- */
+  --lp-ink-90: rgba(11, 11, 12, 0.90);
+  --lp-ink-70: rgba(11, 11, 12, 0.70);
+  --lp-ink-55: rgba(11, 11, 12, 0.55);
+  --lp-ink-40: rgba(11, 11, 12, 0.40);
+  --lp-ink-22: rgba(11, 11, 12, 0.22);
+  --lp-ink-14: rgba(11, 11, 12, 0.14);
+  --lp-ink-08: rgba(11, 11, 12, 0.08);
+  --lp-ink-04: rgba(11, 11, 12, 0.04);
+
+  /* Blue at alpha — for tints, underlines, selections */
+  --lp-blue-12: rgba(0, 0, 238, 0.12);
+  --lp-blue-08: rgba(0, 0, 238, 0.08);
+
+  /* --- Semantic aliases -------------------------------------------------- */
+  --text-body:        var(--lp-black);
+  --text-muted:       var(--lp-ink-55);
+  --text-faint:       var(--lp-ink-40);
+  --text-link:        var(--lp-blue);
+  --text-link-press:  var(--lp-blue-deep);
+  --text-on-blue:     var(--lp-white);
+  --text-on-green:    var(--lp-white);
+
+  --surface-page:     var(--lp-white);
+  --surface-paper:    var(--lp-paper);
+  --surface-card:     var(--lp-white);
+  --surface-blue:     var(--lp-blue);
+  --surface-green:    var(--lp-green);
+  --surface-ink:      var(--lp-black);
+
+  --border-hairline:  var(--lp-ink-14);
+  --border-soft:      var(--lp-ink-08);
+  --border-strong:    var(--lp-black);
+  --border-blue:      var(--lp-blue);
+
+  --focus-ring:       var(--lp-blue);
+  --selection-bg:     var(--lp-blue);
+  --selection-fg:     var(--lp-white);
+}
+
+::selection { background: var(--selection-bg); color: var(--selection-fg); }

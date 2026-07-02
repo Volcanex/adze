@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x180" name="Link voice" subtitle="Default, hover (underline lifts), active, visited" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 32px; background: var(--surface-page); }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px 48px; align-items: baseline; }
+  .item { font-family: var(--font-serif); font-size: 26px; }
+  .lab { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); display:block; margin-bottom: 8px; }
+  .l-default { color: var(--lp-blue); text-decoration: underline; text-underline-offset: 2px; }
+  .l-hover { color: var(--lp-blue); text-decoration: none; }
+  .l-active { color: var(--lp-blue-deep); text-decoration: underline; text-underline-offset: 2px; }
+  .l-visited { color: var(--lp-visited); text-decoration: underline; text-underline-offset: 2px; }
+</style>
+</head>
+<body>
+  <div class="grid">
+    <div><span class="lab">Default</span><span class="item l-default">our latest work</span></div>
+    <div><span class="lab">Hover</span><span class="item l-hover">our latest work</span></div>
+    <div><span class="lab">Active</span><span class="item l-active">our latest work</span></div>
+    <div><span class="lab">Visited (rare)</span><span class="item l-visited">our latest work</span></div>
+  </div>
+</body>
+</html>

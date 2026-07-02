@@ -1,0 +1,52 @@
+/* ===========================================================================
+   LAST PLACE — Space, measure, line & form
+   The brand is mostly white space. Spacing runs generous; radii run sharp.
+   Shadows barely exist — hairline rules do the structural work instead.
+   =========================================================================== */
+
+:root {
+  /* --- Spacing scale (px) ------------------------------------------------ */
+  --space-0:   0px;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   24px;
+  --space-6:   32px;
+  --space-7:   48px;
+  --space-8:   64px;
+  --space-9:   96px;
+  --space-10:  128px;
+  --space-11:  192px;
+  --space-12:  256px;
+
+  /* --- Layout ------------------------------------------------------------ */
+  --page-margin:   clamp(24px, 6vw, 120px); /* generous side air */
+  --gutter:        32px;
+  --measure:       62ch;   /* comfortable reading line length */
+  --measure-tight: 46ch;   /* lede / pull text */
+  --max-page:      1440px;
+
+  /* --- Radii (sharp, editorial) ----------------------------------------- */
+  --radius-0:    0px;     /* default — square corners */
+  --radius-sm:   2px;
+  --radius-md:   4px;
+  --radius-pill: 999px;   /* tags / round buttons only */
+
+  /* --- Borders ----------------------------------------------------------- */
+  --hairline:  1px solid var(--border-hairline);
+  --rule:      1px solid var(--border-strong);
+  --rule-blue: 1px solid var(--border-blue);
+
+  /* --- Shadow (used sparingly; the system prefers rules) ----------------- */
+  --shadow-none: none;
+  --shadow-card: 0 1px 0 var(--lp-ink-08);
+  --shadow-lift: 0 12px 40px -16px rgba(11, 11, 12, 0.22);
+
+  /* --- Motion ------------------------------------------------------------ */
+  --ease-out:   cubic-bezier(0.2, 0.6, 0.2, 1); /* @kind other */
+  --ease-inout: cubic-bezier(0.6, 0, 0.2, 1);   /* @kind other */
+  --dur-fast:   120ms; /* @kind other */
+  --dur-base:   220ms; /* @kind other */
+  --dur-slow:   480ms; /* @kind other */
+}

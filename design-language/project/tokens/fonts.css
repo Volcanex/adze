@@ -1,0 +1,9 @@
+/* ===========================================================================
+   LAST PLACE — Fonts
+   Cormorant is loaded from Google Fonts (the studio's typeface).
+   Full optical range 300–700, roman + italic, so display can run light and
+   body can run regular. This @import must stay first in the cascade.
+   Source: https://fonts.google.com/specimen/Cormorant
+   =========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&display=swap");

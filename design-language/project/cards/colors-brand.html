@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x250" name="Brand palette" subtitle="Hyperlink blue, ink, paper, and the rare forest green" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 28px; background: var(--surface-page); }
+  .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .sw { display: flex; flex-direction: column; gap: 8px; }
+  .chip { height: 96px; border: var(--hairline); }
+  .meta { display: flex; flex-direction: column; gap: 2px; }
+  .nm { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-body); }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:var(--lp-blue)"></div><div class="meta"><span class="nm">Blue</span><span class="hex">#0000EE</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--lp-black)"></div><div class="meta"><span class="nm">Ink</span><span class="hex">#0B0B0C</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--lp-white)"></div><div class="meta"><span class="nm">White</span><span class="hex">#FFFFFF</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--lp-paper)"></div><div class="meta"><span class="nm">Paper</span><span class="hex">#FBFBF9</span></div></div>
+    <div class="sw"><div class="chip" style="background:var(--lp-green)"></div><div class="meta"><span class="nm">Forest</span><span class="hex">#14432B</span></div></div>
+  </div>
+</body>
+</html>

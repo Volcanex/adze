@@ -1,0 +1,108 @@
+/* ===========================================================================
+   LAST PLACE — Typography
+   Cormorant carries everything that matters. A quiet monospace handles the
+   small administrative type (labels, captions, metadata). Two leading modes:
+   airy by default, and "clip" where lines just barely kiss.
+   =========================================================================== */
+
+:root {
+  /* --- Families ---------------------------------------------------------- */
+  --font-serif: "Cormorant", "Cormorant Garamond", "Times New Roman", Georgia, serif;
+  --font-mono:  ui-monospace, "SF Mono", "SFMono-Regular", Menlo, "Consolas", monospace;
+
+  /* --- Weights (Cormorant ships 300–700) --------------------------------- */
+  --weight-light:    300;
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  /* --- Display & heading sizes (px) -------------------------------------- */
+  --size-display-xl: 132px;
+  --size-display:    92px;
+  --size-h1:         64px;
+  --size-h2:         46px;
+  --size-h3:         32px;
+  --size-title:      24px;
+
+  /* --- Text sizes -------------------------------------------------------- */
+  --size-lede:       23px;   /* opening paragraph / pull text */
+  --size-body:       18px;
+  --size-small:      15px;
+  --size-caption:    13px;
+  --size-label:      11.5px; /* mono, tracked, uppercase */
+
+  /* --- Leading ----------------------------------------------------------- */
+  --leading-clip:  0.88;  /* lines just about clip each other — display only */
+  --leading-tight: 1.04;
+  --leading-snug:  1.22;
+  --leading-body:  1.62;  /* generous, airy reading */
+  --leading-airy:  1.9;
+
+  /* --- Tracking ---------------------------------------------------------- */
+  --tracking-label:  0.2em;   /* uppercase mono labels */
+  --tracking-caps:   0.08em;
+  --tracking-tight: -0.015em; /* large display serif */
+  --tracking-normal: 0;
+}
+
+/* --- Composed roles — opt-in utility classes ----------------------------- */
+.lp-display-xl {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-light);
+  font-size: var(--size-display-xl);
+  line-height: var(--leading-clip);
+  letter-spacing: var(--tracking-tight);
+}
+.lp-display {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-light);
+  font-size: var(--size-display);
+  line-height: var(--leading-clip);
+  letter-spacing: var(--tracking-tight);
+}
+.lp-h1 {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-h1);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+}
+.lp-h2 {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-h2);
+  line-height: var(--leading-snug);
+}
+.lp-h3 {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-medium);
+  font-size: var(--size-h3);
+  line-height: var(--leading-snug);
+}
+.lp-lede {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-lede);
+  line-height: var(--leading-body);
+}
+.lp-body {
+  font-family: var(--font-serif);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-body);
+  line-height: var(--leading-body);
+}
+.lp-label {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-label);
+  line-height: 1;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+.lp-caption {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-regular);
+  font-size: var(--size-caption);
+  line-height: var(--leading-snug);
+}

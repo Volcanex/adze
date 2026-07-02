@@ -1,0 +1,31 @@
+<!-- @dsCard group="Spacing" viewport="700x200" name="Radii & rules" subtitle="Sharp by default; hairline rules do the structural work" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  body { margin: 0; padding: 32px; background: var(--surface-page); display: flex; gap: 40px; align-items: center; }
+  .col { display: flex; gap: 22px; }
+  .box { width: 84px; height: 84px; border: var(--rule); display:flex; align-items:flex-end; padding:6px; }
+  .box span { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+  .rules { display: flex; flex-direction: column; gap: 18px; flex: 1; min-width: 200px; }
+  .hl { border-top: var(--hairline); }
+  .st { border-top: var(--rule); }
+  .bl { border-top: var(--rule-blue); }
+  .rl { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div class="col">
+    <div class="box" style="border-radius:0"><span>0</span></div>
+    <div class="box" style="border-radius:2px"><span>2</span></div>
+    <div class="box" style="border-radius:999px"><span>pill</span></div>
+  </div>
+  <div class="rules">
+    <div><div class="hl"></div><div class="rl">hairline · ink-14</div></div>
+    <div><div class="st"></div><div class="rl">rule · ink</div></div>
+    <div><div class="bl"></div><div class="rl">rule · blue</div></div>
+  </div>
+</body>
+</html>
