@@ -75,10 +75,11 @@ hand-edit between the markers.
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
 | `_shared/widgets/loom/CLAUDE.md` | Loom — visual synth (flagship T2 widget) |
 | `artists/CLAUDE.md` | Artists — coordination with Terminal Access |
+| `artists/jackdt/CLAUDE.md` | Jack Dennison-Thompson (jackdt) — jackdt.com |
 | `artists/rose/CLAUDE.md` | Rose Jones — generated from information.json |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 | `shared/CLAUDE.md` | shared/ — legacy stub, do not use |
 
-_Auto-compiled 2026-06-11 13:45 UTC — 11 doc(s) found._
+_Auto-compiled 2026-06-24 21:53 UTC — 12 doc(s) found._
 <!-- DOCS:END -->

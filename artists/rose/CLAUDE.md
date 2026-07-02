@@ -44,3 +44,15 @@ image) renders a "(Work file missing)" placeholder box.
 `about.html` — full pages with `{{TOKEN}}` slots the generator fills. They carry
 the shared chrome (header, hamburger menu, loading veil, footer, scripts), so a
 site-wide chrome change is an edit to these five files, not 40 pages.
+`contact/content.md` carries the **same** menu chrome (it is hand-authored, not
+generated), so menu edits actually span **six** files — keep them in sync.
+
+### Menu = title (2x2 conveyor)
+The hamburger menu is a 2x2 grid: Works / About on top, Exhibitions / Contact
+below. On open, the top row slides in from the right and the bottom row from the
+left (`.menu-overlay` CSS). There is **no separate `<h1>` section-title** — the
+current page's menu link carries `is-current`, stays put as the always-visible
+page title (coloured per section), and the other three slide in *in front* of it
+(z-index). Because the title lives in the fixed menu grid, `.page` reserves the
+zone with `padding-top` (140px mobile / 190px desktop). To retitle a page, change
+which link has `is-current`. `home/content.md` has no menu and is left as-is.
