@@ -50,7 +50,7 @@ a { color: var(--link); }
     --heading-line-height: 1.4;
 
     /* ── Spacing & Layout ── */
-    --content-max-width: 640px;
+    --content-max-width: 800px;
     --sidebar-width: 260px;
     --page-padding: 48px;
     --section-gap: 28px;

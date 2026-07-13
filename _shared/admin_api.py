@@ -6373,6 +6373,199 @@ def calendly_verify():
     return jsonify({'success': True, 'name': name})
 
 
+# ── Email (Purelymail mailboxes / forwards) ───────────────────────────────
+
+def _email_integration(artist_slug):
+    """Return (cfg, email_cfg) for an artist — email_cfg is None if the
+    artist's workspace has no email integration configured."""
+    cfg_path = get_artist_path(artist_slug) / 'config.json'
+    if not cfg_path.exists():
+        return None, None
+    cfg = json.loads(cfg_path.read_text())
+    from workspaces import integration
+    return cfg, integration(_artist_workspace(cfg), 'email')
+
+
+def _email_signatures_path(artist_slug):
+    return _STUDIO_DATA_DIR / f'email_signatures_{artist_slug}.json'
+
+
+@bp.route('/email-status', methods=['GET'])
+def email_status():
+    """Mailboxes + forwards for the artist's domain, plus constant client
+    connection settings (IMAP/POP/SMTP hosts)."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    cfg, email_cfg = _email_integration(artist_slug)
+    if cfg is None:
+        abort(404)
+
+    domain = cfg.get('domain', '')
+    if not domain:
+        return jsonify({'configured': False, 'reason': 'no_domain', 'domain': ''})
+    if not email_cfg or not email_cfg.get('purelymail_token'):
+        return jsonify({'configured': False, 'reason': 'not_set_up', 'domain': domain})
+
+    from integrations.purelymail import list_domain_email
+    mailboxes, forwards = list_domain_email(email_cfg['purelymail_token'], domain)
+
+    return jsonify({
+        'configured': True,
+        'domain': domain,
+        'mailboxes': mailboxes,
+        'forwards': forwards,
+        'settings': {
+            'imap': {'host': email_cfg['imap_host'], 'port': email_cfg['imap_port']},
+            'pop':  {'host': email_cfg['pop_host'], 'port': email_cfg['pop_port']},
+            'smtp': {'host': email_cfg['smtp_host'], 'port': email_cfg['smtp_port']},
+        },
+    })
+
+
+@bp.route('/email-add-mailbox', methods=['POST'])
+def email_add_mailbox():
+    """Create a Purelymail mailbox on the artist's domain. The generated
+    password is returned once and never stored by Adze."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    cfg, email_cfg = _email_integration(artist_slug)
+    if cfg is None:
+        abort(404)
+    domain = cfg.get('domain', '')
+    if not domain or not email_cfg or not email_cfg.get('purelymail_token'):
+        return jsonify({'error': 'Email is not set up for this domain'}), 400
+
+    data = request.get_json(silent=True) or {}
+    localpart = (data.get('localpart') or '').strip().lower()
+    if not localpart or not re.match(r'^[a-z0-9._-]+$', localpart):
+        return jsonify({'error': 'Invalid mailbox name'}), 400
+
+    import secrets
+    password = secrets.token_urlsafe(18)
+
+    from integrations.purelymail import create_mailbox, ok, error_message
+    resp = create_mailbox(email_cfg['purelymail_token'], localpart, domain, password)
+    if not ok(resp):
+        return jsonify({'error': error_message(resp)}), 400
+
+    return jsonify({'success': True, 'address': f'{localpart}@{domain}', 'password': password})
+
+
+@bp.route('/email-delete-mailbox', methods=['POST'])
+def email_delete_mailbox():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    cfg, email_cfg = _email_integration(artist_slug)
+    if cfg is None:
+        abort(404)
+    domain = cfg.get('domain', '')
+    if not email_cfg or not email_cfg.get('purelymail_token'):
+        return jsonify({'error': 'Email is not set up for this domain'}), 400
+
+    data = request.get_json(silent=True) or {}
+    address = (data.get('address') or '').strip().lower()
+    if not address or not address.endswith('@' + domain):
+        return jsonify({'error': 'Address does not belong to this domain'}), 400
+
+    from integrations.purelymail import delete_mailbox, ok, error_message
+    resp = delete_mailbox(email_cfg['purelymail_token'], address)
+    if not ok(resp):
+        return jsonify({'error': error_message(resp)}), 400
+
+    return jsonify({'success': True})
+
+
+@bp.route('/email-add-forward', methods=['POST'])
+def email_add_forward():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    cfg, email_cfg = _email_integration(artist_slug)
+    if cfg is None:
+        abort(404)
+    domain = cfg.get('domain', '')
+    if not domain or not email_cfg or not email_cfg.get('purelymail_token'):
+        return jsonify({'error': 'Email is not set up for this domain'}), 400
+
+    data = request.get_json(silent=True) or {}
+    localpart = (data.get('localpart') or '').strip().lower()
+    targets = [t.strip() for t in (data.get('targets') or []) if t.strip()]
+    if not localpart or not re.match(r'^[a-z0-9._-]+$', localpart):
+        return jsonify({'error': 'Invalid alias name'}), 400
+    if not targets:
+        return jsonify({'error': 'At least one forward target is required'}), 400
+
+    from integrations.purelymail import create_forward, ok, error_message
+    resp = create_forward(email_cfg['purelymail_token'], localpart, domain, targets)
+    if not ok(resp):
+        return jsonify({'error': error_message(resp)}), 400
+
+    return jsonify({'success': True})
+
+
+@bp.route('/email-delete-forward', methods=['POST'])
+def email_delete_forward():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    cfg, email_cfg = _email_integration(artist_slug)
+    if cfg is None:
+        abort(404)
+    if not email_cfg or not email_cfg.get('purelymail_token'):
+        return jsonify({'error': 'Email is not set up for this domain'}), 400
+
+    data = request.get_json(silent=True) or {}
+    rule_id = data.get('id')
+    if rule_id is None:
+        return jsonify({'error': 'id is required'}), 400
+
+    from integrations.purelymail import delete_forward, ok, error_message
+    resp = delete_forward(email_cfg['purelymail_token'], rule_id)
+    if not ok(resp):
+        return jsonify({'error': error_message(resp)}), 400
+
+    return jsonify({'success': True})
+
+
+@bp.route('/email-signatures', methods=['GET'])
+def email_signatures_list():
+    """Saved signature HTML per mailbox address for this artist."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    sigs = _read_studio_json(_email_signatures_path(artist_slug))
+    return jsonify({'signatures': sigs if isinstance(sigs, dict) else {}})
+
+
+@bp.route('/email-signature-save', methods=['POST'])
+def email_signature_save():
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data = request.get_json(silent=True) or {}
+    address = (data.get('address') or '').strip().lower()
+    html = data.get('html') or ''
+    if not address:
+        return jsonify({'error': 'address is required'}), 400
+
+    path = _email_signatures_path(artist_slug)
+    sigs = _read_studio_json(path)
+    if not isinstance(sigs, dict):
+        sigs = {}
+    sigs[address] = html
+    _write_studio_json(path, sigs)
+    return jsonify({'success': True})
+
+
 # ── Stripe Integration ────────────────────────────────────────────────────
 
 def _get_stripe_client(artist_slug):

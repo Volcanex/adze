@@ -72,7 +72,7 @@ html, body {
 .ab-figure img {
   display: block;
   width: 100%;
-  height: clamp(360px, 80vh, 935px);
+  height: clamp(380px, 80vh, 935px);
   object-fit: cover;
   background: #f0ede8;
 }
@@ -131,7 +131,7 @@ html, body {
 
     <!-- Studio portrait of Lydia with her textile works. -->
     <figure class="ab-figure">
-      <img src="../assets/images/lydia-portrait.png" alt="Lydia Lott in her studio">
+      <img src="../assets/images/saatchi_art_pic_5.jpg" alt="Lydia Lott in her studio">
     </figure>
   </main>
 
