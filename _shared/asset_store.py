@@ -217,3 +217,65 @@ def save_temp_upload(fileobj):
     fileobj.save(tmp.name)
     tmp.close()
     return tmp.name
+
+
+# ── tiered image storage ─────────────────────────────────────────────────────
+# One scheme for every content-driven admin (replaces Rose's -full/-good and
+# Lydia's thumbs split): the upload is the canonical "full" file, and a
+# down-scaled "display" sibling (<stem>.display.<ext>) is what pages reference.
+# The 64px .thumbs sidecar for the asset browser still comes from store_fileobj.
+_DISPLAY_MAX_PX = 2000
+_DISPLAY_QUALITY = 85
+
+
+def _make_display(slug, rel, max_px):
+    """Write a down-scaled display sibling next to `rel` and mirror it to
+    output/. Returns the display rel, or None if the original is already small
+    enough / not a raster image / PIL is unavailable (caller falls back to full)."""
+    ext = rel.rsplit('.', 1)[-1].lower() if '.' in rel else ''
+    if ext not in _THUMB_IMAGE_EXTS or ext == 'gif':
+        return None
+    try:
+        from PIL import Image
+        src = assets_dir(slug) / rel
+        stem, _, e = rel.rpartition('.')
+        disp_rel = f'{stem}.display.{e}'
+        dest = assets_dir(slug) / disp_rel
+        with Image.open(src) as img:
+            if max(img.size) <= max_px:
+                return None
+            img = img.convert('RGB')
+            img.thumbnail((max_px, max_px), Image.LANCZOS)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            img.save(str(dest), quality=_DISPLAY_QUALITY)
+        _mirror_to_output(slug, disp_rel)
+        return disp_rel
+    except Exception as e:
+        logging.debug('display tier skipped for %s: %s', rel, e)
+        return None
+
+
+def _aspect_ratio(path):
+    """width/height of an image, rounded — for figure placeholders / masonry
+    layouts. None if PIL is unavailable or the file isn't a readable image."""
+    try:
+        from PIL import Image
+        with Image.open(path) as img:
+            w, h = img.size
+        return round(w / h, 4) if h else None
+    except Exception:
+        return None
+
+
+def store_image(slug, rel, fileobj, *, uploaded_by, uploaded_at=None,
+                labels=None, display_max=_DISPLAY_MAX_PX):
+    """Store an uploaded image at `rel` (canonical/full) and generate a
+    display-tier derivative. Returns {'full': rel, 'display': display_rel,
+    'ar': aspect_ratio} (display falls back to full when no derivative was
+    needed/possible; ar may be None), or None if `rel` sanitised to nothing."""
+    rel = store_fileobj(slug, rel, fileobj, uploaded_by=uploaded_by,
+                        uploaded_at=uploaded_at, labels=labels)
+    if not rel:
+        return None
+    disp = _make_display(slug, rel, display_max)
+    return {'full': rel, 'display': disp or rel, 'ar': _aspect_ratio(assets_dir(slug) / rel)}

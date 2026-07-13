@@ -6,10 +6,37 @@
     "description": "Journalism portfolio",
     "contact_email": "jackdt26@outlook.com",
     "features": [
-        "jack_admin"
+        "content_admin"
     ],
-    "last_login": 1782736934,
-    "last_login_ip": "86.104.22.79",
+    "content_types": {
+        "posts": {
+            "label": "Posts",
+            "item": {
+                "title": {"type": "text", "required": true, "slug_source": true},
+                "meta": {"type": "text", "label": "Publication & date"},
+                "excerpt": {"type": "textarea"},
+                "url": {"type": "text", "required": true, "format": "url", "label": "Link"}
+            },
+            "page": {
+                "mode": "single",
+                "parent": "writing",
+                "title": "Writing — Jack Dennison Thompson",
+                "description": "Selected journalism and writing by Jack Dennison Thompson",
+                "template": "templates/writing.html"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#f4f3ee",
+        "surface": "#fbfaf6",
+        "text": "#0b0d1a",
+        "accent": "#1a35ff",
+        "accentText": "#ffffff",
+        "border": "#c7c5bd",
+        "font": "'Barlow', Arial, Helvetica, sans-serif"
+    },
+    "last_login": 1783252139,
+    "last_login_ip": "151.226.16.222",
     "slack_channel_id": "C0B7FEC5LHE",
     "slack_pinned_ts": "1779930838.530469",
     "slack_announced": true,

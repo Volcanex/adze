@@ -194,6 +194,8 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1920/2560">
         <img class="work-image" src="../../assets/work-divine-like-a-bird-01-good.jpg" alt="Divine like a Bird" decoding="async">
     </figure>
@@ -201,6 +203,8 @@ body {
     <figure class="work-figure" style="aspect-ratio:1912/2560">
         <img class="work-image" src="../../assets/work-divine-like-a-bird-02-good.jpg" alt="Divine like a Bird" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Divine like a Bird</h1>

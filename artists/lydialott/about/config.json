@@ -1,6 +1,7 @@
 {
-  "title": "About",
-  "slug": "about",
-  "description": "About page",
-  "categories": []
+    "title": "About",
+    "slug": "about",
+    "description": "About page",
+    "categories": [],
+    "hidden": false
 }

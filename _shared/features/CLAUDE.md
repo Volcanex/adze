@@ -13,106 +13,76 @@ by adding its name to `features` in the artist's `config.json`.
 3. Add the feature name to the artist's `config.json` features array.
 4. No changes to `flask_server.py` are needed.
 
-## Custom artist admins
+## Custom artist admins — `content_admin` (config-driven, ONE module)
 
-A custom admin is a per-artist `/admin` SPA on the artist's own domain. **Build
-it on the `ArtistAdmin` framework in `artist_admin.py` — do not hand-roll auth
-or the compile trigger, and do not copy another dashboard's skeleton.** The
-framework owns the parts that must never drift between dashboards; you supply
-only the data model, the render function, and the HTML.
+A custom admin is a per-artist `/admin` SPA on the artist's own domain. There is
+**no per-artist Python** — every artist uses the single generic feature
+`content_admin.py`, driven entirely by a `content_types` block in their
+`config.json`. (This replaced the old hand-written `maria_admin.py` /
+`rose_admin.py` / … modules, which duplicated auth + chrome + image handling
+per artist and drifted independently.)
 
-The framework gives you, from the artist's `config.json` alone:
+To give an artist a custom admin:
 
-- **Auth** — domain guard + token (`admin.auth_required`, `admin.domain_guard`),
-  so domain/token live in `config.json`, never duplicated in the module.
-- **Core routes** — `register_core(html)` wires `…/panel`, `…/login`,
-  `…/logout`, and `…/compile` (which runs the rebuild transaction).
-- **The rebuild transaction** — `admin.rebuild()` runs your `render()`, writes
-  the generated-page manifest (`.generated.json`), then compiles the artist.
-  One guaranteed path: data source-of-truth → live site, so they can't drift.
-- `flask_server` reads `PANEL_URL` and maps `/admin` → it for the artist's
-  domain automatically (the `domain` in `config.json` must be set).
+1. Add `"content_admin"` to `features` in their `config.json`.
+2. Declare their content under `content_types` (see the example in
+   `content_admin.py`'s module docstring). Each type has an `item` field schema
+   and a `page` block:
+   - **field types** (→ editors in the shared shell's `field-editors.js`
+     registry): `text`, `textarea`, `number`, `date`, `boolean`, `select`
+     (+`options`), `tags`, `image` (+`multiple`), `markdown` (EasyMDE),
+     `richtext` (Quill). Field opts: `required`, `slug_source` (which field
+     becomes the item `id`), `format:"url"`, `label`.
+   - **page.mode**: `single` (one page lists all items), `per_item` (a page per
+     item + an optional index via `index_template`), `none` (no page — items are
+     published to `assets/data/<type>.json` for a client-side grid to `fetch`).
+   - `page.parent` is the URL dir; `"."` = the artist root (siblings of static
+     pages like `home/`).
+3. Add an `admin_theme` block (CSS vars: `bg`, `surface`, `text`, `accent`,
+   `accentText`, `border`, `font`) to brand the admin.
+4. Write the per-artist Jinja templates named in `page.template` /
+   `index_template`, under `artists/<slug>/templates/`. These hold the design;
+   the engine fills them with data. Template output **is** the page `content.md`
+   (a `<style>…</style>` + `<html>…</html>` blob). Autoescape is on; use
+   `{{ x|safe }}` for pre-sanitised richtext. Relative asset URLs must match page
+   depth (`../assets/…` at `<parent>/`, `../../assets/…` at `<parent>/<id>/`).
 
-`render()` must return the list of page slugs it generates (rel to the artist
-dir, posix, e.g. `'works/cormorant'`). Those pages are then **read-only** to the
-dashboard editor and Auto-Code — `/edit-page` refuses direct edits to a
-generated page, because the next rebuild would overwrite them. The data file is
-the source of truth; the pages are derived.
+Data lives in `artists/<slug>/content.json` keyed by type; each item is a dict
+with an `id`. The JSON is the source of truth; pages are always derived.
 
-Minimal pattern (see `maria_admin.py` for a complete, small example;
-`rose_admin.py` / `alfie_admin.py` for richer ones):
-```python
-from features.artist_admin import ArtistAdmin
+What the engine (via the underlying `ArtistAdmin` framework) still owns and you
+never re-implement: **auth** (domain guard + `admin_token` from `config.json`),
+the **rebuild transaction** (`render()` → `.generated.json` → `compile.py`), and
+the **generated-page manifest** (those pages are read-only to `/edit-page` and
+the control-panel editor).
 
-ARTIST_SLUG = 'example'
-COOKIE = 'example_admin'
-PANEL_URL = '/api/example-admin/panel'
+**Safe pruning (important):** on rebuild, `_prune_stale` removes only page dirs
+that were in the *previous* `.generated.json` and are no longer generated. A
+hand-authored sibling the engine never created (static `home/`, `videography/`)
+is never touched — even at `parent:"."`. Publish can't destroy a page it didn't
+make.
 
-def _render():
-    # rewrite the artist's data-driven content.md from your source-of-truth file
-    ...
-    return ['some-page']            # generated page slugs → marked read-only
+**Images**: `content_admin` uploads route through `asset_store.store_image`
+(tiered `full`/`display` + 64px thumb + `output/` mirror + `asset_meta`), storing
+`{src, full, ar}` per image. Paths are relative to the artist's `assets/` dir;
+the shell renders admin thumbnails from `/assets/<src>` (served by the artist
+domain's nginx). No per-artist upload code.
 
-admin = ArtistAdmin(ARTIST_SLUG, COOKIE, PANEL_URL, render=_render,
-                    blueprint_name='example_admin')
-bp = admin.bp
+**Control-panel handoff**: the shell's "Advanced editing →" link hits
+`{prefix}/handoff`, which (once the artist is logged in) mints the `adze_session`
+cookie and redirects to `/api/adze/dashboard?slug=<slug>` — same-origin on the
+artist's own domain, no re-auth, no token in the URL.
 
-admin.register_core(ADMIN_HTML)     # panel / login / logout / compile
+**`output/` ownership gotcha (general):** a host-side **root** `compile.py` run
+leaves `output/artists/<slug>/` owned by uid 0, after which the container (`adze`,
+uid 1000) can't overwrite them and Publish 500s with `PermissionError`. Fix:
+`sudo chown -R 1000:1000 output/artists/<slug>`. Always compile as uid 1000.
 
-@bp.route(f'{admin.prefix}/things', methods=['GET'])
-@admin.auth_required                # your bespoke data routes
-def get_things(): ...
+### Describe the admin for the handover page
 
-def create_blueprint(artist_slug):
-    admin.bp.url_prefix = ''
-    return admin.bp
-```
-
-`compile.py` also prunes compiled output whose source page was deleted, so a
-removed page stops being served — relevant to any dashboard that can delete
-pages (a deleted item's source dir vanishes, the orphaned output goes with it).
-
-### The render-less variant (`lydia_admin.py`)
-
-Not every dashboard needs `render()`. Lydia's site reads its source of truth
-(`assets/works.json`) **at runtime in the browser** (`assets/works-grid.js`
-`fetch`es it), so no `content.md` is generated from it. `lydia_admin` therefore
-constructs `ArtistAdmin` with **no `render`** and writes no `.generated.json` —
-`rebuild()` still recompiles, which is all that's needed (compile copies the
-updated `works.json` + images into `output/`, what nginx serves). Use this shape
-when the page is data-driven client-side; use a `render()` (rose/alfie) only when
-a `content.md` must be regenerated from the data.
-
-- **Thumbnail convention:** the grid derives each tile's src from the work's
-  `image` by swapping `images/ → images/thumbs/` and the ext `→ .webp`. So every
-  uploaded image needs a sibling webp thumbnail; `lydia_admin._make_thumb`
-  width-caps to 800px (never upscales), flattens alpha on white, saves webp q82.
-- **`output/` ownership gotcha (general):** a host-side **root** `compile.py` run
-  leaves `output/artists/<slug>/` files owned by uid 0, after which the container
-  (`adze`, uid 1000) can't overwrite them and the dashboard's Publish 500s with
-  `PermissionError`. The fix is `sudo chown -R 1000:1000 output/artists/<slug>`
-  (+ `chmod -R g+w`). Always compile as uid 1000, never as host root.
-
-### Describe your dashboard for the handover page
-
-The handover page (`/handover/<slug>/<token>`) auto-detects a custom dashboard
-(any `*_admin` feature + a domain) and shows a "Your dashboard" card with the
-web address + password. To also explain *what the dashboard does*, export a
-`DASHBOARD_INFO` dict from the feature module:
-
-```python
-DASHBOARD_INFO = {
-    'name':  'Your works dashboard',
-    'blurb': 'One sentence on what this lets the artist do.',
-    'can':   ['Add and edit works', 'Upload images', 'Publish to the live site'],
-}
-```
-
-`admin_api._dashboard_info()` reads it and forwards it into the page — so the
-moment you give a new dash a `DASHBOARD_INFO`, the handover explains it, with no
-per-artist config. Omit it and the card falls back to generic copy
-(`DEFAULT_DASHBOARD_INFO`). This is the one place that per-dashboard handover
-copy lives; don't hard-code it in handover.html.
+The handover page auto-detects a `content_admin` feature + domain and shows a
+"Your dashboard" card. `admin_api._dashboard_info()` supplies the copy; the old
+per-module `DASHBOARD_INFO` export is gone with the bespoke modules.
 
 ## Feature vs widget
 

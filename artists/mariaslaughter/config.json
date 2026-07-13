@@ -5,8 +5,32 @@
     "domain": "mariaslaughter.online",
     "admin_token": "adele",
     "features": [
-        "maria_admin"
+        "content_admin"
     ],
+    "content_types": {
+        "links": {
+            "label": "Links",
+            "item": {
+                "label": {"type": "text", "required": true, "slug_source": true},
+                "url": {"type": "text", "required": true, "format": "url"}
+            },
+            "page": {
+                "mode": "single",
+                "parent": "links",
+                "title": "Links — Adele",
+                "description": "Links, shows and shop for Adele.",
+                "template": "templates/links.html"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#281800",
+        "surface": "#1a1000",
+        "text": "#c9a573",
+        "accent": "#c9a573",
+        "accentText": "#281800",
+        "border": "#4a3318"
+    },
     "description": "Dark Arts & Photography - Digital Necropolis",
     "contact_email": "fallenangelselvatica@gmail.com",
     "last_login": 1780568067,

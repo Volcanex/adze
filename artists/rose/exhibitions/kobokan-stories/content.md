@@ -194,7 +194,9 @@ body {
 
     <a class="back-link" href="/exhibitions/">← Exhibitions</a>
 
+
     <div class="exh-image" style="aspect-ratio:3/2;background:#f5f5f5;border:1px solid #e6e6e6;background-image:linear-gradient(to top right,transparent calc(50% - 0.5px),#e4e4e4 calc(50% - 0.5px),#e4e4e4 calc(50% + 0.5px),transparent calc(50% + 0.5px)),linear-gradient(to top left,transparent calc(50% - 0.5px),#e4e4e4 calc(50% - 0.5px),#e4e4e4 calc(50% + 0.5px),transparent calc(50% + 0.5px));"></div>
+
 
     <div class="title-row">
         <h1 class="exh-title">Kobokan stories</h1>

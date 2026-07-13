@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1549/2059">
         <img class="work-image" src="../../assets/work-her-cup-good.jpg" alt="Her Cup" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Her Cup</h1>

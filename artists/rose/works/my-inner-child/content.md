@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1893/2560">
         <img class="work-image" src="../../assets/work-my-inner-child-good.jpg" alt="My Inner Child" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">My Inner Child</h1>

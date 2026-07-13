@@ -1,58 +1,58 @@
-# Rose Jones — generated from information.json
+# Rose Jones — rosefpjones.com
 
-**`information.json` is the source of truth for this site.** Rose's admin
-(`/admin` on rosefpjones.com, served by `_shared/features/rose_admin.py`)
-reads/writes it and uploads images. The page `content.md` files are
-**generated**, not hand-authored.
+**`content.json` is the source of truth** (types: `works`, `exhibitions`).
+Rose's admin is the generic `content_admin` feature (`/admin` on rosefpjones.com),
+driven by the `content_types` + `admin_theme` blocks in `config.json`. Page
+`content.md` files are **generated** from `content.json` via the Jinja templates
+in `templates/` — not hand-authored.
 
 ## ⚠ Do NOT hand-edit the generated pages
-These are overwritten on every compile — edits are lost:
-- `works/<slug>/content.md`, `works/content.md` (index)
-- `exhibitions/<slug>/content.md`, `exhibitions/content.md` (index)
-- `about/content.md`
+Overwritten on every publish (they're listed in `.generated.json`, so `/edit-page`
+and Auto-Code refuse direct edits):
+- `works/<slug>/content.md` + `works/content.md` (index)
+- `exhibitions/<slug>/content.md` + `exhibitions/content.md` (index)
 
-To change them, edit either **`information.json`** (data: titles, years,
-medium, dimensions, status, images) or the **templates in `_templates/`**
-(layout/CSS). `home/` and `contact/` are NOT generated — edit those directly.
+To change them, edit **`content.json`** (data) or the **templates** (layout/CSS).
+`home/`, `about/`, `contact/` are ordinary hand-authored pages — edit directly.
+(`about/` is deliberately NOT a content type.)
 
-## Pipeline
-`POST /api/rose-admin/compile` (or the admin "compile" action) runs:
-1. `rose_pages.regenerate(info)` — writes all generated `content.md` + ensures
-   image tiers exist, from `information.json`.
-2. `compile.py --artist rose` — the normal content.md → HTML step (also fills
-   the `<!-- EXHIBITIONS_BLOCK -->` placeholder on the About page).
-
-Regenerate by hand from the repo root: `python3 _shared/features/rose_pages.py`.
-The generator (`_shared/features/rose_pages.py`) and admin (`rose_admin.py`)
-are Rose-scoped; they do **not** touch shared `compile.py`.
+## Templates (`templates/`)
+`work.html`, `exhibition.html`, `works_index.html`, `exhibitions_index.html` —
+full pages with the shared chrome (header, hamburger menu, loading veil, footer),
+carrying Jinja logic that reproduces the previous generator exactly (meta spans
+only for present fields, missing-image placeholder, works grouped by year desc,
+exhibitions-index hero = first item with images). A site-wide chrome change is an
+edit to these four files. (`_templates/` is the pre-migration copy, now unused —
+`templates/` is live.)
 
 ## Image tiers (per image `<stem>`, e.g. `work-bed`)
-- `<stem>-full.jpg` — full-res master, the source of truth. **Unserved** — never
-  referenced by a page. Kept in `assets/`.
-- `<stem>-good.jpg` — 2560px / q88 display tier. The only image pages reference.
+- `<stem>-full.jpg` — full-res master, source of truth. **Unserved.** Kept in `assets/`.
+- `<stem>-good.jpg` — 2560px / q88 display tier. What pages reference.
 
-Admin uploads call `rose_pages.save_master(stem, file)` which writes the master
-**and** derives the display tier. Stored image ids in `information.json` are
-logical (`work-bed.jpg`); the generator derives `-full`/`-good` from the stem,
-and `serve_asset` resolves logical ids to the display tier for admin previews.
-There is no blur/`-fast` tier — the loading veil (in the templates) covers the
-load gap instead. A work/exhibition with `status: "missing"` (or no resolvable
-image) renders a "(Work file missing)" placeholder box.
+Existing `content.json` image entries point `src` at the `-good` tier and `full`
+at `-full`, with an `aspect` (W/H) for the figure placeholder. New uploads through
+the admin route via `asset_store.store_image` (which writes `{full, display, ar}`
+and a display derivative) — the shell stores `src`=display, `full`=full, plus
+`ar`/`aspect`. A work/exhibition with no resolvable image renders a
+"(Work file missing)" placeholder.
 
-## Templates (`_templates/`)
-`work.html`, `exhibition.html`, `works-index.html`, `exhibitions-index.html`,
-`about.html` — full pages with `{{TOKEN}}` slots the generator fills. They carry
-the shared chrome (header, hamburger menu, loading veil, footer, scripts), so a
-site-wide chrome change is an edit to these five files, not 40 pages.
-`contact/content.md` carries the **same** menu chrome (it is hand-authored, not
-generated), so menu edits actually span **six** files — keep them in sync.
+## Menu = title (2x2 conveyor)
+The hamburger menu is a 2x2 grid: Works / About top, Exhibitions / Contact below.
+There is **no separate `<h1>`** — the current page's menu link carries `is-current`
+and stays as the always-visible page title; the others slide in front (z-index).
+`.page` reserves the zone with `padding-top` (140px mobile / 190px desktop). To
+retitle a page, change which link has `is-current`. This chrome lives in the four
+`templates/` files **and** hand-authored `about/`/`contact/content.md` — keep them
+in sync. `home/content.md` has no menu, left as-is.
 
-### Menu = title (2x2 conveyor)
-The hamburger menu is a 2x2 grid: Works / About on top, Exhibitions / Contact
-below. On open, the top row slides in from the right and the bottom row from the
-left (`.menu-overlay` CSS). There is **no separate `<h1>` section-title** — the
-current page's menu link carries `is-current`, stays put as the always-visible
-page title (coloured per section), and the other three slide in *in front* of it
-(z-index). Because the title lives in the fixed menu grid, `.page` reserves the
-zone with `padding-top` (140px mobile / 190px desktop). To retitle a page, change
-which link has `is-current`. `home/content.md` has no menu and is left as-is.
+## Bespoke extras (removed with the old admin — see repo root discussion)
+The old `rose_admin.py` had a QR-code / business-card generator and an admin-font
+route. These were panel utilities, not content, and came out when the bespoke
+module was deleted (recoverable from git). If wanted, re-home QR as a shared shell
+feature rather than per-artist code.
+
+## Gotcha: compile as uid 1000, never host root
+Host-root compiles leave root-owned files in `output/artists/rose/` the container
+(uid 1000) can't overwrite → publish 500s. Compile in-container
+(`sudo docker exec adze-flask python3 compile.py --artist rose`) or fix with
+`sudo chown -R 1000:1000 output/artists/rose`.

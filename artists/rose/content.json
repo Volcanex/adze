@@ -1,0 +1,569 @@
+{
+  "works": [
+    {
+      "id": "wise-man",
+      "title": "Wise Man",
+      "year": 2021,
+      "medium": "Oil on canvas",
+      "dimensions": "160 x 140 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-wise-man-good.jpg",
+          "full": "work-wise-man-full.jpg",
+          "aspect": "2156/2560"
+        }
+      ]
+    },
+    {
+      "id": "worship",
+      "title": "Worship",
+      "year": 2021,
+      "medium": "Monoprint",
+      "dimensions": "A4",
+      "description": "",
+      "images": [
+        {
+          "src": "work-worship-good.jpg",
+          "full": "work-worship-full.jpg",
+          "aspect": "1920/2560"
+        }
+      ]
+    },
+    {
+      "id": "pin-mill",
+      "title": "Pin Mill",
+      "year": 2021,
+      "medium": "Oil on calico",
+      "dimensions": "180 x 120 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-pin-mill-good.jpg",
+          "full": "work-pin-mill-full.jpg",
+          "aspect": "1789/2560"
+        }
+      ]
+    },
+    {
+      "id": "keeper-of-the-egg",
+      "title": "Keeper of the Egg",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 160 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-keeper-of-the-egg-good.jpg",
+          "full": "work-keeper-of-the-egg-full.jpg",
+          "aspect": "1920/2560"
+        }
+      ]
+    },
+    {
+      "id": "while-we-sit-together",
+      "title": "While We Sit Together",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 160 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-while-we-sit-together-good.jpg",
+          "full": "work-while-we-sit-together-full.jpg",
+          "aspect": "1920/2560"
+        }
+      ]
+    },
+    {
+      "id": "you-belong-at-the-head-of-the-table",
+      "title": "You belong at the head of the table",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "160 x 190 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-you-belong-at-the-head-of-the-table-good.jpg",
+          "full": "work-you-belong-at-the-head-of-the-table-full.jpg",
+          "aspect": "2199/2560"
+        }
+      ]
+    },
+    {
+      "id": "her-cup",
+      "title": "Her Cup",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-her-cup-good.jpg",
+          "full": "work-her-cup-full.jpg",
+          "aspect": "1549/2059"
+        }
+      ]
+    },
+    {
+      "id": "my-memory-of-your-birth",
+      "title": "My Memory of your Birth",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-my-memory-of-your-birth-good.jpg",
+          "full": "work-my-memory-of-your-birth-full.jpg",
+          "aspect": "1832/2560"
+        }
+      ]
+    },
+    {
+      "id": "divine-like-a-bird",
+      "title": "Divine like a Bird",
+      "year": 2022,
+      "medium": "Etching series",
+      "dimensions": "A5",
+      "description": "",
+      "images": [
+        {
+          "src": "work-divine-like-a-bird-01-good.jpg",
+          "full": "work-divine-like-a-bird-01-full.jpg",
+          "aspect": "1920/2560"
+        },
+        {
+          "src": "work-divine-like-a-bird-02-good.jpg",
+          "full": "work-divine-like-a-bird-02-full.jpg",
+          "aspect": "1912/2560"
+        }
+      ]
+    },
+    {
+      "id": "cormorant",
+      "title": "Cormorant",
+      "year": 2022,
+      "medium": "Drawing animation film; oil on ceramic tile",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-cormorant-good.jpg",
+          "full": "work-cormorant-full.jpg",
+          "aspect": "1486/1825"
+        }
+      ]
+    },
+    {
+      "id": "skip-kids",
+      "title": "Skip Kids",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "220 x 190 cm",
+      "description": "",
+      "images": [
+        {
+          "src": "work-skip-kids-good.jpg",
+          "full": "work-skip-kids-full.jpg",
+          "aspect": "1834/2560"
+        }
+      ]
+    },
+    {
+      "id": "untitled",
+      "title": "Untitled",
+      "year": 2022,
+      "medium": "Charcoal on paper; oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-untitled-good.jpg",
+          "full": "work-untitled-full.jpg",
+          "aspect": "1861/2560"
+        }
+      ]
+    },
+    {
+      "id": "murmuration",
+      "title": "Murmuration",
+      "year": 2022,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-murmuration-good.jpg",
+          "full": "work-murmuration-full.jpg",
+          "aspect": "2008/2560"
+        }
+      ]
+    },
+    {
+      "id": "night-fishing",
+      "title": "Night fishing",
+      "year": 2022,
+      "medium": "",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-night-fishing-good.jpg",
+          "full": "work-night-fishing-full.jpg",
+          "aspect": "706/859"
+        }
+      ]
+    },
+    {
+      "id": "night-fishing-2",
+      "title": "Night fishing 2",
+      "year": 2022,
+      "medium": "",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-night-fishing-2-good.jpg",
+          "full": "work-night-fishing-2-full.jpg",
+          "aspect": "2187/1719"
+        },
+        {
+          "src": "work-night-fishing-2-2-good.jpg",
+          "full": "work-night-fishing-2-2-full.jpg",
+          "aspect": "2187/1719"
+        }
+      ]
+    },
+    {
+      "id": "my-mothers-hum",
+      "title": "My Mothers Hum",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-my-mothers-hum-good.jpg",
+          "full": "work-my-mothers-hum-full.jpg",
+          "aspect": "1880/2560"
+        },
+        {
+          "src": "work-my-mothers-hum-2-good.jpg",
+          "full": "work-my-mothers-hum-2-full.jpg",
+          "aspect": "1832/2560"
+        }
+      ]
+    },
+    {
+      "id": "estuary",
+      "title": "Estuary",
+      "year": 2023,
+      "medium": "Dry point etch",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-estuary-good.jpg",
+          "full": "work-estuary-full.jpg",
+          "aspect": "1958/2364"
+        }
+      ]
+    },
+    {
+      "id": "math-equation",
+      "title": "Math Equation",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-math-equation-2-good.jpg",
+          "full": "work-math-equation-2-full.jpg",
+          "aspect": "2560/2550"
+        }
+      ]
+    },
+    {
+      "id": "what-did-it-mean-to-fly",
+      "title": "What did it mean to fly",
+      "year": 2023,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-what-did-it-mean-to-fly-good.jpg",
+          "full": "work-what-did-it-mean-to-fly-full.jpg",
+          "aspect": "1811/2560"
+        }
+      ]
+    },
+    {
+      "id": "drive-thru",
+      "title": "Drive thru",
+      "year": 2024,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-drive-thru-good.jpg",
+          "full": "work-drive-thru-full.jpg",
+          "aspect": "1932/2560"
+        }
+      ]
+    },
+    {
+      "id": "a-shooting-star-from-atop-a-slide",
+      "title": "A shooting star from atop a slide and gold waiting below",
+      "year": 2024,
+      "medium": "Oil on canvas",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-a-shooting-star-from-atop-a-slide-good.jpg",
+          "full": "work-a-shooting-star-from-atop-a-slide-full.jpg",
+          "aspect": "2560/1794"
+        }
+      ]
+    },
+    {
+      "id": "marsh-at-sunset",
+      "title": "Marsh at sunset",
+      "year": 2024,
+      "medium": "Oil on paper",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-marsh-at-sunset-good.jpg",
+          "full": "work-marsh-at-sunset-full.jpg",
+          "aspect": "2560/1968"
+        }
+      ]
+    },
+    {
+      "id": "moonlit-sea",
+      "title": "Moonlit Sea",
+      "year": 2024,
+      "medium": "Oil on paper",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-moonlit-sea-good.jpg",
+          "full": "work-moonlit-sea-full.jpg",
+          "aspect": "1920/1480"
+        }
+      ]
+    },
+    {
+      "id": "wondering-women",
+      "title": "Wondering women",
+      "year": 2024,
+      "medium": "Oil on MDF",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-wondering-women-good.jpg",
+          "full": "work-wondering-women-full.jpg",
+          "aspect": "1951/2560"
+        }
+      ]
+    },
+    {
+      "id": "bed",
+      "title": "Bed",
+      "year": 2025,
+      "medium": "",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-bed-good.jpg",
+          "full": "work-bed-full.jpg",
+          "aspect": "1672/2330"
+        }
+      ]
+    },
+    {
+      "id": "my-inner-child",
+      "title": "My Inner Child",
+      "year": 2025,
+      "medium": "",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-my-inner-child-good.jpg",
+          "full": "work-my-inner-child-full.jpg",
+          "aspect": "1893/2560"
+        }
+      ]
+    },
+    {
+      "id": "paddle-for-dear-life",
+      "title": "Paddle for dear life",
+      "year": 2025,
+      "medium": "",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-paddle-for-dear-life-good.jpg",
+          "full": "work-paddle-for-dear-life-full.jpg",
+          "aspect": "2049/2560"
+        }
+      ]
+    },
+    {
+      "id": "tara",
+      "title": "Tara",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "107x127",
+      "description": "",
+      "images": [
+        {
+          "src": "work-tara-good.jpg",
+          "full": "work-tara-full.jpg",
+          "aspect": "2115/2560"
+        }
+      ]
+    },
+    {
+      "id": "her-bed",
+      "title": "Her Bed",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "out-the-front-door",
+      "title": "Out the Front Door",
+      "year": 2025,
+      "medium": "Oil on Canvas",
+      "dimensions": "220X190",
+      "description": "",
+      "images": [
+        {
+          "src": "work-out-the-front-door-good.jpg",
+          "full": "work-out-the-front-door-full.jpg",
+          "aspect": "2560/1707"
+        }
+      ]
+    },
+    {
+      "id": "swimmers",
+      "title": "Swimmers",
+      "year": 2025,
+      "medium": "Oil on MDF",
+      "dimensions": "",
+      "description": "",
+      "images": [
+        {
+          "src": "work-swimmers-good.jpg",
+          "full": "work-swimmers-full.jpg",
+          "aspect": "1707/2560"
+        }
+      ]
+    },
+    {
+      "id": "sparrow",
+      "title": "sparrow",
+      "year": 2025,
+      "medium": "Oil on MDF",
+      "dimensions": "",
+      "description": "",
+      "images": []
+    }
+  ],
+  "exhibitions": [
+    {
+      "id": "good-grief",
+      "title": "GOOD GRIEF",
+      "year": 2022,
+      "type": "Group show",
+      "location": "London, UK",
+      "description": "",
+      "images": [
+        {
+          "src": "exh-good-grief-good.jpg",
+          "full": "exh-good-grief-full.jpg",
+          "aspect": "1920/2560"
+        },
+        {
+          "src": "exh-good-grief-detail-good.jpg",
+          "full": "exh-good-grief-detail-full.jpg",
+          "aspect": "1920/2560"
+        }
+      ]
+    },
+    {
+      "id": "juice-box",
+      "title": "Juice box",
+      "year": 2022,
+      "type": "Group show",
+      "location": "London, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "slade-interim-show",
+      "title": "Slade Interim show",
+      "year": 2023,
+      "type": "Group show",
+      "location": "London, UK",
+      "description": "",
+      "images": [
+        {
+          "src": "exh-slade-interim-good.jpg",
+          "full": "exh-slade-interim-full.jpg",
+          "aspect": "2560/1707"
+        }
+      ]
+    },
+    {
+      "id": "discard-archives",
+      "title": "Discard Archives",
+      "year": 2023,
+      "type": "Group show",
+      "location": "London, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "threading-the-eye",
+      "title": "Threading the Eye",
+      "year": 2024,
+      "type": "Group show",
+      "location": "Crypt Gallery, London, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "kobokan-stories",
+      "title": "Kobokan stories",
+      "year": 2024,
+      "type": "Solo show and workshop",
+      "location": "Tokyo, JPN",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "axxx-blood",
+      "title": "Aίμα/Blood",
+      "year": 2024,
+      "type": "Group show",
+      "location": "London, UK",
+      "description": "",
+      "images": []
+    }
+  ]
+}

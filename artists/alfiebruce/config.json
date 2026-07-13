@@ -1,7 +1,7 @@
 {
     "name": "Alfie Bruce",
     "slug": "alfiebruce",
-    "domain": "https://alfiebruce.com",
+    "domain": "alfiebruce.com",
     "admin_token": "AlfieBruce2026!",
     "description": "",
     "contact_email": "",
@@ -38,7 +38,31 @@
     "last_login": 1780859594,
     "last_login_ip": "82.33.103.61",
     "features": [
-        "alfie_admin"
+        "content_admin"
     ],
+    "content_types": {
+        "categories": {
+            "label": "Categories",
+            "item": {
+                "title": {"type": "text", "required": true, "slug_source": true},
+                "cover": {"type": "image"},
+                "photos": {"type": "image", "multiple": true}
+            },
+            "page": {
+                "mode": "per_item",
+                "parent": ".",
+                "template": "templates/category.html"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#000000",
+        "surface": "#111111",
+        "text": "#ffffff",
+        "accent": "#ffffff",
+        "accentText": "#000000",
+        "border": "rgba(255,255,255,0.15)",
+        "font": "'Helvetica Neue', Helvetica, Arial, sans-serif"
+    },
     "handover_token": "988EF5j8n36yDxiwYz7-tOJOZ3nSlR5y"
 }

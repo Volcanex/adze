@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:2560/2550">
         <img class="work-image" src="../../assets/work-math-equation-2-good.jpg" alt="Math Equation" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Math Equation</h1>

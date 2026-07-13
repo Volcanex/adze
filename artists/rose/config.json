@@ -30,8 +30,55 @@
     "last_login": 1780762947,
     "last_login_ip": "148.252.147.214",
     "features": [
-        "rose_admin"
+        "content_admin"
     ],
+    "content_types": {
+        "works": {
+            "label": "Works",
+            "item": {
+                "title": {"type": "text", "required": true, "slug_source": true},
+                "year": {"type": "number"},
+                "medium": {"type": "text"},
+                "dimensions": {"type": "text"},
+                "description": {"type": "textarea"},
+                "images": {"type": "image", "multiple": true}
+            },
+            "page": {
+                "mode": "per_item",
+                "parent": "works",
+                "title": "Works — Rose Jones",
+                "template": "templates/work.html",
+                "index_template": "templates/works_index.html"
+            }
+        },
+        "exhibitions": {
+            "label": "Exhibitions",
+            "item": {
+                "title": {"type": "text", "required": true, "slug_source": true},
+                "year": {"type": "number"},
+                "type": {"type": "text"},
+                "location": {"type": "text"},
+                "description": {"type": "textarea"},
+                "images": {"type": "image", "multiple": true}
+            },
+            "page": {
+                "mode": "per_item",
+                "parent": "exhibitions",
+                "title": "Exhibitions — Rose Jones",
+                "template": "templates/exhibition.html",
+                "index_template": "templates/exhibitions_index.html"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#ffffff",
+        "surface": "#f8f8f8",
+        "text": "#000000",
+        "accent": "#000000",
+        "accentText": "#ffffff",
+        "border": "#e8e8e8",
+        "font": "'Quasimoda', -apple-system, sans-serif"
+    },
     "handover_token": "wW2VrDkKJhwT2FEU9dEULbVNxPCw31Uy",
     "slack_figma_msg_ts": "1782309445.249019"
 }

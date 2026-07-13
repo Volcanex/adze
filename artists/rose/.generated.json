@@ -1,6 +1,5 @@
 {
   "pages": [
-    "about",
     "exhibitions",
     "exhibitions/axxx-blood",
     "exhibitions/discard-archives",
@@ -16,6 +15,7 @@
     "works/divine-like-a-bird",
     "works/drive-thru",
     "works/estuary",
+    "works/her-bed",
     "works/her-cup",
     "works/keeper-of-the-egg",
     "works/marsh-at-sunset",
@@ -27,9 +27,13 @@
     "works/my-mothers-hum",
     "works/night-fishing",
     "works/night-fishing-2",
+    "works/out-the-front-door",
     "works/paddle-for-dear-life",
     "works/pin-mill",
     "works/skip-kids",
+    "works/sparrow",
+    "works/swimmers",
+    "works/tara",
     "works/untitled",
     "works/what-did-it-mean-to-fly",
     "works/while-we-sit-together",

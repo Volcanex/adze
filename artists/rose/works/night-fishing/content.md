@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:706/859">
         <img class="work-image" src="../../assets/work-night-fishing-good.jpg" alt="Night fishing" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Night fishing</h1>

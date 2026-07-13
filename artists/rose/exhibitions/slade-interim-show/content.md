@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/exhibitions/">← Exhibitions</a>
 
+
+
     <figure class="exh-figure" style="aspect-ratio:2560/1707">
         <img class="exh-image" src="../../assets/exh-slade-interim-good.jpg" alt="Slade Interim show" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="exh-title">Slade Interim show</h1>

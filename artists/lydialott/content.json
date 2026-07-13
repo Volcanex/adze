@@ -1,0 +1,443 @@
+{
+  "works": [
+    {
+      "id": "weather-ii",
+      "title": "'Nested'",
+      "dimensions": "50 X 30 cm",
+      "medium": "Acrylic on paper",
+      "year": 2026,
+      "date": "2026-06-10",
+      "image": "images/weather-ii.jpeg",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": "This work forms part of an ongoing series exploring the bed as a site of intimacy and vulnerability. The series began after finding a photograph of my father in bed in a family photo album, taken during a period of depression that he later wrote about in his memoir. Around the same time, I saw Tracey Emin’s My Bed at the Tate.The bed is a humanising site- one in which people's most private and universal selves emerge. I find that painting people in beds dissolves distinctions of difference for me. There is a way in which I feel able to touch, even partially, some fresh and human core that can get hidden in leathered outer layers."
+    },
+    {
+      "id": "weather-iii",
+      "title": "Untitled (Weather III)",
+      "dimensions": "1000 x 650mm",
+      "medium": "Acrylic on paper",
+      "year": 2024,
+      "date": "2026-06-22",
+      "image": "images/weather-iii.png",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "study-01",
+      "title": "Study 01",
+      "dimensions": "297 x 420mm",
+      "medium": "Graphite on paper",
+      "year": 2024,
+      "date": "2024-07-04",
+      "image": "images/2025_Bulk_Drawings_1.png",
+      "tags": [
+        "drawings",
+        "selected"
+      ]
+    },
+    {
+      "id": "study-02",
+      "title": "Study 02",
+      "dimensions": "297 x 420mm",
+      "medium": "Graphite on paper",
+      "year": 2024,
+      "date": "2024-06-18",
+      "image": "images/2025_Bulk_Drawings_2.png",
+      "tags": [
+        "drawings"
+      ]
+    },
+    {
+      "id": "woven-i",
+      "title": "Woven I",
+      "dimensions": "800 x 600mm",
+      "medium": "Linen, wool",
+      "year": 2024,
+      "date": "2024-05-30",
+      "image": "images/woven-i.jpeg",
+      "tags": [
+        "textiles"
+      ],
+      "description": ""
+    },
+    {
+      "id": "woven-ii",
+      "title": "Woven II",
+      "dimensions": "800 x 600mm",
+      "medium": "Linen, wool",
+      "year": 2024,
+      "date": "2024-04-12",
+      "image": "images/2025_Bulk_Textiles_2.png",
+      "tags": [
+        "textiles"
+      ]
+    },
+    {
+      "id": "form-i",
+      "title": "Form I",
+      "dimensions": "350 x 220 x 220mm",
+      "medium": "Stoneware",
+      "year": 2023,
+      "date": "2023-11-09",
+      "image": "images/IMG_0291_1.png",
+      "tags": [
+        "drawings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "form-ii",
+      "title": "Form II",
+      "dimensions": "400 x 240 x 240mm",
+      "medium": "Stoneware",
+      "year": 2023,
+      "date": "2023-10-21",
+      "image": "images/Trinity_Boy_Wharf_End_of_Year_2025-7893_1.png",
+      "tags": [
+        "sculpture",
+        "selected"
+      ]
+    },
+    {
+      "id": "field-notes",
+      "title": "Field Notes",
+      "dimensions": "210 x 297mm",
+      "medium": "Mixed media on paper",
+      "year": 2023,
+      "date": "2023-09-05",
+      "image": "images/2025_Bulk_Drawings_3.png",
+      "tags": [
+        "drawings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "weather-iv",
+      "title": "Untitled (Weather IV)",
+      "dimensions": "1000 x 650mm",
+      "medium": "Acrylic on paper",
+      "year": 2024,
+      "date": "2024-03-28",
+      "image": "images/weather-iv-2.png",
+      "tags": [
+        "paintings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "weather-v",
+      "title": "I would be so grateful",
+      "dimensions": "1200 x 800mm",
+      "medium": "Oil on linen",
+      "year": 2026,
+      "date": "2024-03-02",
+      "image": "images/weather-v-2.jpeg",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "study-03",
+      "title": "Study 03",
+      "dimensions": "297 x 420mm",
+      "medium": "Graphite on paper",
+      "year": 2024,
+      "date": "2024-02-15",
+      "image": "images/2025_Bulk_Drawings_4.png",
+      "tags": [
+        "drawings"
+      ]
+    },
+    {
+      "id": "study-04",
+      "title": "Study 04",
+      "dimensions": "420 x 594mm",
+      "medium": "Ink on paper",
+      "year": 2024,
+      "date": "2024-01-30",
+      "image": "images/2025_Bulk_Drawings_5.png",
+      "tags": [
+        "drawings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "study-05",
+      "title": "Study 05",
+      "dimensions": "297 x 420mm",
+      "medium": "Charcoal on paper",
+      "year": 2023,
+      "date": "2023-12-19",
+      "image": "images/2025_Bulk_Drawings_6.png",
+      "tags": [
+        "drawings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "woven-iii",
+      "title": "Woven III",
+      "dimensions": "900 x 700mm",
+      "medium": "Tufted wool",
+      "year": 2023,
+      "date": "2023-12-01",
+      "image": "images/woven-iii.png",
+      "tags": [
+        "textiles",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "woven-iv",
+      "title": "Woven IV",
+      "dimensions": "1100 x 850mm",
+      "medium": "Linen, cotton, wool",
+      "year": 2023,
+      "date": "2023-11-14",
+      "image": "images/woven-iv.png",
+      "tags": [
+        "textiles"
+      ],
+      "description": ""
+    },
+    {
+      "id": "soft-body-i",
+      "title": "Soft Body I",
+      "dimensions": "600 x 450mm",
+      "medium": "Stuffed fabric, thread",
+      "year": 2023,
+      "date": "2023-10-28",
+      "image": "images/Screenshot_2026-03-25_at_13.22.52_1.png",
+      "tags": [
+        "soft-bodies",
+        "selected"
+      ]
+    },
+    {
+      "id": "soft-body-ii",
+      "title": "Soft Body II",
+      "dimensions": "700 x 500mm",
+      "medium": "Stuffed fabric, thread",
+      "year": 2023,
+      "date": "2023-10-05",
+      "image": "images/Screenshot_2026-03-25_at_13.23.19_1.png",
+      "tags": [
+        "sculpture"
+      ],
+      "description": ""
+    },
+    {
+      "id": "form-iii",
+      "title": "Form III",
+      "dimensions": "450 x 300 x 300mm",
+      "medium": "Plaster, pigment",
+      "year": 2023,
+      "date": "2023-09-20",
+      "image": "images/Screenshot_2026-03-25_at_13.23.44_1.png",
+      "tags": [
+        "paintings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "form-iv",
+      "title": "Form IV",
+      "dimensions": "600 x 400 x 400mm",
+      "medium": "Ceramic",
+      "year": 2023,
+      "date": "2023-09-01",
+      "image": "images/Screenshot_2026-03-25_at_13.24.17_1.png",
+      "tags": [
+        "sculpture",
+        "selected"
+      ]
+    },
+    {
+      "id": "air-i",
+      "title": "Atmosphere I",
+      "dimensions": "840 x 1188mm",
+      "medium": "Airbrush on board",
+      "year": 2023,
+      "date": "2023-08-12",
+      "image": "images/2025_Bulk_Airbrushing_1.png",
+      "tags": [
+        "airbrushing",
+        "paintings"
+      ]
+    },
+    {
+      "id": "air-ii",
+      "title": "Atmosphere II",
+      "dimensions": "840 x 1188mm",
+      "medium": "Airbrush on board",
+      "year": 2023,
+      "date": "2023-07-25",
+      "image": "images/2025_Bulk_Airbrushing_2.png",
+      "tags": [
+        "airbrushing"
+      ]
+    },
+    {
+      "id": "air-iii",
+      "title": "Atmosphere III",
+      "dimensions": "594 x 841mm",
+      "medium": "Airbrush, acrylic",
+      "year": 2023,
+      "date": "2023-07-03",
+      "image": "images/2025_Bulk_Airbrushing_3.png",
+      "tags": [
+        "airbrushing",
+        "landscapes"
+      ]
+    },
+    {
+      "id": "land-i",
+      "title": "Field, Morning",
+      "dimensions": "1000 x 700mm",
+      "medium": "Oil on canvas",
+      "year": 2023,
+      "date": "2023-06-16",
+      "image": "images/F894FCC4-7529-4CBF-B2F2-58CE8189EDE0_1_105_c_1.png",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "land-ii",
+      "title": "Field, Dusk",
+      "dimensions": "1000 x 700mm",
+      "medium": "Oil on canvas",
+      "year": 2023,
+      "date": "2023-05-29",
+      "image": "images/Screenshot_2026-03-26_at_01.11.26_1.png",
+      "tags": [
+        "landscapes",
+        "paintings"
+      ]
+    },
+    {
+      "id": "etch-i",
+      "title": "Plate I",
+      "dimensions": "210 x 297mm",
+      "medium": "Etching, intaglio",
+      "year": 2023,
+      "date": "2023-05-08",
+      "image": "images/2025_Bulk_Etchings_1.png",
+      "tags": [
+        "etchings"
+      ]
+    },
+    {
+      "id": "etch-ii",
+      "title": "Plate II",
+      "dimensions": "210 x 297mm",
+      "medium": "Etching, aquatint",
+      "year": 2023,
+      "date": "2023-04-19",
+      "image": "images/2025_Bulk_Etchings_2.png",
+      "tags": [
+        "etchings",
+        "drawings"
+      ]
+    },
+    {
+      "id": "exh-i",
+      "title": "Installation View — \"Divided Self\"",
+      "dimensions": "Dimensions variable",
+      "medium": "Mixed media",
+      "year": 2023,
+      "date": "2023-04-01",
+      "image": "images/Screenshot_2026-03-25_at_13.57.11_1.png",
+      "tags": [
+        "exhibitions"
+      ],
+      "description": ""
+    },
+    {
+      "id": "exh-ii",
+      "title": "Installation View — \"Held\"",
+      "dimensions": "Dimensions variable",
+      "medium": "Mixed media",
+      "year": 2023,
+      "date": "2023-03-10",
+      "image": "images/Screenshot_2026-03-25_at_14.01.04_1.png",
+      "tags": [
+        "exhibitions"
+      ]
+    },
+    {
+      "id": "wkshp-i",
+      "title": "Tufting Workshop",
+      "dimensions": "Documentation",
+      "medium": "Photograph",
+      "year": 2023,
+      "date": "2023-02-20",
+      "image": "images/Screenshot_2026-03-25_at_13.58.31_1.png",
+      "tags": [
+        "workshops"
+      ]
+    },
+    {
+      "id": "wkshp-ii",
+      "title": "Life Drawing Session",
+      "dimensions": "Documentation",
+      "medium": "Photograph",
+      "year": 2023,
+      "date": "2023-01-28",
+      "image": "images/Screenshot_2026-03-30_at_17.01.27_1.png",
+      "tags": [
+        "workshops",
+        "drawings"
+      ]
+    },
+    {
+      "id": "like-father-like-daughter-vol-1",
+      "title": "Like Father Like Daughter Vol.1",
+      "dimensions": "",
+      "medium": "Oil on Board",
+      "year": 2026,
+      "date": "2026-07-02",
+      "image": "images/like-father-like-daughter-vol-1.png",
+      "tags": [
+        "paintings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "like-father-like-daughter-vol-2",
+      "title": "Like Father Like Daughter Vol.2",
+      "dimensions": "",
+      "medium": "Oil on Board",
+      "year": 2026,
+      "date": "2026-07-01",
+      "image": "images/like-father-like-daughter-vol-2.png",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "hyde-park-at-night",
+      "title": "Hyde Park at Night",
+      "dimensions": "",
+      "medium": "",
+      "year": null,
+      "date": "2026-07-02",
+      "image": "images/hyde-park-at-night.png",
+      "tags": [],
+      "description": ""
+    }
+  ]
+}

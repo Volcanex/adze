@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1832/2560">
         <img class="work-image" src="../../assets/work-my-memory-of-your-birth-good.jpg" alt="My Memory of your Birth" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">My Memory of your Birth</h1>

@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:2560/1707">
         <img class="work-image" src="../../assets/work-out-the-front-door-good.jpg" alt="Out the Front Door" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Out the Front Door</h1>

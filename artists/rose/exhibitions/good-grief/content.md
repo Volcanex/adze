@@ -194,6 +194,8 @@ body {
 
     <a class="back-link" href="/exhibitions/">← Exhibitions</a>
 
+
+
     <figure class="exh-figure" style="aspect-ratio:1920/2560">
         <img class="exh-image" src="../../assets/exh-good-grief-good.jpg" alt="GOOD GRIEF" decoding="async">
     </figure>
@@ -201,6 +203,8 @@ body {
     <figure class="exh-figure" style="aspect-ratio:1920/2560">
         <img class="exh-image" src="../../assets/exh-good-grief-detail-good.jpg" alt="GOOD GRIEF" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="exh-title">GOOD GRIEF</h1>

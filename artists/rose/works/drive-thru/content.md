@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1932/2560">
         <img class="work-image" src="../../assets/work-drive-thru-good.jpg" alt="Drive thru" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Drive thru</h1>

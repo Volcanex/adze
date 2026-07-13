@@ -5,8 +5,8 @@
     "admin_token": "loudhive",
     "description": "",
     "contact_email": "",
-    "last_login": 1782681962,
-    "last_login_ip": "143.58.143.248",
+    "last_login": 1783252135,
+    "last_login_ip": "151.226.16.222",
     "lead": {
         "active": true,
         "contact": "Self",
@@ -40,7 +40,36 @@
         "loom"
     ],
     "features": [
-        "lydia_admin"
+        "content_admin"
     ],
+    "content_types": {
+        "works": {
+            "label": "Works",
+            "item": {
+                "title": {"type": "text", "required": true, "slug_source": true},
+                "dimensions": {"type": "text"},
+                "medium": {"type": "text"},
+                "year": {"type": "number"},
+                "date": {"type": "date"},
+                "image": {"type": "image"},
+                "tags": {"type": "tags", "options": [
+                    "selected", "paintings", "textiles", "sculpture",
+                    "drawings", "exhibitions", "workshops"
+                ]},
+                "description": {"type": "textarea"}
+            },
+            "page": {
+                "mode": "none"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#fafafa",
+        "surface": "#ffffff",
+        "text": "#111111",
+        "accent": "#000000",
+        "accentText": "#ffffff",
+        "border": "#e3e3e3"
+    },
     "handover_token": "V_bnP_TiHh4w5D-YFqDKmhSSGE7P4QOo"
 }

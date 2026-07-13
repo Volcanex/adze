@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:2008/2560">
         <img class="work-image" src="../../assets/work-murmuration-good.jpg" alt="Murmuration" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Murmuration</h1>

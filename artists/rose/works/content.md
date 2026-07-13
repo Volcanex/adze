@@ -178,57 +178,101 @@ body {
         <a class="m-contact" href="/contact/">Contact</a>
     </nav>
 
+
+
     <div class="year-row"><div class="rule"></div><div class="year">2025</div><div class="rule"></div></div>
     <ul class="works-list">
+
         <li><a href="/works/bed/">Bed</a></li>
+
         <li><a href="/works/my-inner-child/">My Inner Child</a></li>
+
         <li><a href="/works/paddle-for-dear-life/">Paddle for dear life</a></li>
+
         <li><a href="/works/tara/">Tara</a></li>
+
         <li><a href="/works/her-bed/">Her Bed</a></li>
+
         <li><a href="/works/out-the-front-door/">Out the Front Door</a></li>
+
         <li><a href="/works/swimmers/">Swimmers</a></li>
+
         <li><a href="/works/sparrow/">sparrow</a></li>
+
     </ul>
+
 
     <div class="year-row"><div class="rule"></div><div class="year">2024</div><div class="rule"></div></div>
     <ul class="works-list">
+
         <li><a href="/works/drive-thru/">Drive thru</a></li>
+
         <li><a href="/works/a-shooting-star-from-atop-a-slide/">A shooting star from atop a slide and gold waiting below</a></li>
+
         <li><a href="/works/marsh-at-sunset/">Marsh at sunset</a></li>
+
         <li><a href="/works/moonlit-sea/">Moonlit Sea</a></li>
+
         <li><a href="/works/wondering-women/">Wondering women</a></li>
+
     </ul>
+
 
     <div class="year-row"><div class="rule"></div><div class="year">2023</div><div class="rule"></div></div>
     <ul class="works-list">
+
         <li><a href="/works/my-mothers-hum/">My Mothers Hum</a></li>
+
         <li><a href="/works/estuary/">Estuary</a></li>
+
         <li><a href="/works/math-equation/">Math Equation</a></li>
+
         <li><a href="/works/what-did-it-mean-to-fly/">What did it mean to fly</a></li>
+
     </ul>
+
 
     <div class="year-row"><div class="rule"></div><div class="year">2022</div><div class="rule"></div></div>
     <ul class="works-list">
+
         <li><a href="/works/keeper-of-the-egg/">Keeper of the Egg</a></li>
+
         <li><a href="/works/while-we-sit-together/">While We Sit Together</a></li>
+
         <li><a href="/works/you-belong-at-the-head-of-the-table/">You belong at the head of the table</a></li>
+
         <li><a href="/works/her-cup/">Her Cup</a></li>
+
         <li><a href="/works/my-memory-of-your-birth/">My Memory of your Birth</a></li>
+
         <li><a href="/works/divine-like-a-bird/">Divine like a Bird</a></li>
+
         <li><a href="/works/cormorant/">Cormorant</a></li>
+
         <li><a href="/works/skip-kids/">Skip Kids</a></li>
+
         <li><a href="/works/untitled/">Untitled</a></li>
+
         <li><a href="/works/murmuration/">Murmuration</a></li>
+
         <li><a href="/works/night-fishing/">Night fishing</a></li>
+
         <li><a href="/works/night-fishing-2/">Night fishing 2</a></li>
+
     </ul>
+
 
     <div class="year-row"><div class="rule"></div><div class="year">2021</div><div class="rule"></div></div>
     <ul class="works-list">
+
         <li><a href="/works/wise-man/">Wise Man</a></li>
+
         <li><a href="/works/worship/">Worship</a></li>
+
         <li><a href="/works/pin-mill/">Pin Mill</a></li>
+
     </ul>
+
 
     <footer class="footer">
         <a href="/contact/">Contact</a>

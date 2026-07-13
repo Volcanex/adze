@@ -177,18 +177,51 @@ body {
         <a class="m-contact" href="/contact/">Contact</a>
     </nav>
 
+
+
+
     <figure class="image-placeholder exh-figure" style="aspect-ratio:1920/2560">
         <img class="exh-image" src="../assets/exh-good-grief-good.jpg" alt="GOOD GRIEF, group show, 2022" decoding="async">
     </figure>
 
+
     <div class="exhibitions-list">
+
+
+
+
         <div class="item"><a href="/exhibitions/threading-the-eye/"><span class="year">2024</span><span class="title">Threading the Eye, group show, Crypt Gallery, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/kobokan-stories/"><span class="year">2024</span><span class="title">Kobokan stories, solo show and workshop, Tokyo, JPN</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/axxx-blood/"><span class="year">2024</span><span class="title">Aίμα/Blood, group show, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/slade-interim-show/"><span class="year">2023</span><span class="title">Slade Interim show, group show, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/discard-archives/"><span class="year">2023</span><span class="title">Discard Archives, group show, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/good-grief/"><span class="year">2022</span><span class="title">GOOD GRIEF, group show, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/juice-box/"><span class="year">2022</span><span class="title">Juice box, group show, London, UK</span></a></div>
+
     </div>
 
     <footer class="footer">

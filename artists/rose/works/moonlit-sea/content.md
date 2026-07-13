@@ -194,9 +194,13 @@ body {
 
     <a class="back-link" href="/works/">← Works</a>
 
+
+
     <figure class="work-figure" style="aspect-ratio:1920/1480">
         <img class="work-image" src="../../assets/work-moonlit-sea-good.jpg" alt="Moonlit Sea" decoding="async">
     </figure>
+
+
 
     <div class="title-row">
         <h1 class="work-title">Moonlit Sea</h1>

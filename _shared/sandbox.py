@@ -2,14 +2,10 @@
 Per-artist sandbox container helpers.
 
 The Adze platform runs a single sandbox container per artist
-(`adze-terminal-<slug>`) shared between Terminal Access and Auto-Code.
-This module centralises the naming, network, volume, and lifecycle
-logic so both subsystems agree on which container they're talking to.
-
-Historically the helpers were duplicated in `terminal_bridge.py` and
-`auto_code_bridge.py`. New code imports from here; the older copies
-remain in place until their owners migrate, to keep the blast radius
-of this change tight.
+(`adze-terminal-<slug>`) for Auto-Code. This module centralises the
+naming, network, volume, and lifecycle logic. (Terminal Access, which
+also used it, was retired 2026-07; its `terminal_bridge.py` and the old
+`auto_code_bridge.py` are gone — this is now the sole owner.)
 """
 
 from __future__ import annotations

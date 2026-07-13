@@ -1,0 +1,15 @@
+# Runtime data — all mounted as volumes in docker-compose.yml, so baking them
+# into the image is pure waste (17GB+) and blows out disk during image export.
+# The volume mounts overlay these paths at runtime; image contents are unused.
+artists/
+output/
+uploads/
+data/
+logs/
+_vibe_sessions/
+static/
+
+.git/
+**/__pycache__/
+**/*.pyc
+node_modules/
