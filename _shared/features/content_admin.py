@@ -33,6 +33,12 @@ Jinja templates), never hand-edited — the rebuild transaction (ArtistAdmin) ma
 them read-only to /edit-page. `mode:"none"` skips render (client-side grids that
 fetch content.json at runtime); the site still recompiles so the JSON ships.
 
+`page` may also carry a `config` dict, merged verbatim into the generated page's
+config.json (e.g. `{"hidden": true}`) — this lets a hand-authored page keep its
+config once it's converted to an editable one. A `single`-mode type with one
+seeded item is the "editable copy" pattern (edit a bespoke page's prose without
+touching its layout); see CLAUDE.md → "Editable copy on a hand-authored page".
+
 See _shared/features/CLAUDE.md → "Custom artist admins" for the author guide.
 """
 import json
@@ -160,13 +166,18 @@ def _jinja_env(slug):
     )
 
 
-def _write_page(slug, rel, body_html, title, description=None):
+def _write_page(slug, rel, body_html, title, description=None, extra=None):
     d = _artist_dir(slug) / rel
     d.mkdir(parents=True, exist_ok=True)
     (d / 'content.md').write_text(body_html, encoding='utf-8')
     page_config = {'title': title, 'slug': f'artists/{slug}/{rel}'}
     if description:
         page_config['description'] = description
+    # A content type's `page.config` block passes extra keys straight through to
+    # the generated page's config.json (e.g. `hidden`, `categories`). This lets a
+    # hand-authored page keep its config when it's converted to an editable one.
+    if isinstance(extra, dict):
+        page_config.update(extra)
     (d / 'config.json').write_text(json.dumps(
         page_config, indent=2, ensure_ascii=False), encoding='utf-8')
 
@@ -221,6 +232,7 @@ def make_render(slug, cfg):
             label = tdef.get('label', ctype)
             title = page.get('title', label)
             description = page.get('description')
+            extra = page.get('config')
 
             if mode == 'single':
                 if not parent:
@@ -228,7 +240,7 @@ def make_render(slug, cfg):
                 _write_page(slug, parent,
                             env.get_template(page['template']).render(
                                 items=items, type=ctype, label=label, config=cfg),
-                            title, description)
+                            title, description, extra)
                 generated.append(parent)
 
             elif mode == 'per_item':
@@ -236,7 +248,7 @@ def make_render(slug, cfg):
                     _write_page(slug, parent,
                                 env.get_template(page['index_template']).render(
                                     items=items, type=ctype, label=label, config=cfg),
-                                title, description)
+                                title, description, extra)
                     generated.append(parent)
                 tpl = env.get_template(page['template'])
                 for it in items:

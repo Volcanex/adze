@@ -38,6 +38,10 @@ To give an artist a custom admin:
      published to `assets/data/<type>.json` for a client-side grid to `fetch`).
    - `page.parent` is the URL dir; `"."` = the artist root (siblings of static
      pages like `home/`).
+   - `page.config` (optional dict) is merged verbatim into the generated page's
+     `config.json` — carry keys the compiler cares about that aren't
+     title/description, e.g. `{"hidden": true, "categories": ["portfolio"]}`. This
+     is what lets a hand-authored page keep its config when it becomes editable.
 3. Add an `admin_theme` block (CSS vars: `bg`, `surface`, `text`, `accent`,
    `accentText`, `border`, `font`) to brand the admin.
 4. Write the per-artist Jinja templates named in `page.template` /
@@ -77,6 +81,40 @@ artist's own domain, no re-auth, no token in the URL.
 leaves `output/artists/<slug>/` owned by uid 0, after which the container (`adze`,
 uid 1000) can't overwrite them and Publish 500s with `PermissionError`. Fix:
 `sudo chown -R 1000:1000 output/artists/<slug>`. Always compile as uid 1000.
+
+### Editable copy on a hand-authored page (the singleton "copy" pattern)
+
+A common need: let an artist edit the **prose** on a bespoke, hand-designed page
+(a home page, an about page) without touching the layout. This reuses the same
+machinery — no new engine code — as a **singleton** content type:
+
+1. Declare a content type (e.g. `"copy"`) whose `item` fields are the editable
+   text blocks (`text` for one-liners, `textarea` for multi-line). `page.mode:
+   "single"`, `page.parent` = the page's dir (e.g. `"home"`).
+2. Convert that page's hand-authored `content.md` into the type's
+   `page.template`. Keep **all** the markup and `<style>` verbatim; replace only
+   the copy with `{{ copy.<field> }}`, where `{% set copy = items[0] if items
+   else {} %}` treats the single item as the record.
+3. Seed `content.json` with one item holding the current copy, so the first
+   publish reproduces the page unchanged. Use `page.config` (above) to preserve
+   flags like `hidden`.
+4. **Multi-line → `<br>`**: don't `replace('\n','<br>')|safe` — Jinja's `Markup`
+   re-escapes the inserted tag (`&lt;br&gt;`). Split and let each line autoescape:
+   `{% for line in (copy.body or '').split('\n') %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}`.
+
+By convention this type holds exactly one item; the shell's list view still shows
+an "Add", so label it clearly (e.g. `"Home text"`) and seed the one row.
+`artists/mariaslaughter/` uses this for its home page alongside `gallery`/`music`
+photo editors — a worked reference.
+
+### Self-service password change
+
+Artists change their own password from the shell's **Account** button →
+`POST {prefix}/password` (`{current, new}`), handled in `artist_admin.py`'s
+`register_core`. It verifies the current token, writes the new `admin_token` to
+`config.json` via `ArtistAdmin.set_token`, and re-mints the session cookie. Unlike
+the one-time handover-page change (`admin_api.handover_set_password`, which sets
+`password_changed` to lock itself), this path is **repeatable**.
 
 ### Describe the admin for the handover page
 

@@ -87,6 +87,21 @@ class ArtistAdmin:
     def token(self):
         return self._config().get('admin_token', '')
 
+    def set_token(self, new_token):
+        """Persist a new admin_token to config.json, preserving everything else.
+        Returns True on success. Used by the self-service password change."""
+        cfg_path = self.artist_dir / 'config.json'
+        cfg = self._config()
+        if not cfg:
+            return False
+        cfg['admin_token'] = new_token
+        try:
+            cfg_path.write_text(
+                json.dumps(cfg, indent=4, ensure_ascii=False), encoding='utf-8')
+            return True
+        except OSError:
+            return False
+
     def domain(self):
         return _strip_scheme(self._config().get('domain'))
 
@@ -167,6 +182,25 @@ class ArtistAdmin:
             admin.domain_guard()
             resp = jsonify({'ok': True})
             resp.delete_cookie(admin.cookie)
+            return resp
+
+        @admin.bp.route(f'{admin.prefix}/password', methods=['POST'])
+        @admin.auth_required
+        def change_password():
+            # Repeatable, self-service. Unlike the one-time handover change, this
+            # never sets `password_changed` — the artist can rotate it any time.
+            data = request.get_json(silent=True) or {}
+            current = (data.get('current') or '').strip()
+            new = (data.get('new') or '').strip()
+            if current != admin.token():
+                return jsonify({'error': 'Current password is incorrect.'}), 400
+            if len(new) < 6:
+                return jsonify({'error': 'New password must be at least 6 characters.'}), 400
+            if not admin.set_token(new):
+                return jsonify({'error': 'Could not save the new password.'}), 500
+            resp = jsonify({'ok': True})
+            resp.set_cookie(admin.cookie, new, httponly=True,
+                            samesite='Strict', max_age=60 * 60 * 24 * 30)
             return resp
 
         @admin.bp.route(f'{admin.prefix}/compile', methods=['POST'])

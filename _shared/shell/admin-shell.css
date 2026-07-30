@@ -58,7 +58,16 @@ body {
 .af-input:focus { outline: none; border-color: var(--as-accent); }
 .af-textarea { min-height: 96px; resize: vertical; }
 .af-checkrow { display: flex; align-items: center; gap: 8px; }
-.af-check { width: 18px; height: 18px; }
+.af-check { width: 18px; height: 18px; accent-color: var(--as-accent); }
+
+/* select: kill the native chrome, draw our own caret */
+select.af-input {
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  padding-right: 36px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23b8b3a2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 13px center;
+}
+select.af-input option { background: var(--as-surface); color: var(--as-text); }
 .af-note { font-size: 12px; color: #8a8a7a; font-style: italic; margin-top: 6px; }
 
 /* tags */
@@ -70,13 +79,19 @@ body {
 .af-chip button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0; }
 
 /* richtext / images */
-.af-rich { background: #fff; color: #111; border-radius: var(--as-radius); }
+.af-rich { background: var(--as-surface); color: var(--as-text); border-radius: var(--as-radius); }
 .af-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
 .af-thumb { position: relative; width: 96px; height: 96px; border-radius: var(--as-radius); overflow: hidden; border: 1px solid var(--as-border); }
 .af-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .af-thumb button { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px;
   border: none; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; }
-.af-file { display: block; font: inherit; color: var(--as-text); }
+.af-file { display: block; font: inherit; color: #8a8a7a; }
+.af-file::file-selector-button {
+  font: inherit; font-weight: 600; margin-right: 12px; cursor: pointer;
+  padding: 8px 16px; border-radius: var(--as-radius);
+  border: 1px solid var(--as-accent); background: var(--as-accent); color: var(--as-accent-text);
+}
+.af-file::file-selector-button:hover { opacity: .9; }
 
 /* buttons / footer */
 .as-btn { border: 1px solid var(--as-accent); background: var(--as-accent); color: var(--as-accent-text);
@@ -84,6 +99,7 @@ body {
 .as-btn:hover { opacity: .9; }
 .as-btn:disabled { opacity: .4; cursor: default; }
 .as-btn-sm { padding: 6px 14px; font-size: 13px; }
+.as-actions { display: flex; gap: 12px; margin: 4px 0 16px; }
 .as-link { background: none; border: none; color: var(--as-accent); font: inherit; cursor: pointer; padding: 0; text-decoration: none; }
 .as-link:hover { text-decoration: underline; }
 .as-danger { color: #e06a5a; }
@@ -107,3 +123,49 @@ body {
 .as-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .as-toast.ok { border-color: #5aa86a; }
 .as-toast.err { border-color: #e06a5a; }
+
+/* modal (account / change password) */
+.as-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center; z-index: 60; padding: 18px; }
+.as-modal { background: var(--as-surface); border: 1px solid var(--as-border);
+  border-radius: var(--as-radius); padding: 24px; width: 100%; max-width: 360px; }
+.as-modal h2 { margin: 0 0 18px; font-size: 18px; }
+
+/* ── vendor editors re-themed to the admin palette ──────────────────────────
+ * EasyMDE (markdown) and Quill (richtext) ship light themes; without this they
+ * render as white boxes inside the dark shell. Overrides scoped to their
+ * containers so the vendored CSS stays untouched. */
+.EasyMDEContainer .CodeMirror {
+  background: var(--as-surface); color: var(--as-text);
+  border-color: var(--as-border); border-radius: 0 0 var(--as-radius) var(--as-radius); }
+.EasyMDEContainer .CodeMirror-cursor { border-color: var(--as-text); }
+.EasyMDEContainer .editor-toolbar {
+  background: var(--as-surface); border-color: var(--as-border);
+  border-radius: var(--as-radius) var(--as-radius) 0 0; opacity: 1; }
+.EasyMDEContainer .editor-toolbar button { color: var(--as-text) !important; border-color: transparent; }
+.EasyMDEContainer .editor-toolbar button:hover,
+.EasyMDEContainer .editor-toolbar button.active {
+  background: var(--as-border); border-color: var(--as-border); }
+.EasyMDEContainer .editor-toolbar i.separator { border-color: var(--as-border); }
+.EasyMDEContainer .editor-preview, .EasyMDEContainer .editor-preview-side {
+  background: var(--as-bg); color: var(--as-text); }
+
+.ql-toolbar.ql-snow {
+  background: var(--as-surface); border-color: var(--as-border);
+  border-radius: var(--as-radius) var(--as-radius) 0 0; }
+.ql-container.ql-snow { border-color: var(--as-border);
+  border-radius: 0 0 var(--as-radius) var(--as-radius); }
+.af-rich .ql-editor { color: var(--as-text); min-height: 140px; }
+.af-rich .ql-editor.ql-blank::before { color: #8a8a7a; font-style: italic; }
+.ql-snow .ql-stroke { stroke: var(--as-text); }
+.ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--as-text); }
+.ql-snow .ql-picker { color: var(--as-text); }
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: var(--as-accent); }
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill { fill: var(--as-accent); }
+.ql-snow .ql-picker-options { background: var(--as-surface); border-color: var(--as-border); }
+.ql-snow .ql-tooltip { background: var(--as-surface); border-color: var(--as-border);
+  color: var(--as-text); box-shadow: none; }
+.ql-snow .ql-tooltip input[type=text] {
+  background: var(--as-bg); border-color: var(--as-border); color: var(--as-text); }

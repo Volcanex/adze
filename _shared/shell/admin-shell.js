@@ -69,9 +69,13 @@ window.AdminShell = (function () {
     root.innerHTML = '';
     const header = el('div', 'as-header');
     header.appendChild(el('div', 'as-brand', SCHEMA.name || SCHEMA.slug));
+    const acts = el('div', 'as-row-actions');
+    const account = el('button', 'as-link', 'Account');
+    account.onclick = renderAccountModal;
     const logout = el('button', 'as-link', 'Log out');
     logout.onclick = async () => { await api('POST', '/logout'); renderLogin(); };
-    header.appendChild(logout);
+    acts.append(account, logout);
+    header.appendChild(acts);
     root.appendChild(header);
 
     const keys = typeKeys();
@@ -192,6 +196,7 @@ window.AdminShell = (function () {
     });
     main.appendChild(form);
 
+    const actions = el('div', 'as-actions');
     const save = el('button', 'as-btn', 'Save');
     save.onclick = async () => {
       const body = {};
@@ -208,7 +213,39 @@ window.AdminShell = (function () {
       toast('Saved.', 'ok');
       if (!currentId) renderEdit(saved);  // reopen with id so images can be added
     };
-    main.appendChild(save);
+    actions.appendChild(save);
+    main.appendChild(actions);
+  }
+
+  // ── account / change password ───────────────────────────────────────────────
+  function renderAccountModal() {
+    const backdrop = el('div', 'as-modal-backdrop');
+    backdrop.onclick = e => { if (e.target === backdrop) backdrop.remove(); };
+    const box = el('div', 'as-modal');
+    box.appendChild(el('h2', null, 'Change password'));
+    const cur = el('input', 'af-input'); cur.type = 'password'; cur.placeholder = 'Current password';
+    const nw = el('input', 'af-input'); nw.type = 'password'; nw.placeholder = 'New password (6+ characters)';
+    const conf = el('input', 'af-input'); conf.type = 'password'; conf.placeholder = 'Confirm new password';
+    [cur, nw, conf].forEach(i => i.style.marginBottom = '12px');
+    const err = el('div', 'as-err');
+    const actions = el('div', 'as-actions');
+    const cancel = el('button', 'as-link', 'Cancel'); cancel.onclick = () => backdrop.remove();
+    const submit = el('button', 'as-btn', 'Update password');
+    submit.onclick = async () => {
+      err.textContent = '';
+      if (nw.value.length < 6) { err.textContent = 'New password must be at least 6 characters.'; return; }
+      if (nw.value !== conf.value) { err.textContent = 'The two passwords do not match.'; return; }
+      submit.disabled = true;
+      const r = await api('POST', '/password', { current: cur.value, new: nw.value });
+      submit.disabled = false;
+      if (r && r.ok) { backdrop.remove(); toast('Password updated.', 'ok'); }
+      else { const e = r ? await r.json().catch(() => ({})) : {}; err.textContent = (e && e.error) || 'Could not update password.'; }
+    };
+    actions.append(submit, cancel);
+    box.append(cur, nw, conf, err, actions);
+    backdrop.appendChild(box);
+    root.appendChild(backdrop);
+    cur.focus();
   }
 
   async function boot() {
