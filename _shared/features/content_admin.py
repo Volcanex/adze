@@ -316,6 +316,7 @@ def create_blueprint(artist_slug):
 
     # ── shared front-end assets (single source on disk, per-artist route) ─────
     _SHELL_FILES = {
+        'adze-ui.js':      (SHELL_DIR / 'adze-ui.js',      'application/javascript'),
         'admin-shell.js':  (SHELL_DIR / 'admin-shell.js',  'application/javascript'),
         'admin-shell.css': (SHELL_DIR / 'admin-shell.css', 'text/css'),
         'field-editors.js': (SHELL_DIR / 'field-editors.js', 'application/javascript'),
@@ -541,6 +542,7 @@ _PANEL_BOOTSTRAP = """<!DOCTYPE html>
 <div id="adze-admin-root"></div>
 <script src="{prefix}/asset/vendor/easymde.js"></script>
 <script src="{prefix}/asset/vendor/quill.js"></script>
+<script src="{prefix}/asset/adze-ui.js"></script>
 <script src="{prefix}/asset/field-editors.js"></script>
 <script src="{prefix}/asset/admin-shell.js"></script>
 <script>AdminShell.init({{prefix: "{prefix}"}});</script>
