@@ -170,18 +170,41 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
-/* ── Article cards ── */
+/* ── Article cards — thumbnail left, title/meta right ── */
 .grid { display: grid; gap: 0; }
 .entry {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 36px 0;
+    grid-template-columns: 200px 1fr;
+    align-items: center;
+    gap: 28px;
+    padding: 28px 0;
     border-top: 2px solid var(--ink);
     transition: padding-left 0.2s ease;
 }
 .entry:last-of-type { border-bottom: 2px solid var(--ink); }
 .entry:hover { padding-left: 12px; }
+
+/* thumb keeps a fixed frame so ragged source aspect ratios still line up */
+.entry .thumb {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+}
+.entry .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(1) contrast(1.05);
+    transition: filter 0.3s ease, transform 0.4s ease;
+}
+.entry:hover .thumb img { filter: grayscale(0); transform: scale(1.04); }
+/* placeholder when a post has no image yet */
+.entry .thumb.empty { border-style: dashed; opacity: 0.5; }
+
+.entry .body { display: flex; flex-direction: column; gap: 8px; }
 .entry .meta {
     font-family: var(--body);
     font-weight: 700;
@@ -193,24 +216,15 @@ h1 {
 .entry .title {
     font-family: var(--display);
     font-weight: 400;
-    font-size: clamp(30px, 5vw, 58px);
-    line-height: 0.92;
+    font-size: clamp(28px, 3.6vw, 46px);
+    line-height: 0.94;
     letter-spacing: 0.012em;
     text-transform: uppercase;
     color: var(--ink);
 }
 .entry:hover .title { color: var(--blue); }
-.entry .excerpt {
-    font-family: var(--body);
-    font-weight: 200;
-    font-size: clamp(16px, 1.45vw, 19px);
-    line-height: 1.7;
-    color: #24272f;
-    max-width: 64ch;
-    margin-top: 6px;
-}
 .entry .more {
-    margin-top: 6px;
+    margin-top: 2px;
     font-family: var(--body);
     font-weight: 700;
     font-size: 13px;
@@ -229,17 +243,35 @@ h1 {
     letter-spacing: 0.18em;
     text-transform: uppercase;
 }
-.foot a { color: var(--blue); }
-.foot a:hover { color: #fff; }
+.foot .foot-mail { color: var(--blue); }
+.foot .foot-mail:hover { color: #fff; }
 
-/* texture on the remaining blue text — same treatment, clipped to glyphs */
+/* ── Social marks (inline SVG — no CDN, no icon font) ── */
+.social {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 30px;
+}
+.social a {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social a:hover { color: var(--blue); transform: translateY(-2px); }
+.social svg { width: 100%; height: 100%; display: block; }
+
+/* texture on the remaining blue text — same treatment, clipped to glyphs.
+   .social links are excluded: background-clip would paint a box behind the SVGs. */
 .brand,
 .top-nav a.active,
 .eyebrow,
 .entry .meta,
 .entry .more,
 .entry:hover .title,
-.foot a {
+.foot .foot-mail {
     background-image:
         linear-gradient(rgba(26, 53, 255, 0.65), rgba(26, 53, 255, 0.65)),
         url('../assets/intake/91aafc78_5.jpeg');
@@ -250,12 +282,14 @@ h1 {
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-.foot a:hover { -webkit-text-fill-color: #fff; }
+.foot .foot-mail:hover { -webkit-text-fill-color: #fff; }
 
 @media (max-width: 640px) {
     .masthead { padding: 14px 18px; }
     .top-nav { gap: 14px; font-size: 10px; letter-spacing: 0.12em; }
     .wrap { padding: 110px 22px 80px; }
+    /* stack the card: thumb on top, text under */
+    .entry { grid-template-columns: 1fr; gap: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
@@ -266,7 +300,6 @@ h1 {
     <nav class="top-nav">
         <a href="../about/">About</a>
         <a href="../writing/" class="active">Writing</a>
-        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -276,17 +309,45 @@ h1 {
 
     <div class="grid">
 {% for p in items %}        <a class="entry" href="{{ p.url }}" target="_blank" rel="noopener">
-            <div class="meta">{{ p.meta }}</div>
-            <div class="title">{{ p.title }}</div>
-            <p class="excerpt">{{ p.excerpt }}</p>
-            <div class="more">Read Article &rarr;</div>
+{% if p.image and p.image.src %}            <div class="thumb"><img src="../assets/{{ p.image.src }}" alt="" loading="lazy"></div>
+{% else %}            <div class="thumb empty"></div>
+{% endif %}            <div class="body">
+                <div class="meta">{{ p.meta }}</div>
+                <div class="title">{{ p.title }}</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 {% if not loop.last %}
-{% endif %}{% else %}        <p class="excerpt">No articles yet.</p>
+{% endif %}{% else %}        <p class="meta">No articles yet.</p>
 {% endfor %}    </div>
 </section>
 
 <footer class="foot">
-    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+    <a class="foot-mail" href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+
+    <div class="social">
+        <a href="https://soundcloud.com/user-216694930" target="_blank" rel="noopener" aria-label="SoundCloud">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="28" y1="150" x2="28" y2="182"/>
+                <line x1="62" y1="128" x2="62" y2="182"/>
+                <line x1="96" y1="112" x2="96" y2="182"/>
+                <path d="M130 182V104a54 54 0 0 1 103 -16 42 42 0 0 1 -9 94 Z"/>
+            </svg>
+        </a>
+        <a href="https://www.instagram.com/jack.dennison.thompson/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="36" y="36" width="184" height="184" rx="48"/>
+                <circle cx="128" cy="128" r="40"/>
+                <circle cx="180" cy="76" r="10" fill="currentColor" stroke="none"/>
+            </svg>
+        </a>
+        <a href="https://substack.com/@jackdennisonthompson" target="_blank" rel="noopener" aria-label="Substack">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M56 40h144v26H56z"/>
+                <path d="M56 90h144v26H56z"/>
+                <path d="M56 140v76l72-40 72 40v-76z"/>
+            </svg>
+        </a>
+    </div>
 </footer>
 </html>

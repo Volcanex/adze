@@ -206,54 +206,40 @@ b {
     font-weight: normal;
 }
 
-.gallery-grid img {
-    margin: 10px;
-    border: none;
-    transition: all 0.3s;
-}
-
-.gallery-grid img:hover {
-    border-color: #000000;
-    transform: scale(1.05);
-    box-shadow: 0 0 20px #ff0000;
-}
-
+/* Mobile styles */
 @media (max-width: 768px) {
     body {
         display: flex;
-        flex-direction: column; /* Changed from column-reverse to column */
+        flex-direction: column; /* Stacks content vertically */
     }
 
     .gothic-sidebar {
-        position: relative;
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: none;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.7);
-        order: 2;
-    }
-
-    .sidebar-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .nav-link {
-        flex: 1 1 auto;
-        text-align: center;
-        margin: 5px;
+        position: static; /* Remove fixed positioning */
+        width: 100%; /* Full width */
+        height: auto; /* Auto height */
+        order: 2; /* Place below main content */
+        border-right: none; /* Remove right border */
+        box-shadow: none; /* Remove shadow */
+        padding: 10px; /* Adjust padding for mobile */
     }
 
     .main-content-1996 {
-        margin-left: 0;
-        margin-right: 0;
-        order: 1;
+        margin-left: 0; /* Remove left margin */
+        margin-right: 0; /* Remove right margin */
+        width: 100%; /* Full width */
+        order: 1; /* Place above sidebar */
+        padding: 10px; /* Add some padding */
     }
 
-    .border-left, .border-right {
-        display: none;
+    .border-left,
+    .border-right {
+        display: none; /* Hide the fixed borders on mobile */
+    }
+
+    .sidebar-footer {
+        position: static;
+        padding-top: 10px;
+        border-top: none;
     }
 
     .gothic-title {
@@ -268,11 +254,6 @@ b {
         display: block;
         width: 100%;
         text-align: center;
-    }
-
-    .gallery-grid img {
-        width: calc(100% - 20px);
-        margin: 10px 0;
     }
 }
 </style>
@@ -324,85 +305,34 @@ b {
 <!-- Main Content -->
 <div class="main-content-1996">
 <center>
-    <h1 class="gothic-title">GALLERY</h1>
-    <font size="2" color="#c9a573" style="font-style: italic;">instagram: whitethornapple</font>
+    <h1 class="gothic-title">SOUND WORKS</h1>
 </center>
 <br><br>
 
-<center class="gallery-grid">
-
-    <table border="5" cellpadding="10">
+{% for it in items %}
+<center>
+    <table border="5" cellpadding="15">
         <tr>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_3.jpg" width="250" border="0"></td>
+            <td align="center">
+{% if it.url %}                <a href="{{ it.url }}" target="_blank" rel="noopener">
+{% endif %}{% if it.image and it.image.src %}                    <img src="../assets/{{ it.image.src }}" width="300" border="0">
+{% endif %}{% if it.title %}                    <br><br>
+                    <font size="3"><b>{{ it.title }}</b></font>
+{% endif %}{% if it.url %}                </a>
+{% endif %}            </td>
         </tr>
     </table>
-    <br>
+</center>
+<br><br>
+{% else %}
+<center><font size="3" color="#c9a573">nothing here yet</font></center>
+<br><br>
+{% endfor %}
 
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
+<center>
+    <img src="../assets/gifs/email.webp" width="180" border="0">
     <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-10-25_17-29-26_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-25_17-29-26_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-09-16_20-53-46_UTC_1.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-09-16_20-53-46_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-10-05_16-13-19_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-10-05_16-13-19_UTC_2.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2023-09-16_16-33-54_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-09-16_16-33-54_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-09-07_13-27-16_UTC_1.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
+    <font size="11" color="#ff0000"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></font>
 </center>
 <br><br>
 

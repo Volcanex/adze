@@ -170,18 +170,41 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
-/* ── Article cards ── */
+/* ── Article cards — thumbnail left, title/meta right ── */
 .grid { display: grid; gap: 0; }
 .entry {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 36px 0;
+    grid-template-columns: 200px 1fr;
+    align-items: center;
+    gap: 28px;
+    padding: 28px 0;
     border-top: 2px solid var(--ink);
     transition: padding-left 0.2s ease;
 }
 .entry:last-of-type { border-bottom: 2px solid var(--ink); }
 .entry:hover { padding-left: 12px; }
+
+/* thumb keeps a fixed frame so ragged source aspect ratios still line up */
+.entry .thumb {
+    position: relative;
+    aspect-ratio: 3 / 2;
+    overflow: hidden;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+}
+.entry .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(1) contrast(1.05);
+    transition: filter 0.3s ease, transform 0.4s ease;
+}
+.entry:hover .thumb img { filter: grayscale(0); transform: scale(1.04); }
+/* placeholder when a post has no image yet */
+.entry .thumb.empty { border-style: dashed; opacity: 0.5; }
+
+.entry .body { display: flex; flex-direction: column; gap: 8px; }
 .entry .meta {
     font-family: var(--body);
     font-weight: 700;
@@ -193,24 +216,15 @@ h1 {
 .entry .title {
     font-family: var(--display);
     font-weight: 400;
-    font-size: clamp(30px, 5vw, 58px);
-    line-height: 0.92;
+    font-size: clamp(28px, 3.6vw, 46px);
+    line-height: 0.94;
     letter-spacing: 0.012em;
     text-transform: uppercase;
     color: var(--ink);
 }
 .entry:hover .title { color: var(--blue); }
-.entry .excerpt {
-    font-family: var(--body);
-    font-weight: 200;
-    font-size: clamp(16px, 1.45vw, 19px);
-    line-height: 1.7;
-    color: #24272f;
-    max-width: 64ch;
-    margin-top: 6px;
-}
 .entry .more {
-    margin-top: 6px;
+    margin-top: 2px;
     font-family: var(--body);
     font-weight: 700;
     font-size: 13px;
@@ -229,17 +243,35 @@ h1 {
     letter-spacing: 0.18em;
     text-transform: uppercase;
 }
-.foot a { color: var(--blue); }
-.foot a:hover { color: #fff; }
+.foot .foot-mail { color: var(--blue); }
+.foot .foot-mail:hover { color: #fff; }
 
-/* texture on the remaining blue text — same treatment, clipped to glyphs */
+/* ── Social marks (inline SVG — no CDN, no icon font) ── */
+.social {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 30px;
+}
+.social a {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social a:hover { color: var(--blue); transform: translateY(-2px); }
+.social svg { width: 100%; height: 100%; display: block; }
+
+/* texture on the remaining blue text — same treatment, clipped to glyphs.
+   .social links are excluded: background-clip would paint a box behind the SVGs. */
 .brand,
 .top-nav a.active,
 .eyebrow,
 .entry .meta,
 .entry .more,
 .entry:hover .title,
-.foot a {
+.foot .foot-mail {
     background-image:
         linear-gradient(rgba(26, 53, 255, 0.65), rgba(26, 53, 255, 0.65)),
         url('../assets/intake/91aafc78_5.jpeg');
@@ -250,12 +282,14 @@ h1 {
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-.foot a:hover { -webkit-text-fill-color: #fff; }
+.foot .foot-mail:hover { -webkit-text-fill-color: #fff; }
 
 @media (max-width: 640px) {
     .masthead { padding: 14px 18px; }
     .top-nav { gap: 14px; font-size: 10px; letter-spacing: 0.12em; }
     .wrap { padding: 110px 22px 80px; }
+    /* stack the card: thumb on top, text under */
+    .entry { grid-template-columns: 1fr; gap: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
@@ -266,7 +300,6 @@ h1 {
     <nav class="top-nav">
         <a href="../about/">About</a>
         <a href="../writing/" class="active">Writing</a>
-        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -275,72 +308,160 @@ h1 {
     <h1>Writing</h1>
 
     <div class="grid">
+        <a class="entry" href="https://www.clashmusic.com/live/live-report-the-black-lights/" target="_blank" rel="noopener">
+            <div class="thumb"><img src="../assets/thumb-live-report-the-black-lights.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Live · Jul 2026</div>
+                <div class="title">Live Report: The Black Lights</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/news/parisi-link-with-fred-again-on-this-is-real/" target="_blank" rel="noopener">
+            <div class="thumb"><img src="../assets/thumb-parisi-link-with-fred-again-on-this-is-real.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · News · Jun 2026</div>
+                <div class="title">PARISI Link With Fred again.. On ‘This Is Real (Disappear)’</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/live/the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026/" target="_blank" rel="noopener">
+            <div class="thumb"><img src="../assets/thumb-the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Live · Jun 2026</div>
+                <div class="title">The Cure, Gorillaz, Wolf Alice For PHILLGOOD Festival 2026</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
+        </a>
+
         <a class="entry" href="https://thecoldmagazine.co.uk/khakikid-is-making-irish-rap-as-an-excuse-to-hang-out/" target="_blank" rel="noopener">
-            <div class="meta">The Cold Magazine · May 2026</div>
-            <div class="title">KhakiKid Is Making Irish Rap ‘as an Excuse to Hang Out’</div>
-            <p class="excerpt">The Irish-Libyan rapper treats music as an excuse to hang out — prizing collaboration and creative freedom over the commercial machine.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-khakikid-is-making-irish-rap-as-an-excuse-to-hang-out.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">The Cold Magazine · May 2026</div>
+                <div class="title">KhakiKid Is Making Irish Rap ‘as an Excuse to Hang Out’</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://thecoldmagazine.co.uk/geese-psyop/" target="_blank" rel="noopener">
-            <div class="meta">The Cold Magazine · May 2026</div>
-            <div class="title">The Geese ‘Psyop’ Marks the Death of Indie</div>
-            <p class="excerpt">The outrage over Geese’s manufactured rise lays bare a deeper anxiety: indie authenticity dying in the streaming era’s algorithm-driven industry.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-the-geese-psyop-marks-the-death-of-indie.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">The Cold Magazine · May 2026</div>
+                <div class="title">The Geese ‘Psyop’ Marks the Death of Indie</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://thecoldmagazine.co.uk/ruby-roberts/" target="_blank" rel="noopener">
-            <div class="meta">The Cold Magazine · May 2026</div>
-            <div class="title">Ruby Roberts Is an Artist of Dreamlike Spontaneity</div>
-            <p class="excerpt">The Somerset alt-pop singer builds fluid, genre-defying songs out of spontaneous late-night jam sessions and an ever-shifting sense of self.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-ruby-roberts-is-an-artist-of-dreamlike-spontaneity.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">The Cold Magazine · May 2026</div>
+                <div class="title">Ruby Roberts Is an Artist of Dreamlike Spontaneity</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://www.clashmusic.com/live/thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station/" target="_blank" rel="noopener">
-            <div class="meta">Clash Music · Live · Mar 2026</div>
-            <div class="title">Thundercat Transforms O2 Academy Brixton Into a South London Space Station</div>
-            <p class="excerpt">A futuristic, avant-garde Thundercat turns Brixton into an interstellar nightclub — funkadelic, six-string bass in hand, too unearthly for any normal stage.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Live · Mar 2026</div>
+                <div class="title">Thundercat Transforms O2 Academy Brixton Into a South London Space Station</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://www.clashmusic.com/reviews/ms-banks-south-ldn-lover-girl/" target="_blank" rel="noopener">
-            <div class="meta">Clash Music · Review · Mar 2026</div>
-            <div class="title">Ms Banks — SOUTH LDN LOVER GIRL</div>
-            <p class="excerpt">The debut balances feel-good anthems with a bracing origin story — Afrobeats, rap and R&amp;B from a true voice of the streets.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-ms-banks-south-ldn-lover-girl.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Review · Mar 2026</div>
+                <div class="title">Ms Banks — SOUTH LDN LOVER GIRL</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://jackdennisonthompson.substack.com/p/jason-williamson-the-working-class" target="_blank" rel="noopener">
-            <div class="meta">Substack · Mar 2026</div>
-            <div class="title">Jason Williamson: The Working-Class Hero Who Made His Own Cage</div>
-            <p class="excerpt">The sober Sleaford Mods frontman on how his working-class roots shaped his music — and his reluctant, controversial political identity.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-jason-williamson-the-working-class-hero-who-made-his-own-cage.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Substack · Mar 2026</div>
+                <div class="title">Jason Williamson: The Working-Class Hero Who Made His Own Cage</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://www.clashmusic.com/reviews/moby-future-quiet/" target="_blank" rel="noopener">
-            <div class="meta">Clash Music · Review · Feb 2026</div>
-            <div class="title">Moby — Future Quiet</div>
-            <p class="excerpt">An album of ambient-piano therapy — a rescue from insomnia and anxiety, offered to the world by one of electronic music’s great producers.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-moby-future-quiet.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Review · Feb 2026</div>
+                <div class="title">Moby — Future Quiet</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/features/audio-inception-26-artists-who-could-define-2026/" target="_blank" rel="noopener">
+            <div class="thumb"><img src="../assets/thumb-audio-inception-26-artists-who-could-define-2026.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Feature · Feb 2026</div>
+                <div class="title">Audio Inception: 26 Artists Who Could Define 2026</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
+        </a>
+
+        <a class="entry" href="https://www.clashmusic.com/news/marlon-craft-shares-soulful-cut-analog-man/" target="_blank" rel="noopener">
+            <div class="thumb"><img src="../assets/thumb-marlon-craft-shares-soulful-cut-analog-man.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · News · Feb 2026</div>
+                <div class="title">Marlon Craft Shares Soulful Cut ‘Analog Man’</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://www.clashmusic.com/features/remember-me-chet-faker-interviewed/" target="_blank" rel="noopener">
-            <div class="meta">Clash Music · Feature</div>
-            <div class="title">Remember Me: Chet Faker Interviewed</div>
-            <p class="excerpt">Five years on from ‘Hotel Surrender’, Chet Faker confronts loss, heartache and industry disenchantment on an album grounded in communal warmth.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-remember-me-chet-faker-interviewed.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Feature</div>
+                <div class="title">Remember Me: Chet Faker Interviewed</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
 
         <a class="entry" href="https://www.clashmusic.com/next-wave/next-wave-1179-pollyfromthedirt/" target="_blank" rel="noopener">
-            <div class="meta">Clash Music · Next Wave</div>
-            <div class="title">Next Wave #1179: Pollyfromthedirt</div>
-            <p class="excerpt">Darlington’s masked, anti-industry talent honours his Northern roots on instinct alone — never chasing trends, just figuring out who he is in real time.</p>
-            <div class="more">Read Article &rarr;</div>
+            <div class="thumb"><img src="../assets/thumb-next-wave-1179-pollyfromthedirt.jpg" alt="" loading="lazy"></div>
+            <div class="body">
+                <div class="meta">Clash Music · Next Wave</div>
+                <div class="title">Next Wave #1179: Pollyfromthedirt</div>
+                <div class="more">Read Article &rarr;</div>
+            </div>
         </a>
     </div>
 </section>
 
 <footer class="foot">
-    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+    <a class="foot-mail" href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+
+    <div class="social">
+        <a href="https://soundcloud.com/user-216694930" target="_blank" rel="noopener" aria-label="SoundCloud">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="28" y1="150" x2="28" y2="182"/>
+                <line x1="62" y1="128" x2="62" y2="182"/>
+                <line x1="96" y1="112" x2="96" y2="182"/>
+                <path d="M130 182V104a54 54 0 0 1 103 -16 42 42 0 0 1 -9 94 Z"/>
+            </svg>
+        </a>
+        <a href="https://www.instagram.com/jack.dennison.thompson/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="36" y="36" width="184" height="184" rx="48"/>
+                <circle cx="128" cy="128" r="40"/>
+                <circle cx="180" cy="76" r="10" fill="currentColor" stroke="none"/>
+            </svg>
+        </a>
+        <a href="https://substack.com/@jackdennisonthompson" target="_blank" rel="noopener" aria-label="Substack">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M56 40h144v26H56z"/>
+                <path d="M56 90h144v26H56z"/>
+                <path d="M56 140v76l72-40 72 40v-76z"/>
+            </svg>
+        </a>
+    </div>
 </footer>
 </html>

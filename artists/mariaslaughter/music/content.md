@@ -306,23 +306,18 @@ b {
 <div class="main-content-1996">
 <center>
     <h1 class="gothic-title">SOUND WORKS</h1>
-
 </center>
 <br><br>
 
+
 <center>
-    <table border="5" cellpadding="15" width="80%">
-        <tr>
-            <th colspan="2">
-                <font size="4"><b>LISTEN ON SOUNDCLOUD</b></font>
-            </th>
-        </tr>
+    <table border="5" cellpadding="15">
         <tr>
             <td align="center">
-                <a href="https://soundcloud.com/adeleclifford" target="_blank">
+                <a href="https://soundcloud.com/adeleclifford" target="_blank" rel="noopener">
                     <img src="../assets/images/2023-07-18_11-41-08_UTC_1.jpg" width="300" border="0">
                     <br><br>
-                    <font size="3"><b>→ VISIT SOUNDCLOUD PROFILE ←</b></font>
+                    <font size="3"><b>Visit SoundCloud Profile</b></font>
                 </a>
             </td>
         </tr>
@@ -331,20 +326,32 @@ b {
 <br><br>
 
 <center>
+    <table border="5" cellpadding="15">
+        <tr>
+            <td align="center">
+                    <img src="../assets/images/2023-02-20_11-56-28_UTC_1.jpg" width="300" border="0">
+            </td>
+        </tr>
+    </table>
 </center>
 <br><br>
 
 <center>
-    <table border="5" cellpadding="10">
+    <table border="5" cellpadding="15">
         <tr>
             <td align="center">
-                <img src="../assets/images/2023-02-20_11-56-28_UTC_1.jpg" width="200" border="0">
+                    <img src="../assets/images/2023-02-23_21-59-22_UTC_1.jpg" width="300" border="0">
             </td>
+        </tr>
+    </table>
+</center>
+<br><br>
+
+<center>
+    <table border="5" cellpadding="15">
+        <tr>
             <td align="center">
-                <img src="../assets/images/2023-02-23_21-59-22_UTC_1.jpg" width="200" border="0">
-            </td>
-            <td align="center">
-                <img src="../assets/images/2023-08-31_12-36-44_UTC_1.jpg" width="200" border="0">
+                    <img src="../assets/images/2023-08-31_12-36-44_UTC_1.jpg" width="300" border="0">
             </td>
         </tr>
     </table>
@@ -368,3 +375,4 @@ b {
     <img src="../assets/gifs/bottom.gif" class="border-bottom">
 </center>
 </div>
+</html>

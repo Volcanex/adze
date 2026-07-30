@@ -3,10 +3,7 @@
     {
       "id": "festival",
       "title": "Festival",
-      "cover": {
-        "src": "work/festival.jpg",
-        "full": "work/festival.jpg"
-      },
+      "cover": null,
       "photos": [
         {
           "src": "work/festival/001.jpg",

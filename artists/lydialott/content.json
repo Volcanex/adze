@@ -16,12 +16,17 @@
     },
     {
       "id": "weather-iii",
-      "title": "Untitled (Weather III)",
+      "title": "Like Father Like Daughter",
       "dimensions": "1000 x 650mm",
       "medium": "Acrylic on paper",
       "year": 2024,
       "date": "2026-06-22",
-      "image": "images/weather-iii.png",
+      "image": {
+        "src": "works/weather-iii/close_up_like_father_like_daughter.display.png",
+        "full": "works/weather-iii/close_up_like_father_like_daughter.png",
+        "ar": 0.9857,
+        "aspect": 0.9857
+      },
       "tags": [
         "paintings",
         "selected"
@@ -30,7 +35,7 @@
     },
     {
       "id": "study-01",
-      "title": "Study 01",
+      "title": "birds",
       "dimensions": "297 x 420mm",
       "medium": "Graphite on paper",
       "year": 2024,
@@ -39,7 +44,8 @@
       "tags": [
         "drawings",
         "selected"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "study-02",

@@ -1,4 +1,245 @@
 {
+  "copy": [
+    {
+      "id": "home",
+      "tagline": "with un-angels hovering like flies round the ordure...",
+      "upcoming_shows": "Trade - 19.06.2026 - The Lubber Fiend, Newcastle Upon Tyne",
+      "latest_works": "- Sacral Foramina - 04.04.2026 - Little Buildings\n- Extravenous Therapy 26.11.2025 - Star and Shadow Cinema",
+      "contact_line": "FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "img-01",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-21_21-44-10_UTC_1.jpg",
+        "full": "images/2025-12-21_21-44-10_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-02",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-21_21-44-10_UTC_2.jpg",
+        "full": "images/2025-12-21_21-44-10_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-03",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-21_21-44-10_UTC_3.jpg",
+        "full": "images/2025-12-21_21-44-10_UTC_3.jpg"
+      }
+    },
+    {
+      "id": "img-04",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-11_23-33-44_UTC_1.jpg",
+        "full": "images/2025-12-11_23-33-44_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-05",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-11_23-33-44_UTC_2.jpg",
+        "full": "images/2025-12-11_23-33-44_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-06",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-11_23-33-44_UTC_3.jpg",
+        "full": "images/2025-12-11_23-33-44_UTC_3.jpg"
+      }
+    },
+    {
+      "id": "img-07",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-09_16-47-39_UTC_1.jpg",
+        "full": "images/2025-12-09_16-47-39_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-08",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-09_16-47-39_UTC_2.jpg",
+        "full": "images/2025-12-09_16-47-39_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-09",
+      "title": "",
+      "image": {
+        "src": "images/2025-12-09_16-47-39_UTC_3.jpg",
+        "full": "images/2025-12-09_16-47-39_UTC_3.jpg"
+      }
+    },
+    {
+      "id": "img-10",
+      "title": "",
+      "image": {
+        "src": "images/2025-11-02_18-14-12_UTC_1.jpg",
+        "full": "images/2025-11-02_18-14-12_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-11",
+      "title": "",
+      "image": {
+        "src": "images/2025-11-02_18-14-12_UTC_2.jpg",
+        "full": "images/2025-11-02_18-14-12_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-12",
+      "title": "",
+      "image": {
+        "src": "images/2025-11-02_18-14-12_UTC_3.jpg",
+        "full": "images/2025-11-02_18-14-12_UTC_3.jpg"
+      }
+    },
+    {
+      "id": "img-13",
+      "title": "",
+      "image": {
+        "src": "images/2025-10-27_21-00-02_UTC_1.jpg",
+        "full": "images/2025-10-27_21-00-02_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-14",
+      "title": "",
+      "image": {
+        "src": "images/2025-10-27_21-00-02_UTC_2.jpg",
+        "full": "images/2025-10-27_21-00-02_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-15",
+      "title": "",
+      "image": {
+        "src": "images/2025-10-27_21-00-02_UTC_3.jpg",
+        "full": "images/2025-10-27_21-00-02_UTC_3.jpg"
+      }
+    },
+    {
+      "id": "img-16",
+      "title": "",
+      "image": {
+        "src": "images/2025-10-25_17-29-26_UTC_1.jpg",
+        "full": "images/2025-10-25_17-29-26_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-17",
+      "title": "",
+      "image": {
+        "src": "images/2025-10-25_17-29-26_UTC_2.jpg",
+        "full": "images/2025-10-25_17-29-26_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-18",
+      "title": "",
+      "image": {
+        "src": "images/2025-09-16_20-53-46_UTC_1.jpg",
+        "full": "images/2025-09-16_20-53-46_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-19",
+      "title": "",
+      "image": {
+        "src": "images/2025-09-16_20-53-46_UTC_2.jpg",
+        "full": "images/2025-09-16_20-53-46_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-20",
+      "title": "",
+      "image": {
+        "src": "images/2023-10-05_16-13-19_UTC_1.jpg",
+        "full": "images/2023-10-05_16-13-19_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-21",
+      "title": "",
+      "image": {
+        "src": "images/2023-10-05_16-13-19_UTC_2.jpg",
+        "full": "images/2023-10-05_16-13-19_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-22",
+      "title": "",
+      "image": {
+        "src": "images/2023-09-16_16-33-54_UTC_1.jpg",
+        "full": "images/2023-09-16_16-33-54_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "img-23",
+      "title": "",
+      "image": {
+        "src": "images/2023-09-16_16-33-54_UTC_2.jpg",
+        "full": "images/2023-09-16_16-33-54_UTC_2.jpg"
+      }
+    },
+    {
+      "id": "img-24",
+      "title": "",
+      "image": {
+        "src": "images/2023-09-07_13-27-16_UTC_1.jpg",
+        "full": "images/2023-09-07_13-27-16_UTC_1.jpg"
+      }
+    }
+  ],
+  "music": [
+    {
+      "id": "soundcloud",
+      "title": "Visit SoundCloud Profile",
+      "url": "https://soundcloud.com/adeleclifford",
+      "image": {
+        "src": "images/2023-07-18_11-41-08_UTC_1.jpg",
+        "full": "images/2023-07-18_11-41-08_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "still-1",
+      "title": "",
+      "url": "",
+      "image": {
+        "src": "images/2023-02-20_11-56-28_UTC_1.jpg",
+        "full": "images/2023-02-20_11-56-28_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "still-2",
+      "title": "",
+      "url": "",
+      "image": {
+        "src": "images/2023-02-23_21-59-22_UTC_1.jpg",
+        "full": "images/2023-02-23_21-59-22_UTC_1.jpg"
+      }
+    },
+    {
+      "id": "still-3",
+      "title": "",
+      "url": "",
+      "image": {
+        "src": "images/2023-08-31_12-36-44_UTC_1.jpg",
+        "full": "images/2023-08-31_12-36-44_UTC_1.jpg"
+      }
+    }
+  ],
   "links": [
     {
       "id": "instagram",

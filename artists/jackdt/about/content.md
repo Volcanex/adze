@@ -229,15 +229,33 @@ ul.exp li strong { color: var(--ink); font-weight: 700; }
     letter-spacing: 0.18em;
     text-transform: uppercase;
 }
-.foot a { color: var(--blue); }
-.foot a:hover { color: #fff; }
+.foot .foot-mail { color: var(--blue); }
+.foot .foot-mail:hover { color: #fff; }
 
-/* texture on the remaining blue text — same treatment, clipped to glyphs */
+/* ── Social marks (inline SVG — no CDN, no icon font) ── */
+.social {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 30px;
+}
+.social a {
+    display: inline-flex;
+    width: 26px;
+    height: 26px;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social a:hover { color: var(--blue); transform: translateY(-2px); }
+.social svg { width: 100%; height: 100%; display: block; }
+
+/* texture on the remaining blue text — same treatment, clipped to glyphs.
+   .social links are excluded: background-clip would paint a box behind the SVGs. */
 .brand,
 .top-nav a.active,
 .eyebrow,
 p a,
-.foot a {
+.foot .foot-mail {
     background-image:
         linear-gradient(rgba(26, 53, 255, 0.65), rgba(26, 53, 255, 0.65)),
         url('../assets/intake/91aafc78_5.jpeg');
@@ -248,7 +266,7 @@ p a,
     background-clip: text;
     -webkit-text-fill-color: transparent;
 }
-.foot a:hover { -webkit-text-fill-color: #fff; }
+.foot .foot-mail:hover { -webkit-text-fill-color: #fff; }
 
 @media (max-width: 640px) {
     .masthead { padding: 14px 18px; }
@@ -264,7 +282,6 @@ p a,
     <nav class="top-nav">
         <a href="../about/" class="active">About</a>
         <a href="../writing/">Writing</a>
-        <a href="../music/">Music</a>
     </nav>
 </header>
 
@@ -288,6 +305,31 @@ p a,
 </article>
 
 <footer class="foot">
-    <a href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+    <a class="foot-mail" href="mailto:jackdt26@outlook.com">Email Jack &rarr;</a>
+
+    <div class="social">
+        <a href="https://soundcloud.com/user-216694930" target="_blank" rel="noopener" aria-label="SoundCloud">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="28" y1="150" x2="28" y2="182"/>
+                <line x1="62" y1="128" x2="62" y2="182"/>
+                <line x1="96" y1="112" x2="96" y2="182"/>
+                <path d="M130 182V104a54 54 0 0 1 103 -16 42 42 0 0 1 -9 94 Z"/>
+            </svg>
+        </a>
+        <a href="https://www.instagram.com/jack.dennison.thompson/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="36" y="36" width="184" height="184" rx="48"/>
+                <circle cx="128" cy="128" r="40"/>
+                <circle cx="180" cy="76" r="10" fill="currentColor" stroke="none"/>
+            </svg>
+        </a>
+        <a href="https://substack.com/@jackdennisonthompson" target="_blank" rel="noopener" aria-label="Substack">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M56 40h144v26H56z"/>
+                <path d="M56 90h144v26H56z"/>
+                <path d="M56 140v76l72-40 72 40v-76z"/>
+            </svg>
+        </a>
+    </div>
 </footer>
 </html>

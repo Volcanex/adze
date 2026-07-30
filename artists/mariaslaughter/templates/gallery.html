@@ -330,79 +330,16 @@ b {
 <br><br>
 
 <center class="gallery-grid">
-
+{% for row in items | batch(3) %}
     <table border="5" cellpadding="10">
         <tr>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-21_21-44-10_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
+{% for it in row %}{% if it.image and it.image.src %}            <td><img src="../assets/{{ it.image.src }}" width="250" border="0"></td>
+{% endif %}{% endfor %}        </tr>
     </table>
     <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-11_23-33-44_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-12-09_16-47-39_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-11-02_18-14-12_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-27_21-00-02_UTC_3.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-10-25_17-29-26_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-10-25_17-29-26_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2025-09-16_20-53-46_UTC_1.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2025-09-16_20-53-46_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-10-05_16-13-19_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-10-05_16-13-19_UTC_2.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
-    <table border="5" cellpadding="10">
-        <tr>
-            <td><img src="../assets/images/2023-09-16_16-33-54_UTC_1.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-09-16_16-33-54_UTC_2.jpg" width="250" border="0"></td>
-            <td><img src="../assets/images/2023-09-07_13-27-16_UTC_1.jpg" width="250" border="0"></td>
-        </tr>
-    </table>
-    <br>
-
+{% else %}
+    <font size="3" color="#c9a573">nothing here yet</font>
+{% endfor %}
 </center>
 <br><br>
 

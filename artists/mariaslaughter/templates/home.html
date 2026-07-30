@@ -382,7 +382,7 @@ b {
 }
 </style>
 
-
+{% set copy = items[0] if items else {} %}
 <html>
 <img class="border-left" src="../assets/gifs/left.gif">
 <img class="border-right" src="../assets/gifs/right.gif">
@@ -433,15 +433,15 @@ b {
     <div class="main-content-1996">
         <div class="section hero">
             <h1 class="gothic-title">MARIA SLAUGHTER</h1>
-            <div class="tagline"><b>with un-angels hovering like flies round the ordure...</b></div>
+            <div class="tagline"><b>{{ copy.tagline }}</b></div>
             <img src="../assets/gifs/jump.webp" width="100">
         </div>
 
         <div class="section">
             <div class="section-heading">UPCOMING SHOWS</div>
             <font size="2">
-            Trade - 19.06.2026 - The Lubber Fiend, Newcastle Upon Tyne
-            
+            {% for line in (copy.upcoming_shows or '').split('\n') %}{{ line }}{% if not loop.last %}<br>{% endif %}
+            {% endfor %}
             </font>
         </div>
 
@@ -469,15 +469,14 @@ b {
         <div class="section">
             <div class="section-heading">LATEST WORKS</div>
             <font size="2">
-            - Sacral Foramina - 04.04.2026 - Little Buildings<br>
-            - Extravenous Therapy 26.11.2025 - Star and Shadow Cinema
-            
+            {% for line in (copy.latest_works or '').split('\n') %}{{ line }}{% if not loop.last %}<br>{% endif %}
+            {% endfor %}
             </font>
         </div>
 
         <div class="section">
             <img src="../assets/gifs/email.webp" width="180" border="0">
-            <div class="contact-email"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></div>
+            <div class="contact-email"><b style="font-size: 11px;">{{ copy.contact_line }}</b></div>
         </div>
 
         <div class="section">

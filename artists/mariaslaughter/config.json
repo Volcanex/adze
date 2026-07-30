@@ -1,6 +1,6 @@
 {
-    "name": "Adele",
-    "display_name": "Adele",
+    "name": "Maria Slaughter",
+    "display_name": "Maria Slaughter",
     "slug": "mariaslaughter",
     "domain": "mariaslaughter.online",
     "admin_token": "adele",
@@ -8,17 +8,104 @@
         "content_admin"
     ],
     "content_types": {
+        "copy": {
+            "label": "Home text",
+            "item": {
+                "tagline": {
+                    "type": "text",
+                    "label": "Tagline"
+                },
+                "upcoming_shows": {
+                    "type": "textarea",
+                    "label": "Upcoming shows"
+                },
+                "latest_works": {
+                    "type": "textarea",
+                    "label": "Latest works"
+                },
+                "contact_line": {
+                    "type": "text",
+                    "label": "Contact line"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "home",
+                "title": "Maria Slaughter - Dark Arts & Photography",
+                "description": "Revivalist of the Dark Arts - Photography, Music & Digital Art",
+                "template": "templates/home.html",
+                "config": {
+                    "hidden": true,
+                    "categories": [
+                        "portfolio"
+                    ]
+                }
+            }
+        },
+        "gallery": {
+            "label": "Gallery",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "slug_source": true,
+                    "label": "Title / caption"
+                },
+                "image": {
+                    "type": "image",
+                    "label": "Photo"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "gallery",
+                "title": "Gallery — Maria Slaughter",
+                "template": "templates/gallery.html"
+            }
+        },
+        "music": {
+            "label": "Music",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "slug_source": true,
+                    "label": "Title"
+                },
+                "url": {
+                    "type": "text",
+                    "format": "url",
+                    "label": "Link (SoundCloud / Bandcamp)"
+                },
+                "image": {
+                    "type": "image",
+                    "label": "Artwork"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "music",
+                "title": "Sound Works — Maria Slaughter",
+                "template": "templates/music.html"
+            }
+        },
         "links": {
             "label": "Links",
             "item": {
-                "label": {"type": "text", "required": true, "slug_source": true},
-                "url": {"type": "text", "required": true, "format": "url"}
+                "label": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "url": {
+                    "type": "text",
+                    "required": true,
+                    "format": "url"
+                }
             },
             "page": {
                 "mode": "single",
                 "parent": "links",
-                "title": "Links — Adele",
-                "description": "Links, shows and shop for Adele.",
+                "title": "Links — Maria Slaughter",
+                "description": "Links, shows and shop for Maria Slaughter.",
                 "template": "templates/links.html"
             }
         }

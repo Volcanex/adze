@@ -14,7 +14,7 @@
             "item": {
                 "title": {"type": "text", "required": true, "slug_source": true},
                 "meta": {"type": "text", "label": "Publication & date"},
-                "excerpt": {"type": "textarea"},
+                "image": {"type": "image", "label": "Thumbnail"},
                 "url": {"type": "text", "required": true, "format": "url", "label": "Link"}
             },
             "page": {

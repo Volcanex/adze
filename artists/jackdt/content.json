@@ -1,67 +1,172 @@
 {
   "posts": [
     {
+      "id": "live-report-the-black-lights",
+      "title": "Live Report: The Black Lights",
+      "meta": "Clash Music · Live · Jul 2026",
+      "url": "https://www.clashmusic.com/live/live-report-the-black-lights/",
+      "image": {
+        "src": "thumb-live-report-the-black-lights.jpg",
+        "full": "thumb-live-report-the-black-lights.jpg",
+        "ar": 1.5009,
+        "aspect": 1.5009
+      }
+    },
+    {
+      "id": "parisi-link-with-fred-again-on-this-is-real",
+      "title": "PARISI Link With Fred again.. On ‘This Is Real (Disappear)’",
+      "meta": "Clash Music · News · Jun 2026",
+      "url": "https://www.clashmusic.com/news/parisi-link-with-fred-again-on-this-is-real/",
+      "image": {
+        "src": "thumb-parisi-link-with-fred-again-on-this-is-real.jpg",
+        "full": "thumb-parisi-link-with-fred-again-on-this-is-real.jpg",
+        "ar": 1.4981,
+        "aspect": 1.4981
+      }
+    },
+    {
+      "id": "the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026",
+      "title": "The Cure, Gorillaz, Wolf Alice For PHILLGOOD Festival 2026",
+      "meta": "Clash Music · Live · Jun 2026",
+      "url": "https://www.clashmusic.com/live/the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026/",
+      "image": {
+        "src": "thumb-the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026.jpg",
+        "full": "thumb-the-cure-gorillaz-wolf-alice-for-phillgood-festival-2026.jpg",
+        "ar": 1.9093,
+        "aspect": 1.9093
+      }
+    },
+    {
       "id": "khakikid-is-making-irish-rap-as-an-excuse-to-hang-out",
       "title": "KhakiKid Is Making Irish Rap ‘as an Excuse to Hang Out’",
       "meta": "The Cold Magazine · May 2026",
-      "excerpt": "The Irish-Libyan rapper treats music as an excuse to hang out — prizing collaboration and creative freedom over the commercial machine.",
-      "url": "https://thecoldmagazine.co.uk/khakikid-is-making-irish-rap-as-an-excuse-to-hang-out/"
+      "url": "https://thecoldmagazine.co.uk/khakikid-is-making-irish-rap-as-an-excuse-to-hang-out/",
+      "image": {
+        "src": "thumb-khakikid-is-making-irish-rap-as-an-excuse-to-hang-out.jpg",
+        "full": "thumb-khakikid-is-making-irish-rap-as-an-excuse-to-hang-out.jpg",
+        "ar": 0.6633,
+        "aspect": 0.6633
+      }
     },
     {
       "id": "the-geese-psyop-marks-the-death-of-indie",
       "title": "The Geese ‘Psyop’ Marks the Death of Indie",
       "meta": "The Cold Magazine · May 2026",
-      "excerpt": "The outrage over Geese’s manufactured rise lays bare a deeper anxiety: indie authenticity dying in the streaming era’s algorithm-driven industry.",
-      "url": "https://thecoldmagazine.co.uk/geese-psyop/"
+      "url": "https://thecoldmagazine.co.uk/geese-psyop/",
+      "image": {
+        "src": "thumb-the-geese-psyop-marks-the-death-of-indie.jpg",
+        "full": "thumb-the-geese-psyop-marks-the-death-of-indie.jpg",
+        "ar": 0.8,
+        "aspect": 0.8
+      }
     },
     {
       "id": "ruby-roberts-is-an-artist-of-dreamlike-spontaneity",
       "title": "Ruby Roberts Is an Artist of Dreamlike Spontaneity",
       "meta": "The Cold Magazine · May 2026",
-      "excerpt": "The Somerset alt-pop singer builds fluid, genre-defying songs out of spontaneous late-night jam sessions and an ever-shifting sense of self.",
-      "url": "https://thecoldmagazine.co.uk/ruby-roberts/"
+      "url": "https://thecoldmagazine.co.uk/ruby-roberts/",
+      "image": {
+        "src": "thumb-ruby-roberts-is-an-artist-of-dreamlike-spontaneity.jpg",
+        "full": "thumb-ruby-roberts-is-an-artist-of-dreamlike-spontaneity.jpg",
+        "ar": 1.25,
+        "aspect": 1.25
+      }
     },
     {
       "id": "thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station",
       "title": "Thundercat Transforms O2 Academy Brixton Into a South London Space Station",
       "meta": "Clash Music · Live · Mar 2026",
-      "excerpt": "A futuristic, avant-garde Thundercat turns Brixton into an interstellar nightclub — funkadelic, six-string bass in hand, too unearthly for any normal stage.",
-      "url": "https://www.clashmusic.com/live/thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station/"
+      "url": "https://www.clashmusic.com/live/thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station/",
+      "image": {
+        "src": "thumb-thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station.jpg",
+        "full": "thumb-thundercat-transforms-o2-academy-brixton-into-a-south-london-space-station.jpg",
+        "ar": 1.4981,
+        "aspect": 1.4981
+      }
     },
     {
       "id": "ms-banks-south-ldn-lover-girl",
       "title": "Ms Banks — SOUTH LDN LOVER GIRL",
       "meta": "Clash Music · Review · Mar 2026",
-      "excerpt": "The debut balances feel-good anthems with a bracing origin story — Afrobeats, rap and R&B from a true voice of the streets.",
-      "url": "https://www.clashmusic.com/reviews/ms-banks-south-ldn-lover-girl/"
+      "url": "https://www.clashmusic.com/reviews/ms-banks-south-ldn-lover-girl/",
+      "image": {
+        "src": "thumb-ms-banks-south-ldn-lover-girl.jpg",
+        "full": "thumb-ms-banks-south-ldn-lover-girl.jpg",
+        "ar": 1.0,
+        "aspect": 1.0
+      }
     },
     {
       "id": "jason-williamson-the-working-class-hero-who-made-his-own-cage",
       "title": "Jason Williamson: The Working-Class Hero Who Made His Own Cage",
       "meta": "Substack · Mar 2026",
-      "excerpt": "The sober Sleaford Mods frontman on how his working-class roots shaped his music — and his reluctant, controversial political identity.",
-      "url": "https://jackdennisonthompson.substack.com/p/jason-williamson-the-working-class"
+      "url": "https://jackdennisonthompson.substack.com/p/jason-williamson-the-working-class",
+      "image": {
+        "src": "thumb-jason-williamson-the-working-class-hero-who-made-his-own-cage.jpg",
+        "full": "thumb-jason-williamson-the-working-class-hero-who-made-his-own-cage.jpg",
+        "ar": 1.7778,
+        "aspect": 1.7778
+      }
     },
     {
       "id": "moby-future-quiet",
       "title": "Moby — Future Quiet",
       "meta": "Clash Music · Review · Feb 2026",
-      "excerpt": "An album of ambient-piano therapy — a rescue from insomnia and anxiety, offered to the world by one of electronic music’s great producers.",
-      "url": "https://www.clashmusic.com/reviews/moby-future-quiet/"
+      "url": "https://www.clashmusic.com/reviews/moby-future-quiet/",
+      "image": {
+        "src": "thumb-moby-future-quiet.jpg",
+        "full": "thumb-moby-future-quiet.jpg",
+        "ar": 1.0,
+        "aspect": 1.0
+      }
+    },
+    {
+      "id": "audio-inception-26-artists-who-could-define-2026",
+      "title": "Audio Inception: 26 Artists Who Could Define 2026",
+      "meta": "Clash Music · Feature · Feb 2026",
+      "url": "https://www.clashmusic.com/features/audio-inception-26-artists-who-could-define-2026/",
+      "image": {
+        "src": "thumb-audio-inception-26-artists-who-could-define-2026.jpg",
+        "full": "thumb-audio-inception-26-artists-who-could-define-2026.jpg",
+        "ar": 1.4011,
+        "aspect": 1.4011
+      }
+    },
+    {
+      "id": "marlon-craft-shares-soulful-cut-analog-man",
+      "title": "Marlon Craft Shares Soulful Cut ‘Analog Man’",
+      "meta": "Clash Music · News · Feb 2026",
+      "url": "https://www.clashmusic.com/news/marlon-craft-shares-soulful-cut-analog-man/",
+      "image": {
+        "src": "thumb-marlon-craft-shares-soulful-cut-analog-man.jpg",
+        "full": "thumb-marlon-craft-shares-soulful-cut-analog-man.jpg",
+        "ar": 1.81,
+        "aspect": 1.81
+      }
     },
     {
       "id": "remember-me-chet-faker-interviewed",
       "title": "Remember Me: Chet Faker Interviewed",
       "meta": "Clash Music · Feature",
-      "excerpt": "Five years on from ‘Hotel Surrender’, Chet Faker confronts loss, heartache and industry disenchantment on an album grounded in communal warmth.",
-      "url": "https://www.clashmusic.com/features/remember-me-chet-faker-interviewed/"
+      "url": "https://www.clashmusic.com/features/remember-me-chet-faker-interviewed/",
+      "image": {
+        "src": "thumb-remember-me-chet-faker-interviewed.jpg",
+        "full": "thumb-remember-me-chet-faker-interviewed.jpg",
+        "ar": 0.6672,
+        "aspect": 0.6672
+      }
     },
     {
       "id": "next-wave-1179-pollyfromthedirt",
       "title": "Next Wave #1179: Pollyfromthedirt",
       "meta": "Clash Music · Next Wave",
-      "excerpt": "Darlington’s masked, anti-industry talent honours his Northern roots on instinct alone — never chasing trends, just figuring out who he is in real time.",
-      "url": "https://www.clashmusic.com/next-wave/next-wave-1179-pollyfromthedirt/"
+      "url": "https://www.clashmusic.com/next-wave/next-wave-1179-pollyfromthedirt/",
+      "image": {
+        "src": "thumb-next-wave-1179-pollyfromthedirt.jpg",
+        "full": "thumb-next-wave-1179-pollyfromthedirt.jpg",
+        "ar": 0.8,
+        "aspect": 0.8
+      }
     }
   ]
 }
