@@ -86,9 +86,45 @@ if _legacy_admin:
             'super': True,
         })
 
+# ── opaque sessions (accounts.py) ─────────────────────────────────────────────
+# Credentials used to BE the cookie value: adze_session held "<slug>:<plaintext
+# admin_token>" and every consumer re-verified it as a live password. Hashed
+# passwords make that impossible, so the cookie now carries an opaque session id
+# instead. The three functions below are the whole read path — patching them
+# covers all nine places that consume adze_session, so no call site changes.
+#
+# The `as1_` prefix is load-bearing: is_admin_token() and verify_artist_token()
+# run on every API request, and the prefix check lets a legacy token fall
+# straight through on a string comparison with no database hit.
+
+SESSION_PREFIX = 'as1_'
+
+
+def _is_session(token):
+    return bool(token) and token.startswith(SESSION_PREFIX)
+
+
+def _accounts():
+    """Imported lazily: auth.py is imported by scripts that have no business
+    opening a database, and a failure here must never break legacy auth."""
+    try:
+        import accounts
+        return accounts
+    except Exception:
+        return None
+
+
 def is_admin_token(token):
-    """True if `token` matches any admin identity's password."""
-    return bool(token) and token in ADMIN_TOKENS
+    """True if `token` matches any admin identity's password, or is a live
+    session belonging to an owner account."""
+    if not token:
+        return False
+    if token in ADMIN_TOKENS:
+        return True
+    if _is_session(token):
+        acc = _accounts()
+        return bool(acc and acc.session_is_owner(token))
+    return False
 
 def verify_admin_credentials(username, password):
     """Return identity dict for valid (username, password), else None.
@@ -108,6 +144,10 @@ def get_identity_by_token(token):
     for ident in ADMIN_IDENTITIES.values():
         if ident['password'] == token:
             return ident
+    if _is_session(token):
+        acc = _accounts()
+        if acc:
+            return acc.session_identity(token)
     return None
 
 def current_admin_identity():
@@ -206,6 +246,13 @@ def verify_artist_token(artist_slug, token):
     # Check artist's specific token first
     if 'admin_token' in config and config['admin_token'] == token:
         return True
+
+    # An opaque session that owns this site (or belongs to the owner, who can
+    # act as any artist — this is the impersonation path).
+    if _is_session(token):
+        acc = _accounts()
+        if acc and acc.session_grants(token, artist_slug):
+            return True
 
     # Fallback to default admin token (for super admin)
     if is_admin_token(token):
