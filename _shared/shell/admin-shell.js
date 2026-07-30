@@ -30,19 +30,31 @@ window.AdminShell = (function () {
     root.innerHTML = '';
     const box = el('div', 'as-login');
     box.appendChild(el('h1', null, 'Admin'));
-    const pw = el('input', 'af-input'); pw.type = 'password'; pw.placeholder = 'Password';
+    /* The domain already identifies the artist, so the name is optional --
+     * it's here for the artist who owns more than one site, and because
+     * "your name and your password" is what a login is supposed to look like.
+     * Leave it blank and the password alone still works. */
+    const who = el('input', 'af-input');
+    who.type = 'text';
+    who.placeholder = 'Your name or email (optional)';
+    who.autocomplete = 'username';
+    const pw = el('input', 'af-input');
+    pw.type = 'password'; pw.placeholder = 'Password'; pw.autocomplete = 'current-password';
     const err = el('div', 'as-err');
     const btn = el('button', 'as-btn', 'Enter');
     async function submit() {
       const r = await fetch(PREFIX + '/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: pw.value }),
+        body: JSON.stringify({ identifier: who.value.trim(), password: pw.value }),
       });
-      if (r.ok) boot(); else err.textContent = 'Wrong password.';
+      if (r.ok) boot();
+      else err.textContent = who.value.trim()
+        ? 'That name and password don’t match.' : 'Wrong password.';
     }
     btn.onclick = () => withBusy(btn, submit);
-    pw.addEventListener('keydown', e => { if (e.key === 'Enter') withBusy(btn, submit); });
-    box.append(pw, btn, err);
+    [who, pw].forEach(i => i.addEventListener(
+      'keydown', e => { if (e.key === 'Enter') withBusy(btn, submit); }));
+    box.append(who, pw, btn, err);
     root.appendChild(box);
     pw.focus();
   }

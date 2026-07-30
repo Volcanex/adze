@@ -118,9 +118,21 @@ class ArtistAdmin:
         def wrapper(*args, **kwargs):
             self.domain_guard()
             token = request.cookies.get(self.cookie, '')
-            if not token or token != self.token():
+            if not token:
                 abort(401)
-            return f(*args, **kwargs)
+            # The legacy compare stays first and stays permanently: for the
+            # artists whose only door is their own /admin, it is the thing that
+            # guarantees this change can never lock them out.
+            if token == self.token():
+                return f(*args, **kwargs)
+            if token.startswith('as1_'):
+                try:
+                    import accounts
+                    if accounts.session_grants(token, self.slug):
+                        return f(*args, **kwargs)
+                except ImportError:
+                    pass
+            abort(401)
         return wrapper
 
     # ── the rebuild transaction ──────────────────────────────────────────────
@@ -169,12 +181,45 @@ class ArtistAdmin:
         @admin.bp.route(f'{admin.prefix}/login', methods=['POST'])
         def login():
             admin.domain_guard()
+            # This route had no rate limit at all while comparing against the
+            # artist's live API key.
+            try:
+                from admin_api import _rate_limit
+                _rate_limit(f'artistlogin:{admin.slug}', 10, 60)
+            except ImportError:
+                pass
             data = request.get_json(silent=True) or {}
-            if data.get('token') and data['token'] == admin.token():
+
+            def _ok(cookie_value):
                 resp = jsonify({'ok': True})
-                resp.set_cookie(admin.cookie, admin.token(), httponly=True,
+                resp.set_cookie(admin.cookie, cookie_value, httponly=True,
                                 samesite='Strict', max_age=60 * 60 * 24 * 30)
                 return resp
+
+            # Password-only: the domain already says which artist this is, so
+            # the identifier is optional here. Try the account first so the
+            # cookie becomes an opaque session, then fall back to the raw token.
+            password = (data.get('password') or data.get('token') or '').strip()
+            identifier = (data.get('identifier') or '').strip()
+            if password:
+                try:
+                    import accounts
+                    acct = (accounts.resolve(identifier) if identifier
+                            else accounts.account_for_slug(admin.slug))
+                    if acct and accounts.verify_password(acct, password) \
+                            and (acct['is_owner'] or admin.slug in accounts.sites_for(acct['id'])):
+                        sid = accounts.create_session(
+                            acct['id'], admin.slug,
+                            ip=request.headers.get('X-Real-IP') or request.remote_addr,
+                            ua=request.headers.get('User-Agent'))
+                        accounts.record_login(
+                            acct['id'], request.headers.get('X-Real-IP') or request.remote_addr)
+                        return _ok(sid)
+                except ImportError:
+                    pass
+
+            if password and password == admin.token():
+                return _ok(admin.token())
             return jsonify({'ok': False, 'error': 'Invalid token'}), 401
 
         @admin.bp.route(f'{admin.prefix}/logout', methods=['POST'])
@@ -192,14 +237,44 @@ class ArtistAdmin:
             data = request.get_json(silent=True) or {}
             current = (data.get('current') or '').strip()
             new = (data.get('new') or '').strip()
-            if current != admin.token():
+            acct = None
+            try:
+                import accounts
+                acct = accounts.account_for_slug(admin.slug)
+            except ImportError:
+                accounts = None
+
+            current_ok = (current == admin.token())
+            if not current_ok and acct is not None:
+                current_ok = accounts.verify_password(acct, current)
+            if not current_ok:
                 return jsonify({'error': 'Current password is incorrect.'}), 400
             if len(new) < 6:
                 return jsonify({'error': 'New password must be at least 6 characters.'}), 400
+
+            # DUAL-WRITE, and it is not optional. admin_token is still the
+            # editor's API key (~35 X-Admin-Token call sites in admin.html), so
+            # writing only the hash would silently desync the artist's password
+            # from their API key and break the editor for them alone. This is
+            # the tax of keeping the editor out of scope; it goes away when the
+            # editor moves to a separate api_key.
             if not admin.set_token(new):
                 return jsonify({'error': 'Could not save the new password.'}), 500
+            cookie_value = new
+            if acct is not None:
+                try:
+                    accounts.set_password(acct['id'], new)
+                    sid = accounts.create_session(
+                        acct['id'], admin.slug,
+                        ip=request.headers.get('X-Real-IP') or request.remote_addr,
+                        ua=request.headers.get('User-Agent'))
+                    accounts.revoke_all_for_account(acct['id'], except_sid=sid)
+                    cookie_value = sid
+                except Exception:
+                    pass          # config.json is written; don't fail the change
+
             resp = jsonify({'ok': True})
-            resp.set_cookie(admin.cookie, new, httponly=True,
+            resp.set_cookie(admin.cookie, cookie_value, httponly=True,
                             samesite='Strict', max_age=60 * 60 * 24 * 30)
             return resp
 

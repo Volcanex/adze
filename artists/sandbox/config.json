@@ -2,7 +2,7 @@
     "name": "sandbox",
     "slug": "sandbox",
     "domain": "sandbox.com",
-    "admin_token": "loudfern",
+    "admin_token": "tempPass123",
     "description": "SANDBOX",
     "contact_email": "",
     "lead": {
@@ -26,5 +26,34 @@
     "slack_pinned_ts": "1779930849.297109",
     "slack_announced": true,
     "figma_url": "",
-    "handover_token": "hLAfOzNMuTLXzilnQftMaYuYfeuh788J"
+    "handover_token": "hLAfOzNMuTLXzilnQftMaYuYfeuh788J",
+    "features": [
+        "content_admin"
+    ],
+    "content_types": {
+        "notes": {
+            "label": "Notes",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "body": {
+                    "type": "textarea"
+                }
+            },
+            "page": {
+                "mode": "none"
+            }
+        }
+    },
+    "admin_theme": {
+        "bg": "#fbfbfd",
+        "surface": "#ffffff",
+        "text": "#0b0d1a",
+        "accent": "#1c4f82",
+        "accentText": "#ffffff",
+        "border": "#d8d8e0"
+    }
 }

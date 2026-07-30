@@ -582,11 +582,43 @@ def login():
     data = request.get_json() or {}
     slug = data.get('slug', '').strip()
     token = data.get('token', '').strip()
-    if not slug or not token:
-        return jsonify({'error': 'slug and token required'}), 400
-    from auth import verify_artist_token, get_artist_config, is_admin_token
-    if not verify_artist_token(slug, token):
-        return jsonify({'error': 'Invalid credentials'}), 401
+
+    # New shape: {identifier, password} — the identifier is a name, email, slug
+    # or domain and resolves to an account, which may own several sites. The
+    # legacy {slug, token} body below still works, so nothing has to change in
+    # lockstep with this.
+    account = None
+    identifier = (data.get('identifier') or '').strip()
+    password = data.get('password') or ''
+    if identifier and password:
+        try:
+            import accounts
+            acct = accounts.resolve(identifier)
+            if not acct or not accounts.verify_password(acct, password):
+                return jsonify({'error': 'Invalid credentials'}), 401
+            owned = accounts.sites_for(acct['id'])
+            if not slug:
+                if len(owned) == 1:
+                    slug = owned[0]
+                elif len(owned) > 1:
+                    # Caller picks; don't guess which site they meant.
+                    return jsonify({'ok': False, 'choose': True, 'sites': owned}), 200
+                else:
+                    return jsonify({'error': 'That account has no sites'}), 403
+            elif slug not in owned and not acct['is_owner']:
+                return jsonify({'error': 'Invalid credentials'}), 401
+            account = acct
+        except ImportError:
+            return jsonify({'error': 'Accounts unavailable'}), 500
+
+    if not account:
+        if not slug or not token:
+            return jsonify({'error': 'slug and token required'}), 400
+        from auth import verify_artist_token
+        if not verify_artist_token(slug, token):
+            return jsonify({'error': 'Invalid credentials'}), 401
+
+    from auth import get_artist_config, is_admin_token
     # Scaffold from template if artist has no pages yet
     _scaffold_new_artist(slug)
     # Track last login
@@ -599,18 +631,41 @@ def login():
     except Exception:
         pass
     config = get_artist_config(slug) or {}
+    is_admin = bool(account['is_owner']) if account else is_admin_token(token)
     resp = make_response(jsonify({
         'ok': True,
         'slug': slug,
         'name': config.get('display_name') or config.get('name') or slug,
-        'is_admin': is_admin_token(token),
+        'is_admin': is_admin,
         'config': {k: v for k, v in config.items() if k != 'admin_token'}
     }))
+
+    # Prefer an opaque session id. Fall back to the legacy "<slug>:<token>"
+    # value when we can't tell which account the caller is -- a super-admin
+    # token authenticates as any artist, so there is no one account to bind.
+    # auth.verify_artist_token accepts both, so this stays invisible to callers.
+    cookie_value = f'{slug}:{token}'
+    try:
+        import accounts
+        acct = account
+        if acct is None and token and config.get('admin_token') == token:
+            acct = accounts.account_for_slug(slug)
+        if acct is not None:
+            sid = accounts.create_session(
+                acct['id'], slug,
+                ip=request.headers.get('X-Real-IP') or request.remote_addr,
+                ua=request.headers.get('User-Agent'))
+            accounts.record_login(acct['id'],
+                                  request.headers.get('X-Real-IP') or request.remote_addr)
+            cookie_value = f'{slug}:{sid}'
+    except Exception:
+        pass          # never let the account store stop a valid login
+
     # httpOnly — not accessible via JS (XSS protection)
     # SameSite=Lax — safe for normal navigation, blocks CSRF from cross-site POSTs
     # secure — True when behind TLS (nginx sets X-Forwarded-Proto)
     is_https = request.headers.get('X-Forwarded-Proto') == 'https'
-    resp.set_cookie('adze_session', f'{slug}:{token}',
+    resp.set_cookie('adze_session', cookie_value,
                     httponly=True, samesite='Lax', secure=is_https,
                     max_age=30 * 24 * 3600, path='/')
     return resp
