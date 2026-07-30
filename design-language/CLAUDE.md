@@ -1,10 +1,23 @@
 # Design Language — canonical reference
 
-Two design systems live here:
+Two design systems live here. Don't cross-apply them.
 
-**`project/`** — the **Last Place** design system (current). This is the brand used for the lastplace workspace: handover portals, client-facing pages. Exported from claude.ai/design, source of truth for anything branded Last Place.
+**`adze/`** — the **Adze** design system (current, written 2026-07-30). Tokens,
+components and rules for adze.studio's own surfaces: artist login, sites
+dashboard, content admin, studio chrome. Neutral near-white, 13px base, Inter
+for reading + JetBrains Mono for scanning, accent `#1c4f82`. Mirrored to the
+Claude Design project "Adze — Design Language". See [adze/CLAUDE.md](adze/CLAUDE.md).
 
-**Adze chrome** (`_shared/portal.html`, `_shared/admin.html`, `_shared/dashboard.html`) uses a separate mono/technical identity — see the note below. Don't confuse the two.
+**`project/`** — the **Last Place** design system. The brand for the lastplace
+workspace: handover portals, client-facing pages. Hyperlink blue `#0000EE`,
+Cormorant, plant mark. Exported from claude.ai/design.
+
+## Adoption status
+
+`adze/` is **not yet wired into any live surface.** The chrome files still
+carry their own inline `:root` blocks (see below), and
+`_shared/shell/admin-shell.css` still defaults to a neutral dark-gold palette.
+Adopting the token bundle is a separate, agreed job.
 
 ## Last Place design system (`project/`)
 
@@ -21,19 +34,43 @@ Hyperlink blue `#0000EE`, black ink, white space, Cormorant serif. A lino-print 
 - `project/SKILL.md` — agent skill entry point for this system
 - `README.md` — upstream handoff README
 
-**Use for:** `_shared/handover.html`, `_shared/portal.html` (lastplace workspace), client-facing handover slides.
+**Use for:** `_shared/handover.html`, client-facing handover slides.
 
-## Adze chrome identity
+> `_shared/portal.html` used to be listed here. **It is dead code** — its only
+> route (`flask_server.py`, `/api/manage`) points at `pages/artists/_shared/portal.html`,
+> a path that doesn't exist, so the endpoint returns "Portal not found". Don't
+> spend effort skinning it.
 
-The live chrome (adze.studio landing, `admin.html`, `dashboard.html`) uses the **mono/technical** direction:
-- `--heading-font: 'JetBrains Mono', monospace` (upright, not italic)
-- `--radius: 4px`, uppercase + tracked section headers, `[Adze]` wordmark in accent brackets
+## Adze chrome identity (legacy — pre-`adze/`)
 
-This is separate from the Last Place brand. Don't cross-apply. The three chrome files each carry their own `:root` tokens; keep them in sync with each other, not with `project/`.
+The **currently live** chrome (adze.studio landing, `admin.html`,
+`dashboard.html`) still uses the older mono/technical direction:
+
+- `--accent: #1C4F82` on warm cream `#f5f2ed`, ink `#2a2a28`
+- `--heading-font: 'JetBrains Mono', monospace` for headings
+- `--radius: 4px`, 10–13px text, uppercase tracked section headers
+
+Each of those files carries its own inline `:root` block, and they have
+drifted: `--text2` differs in `dashboard.html`, `home.html` is missing
+`danger`/`success`/`warn`/`surface2`, and shadow alpha varies between 0.05 and
+0.06. They also declare `--radius: 4px` while hardcoding 8px 32 times and 6px
+25 times.
+
+**Stale comment, do not trust it:** `dashboard.html` and `portal.html` both
+carry `/* Tokens — canonical source: /design-language/project/Adze Design
+Language.html — keep in sync */`. That file no longer exists (`project/` is
+Last Place now), and the dashboard comment further claims `--radius 6px (vs
+8px)` when the actual value is 4px. Delete those comments when you next touch
+the files — the real canonical source is `adze/tokens/`.
+
+Until adoption, `#1c4f82` is the one value shared between the legacy chrome
+and the new `adze/` bundle.
 
 ### Preserved by user request
-- **Tabs** — current tab styling across all three files. Don't restyle.
-- **Toast notifications** — `portal.html:321-334` and `dashboard.html:451-457`. Don't restyle.
+- **Tabs** — current tab styling in `admin.html` / `dashboard.html`. Don't restyle.
+- **Toast notifications** — `dashboard.html:451-457`. Don't restyle.
 
 ### Intentional chrome divergences
-`dashboard.html` runs denser than `portal.html` / `admin.html` (smaller fonts, 10–13px). Don't homogenise `--radius` or colour values between them.
+`dashboard.html` runs denser than `admin.html` (smaller fonts, 10–13px). Don't
+homogenise `--radius` or colour values between them while they remain on the
+legacy tokens.

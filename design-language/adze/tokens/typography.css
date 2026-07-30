@@ -1,0 +1,83 @@
+/* Adze — type tokens
+ *
+ * Two typefaces with a strict division of labour. This is the "halfway
+ * between Apple and mono" rule, made mechanical:
+ *
+ *   Inter (--adze-font-ui)   — anything a person READS.
+ *                              Headings, body, buttons, form values, prose.
+ *   JetBrains Mono (--adze-font-mono) — anything a person SCANS.
+ *                              Field labels, section headers, counts, dates,
+ *                              file sizes, IDs, status chips, the wordmark.
+ *
+ * The test: if you'd read it aloud in a sentence, it's Inter. If your eye
+ * lands on it to find a value, it's mono. Getting this wrong in either
+ * direction is what makes the old chrome read as a control panel — mono
+ * headings shout, and Inter labels disappear.
+ *
+ * Base is 13px. The previous chrome ran at 10–11px; that density is why it
+ * felt cramped. Do not reintroduce sizes below --adze-text-2xs, and 2xs is
+ * mono-only.
+ */
+
+:root {
+    --adze-font-ui:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --adze-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Monaco, Menlo, 'Courier New', monospace;
+
+    /* ── Size scale ───────────────────────────────────────────────────────
+     * ~1.2 ratio, tuned to land on whole pixels at every step. */
+    --adze-text-2xs:     11px;   /* mono labels ONLY — never body */
+    --adze-text-xs:      12px;   /* secondary metadata, chip text */
+    --adze-text-sm:      13px;   /* BASE — body, inputs, buttons, table cells */
+    --adze-text-md:      15px;   /* lead paragraphs, card titles */
+    --adze-text-lg:      18px;   /* section headings (h3) */
+    --adze-text-xl:      22px;   /* page headings (h2) */
+    --adze-text-2xl:     28px;   /* screen title (h1) */
+    --adze-text-3xl:     36px;   /* marketing headline */
+    --adze-text-display: 48px;   /* landing hero only */
+
+    /* ── Weight ───────────────────────────────────────────────────────────
+     * Four weights. 500 is the workhorse for UI chrome — 400 reads limp on
+     * small sizes, 700 is reserved for genuine emphasis. */
+    --adze-weight-normal:   400;
+    --adze-weight-medium:   500;
+    --adze-weight-semibold: 600;
+    --adze-weight-bold:     700;
+
+    /* ── Line height ──────────────────────────────────────────────────── */
+    --adze-leading-tight:   1.2;   /* display + large headings */
+    --adze-leading-snug:    1.35;  /* small headings, single-line UI */
+    --adze-leading-normal:  1.55;  /* BASE — body, form help text */
+    --adze-leading-relaxed: 1.7;   /* long-form prose blocks */
+
+    /* ── Tracking ─────────────────────────────────────────────────────────
+     * Large type tightens, small mono labels open up. The uppercase-mono
+     * label at 0.08em is the single most recognisable Adze signature —
+     * keep it consistent. */
+    --adze-tracking-display: -0.02em;
+    --adze-tracking-tight:   -0.01em;
+    --adze-tracking-normal:  0;
+    --adze-tracking-label:   0.08em;
+}
+
+/* ── The mono label ────────────────────────────────────────────────────────
+ * Used for every field label and section header in the admin. Defined once
+ * here as a class so it can never drift the way the old inline
+ * `text-transform:uppercase; letter-spacing:0.5px` variants did — there were
+ * six different tracking values across the old chrome. */
+.adze-label {
+    font-family: var(--adze-font-mono);
+    font-size: var(--adze-text-2xs);
+    font-weight: var(--adze-weight-medium);
+    line-height: var(--adze-leading-snug);
+    letter-spacing: var(--adze-tracking-label);
+    text-transform: uppercase;
+    color: var(--adze-text-muted);
+}
+
+/* Tabular numerals for anything that sits in a column and changes —
+ * counts, sizes, percentages, dates. Stops the layout twitching on update. */
+.adze-numeric {
+    font-family: var(--adze-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}

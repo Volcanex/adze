@@ -1,0 +1,233 @@
+<!-- @dsCard group="Type" name="Two voices" subtitle="Inter reads, JetBrains Mono scans" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adze — Two voices</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+<style>
+:root {
+    --adze-bg: #fbfbfd; --adze-surface: #ffffff; --adze-text: #1d1d1f;
+    --adze-accent: #1c4f82; --adze-accent-text: #ffffff; --adze-border: #e3e3e8;
+    --adze-bg-sunken: color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover: color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong: color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+    --adze-text-muted: color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint: color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-accent-hover: color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft: color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line: color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+    --adze-success: #1a8a52; --adze-warn: #a86b00; --adze-danger: #c8362a;
+    --adze-success-soft: color-mix(in srgb, #1a8a52 12%, var(--adze-surface));
+    --adze-warn-soft: color-mix(in srgb, #a86b00 12%, var(--adze-surface));
+    --adze-danger-soft: color-mix(in srgb, #c8362a 12%, var(--adze-surface));
+    --adze-focus-ring: 0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+    --adze-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --adze-font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --adze-text-2xs: 11px; --adze-text-xs: 12px; --adze-text-sm: 13px;
+    --adze-text-md: 15px; --adze-text-lg: 18px; --adze-text-xl: 22px;
+    --adze-text-2xl: 28px; --adze-text-3xl: 36px; --adze-text-display: 48px;
+    --adze-weight-normal: 400; --adze-weight-medium: 500;
+    --adze-weight-semibold: 600; --adze-weight-bold: 700;
+    --adze-leading-tight: 1.2; --adze-leading-snug: 1.35;
+    --adze-leading-normal: 1.55; --adze-leading-relaxed: 1.7;
+    --adze-tracking-display: -0.02em; --adze-tracking-tight: -0.01em;
+    --adze-tracking-label: 0.08em;
+    --adze-space-1: 4px; --adze-space-2: 8px; --adze-space-3: 12px;
+    --adze-space-4: 16px; --adze-space-5: 20px; --adze-space-6: 24px;
+    --adze-space-8: 32px; --adze-space-10: 40px; --adze-space-12: 48px; --adze-space-16: 64px;
+    --adze-control-sm: 28px; --adze-control-md: 36px; --adze-control-lg: 44px;
+    --adze-radius-sm: 4px; --adze-radius-md: 8px; --adze-radius-lg: 12px; --adze-radius-pill: 999px;
+    --adze-width-form: 560px; --adze-width-content: 720px;
+    --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --adze-shadow-md: 0 2px 4px rgba(0,0,0,.04), 0 8px 20px rgba(0,0,0,.08);
+    --adze-shadow-lg: 0 4px 8px rgba(0,0,0,.04), 0 16px 40px rgba(0,0,0,.10);
+    --adze-dur-instant: 80ms; --adze-dur-fast: 140ms; --adze-dur: 220ms;
+    --adze-dur-slow: 320ms; --adze-dur-slower: 480ms;
+    --adze-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --adze-ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --adze-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --adze-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --adze-bg: #131316; --adze-surface: #1c1c20; --adze-text: #f0f0f2;
+        --adze-accent: #99cdff; --adze-accent-text: #131316; --adze-border: #2e2e34;
+        --adze-success: #4fc084; --adze-warn: #e0b055; --adze-danger: #f0685c;
+        --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --adze-shadow-md: 0 2px 6px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.35);
+        --adze-shadow-lg: 0 4px 12px rgba(0,0,0,.5), 0 16px 48px rgba(0,0,0,.4);
+    }
+}
+@keyframes adze-spin { to { transform: rotate(360deg); } }
+@keyframes adze-rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes adze-pulse { 50% { opacity: 0.55; } }
+
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding: var(--adze-space-8);
+    background: var(--adze-bg); color: var(--adze-text);
+    font-family: var(--adze-font-ui); font-size: var(--adze-text-sm);
+    line-height: var(--adze-leading-normal); -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv05' 1, 'ss01' 1;
+}
+h1,h2,h3,h4 { margin: 0; font-weight: var(--adze-weight-semibold); line-height: var(--adze-leading-tight); letter-spacing: var(--adze-tracking-tight); }
+.wrap { max-width: 1100px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.panel { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); padding: var(--adze-space-6); box-shadow: var(--adze-shadow-sm); }
+.panel > h3 { font-size: var(--adze-text-md); margin-bottom: var(--adze-space-4); }
+.stack { display: flex; flex-direction: column; gap: var(--adze-space-4); }
+.row { display: flex; align-items: center; gap: var(--adze-space-3); flex-wrap: wrap; }
+.adze-label { font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); font-weight: var(--adze-weight-medium); letter-spacing: var(--adze-tracking-label); text-transform: uppercase; color: var(--adze-text-muted); line-height: var(--adze-leading-snug); }
+.adze-numeric { font-family: var(--adze-font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.note { font-size: var(--adze-text-xs); color: var(--adze-text-muted); max-width: 62ch; }
+
+.adze-theme {
+    --adze-bg: var(--adze-artist-bg, #fbfbfd);
+    --adze-surface: var(--adze-artist-surface, #ffffff);
+    --adze-text: var(--adze-artist-text, #1d1d1f);
+    --adze-accent: var(--adze-artist-accent, #1c4f82);
+    --adze-accent-text: var(--adze-artist-accent-text, #ffffff);
+    --adze-border: var(--adze-artist-border, #e3e3e8);
+    --adze-bg-sunken: color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover: color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong: color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+    --adze-text-muted: color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint: color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-accent-hover: color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft: color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line: color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+    --adze-success-soft: color-mix(in srgb, var(--adze-success) 12%, var(--adze-surface));
+    --adze-warn-soft: color-mix(in srgb, var(--adze-warn) 12%, var(--adze-surface));
+    --adze-danger-soft: color-mix(in srgb, var(--adze-danger) 12%, var(--adze-surface));
+    --adze-focus-ring: 0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+    background: var(--adze-bg); color: var(--adze-text);
+}
+.mono { font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); color: var(--adze-text-faint); }
+
+.spec { display: flex; align-items: baseline; gap: var(--adze-space-4); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); }
+.spec:last-child { border-bottom: 0; }
+.spec__tok { flex: 0 0 148px; font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .04em; color: var(--adze-text-faint); }
+.spec__demo { flex: 1; min-width: 0; }
+.bar { background: var(--adze-accent); border-radius: 2px; height: 14px; }
+.box { background: var(--adze-accent-soft); border: 1px solid var(--adze-accent-line); }
+
+.adze-tag { display: inline-flex; align-items: center; gap: var(--adze-space-1); padding: 3px var(--adze-space-2); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); font-weight: var(--adze-weight-medium); line-height: 1.4; letter-spacing: var(--adze-tracking-label); text-transform: uppercase; white-space: nowrap; }
+.adze-tag__dot { width: 5px; height: 5px; border-radius: var(--adze-radius-pill); background: currentColor; flex: 0 0 auto; }
+.adze-tag--neutral { background: var(--adze-bg-sunken); color: var(--adze-text-muted); }
+.adze-tag--accent { background: var(--adze-accent-soft); color: var(--adze-accent); }
+.adze-tag--success { background: var(--adze-success-soft); color: var(--adze-success); }
+.adze-tag--warn { background: var(--adze-warn-soft); color: var(--adze-warn); }
+.adze-tag--danger { background: var(--adze-danger-soft); color: var(--adze-danger); }
+
+.adze-field { display: flex; flex-direction: column; gap: var(--adze-space-2); margin-bottom: var(--adze-space-4); }
+.adze-field__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--adze-space-3); }
+.adze-field__req { color: var(--adze-danger); margin-left: 2px; }
+.adze-field__hint { font-size: var(--adze-text-2xs); color: var(--adze-text-faint); }
+.adze-field__help { margin: 0; font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.adze-field__error { display: flex; align-items: center; gap: var(--adze-space-1); margin: 0; font-size: var(--adze-text-xs); color: var(--adze-danger); }
+.adze-input { width: 100%; height: var(--adze-control-md); padding: 0 var(--adze-space-3); background: var(--adze-surface); color: var(--adze-text); border: 1px solid var(--adze-border-strong); border-radius: var(--adze-radius-md); font-family: var(--adze-font-ui); font-size: var(--adze-text-sm); transition: border-color var(--adze-dur-instant) var(--adze-ease-out), box-shadow var(--adze-dur-fast) var(--adze-ease-out); }
+.adze-input--textarea { height: auto; min-height: 96px; padding: var(--adze-space-3); line-height: var(--adze-leading-normal); resize: vertical; }
+.adze-input::placeholder { color: var(--adze-text-faint); }
+.adze-input:hover:not(:disabled) { border-color: var(--adze-text-faint); }
+.adze-input:focus { outline: none; border-color: var(--adze-accent); box-shadow: var(--adze-focus-ring); }
+.adze-input:disabled { opacity: 0.55; cursor: not-allowed; background: var(--adze-bg-sunken); }
+.adze-field--error .adze-input { border-color: var(--adze-danger); }
+.adze-input-group { display: flex; align-items: center; gap: var(--adze-space-2); height: var(--adze-control-md); padding: 0 var(--adze-space-3); background: var(--adze-surface); border: 1px solid var(--adze-border-strong); border-radius: var(--adze-radius-md); transition: border-color var(--adze-dur-instant) var(--adze-ease-out), box-shadow var(--adze-dur-fast) var(--adze-ease-out); }
+.adze-input-group:focus-within { border-color: var(--adze-accent); box-shadow: var(--adze-focus-ring); }
+.adze-input-group i { color: var(--adze-text-faint); font-size: 1.15em; }
+.adze-input-group__prefix { font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); color: var(--adze-text-faint); white-space: nowrap; }
+.adze-input--bare { border: 0; background: transparent; padding: 0; height: 100%; flex: 1; min-width: 0; }
+.adze-input--bare:focus { box-shadow: none; }
+.adze-select-wrap { position: relative; display: block; }
+.adze-select { appearance: none; padding-right: var(--adze-space-8); cursor: pointer; }
+.adze-select__caret { position: absolute; right: var(--adze-space-3); top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--adze-text-faint); font-size: 0.9em; }
+.adze-check { display: flex; align-items: flex-start; gap: var(--adze-space-3); cursor: pointer; padding: var(--adze-space-1) 0; position: relative; }
+.adze-check__input { position: absolute; opacity: 0; width: 18px; height: 18px; margin: 0; cursor: pointer; }
+.adze-check__box { flex: 0 0 auto; display: grid; place-items: center; width: 18px; height: 18px; margin-top: 1px; background: var(--adze-surface); border: 1.5px solid var(--adze-border-strong); border-radius: var(--adze-radius-sm); color: transparent; font-size: 12px; transition: background-color var(--adze-dur-fast) var(--adze-ease-out), border-color var(--adze-dur-fast) var(--adze-ease-out), color var(--adze-dur-fast) var(--adze-ease-out), transform var(--adze-dur-fast) var(--adze-ease-spring); }
+.adze-check:hover .adze-check__box { border-color: var(--adze-text-faint); }
+.adze-check__input:checked + .adze-check__box { background: var(--adze-accent); border-color: var(--adze-accent); color: var(--adze-accent-text); transform: scale(1.06); }
+.adze-check__input:focus-visible + .adze-check__box { box-shadow: var(--adze-focus-ring); }
+.adze-check__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adze-check__label { font-size: var(--adze-text-sm); }
+.adze-check__desc { font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.adze-switch { display: flex; align-items: center; justify-content: space-between; gap: var(--adze-space-4); cursor: pointer; padding: var(--adze-space-2) 0; position: relative; }
+.adze-switch__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.adze-switch__label { font-size: var(--adze-text-sm); }
+.adze-switch__desc { font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.adze-switch__input { position: absolute; opacity: 0; right: 0; width: 44px; height: 26px; margin: 0; cursor: pointer; }
+.adze-switch__track { position: relative; flex: 0 0 auto; width: 44px; height: 26px; background: var(--adze-border-strong); border-radius: var(--adze-radius-pill); transition: background-color var(--adze-dur) var(--adze-ease-out); }
+.adze-switch__thumb { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: var(--adze-radius-pill); box-shadow: var(--adze-shadow-sm); transition: transform var(--adze-dur) var(--adze-ease-spring); }
+.adze-switch__input:checked ~ .adze-switch__track { background: var(--adze-accent); }
+.adze-switch__input:checked ~ .adze-switch__track .adze-switch__thumb { transform: translateX(18px); }
+.adze-switch__input:focus-visible ~ .adze-switch__track { box-shadow: var(--adze-focus-ring); }
+.adze-switch.is-pending .adze-switch__track { animation: adze-pulse 1s var(--adze-ease-in-out) infinite; }
+.adze-switch.is-pending .adze-switch__text { opacity: 0.6; }
+.adze-card { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); box-shadow: var(--adze-shadow-sm); padding: var(--adze-space-6); transition: border-color var(--adze-dur-fast) var(--adze-ease-out), box-shadow var(--adze-dur-fast) var(--adze-ease-out), transform var(--adze-dur-fast) var(--adze-ease-out); }
+.adze-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--adze-space-4); margin-bottom: var(--adze-space-4); }
+.adze-card__title { font-size: var(--adze-text-md); font-weight: var(--adze-weight-semibold); line-height: var(--adze-leading-snug); }
+.adze-card__subtitle { margin: var(--adze-space-1) 0 0; font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.adze-card--interactive { cursor: pointer; }
+.adze-card--interactive:hover { border-color: var(--adze-accent-line); box-shadow: var(--adze-shadow-md); transform: translateY(-1px); }
+.adze-link { color: var(--adze-accent); text-decoration: none; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+.adze-link--inline { text-decoration: underline; }
+.adze-link--standalone { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-weight: var(--adze-weight-medium); }
+.adze-link--standalone:hover { text-decoration: underline; }
+.adze-link--quiet { color: var(--adze-text-muted); }
+.adze-link--quiet:hover { color: var(--adze-text); text-decoration: underline; }
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="stack">
+  <div class="panel">
+    <h3>The division of labour</h3>
+    <p class="note">This is the "halfway between Apple and mono" rule made mechanical.
+    <b>Inter</b> for anything a person <b>reads</b>. <b>JetBrains Mono</b> for anything a person
+    <b>scans</b>.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)"><b>The test:</b> if you'd read it aloud
+    in a sentence, it's Inter. If your eye lands on it to find a value, it's mono. Getting this
+    wrong in either direction is what made the old chrome read as a control panel — mono headings
+    shout, and Inter labels disappear.</p>
+  </div>
+  <div class="grid">
+    <div class="panel">
+      <h3 style="font-family:var(--adze-font-ui)">Inter — read</h3>
+      <p style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0 0 var(--adze-space-3)">Your gallery</p>
+      <p style="margin:0">Headings, body copy, button labels, form values, prose. Everything the
+      user actually reads as language.</p>
+    </div>
+    <div class="panel">
+      <h3 style="font-family:var(--adze-font-ui)">JetBrains Mono — scan</h3>
+      <div class="adze-label" style="margin-bottom:var(--adze-space-2)">Field label</div>
+      <div class="row" style="margin-bottom:var(--adze-space-3)">
+        <span class="adze-tag adze-tag--success"><span class="adze-tag__dot"></span>Live</span>
+        <span class="adze-tag adze-tag--neutral">Draft</span>
+      </div>
+      <div class="adze-numeric" style="font-size:22px">1,284</div>
+      <div class="adze-numeric" style="font-size:12px;color:var(--adze-text-muted)">2026-07-30 · 4.2 MB</div>
+      <p class="note" style="margin-top:var(--adze-space-3)">Labels, status chips, counts, dates,
+      sizes, IDs. Tabular figures stop columns twitching as values update.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Getting it wrong</h3>
+    <div class="grid">
+      <div>
+        <div class="who" style="font-family:var(--adze-font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--adze-danger);margin-bottom:var(--adze-space-2)">✗ mono heading — shouts</div>
+        <p style="font-family:var(--adze-font-mono);font-size:22px;font-weight:700;margin:0">YOUR GALLERY</p>
+      </div>
+      <div>
+        <div class="who" style="font-family:var(--adze-font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--adze-danger);margin-bottom:var(--adze-space-2)">✗ Inter label — disappears</div>
+        <p style="font-size:11px;color:var(--adze-text-muted);margin:0">Title</p>
+        <input class="adze-input" style="width:100%;margin-top:4px" value="Study in Ochre" readonly>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></body>
+</html>

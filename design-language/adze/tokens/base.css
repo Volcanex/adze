@@ -1,0 +1,130 @@
+/* Adze — base / reset
+ *
+ * Minimal. Sets the document defaults so an unstyled element already looks
+ * like Adze, and establishes the accessibility floor (focus, targets,
+ * selection) once rather than per component.
+ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--adze-bg);
+    color: var(--adze-text);
+    font-family: var(--adze-font-ui);
+    font-size: var(--adze-text-sm);
+    font-weight: var(--adze-weight-normal);
+    line-height: var(--adze-leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Inter's optical sizing + contextual alternates — the difference between
+     * Inter looking generic and looking intentional. */
+    font-feature-settings: 'cv05' 1, 'ss01' 1;
+}
+
+/* ── Headings ──────────────────────────────────────────────────────────────
+ * Inter, not mono. Mono headings are what made the old chrome shout. */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-family: var(--adze-font-ui);
+    font-weight: var(--adze-weight-semibold);
+    line-height: var(--adze-leading-tight);
+    letter-spacing: var(--adze-tracking-tight);
+    color: var(--adze-text);
+}
+
+h1 { font-size: var(--adze-text-2xl); }
+h2 { font-size: var(--adze-text-xl); }
+h3 { font-size: var(--adze-text-lg); line-height: var(--adze-leading-snug); }
+h4 { font-size: var(--adze-text-md); line-height: var(--adze-leading-snug); }
+h5, h6 { font-size: var(--adze-text-sm); line-height: var(--adze-leading-snug); }
+
+p {
+    margin: 0 0 var(--adze-space-4);
+    max-width: var(--adze-width-prose);
+}
+p:last-child { margin-bottom: 0; }
+
+a {
+    color: var(--adze-accent);
+    text-decoration: none;
+    transition: var(--adze-transition-color);
+}
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+code, kbd, samp, pre {
+    font-family: var(--adze-font-mono);
+    font-size: 0.92em;
+}
+
+code {
+    background: var(--adze-bg-sunken);
+    border-radius: var(--adze-radius-sm);
+    padding: 0.1em 0.35em;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--adze-border);
+    margin: var(--adze-space-6) 0;
+}
+
+img, svg, video, canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Form elements do not inherit font by default — the commonest reason an
+ * input looks foreign to the rest of a page. */
+button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+/* ── Focus ─────────────────────────────────────────────────────────────────
+ * :focus-visible only, so a mouse click doesn't ring but a Tab does. Never
+ * set `outline: none` without providing this — several places in the old
+ * chrome removed the outline and replaced it with a border colour change,
+ * which fails at low contrast and disappears entirely in dark mode. */
+:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--adze-focus-ring);
+    border-radius: var(--adze-radius-sm);
+}
+
+::selection {
+    background: color-mix(in srgb, var(--adze-accent) 24%, transparent);
+    color: var(--adze-text);
+}
+
+/* Scrollbars — thin, neutral, and themed. Firefox first, then WebKit. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--adze-border-strong) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--adze-border-strong);
+    border-radius: var(--adze-radius-pill);
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--adze-text-faint);
+    background-clip: content-box;
+}
+
+/* Touch targets: the <640px control-height bump lives in spacing.css, beside
+ * the canonical declarations it overrides. */

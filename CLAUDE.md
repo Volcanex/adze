@@ -84,7 +84,8 @@ hand-edit between the markers.
 | `artists/jackdt/CLAUDE.md` | Jack Dennison-Thompson (jackdt) — jackdt.com |
 | `artists/rose/CLAUDE.md` | Rose Jones — rosefpjones.com |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
+| `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-07-13 22:48 UTC — 12 doc(s) found._
+_Auto-compiled 2026-07-30 08:08 UTC — 13 doc(s) found._
 <!-- DOCS:END -->

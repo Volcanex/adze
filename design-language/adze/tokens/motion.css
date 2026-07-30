@@ -1,0 +1,107 @@
+/* Adze — motion
+ *
+ * The old chrome had four durations by accident (0.12s, 0.15s, 0.2s, 0.3s)
+ * and no easing at all, so everything moved linearly. Linear motion is the
+ * single clearest tell of a dated interface: real objects don't start and
+ * stop instantly.
+ *
+ * Three rules:
+ *   1. Anything that changes state visibly gets a transition.
+ *   2. Things ENTERING use --adze-ease-out (fast start, soft landing).
+ *      Things LEAVING use --adze-ease-in and a shorter duration — nobody
+ *      wants to wait for a dismissal.
+ *   3. Nothing exceeds --adze-dur-slower. If it needs longer, it's a
+ *      progress state, not a transition — use a ProgressBar.
+ */
+
+:root {
+    /* ── Duration ─────────────────────────────────────────────────────── */
+    --adze-dur-instant: 80ms;    /* colour-only: hover tints, borders */
+    --adze-dur-fast:   140ms;    /* BASE — buttons, inputs, small toggles */
+    --adze-dur:        220ms;    /* panels, tabs, list reordering */
+    --adze-dur-slow:   320ms;    /* modals, drawers, page transitions */
+    --adze-dur-slower: 480ms;    /* deliberate, once-per-screen reveals */
+
+    /* ── Easing ───────────────────────────────────────────────────────────
+     * ease-out is the workhorse and the source of the "slick" feel: motion
+     * arrives quickly then settles. Use it unless you have a reason. */
+    --adze-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+    --adze-ease-in:     cubic-bezier(0.4, 0, 1, 1);
+    --adze-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --adze-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);  /* toggles, checks — overshoots slightly */
+
+    /* ── Composed shorthands ──────────────────────────────────────────── */
+    --adze-transition:       all var(--adze-dur-fast) var(--adze-ease-out);
+    --adze-transition-color: color var(--adze-dur-instant) var(--adze-ease-out),
+                             background-color var(--adze-dur-instant) var(--adze-ease-out),
+                             border-color var(--adze-dur-instant) var(--adze-ease-out);
+    --adze-transition-panel: transform var(--adze-dur) var(--adze-ease-out),
+                             opacity var(--adze-dur) var(--adze-ease-out);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────────
+ * Shared by the feedback components. Defined here so a spinner and a skeleton
+ * pulse to the same clock rather than each inventing a rhythm. */
+
+@keyframes adze-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Indeterminate progress — a band that sweeps the track. */
+@keyframes adze-sweep {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(0%)    scaleX(0.7); }
+    100% { transform: translateX(220%)  scaleX(0.4); }
+}
+
+/* Skeleton shimmer — a highlight passing left to right. */
+@keyframes adze-shimmer {
+    from { background-position: -200% 0; }
+    to   { background-position:  200% 0; }
+}
+
+@keyframes adze-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Entrances rise slightly as they fade. 6px, not 20px — restraint is the
+ * difference between "considered" and "bouncy". */
+@keyframes adze-rise-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes adze-scale-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * Non-negotiable, and it is genuinely load-bearing here: an animated progress
+ * bar that can't be turned off is a problem for people with vestibular
+ * disorders. Durations collapse rather than transitions being removed, so
+ * state changes still land — they just land immediately. */
+@media (prefers-reduced-motion: reduce) {
+    /* NOTE: deliberately does NOT redefine --adze-dur-*. The universal
+     * !important rule below already overrides every transition and animation,
+     * including inline styles, so collapsing the tokens too was redundant.
+     *
+     * It was also actively harmful to documentation: the design-system
+     * manifest compiler flattens @media blocks last-wins and ignores the
+     * query context, so it reported every duration as "1ms" — the exact
+     * opposite of what the system specifies. The tokens now stay the design
+     * values; this block enforces the behaviour. */
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+    /* Looping feedback keeps animating — it communicates "still working" —
+     * but slowly and without translation. */
+    .adze-spinner, .adze-progress__bar {
+        animation-duration: 1.6s !important;
+        animation-iteration-count: infinite !important;
+    }
+}

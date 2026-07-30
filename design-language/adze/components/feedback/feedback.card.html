@@ -1,0 +1,209 @@
+<!-- @dsCard group="Feedback" name="Loading & empty states" subtitle="ProgressBar, Skeleton, Spinner, EmptyState — live" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adze — Feedback</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+<style>
+:root {
+    --adze-bg: #fbfbfd; --adze-surface: #ffffff; --adze-text: #1d1d1f;
+    --adze-accent: #1c4f82; --adze-accent-text: #ffffff; --adze-border: #e3e3e8;
+    --adze-bg-sunken: color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-border-strong: color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+    --adze-text-muted: color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint: color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-accent-hover: color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-success: #1a8a52; --adze-danger: #c8362a;
+    --adze-danger-soft: color-mix(in srgb, #c8362a 12%, var(--adze-surface));
+    --adze-focus-ring: 0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+    --adze-font-ui: 'Inter', -apple-system, sans-serif;
+    --adze-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --adze-text-2xs: 11px; --adze-text-xs: 12px; --adze-text-sm: 13px;
+    --adze-text-md: 15px; --adze-text-lg: 18px;
+    --adze-weight-medium: 500; --adze-weight-semibold: 600;
+    --adze-leading-snug: 1.35; --adze-leading-normal: 1.55;
+    --adze-tracking-label: 0.08em;
+    --adze-space-1: 4px; --adze-space-2: 8px; --adze-space-3: 12px;
+    --adze-space-4: 16px; --adze-space-6: 24px; --adze-space-8: 32px; --adze-space-12: 48px;
+    --adze-radius-sm: 4px; --adze-radius-md: 8px; --adze-radius-pill: 999px;
+    --adze-control-md: 36px;
+    --adze-dur-instant: 80ms; --adze-dur-fast: 140ms; --adze-dur: 220ms; --adze-dur-slow: 320ms;
+    --adze-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --adze-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --adze-bg: #131316; --adze-surface: #1c1c20; --adze-text: #f0f0f2;
+        --adze-accent: #99cdff; --adze-accent-text: #131316; --adze-border: #2e2e34;
+        --adze-success: #4fc084; --adze-danger: #f0685c;
+        --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    }
+}
+@keyframes adze-spin { to { transform: rotate(360deg); } }
+@keyframes adze-sweep {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(0%)    scaleX(0.7); }
+    100% { transform: translateX(220%)  scaleX(0.4); }
+}
+@keyframes adze-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes adze-rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding: var(--adze-space-8);
+    background: var(--adze-bg); color: var(--adze-text);
+    font-family: var(--adze-font-ui); font-size: var(--adze-text-sm);
+    line-height: var(--adze-leading-normal);
+    -webkit-font-smoothing: antialiased;
+}
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); max-width: 1100px; margin: 0 auto; }
+.panel { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); padding: var(--adze-space-6); box-shadow: var(--adze-shadow-sm); }
+.panel > h3 { margin: 0 0 var(--adze-space-4); font-size: var(--adze-text-md); font-weight: var(--adze-weight-semibold); }
+.stack { display: flex; flex-direction: column; gap: var(--adze-space-6); }
+.row { display: flex; align-items: center; gap: var(--adze-space-4); flex-wrap: wrap; }
+
+.adze-label { font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); font-weight: var(--adze-weight-medium); line-height: var(--adze-leading-snug); letter-spacing: var(--adze-tracking-label); text-transform: uppercase; color: var(--adze-text-muted); }
+.adze-numeric { font-family: var(--adze-font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+
+/* ProgressBar */
+.adze-progress { display: flex; flex-direction: column; gap: var(--adze-space-2); width: 100%; }
+.adze-progress__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--adze-space-3); }
+.adze-progress__meta { display: flex; align-items: baseline; gap: var(--adze-space-2); margin-left: auto; }
+.adze-progress__detail { font-size: var(--adze-text-xs); color: var(--adze-text-faint); }
+.adze-progress__value { font-size: var(--adze-text-2xs); color: var(--adze-text-muted); }
+.adze-progress__track { position: relative; width: 100%; height: 6px; background: var(--adze-bg-sunken); border-radius: var(--adze-radius-pill); overflow: hidden; }
+.adze-progress--sm .adze-progress__track { height: 4px; }
+.adze-progress__bar { height: 100%; width: 0; background: var(--adze-accent); border-radius: var(--adze-radius-pill); transition: width var(--adze-dur) var(--adze-ease-out); }
+.adze-progress--success .adze-progress__bar { background: var(--adze-success); }
+.adze-progress--indeterminate .adze-progress__bar { width: 40%; transition: none; transform-origin: left center; animation: adze-sweep 1.4s var(--adze-ease-in-out) infinite; }
+
+/* Skeleton */
+.adze-skeleton { display: block; border-radius: var(--adze-radius-sm); background: linear-gradient(90deg, var(--adze-bg-sunken) 25%, color-mix(in srgb, var(--adze-bg-sunken) 60%, var(--adze-surface)) 50%, var(--adze-bg-sunken) 75%); background-size: 200% 100%; animation: adze-shimmer 1.6s linear infinite; }
+.adze-skeleton--text { height: 13px; width: 100%; }
+.adze-skeleton--thumb { height: 48px; width: 48px; border-radius: var(--adze-radius-md); flex: 0 0 auto; }
+.adze-skeleton-rows { display: flex; flex-direction: column; }
+.adze-skeleton-row { display: flex; align-items: center; gap: var(--adze-space-3); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); }
+.adze-skeleton-row:last-child { border-bottom: 0; }
+.adze-skeleton-row__text { display: flex; flex-direction: column; gap: var(--adze-space-2); flex: 1; }
+
+/* Spinner */
+.adze-spinner { display: inline-block; flex: 0 0 auto; border-radius: var(--adze-radius-pill); border: 2px solid color-mix(in srgb, currentColor 20%, transparent); border-top-color: currentColor; animation: adze-spin 0.7s linear infinite; vertical-align: -0.125em; }
+.adze-spinner--sm { width: 12px; height: 12px; border-width: 1.5px; }
+.adze-spinner--md { width: 16px; height: 16px; }
+.adze-spinner--lg { width: 24px; height: 24px; border-width: 3px; }
+.adze-spinner--accent { color: var(--adze-accent); }
+.adze-spinner--muted { color: var(--adze-text-faint); }
+
+/* EmptyState */
+.adze-empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: var(--adze-space-8) var(--adze-space-4); animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both; }
+.adze-empty__icon { display: grid; place-items: center; width: 48px; height: 48px; margin-bottom: var(--adze-space-4); border-radius: var(--adze-radius-pill); background: var(--adze-bg-sunken); color: var(--adze-text-faint); font-size: 22px; }
+.adze-empty--error .adze-empty__icon { background: var(--adze-danger-soft); color: var(--adze-danger); }
+.adze-empty__title { font-size: var(--adze-text-md); font-weight: var(--adze-weight-semibold); margin: 0 0 var(--adze-space-2); }
+.adze-empty__body { font-size: var(--adze-text-sm); color: var(--adze-text-muted); max-width: 40ch; margin: 0; }
+.adze-empty__action { margin-top: var(--adze-space-6); }
+
+/* Button (minimal, for context) */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--adze-space-2); height: var(--adze-control-md); padding: 0 var(--adze-space-4); border: 1px solid transparent; border-radius: var(--adze-radius-md); background: var(--adze-accent); color: var(--adze-accent-text); font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); cursor: pointer; transition: background var(--adze-dur-instant) var(--adze-ease-out), transform var(--adze-dur-fast) var(--adze-ease-out); }
+.btn:hover { background: var(--adze-accent-hover); }
+.btn:active { transform: scale(0.98); }
+.btn--secondary { background: var(--adze-surface); color: var(--adze-text); border-color: var(--adze-border-strong); }
+.btn:focus-visible { outline: none; box-shadow: var(--adze-focus-ring); }
+</style>
+</head>
+<body>
+<div class="grid">
+
+    <div class="panel stack">
+        <h3>ProgressBar</h3>
+
+        <div class="adze-progress" role="progressbar" aria-label="Uploading">
+            <div class="adze-progress__head">
+                <span class="adze-label">Uploading</span>
+                <span class="adze-progress__meta">
+                    <span class="adze-progress__detail">3 of 12</span>
+                    <span class="adze-numeric adze-progress__value" id="pctA">0%</span>
+                </span>
+            </div>
+            <div class="adze-progress__track"><div class="adze-progress__bar" id="barA"></div></div>
+        </div>
+
+        <div class="adze-progress adze-progress--indeterminate" role="progressbar" aria-label="Publishing">
+            <div class="adze-progress__head"><span class="adze-label">Publishing</span></div>
+            <div class="adze-progress__track"><div class="adze-progress__bar"></div></div>
+        </div>
+
+        <div class="adze-progress adze-progress--success">
+            <div class="adze-progress__head">
+                <span class="adze-label">Complete</span>
+                <span class="adze-progress__meta"><span class="adze-numeric adze-progress__value">100%</span></span>
+            </div>
+            <div class="adze-progress__track"><div class="adze-progress__bar" style="width:100%"></div></div>
+        </div>
+
+        <div class="adze-progress adze-progress--sm">
+            <div class="adze-progress__track"><div class="adze-progress__bar" style="width:42%"></div></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Skeleton</h3>
+        <div class="adze-skeleton-rows" role="status" aria-label="Loading">
+            <div class="adze-skeleton-row"><div class="adze-skeleton adze-skeleton--thumb"></div><div class="adze-skeleton-row__text"><div class="adze-skeleton adze-skeleton--text" style="width:42%"></div><div class="adze-skeleton adze-skeleton--text" style="width:24%"></div></div></div>
+            <div class="adze-skeleton-row"><div class="adze-skeleton adze-skeleton--thumb"></div><div class="adze-skeleton-row__text"><div class="adze-skeleton adze-skeleton--text" style="width:56%"></div><div class="adze-skeleton adze-skeleton--text" style="width:19%"></div></div></div>
+            <div class="adze-skeleton-row"><div class="adze-skeleton adze-skeleton--thumb"></div><div class="adze-skeleton-row__text"><div class="adze-skeleton adze-skeleton--text" style="width:34%"></div><div class="adze-skeleton adze-skeleton--text" style="width:28%"></div></div></div>
+        </div>
+    </div>
+
+    <div class="panel stack">
+        <h3>Spinner</h3>
+        <div class="row">
+            <span class="adze-spinner adze-spinner--sm adze-spinner--muted"></span>
+            <span class="adze-spinner adze-spinner--md adze-spinner--accent"></span>
+            <span class="adze-spinner adze-spinner--lg adze-spinner--accent"></span>
+        </div>
+        <div class="row">
+            <button class="btn"><span class="adze-spinner adze-spinner--sm"></span> Saving</button>
+            <button class="btn btn--secondary"><span class="adze-spinner adze-spinner--sm"></span> Checking</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>EmptyState</h3>
+        <div class="adze-empty">
+            <div class="adze-empty__icon" aria-hidden="true"><i class="ph ph-images"></i></div>
+            <h3 class="adze-empty__title">No works yet</h3>
+            <p class="adze-empty__body">Add your first piece and it'll appear on your gallery page.</p>
+            <div class="adze-empty__action"><button class="btn">Add a work</button></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>EmptyState — error</h3>
+        <div class="adze-empty adze-empty--error">
+            <div class="adze-empty__icon" aria-hidden="true"><i class="ph ph-warning"></i></div>
+            <h3 class="adze-empty__title">Couldn't load your works</h3>
+            <p class="adze-empty__body">The connection dropped. Your work is safe.</p>
+            <div class="adze-empty__action"><button class="btn btn--secondary">Try again</button></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Cycle the determinate bar so the easing and the tabular readout are visible.
+(function () {
+    var bar = document.getElementById('barA'), out = document.getElementById('pctA'), v = 0;
+    setInterval(function () {
+        v = v >= 100 ? 0 : Math.min(100, v + Math.random() * 22);
+        bar.style.width = v + '%';
+        out.textContent = Math.round(v) + '%';
+    }, 700);
+})();
+</script>
+</body>
+</html>

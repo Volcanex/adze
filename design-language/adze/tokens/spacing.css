@@ -1,0 +1,85 @@
+/* Adze — spacing, radius and elevation
+ *
+ * The old chrome had no spacing scale at all: `2px 6px`, `4px 10px`,
+ * `5px 11px`, `7px 10px`, `6px 8px` — every value invented at the call site.
+ * That is why nothing lines up. Use these; if a value isn't here, the layout
+ * is asking the wrong question.
+ *
+ * 4px base grid. Every step is a multiple of 4 so that any two components
+ * stacked together agree on their rhythm.
+ */
+
+:root {
+    /* ── Space scale ──────────────────────────────────────────────────── */
+    --adze-space-1:   4px;   /* icon↔label, chip padding-y */
+    --adze-space-2:   8px;   /* inside a control, tight stacks */
+    --adze-space-3:  12px;   /* input padding-x, list row gap */
+    --adze-space-4:  16px;   /* BASE — between fields, card padding */
+    --adze-space-5:  20px;
+    --adze-space-6:  24px;   /* between form groups, card padding (roomy) */
+    --adze-space-8:  32px;   /* between sections */
+    --adze-space-10: 40px;
+    --adze-space-12: 48px;   /* between major page blocks */
+    --adze-space-16: 64px;   /* page top/bottom padding */
+
+    /* ── Control heights ──────────────────────────────────────────────────
+     * Three sizes, shared by every button, input and select so they line up
+     * when placed side by side in a row. */
+    --adze-control-sm: 28px;
+    --adze-control-md: 36px;   /* BASE */
+    --adze-control-lg: 44px;   /* touch target minimum on mobile */
+    /* These three are the canonical values. See the <640px bump below. */
+
+    /* ── Radius ───────────────────────────────────────────────────────────
+     * The old chrome declared --radius:4px then hardcoded 8px 32 times,
+     * 6px 25 times, and 3/2/5/10/12/20 besides. Four values, no more. */
+    --adze-radius-sm:   4px;   /* chips, tags, inline code */
+    --adze-radius-md:   8px;   /* BASE — buttons, inputs, cards */
+    --adze-radius-lg:  12px;   /* modals, panels, images */
+    --adze-radius-pill: 999px; /* tabs, avatars, toggles */
+
+    /* ── Layout widths ────────────────────────────────────────────────── */
+    --adze-width-prose:   68ch;   /* readable text column */
+    --adze-width-form:    560px;  /* single-column form */
+    --adze-width-content: 720px;  /* content admin main column */
+    --adze-width-wide:   1140px;  /* dashboard / multi-column */
+
+    /* ── Elevation ────────────────────────────────────────────────────────
+     * Two-layer shadows (a tight contact shadow plus a soft ambient one).
+     * A single-layer shadow is the main thing that makes a UI read as dated. */
+    --adze-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04),
+                      0 1px 3px rgba(0, 0, 0, 0.06);
+    --adze-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04),
+                      0 8px 20px rgba(0, 0, 0, 0.08);
+    --adze-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04),
+                      0 16px 40px rgba(0, 0, 0, 0.10);
+}
+
+/* ── Touch targets ─────────────────────────────────────────────────────────
+ * Below 640px every interactive control grows to the 44px minimum. The old
+ * admin had 28px-tall buttons on mobile, which is the main reason it was
+ * unpleasant to use on a phone — where artists actually use it.
+ *
+ * Kept here rather than in base.css so it sits directly under the canonical
+ * declarations. Caveat: the design-system manifest compiler flattens @media
+ * blocks last-wins, so the token panel reports these mobile values (36/44/48)
+ * rather than the canonical 28/36/44. The CSS is right; the generated doc is
+ * not. Don't restructure working CSS to satisfy the doc parser — read the
+ * canonical block above. */
+@media (max-width: 640px) {
+    :root {
+        --adze-control-sm: 36px;
+        --adze-control-md: 44px;
+        --adze-control-lg: 48px;
+    }
+}
+
+/* Dark mode needs deeper, tighter shadows — the soft ambient layer is
+ * invisible against a dark background and just muddies the edge. */
+[data-theme="dark"] {
+    --adze-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --adze-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45),
+                      0 8px 24px rgba(0, 0, 0, 0.35);
+    --adze-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5),
+                      0 16px 48px rgba(0, 0, 0, 0.4);
+}

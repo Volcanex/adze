@@ -1,0 +1,20 @@
+/* Adze — font loading
+ *
+ * Inter (variable, 300–700) and JetBrains Mono (400/500/700).
+ *
+ * `display=swap` is deliberate: the admin must render text immediately even
+ * on a slow connection. The fallback stacks in typography.css are metric-
+ * adjacent enough that the swap isn't jarring.
+ *
+ * PERFORMANCE NOTE — worth acting on when the chrome is rebuilt. The current
+ * admin surfaces pull from six separate CDN origins (Google Fonts, unpkg,
+ * jsdelivr, cdnjs) before first paint. Each is a fresh DNS + TLS handshake.
+ * Self-hosting these two families under _shared/vendor/fonts/ and dropping
+ * this @import removes two of those origins outright and is the single
+ * cheapest load-time win available. Until then, the preconnects below matter.
+ *
+ *   <link rel="preconnect" href="https://fonts.googleapis.com">
+ *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap');

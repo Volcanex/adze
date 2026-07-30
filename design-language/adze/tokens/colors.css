@@ -1,0 +1,130 @@
+/* Adze — colour tokens
+ *
+ * Two layers, and the distinction is the whole architecture:
+ *
+ *   1. The ARTIST CONTRACT (--adze-artist-*) — six variables an artist may
+ *      set on their own content admin. Nothing else is themeable.
+ *   2. The SYSTEM TOKENS (--adze-*) — what components actually consume.
+ *      Each falls back to an Adze default when the artist sets nothing.
+ *
+ * Components must only ever read system tokens. Never read an --adze-artist-*
+ * variable directly and never hardcode a hex value: that is what breaks the
+ * override, and it breaks silently on one artist's admin only.
+ *
+ * Derived values use color-mix() against the accent/text so that an artist
+ * supplying six colours still gets tints, hovers and focus rings for free.
+ */
+
+:root {
+    /* ── Artist contract defaults (light) ─────────────────────────────── */
+    --adze-bg:              var(--adze-artist-bg,           #fbfbfd);
+    --adze-surface:         var(--adze-artist-surface,      #ffffff);
+    --adze-text:            var(--adze-artist-text,         #1d1d1f);
+    --adze-accent:          var(--adze-artist-accent,       #1c4f82);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #ffffff);
+    --adze-border:          var(--adze-artist-border,       #e3e3e8);
+
+    /* ── Derived surfaces ─────────────────────────────────────────────── */
+    --adze-bg-sunken:       color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover:   color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong:   color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+
+    /* ── Derived text ─────────────────────────────────────────────────── */
+    --adze-text-muted:      color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint:      color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-text-on-accent:  var(--adze-accent-text);
+
+    /* ── Derived accent ───────────────────────────────────────────────── */
+    --adze-accent-hover:    color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft:     color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line:     color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+
+    /* ── Status ───────────────────────────────────────────────────────────
+     * Not artist-overridable. Status must mean the same thing on every
+     * admin — an artist whose accent is red should not get a red "saved". */
+    --adze-success:         #1a8a52;
+    --adze-success-soft:    color-mix(in srgb, #1a8a52 12%, var(--adze-surface));
+    --adze-warn:            #a86b00;
+    --adze-warn-soft:       color-mix(in srgb, #a86b00 12%, var(--adze-surface));
+    --adze-danger:          #c8362a;
+    --adze-danger-soft:     color-mix(in srgb, #c8362a 12%, var(--adze-surface));
+
+    /* ── Focus ────────────────────────────────────────────────────────────
+     * One ring, everywhere, always visible. See guidelines/color-focus.html */
+    --adze-focus-ring:      0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+}
+
+/* ── Scoped themes — .adze-theme ───────────────────────────────────────────
+ * IMPORTANT, and not obvious: custom properties resolve where they are
+ * DECLARED, not where they are used. Every derived token above is declared on
+ * :root, so it re-derives only when the six contract vars are set on :root
+ * too. That is the normal case — the shell's applyTheme() writes them to
+ * document.documentElement, the same element, so overriding works.
+ *
+ * It does NOT work if you set the contract vars on a nested element: the
+ * derived tokens keep resolving against :root's values and you get, say, a
+ * light-grey sunken surface inside a dark artist theme.
+ *
+ * Put `.adze-theme` on any element that carries its own contract vars and the
+ * derivations are recomputed at that scope. Needed for:
+ *   - a live theme preview in the dashboard (several artists on one page)
+ *   - the specimen cards in guidelines/
+ *   - any same-document embed of another artist's admin
+ *
+ * Keep this list in exact sync with the :root blocks above — BOTH the contract
+ * mapping and the derivations. Missing the contract mapping is a silent
+ * failure: the scoped element inherits :root's already-resolved --adze-bg and
+ * the theme simply doesn't apply, with no error anywhere. */
+.adze-theme {
+    /* Re-map the contract at this scope. Without these six lines the element
+     * inherits :root's resolved values and setting --adze-artist-* does
+     * nothing at all. */
+    --adze-bg:              var(--adze-artist-bg,           #fbfbfd);
+    --adze-surface:         var(--adze-artist-surface,      #ffffff);
+    --adze-text:            var(--adze-artist-text,         #1d1d1f);
+    --adze-accent:          var(--adze-artist-accent,       #1c4f82);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #ffffff);
+    --adze-border:          var(--adze-artist-border,       #e3e3e8);
+
+    --adze-bg-sunken:       color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover:   color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong:   color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+
+    --adze-text-muted:      color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint:      color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-text-on-accent:  var(--adze-accent-text);
+
+    --adze-accent-hover:    color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft:     color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line:     color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+
+    /* Status hues stay fixed, but their soft backgrounds must re-derive
+     * against the scoped surface or a green chip sits on a light plate
+     * inside a dark admin. */
+    --adze-success-soft:    color-mix(in srgb, var(--adze-success) 12%, var(--adze-surface));
+    --adze-warn-soft:       color-mix(in srgb, var(--adze-warn) 12%, var(--adze-surface));
+    --adze-danger-soft:     color-mix(in srgb, var(--adze-danger) 12%, var(--adze-surface));
+
+    --adze-focus-ring:      0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+
+    background: var(--adze-bg);
+    color: var(--adze-text);
+}
+
+/* ── Dark ──────────────────────────────────────────────────────────────────
+ * Artists may supply a dark palette by setting the contract vars inside their
+ * own [data-theme="dark"] block. These are the Adze fallbacks. Because every
+ * derived token above is a color-mix against bg/text/accent, the derivations
+ * invert correctly on their own — only the six roots need restating. */
+[data-theme="dark"] {
+    --adze-bg:              var(--adze-artist-bg,           #131316);
+    --adze-surface:         var(--adze-artist-surface,      #1c1c20);
+    --adze-text:            var(--adze-artist-text,         #f0f0f2);
+    --adze-accent:          var(--adze-artist-accent,       #99cdff);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #131316);
+    --adze-border:          var(--adze-artist-border,       #2e2e34);
+
+    --adze-success:         #4fc084;
+    --adze-warn:            #e0b055;
+    --adze-danger:          #f0685c;
+}
