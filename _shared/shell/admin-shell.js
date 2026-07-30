@@ -45,11 +45,17 @@ window.AdminShell = (function () {
     async function submit() {
       const r = await fetch(PREFIX + '/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: who.value.trim(), password: pw.value }),
+        body: JSON.stringify({ identifier: who.value.trim(), password: pw.value.trim() }),
       });
-      if (r.ok) boot();
-      else err.textContent = who.value.trim()
-        ? 'That name and password don’t match.' : 'Wrong password.';
+      if (r.ok) { boot(); return; }
+      if (r.status === 429) {
+        err.textContent = 'Too many attempts just now. Wait a minute and try again.';
+      } else if (r.status >= 500) {
+        err.textContent = 'Something broke at our end — not your password.';
+      } else {
+        err.textContent = who.value.trim()
+          ? 'That name and password don’t match.' : 'Wrong password.';
+      }
     }
     btn.onclick = () => withBusy(btn, submit);
     [who, pw].forEach(i => i.addEventListener(

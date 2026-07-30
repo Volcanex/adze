@@ -59,11 +59,21 @@
     async function submit() {
       const r = await fetch(PREFIX + '/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: who.value.trim(), password: pw.value }),
+        // Trailing whitespace off a paste is not a wrong password.
+        body: JSON.stringify({ identifier: who.value.trim(), password: pw.value.trim() }),
       });
-      if (r.ok) boot();
-      else err.textContent = who.value.trim()
-        ? 'That name and password don’t match.' : 'Wrong password.';
+      if (r.ok) { boot(); return; }
+      // Don't report every failure as bad credentials -- a rate limit worded
+      // as "wrong password" sends people off resetting a password that was
+      // fine, which is exactly the wrong thing to do while locked out.
+      if (r.status === 429) {
+        err.textContent = 'Too many attempts just now. Wait a minute and try again.';
+      } else if (r.status >= 500) {
+        err.textContent = 'Something broke at our end — not your password. Try again shortly.';
+      } else {
+        err.textContent = who.value.trim()
+          ? 'That name and password don’t match.' : 'Wrong password.';
+      }
     }
     btn.onclick = () => withBusy(btn, submit);
     [who, pw].forEach(i => i.addEventListener(
