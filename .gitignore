@@ -46,3 +46,6 @@ output/
 # Temp files
 *.tmp
 .DS_Store
+
+# Agent worktrees — full repo copies, never committed
+.claude/worktrees/
