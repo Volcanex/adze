@@ -73,7 +73,15 @@ class BlogFlaskServer:
         self._register_artist_admin_api()
 
         # Register per-artist feature blueprints
-        self._register_artist_features()
+        content_panels = self._register_artist_features()
+
+        # The artist landing page at theirdomain.com/admin. Must come after the
+        # features so it receives the completed domain -> content-panel map.
+        try:
+            import landing
+            landing.register(self.app, content_panels=content_panels)
+        except Exception as e:
+            print(f"Error registering landing page: {e}")
 
         # Auto-register page API endpoints and WebSocket handlers
         self._register_page_apis()
@@ -535,19 +543,12 @@ window.addEventListener('pagehide',send);
         if features_parent not in sys.path:
             sys.path.insert(0, features_parent)
 
-        # domain -> panel_url, populated as features are loaded below
+        # domain -> content-admin panel_url, populated as features load below.
+        # /admin itself is owned by landing.py now: it must answer for every
+        # artist, not just the five with a content admin, so the dispatch can't
+        # live in the feature loader. This map is handed over so the landing
+        # page's button knows where to point.
         admin_panel_map = {}
-
-        @self.app.route('/admin')
-        @self.app.route('/admin/')
-        def admin_panel_dispatch():
-            from flask import redirect, request, abort
-            host = request.headers.get('Host', '').split(':')[0]
-            host = host.removeprefix('www.')
-            panel_url = admin_panel_map.get(host)
-            if panel_url:
-                return redirect(panel_url, code=302)
-            abort(404)
 
         registered = []
 
@@ -600,6 +601,8 @@ window.addEventListener('pagehide',send);
 
         if registered:
             print(f"Registered {len(registered)} artist features: {', '.join(registered)}")
+
+        return admin_panel_map
 
         @self.app.route('/test-asset')
         def test_asset():

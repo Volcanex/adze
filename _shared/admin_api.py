@@ -298,12 +298,18 @@ def _scaffold_new_artist(slug):
 @bp.route('/analytics')
 def analytics():
     """Return aggregated analytics for the authenticated artist."""
-    from datetime import datetime, timedelta
-    import time
-
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401, description='Authentication required')
+    return jsonify(analytics_payload(artist_slug))
+
+
+def analytics_payload(artist_slug):
+    """The aggregation, with no request and no auth, so other surfaces (the
+    artist landing page) can serve it under their own guard instead of
+    reimplementing the date maths."""
+    from datetime import datetime, timedelta
+    import time
 
     # Migrate legacy JSON files on first access (no-op if already done)
     migrate_json_to_sqlite(artist_slug)
@@ -329,10 +335,11 @@ def analytics():
     else:
         trend = 'flat'
 
-    return jsonify({
+    return {
         'today':          pv['today_count'],
         'week':           pv['week_count'],
         'month':          month_count,
+        'prev_month':     prev_month_count,
         'trend':          trend,
         'top_pages':      pv['top_pages'],
         'sources':        pv['sources'],
@@ -342,7 +349,7 @@ def analytics():
         'avg_duration':   sess['avg_duration'],
         'total_sessions': sess['total_sessions'],
         'hourly':         pv['hourly_counts'],
-    })
+    }
 
 
 @bp.route('/beacon', methods=['POST'])
@@ -1225,6 +1232,67 @@ def admin_usage():
         })
     result.sort(key=lambda x: x['vibe_sessions'], reverse=True)
     return jsonify({'artists': result})
+
+
+@bp.route('/admin/feedback')
+def admin_feedback():
+    """The artist feedback pool, newest first.
+
+    Deliberately just the endpoint: a panel in the editor is out of scope this
+    round, and half-building a UI now is how it stays half-built. This makes
+    the pool readable with curl from day one.
+    """
+    _require_super_admin()
+    path = Path('data/feedback.jsonl')
+    items = []
+    try:
+        for line in path.read_text(encoding='utf-8').splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                items.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue          # one bad line must not hide the rest
+    except OSError:
+        pass
+    items.sort(key=lambda r: r.get('ts', 0), reverse=True)
+    status = request.args.get('status')
+    if status:
+        items = [r for r in items if r.get('status') == status]
+    return jsonify({'count': len(items), 'items': items})
+
+
+@bp.route('/admin/feedback/<item_id>', methods=['PATCH'])
+def admin_feedback_patch(item_id):
+    """Set an item's status (new/triaged/done). Rewrites the file in place."""
+    _require_super_admin()
+    new_status = ((request.get_json(silent=True) or {}).get('status') or '').strip()
+    if new_status not in ('new', 'triaged', 'done'):
+        return jsonify({'error': 'status must be new, triaged or done'}), 400
+    path = Path('data/feedback.jsonl')
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines()
+    except OSError:
+        return jsonify({'error': 'no feedback yet'}), 404
+    out, found = [], False
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if rec.get('id') == item_id:
+            rec['status'] = new_status
+            rec['seen'] = True
+            found = True
+        out.append(json.dumps(rec, ensure_ascii=False))
+    if not found:
+        return jsonify({'error': 'not found'}), 404
+    path.write_text('\n'.join(out) + '\n', encoding='utf-8')
+    return jsonify({'ok': True, 'id': item_id, 'status': new_status})
 
 
 @bp.route('/admin/status')
