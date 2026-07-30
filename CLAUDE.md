@@ -8,6 +8,8 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 - Recompile a single artist: `python3 compile.py --artist <slug>` (run on host).
 - **On this Hetzner host, `gabriel` is not in the `docker` group**, so docker commands need sudo: `sudo docker restart adze-flask`. The container's PID-1 surfaces on the host `ps` as a root-owned `python3 flask_server.py` — that's normal, not a separate bare-host process. Don't `kill` it from the host; use `sudo docker restart adze-flask`.
 - `restart.sh` in the repo is stale; do **not** use it (no `venv/` exists here either).
+- **`flask_server.py` and `compile.py` are bind-mounted as single FILES**, not directories. Most editors (and every agent file tool) write a new file and rename over the old one, which changes the inode — and a single-file bind mount follows the *inode*, so the container silently keeps running the old code. `sudo docker restart` does **not** fix this. You need `sudo docker compose up -d --force-recreate`. Symptom: your edit is provably in the host file and provably absent from `docker exec adze-flask cat /app/compile.py`. Directory mounts (`_shared/`, `artists/`) are unaffected — only these two files.
+- **`docker restart` does not re-read `.env`.** Environment changes need `sudo docker compose up -d`.
 - Studio admin state lives under `data/` (`hours.json`, `leads.json`, `pinned_order.json`, `todos.json`), bind-mounted via `./data:/app/data` (docker-compose.yml) — so it persists across both `docker restart` and `docker compose down/up`. Each blob is read/written through `_read_studio_json`/`_write_studio_json` in `admin_api.py`; super-admin only.
 
 ## ⚠ Outbound mail is on the wrong domain — KNOWN BROKEN, NEEDS FIXING

@@ -114,7 +114,19 @@ window.addEventListener('pagehide',send);
 })();</script>'''
 
     def _setup_analytics_logging(self):
-        """Register an after_request hook to log page views and inject tracking for artist pages."""
+        """Register an after_request hook to log page views for artist pages.
+
+        Note this hook is nearly dead in production and always was: nginx serves
+        compiled artist pages straight off disk (`try_files $uri $uri/ @api`),
+        so Flask only sees a page request when the file is MISSING. That is why
+        every artist's pageviews table read zero. Counting now happens in the
+        page itself, injected by compile.py (`_inject_analytics`).
+
+        The hook is kept only for the rare page Flask really does serve, and it
+        skips anything already carrying the compile-time beacon — otherwise
+        those pages would count twice, and a silently doubled number is worse
+        than no number because nobody questions it.
+        """
 
         @self.app.after_request
         def log_analytics(response):
@@ -122,14 +134,22 @@ window.addEventListener('pagehide',send);
                 self._log_page_view(response)
             except Exception:
                 pass  # Never break the response for analytics
-            try:
-                self._inject_tracking_script(response)
-            except Exception:
-                pass
             return response
 
-    def _inject_tracking_script(self, response):
-        """Inject a tiny session tracking script into artist HTML pages."""
+    def _self_counting(self, response):
+        """True if this page already counts itself via the compile-time beacon."""
+        try:
+            if 'text/html' not in (response.content_type or ''):
+                return False
+            return '<!--adze-pv-->' in response.get_data(as_text=True)
+        except Exception:
+            return False
+
+    def _unused_inject_tracking_script(self, response):
+        """Retired. Injected a beacon that could not work: it rode this dead
+        hook, and derived the slug from location.pathname.split('/')[2], which
+        on an artist's own domain is a page name, not a slug. Replaced by
+        compile.py's _inject_analytics, which bakes the slug in as a literal."""
         if response.status_code != 200:
             return
         content_type = response.content_type or ''
@@ -150,6 +170,11 @@ window.addEventListener('pagehide',send);
     def _log_page_view(self, response):
         """Log a page view if it matches an artist page request."""
         path = request.path
+
+        # The page counts itself (compile.py's beacon) — counting here too
+        # would double it.
+        if self._self_counting(response):
+            return
 
         # Only log artist pages: /artists/{slug}/...
         if not path.startswith('/artists/'):

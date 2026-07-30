@@ -352,6 +352,64 @@ def analytics_payload(artist_slug):
     }
 
 
+# Kept beside the bot list in flask_server; duplicated deliberately rather than
+# imported, because admin_api must not import the server module.
+_PV_BOTS = ('bot', 'crawl', 'spider', 'slurp', 'wget', 'curl', 'fetch', 'scrape',
+            'headless', 'phantom', 'lighthouse', 'pingdom', 'uptimerobot',
+            'semrush', 'ahref', 'mj12', 'dotbot')
+
+
+@bp.route('/pv', methods=['POST'])
+def pageview():
+    """Record one page view from the compile-time beacon.
+
+    This exists because the old Flask after_request logger could never fire:
+    nginx serves artist pages straight off disk (`try_files $uri $uri/ @api`),
+    so Flask never sees a page load, and every artist's pageviews table sat at
+    zero. The beacon is injected at compile time instead, with the slug baked
+    in as a literal — the old script parsed the slug out of location.pathname,
+    which yields a page name on an artist's own domain.
+
+    Public by necessity (it runs on the artist's public site). Referer and IP
+    are read server-side so the client can't forge them.
+    """
+    import time
+    _rate_limit('pv', 240, 60)
+    data = request.get_json(silent=True) or {}
+    slug = (data.get('slug') or '').strip()
+    path = (data.get('path') or '/')[:300]
+    if not slug or not _valid_slug(slug):
+        return jsonify({'ok': False}), 400
+    if not (Path('artists') / slug / 'config.json').exists():
+        return jsonify({'ok': False}), 404
+
+    ua = (request.headers.get('User-Agent') or '').lower()
+    if any(b in ua for b in _PV_BOTS):
+        return jsonify({'ok': True, 'skipped': 'bot'})
+
+    ref = ''
+    raw_ref = request.headers.get('Referer') or ''
+    if raw_ref:
+        try:
+            from urllib.parse import urlparse
+            ref = urlparse(raw_ref).netloc or ''
+            if ref.startswith('www.'):
+                ref = ref[4:]
+            # A visit from the artist's own site is navigation, not a source.
+            cfg = json.loads((Path('artists') / slug / 'config.json').read_text())
+            own = (cfg.get('domain') or '').replace('https://', '').replace('http://', '')
+            if ref and own and ref.removeprefix('www.') == own.removeprefix('www.'):
+                ref = ''
+        except Exception:
+            ref = ''
+
+    try:
+        insert_pageview(slug, path, int(time.time()), ref, '')
+    except Exception:
+        return jsonify({'ok': False}), 500
+    return jsonify({'ok': True})
+
+
 @bp.route('/beacon', methods=['POST'])
 def beacon():
     """Receive session duration beacons from the tracking script (no auth required)."""

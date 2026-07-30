@@ -19,6 +19,9 @@ data/
 uploads/
 logs/
 artists/*/analytics.json
+# when a site started counting (written by compile.py; runtime state,
+# deliberately NOT in the hand-authored config.json)
+artists/*/.analytics.json
 artists/*/analytics.json.bak
 artists/*/data.db
 artists/*/data.db-shm

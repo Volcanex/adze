@@ -378,6 +378,79 @@ class AdzeCompiler:
         )
         return html.replace('</body>', script_block + '</body>')
 
+    # Marker so the dead Flask-side logger can recognise a page that already
+    # counts itself. Double-counting is worse than zero: nobody questions a
+    # number that merely looks generous.
+    ANALYTICS_MARKER = '<!--adze-pv-->'
+
+    @staticmethod
+    def _stamp_analytics_since(artist_dir):
+        """Record when this site first started counting.
+
+        The landing page needs to tell "nobody visited" apart from "we weren't
+        measuring yet" — without this it would draw a flat line along zero and
+        imply the artist has no audience, which would be a lie.
+
+        Written to a sidecar, NOT config.json. config.json is hand-authored,
+        with compact one-line field definitions that a json.dumps round-trip
+        would explode across 30 artists in a single compile — a huge diff for
+        one integer, and a guaranteed conflict with anyone editing a config at
+        the time.
+        """
+        import time
+        cfg_path = artist_dir / 'config.json'
+        side = artist_dir / '.analytics.json'
+        if side.exists():
+            return
+        try:
+            cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError):
+            return
+        if cfg.get('analytics') is False:
+            return
+        try:
+            side.write_text(json.dumps({'since': int(time.time())}) + '\n',
+                            encoding='utf-8')
+        except OSError:
+            pass
+
+    def _inject_analytics(self, html, artist_slug, artist_config):
+        """Count page views from the page itself.
+
+        The Flask after_request logger this replaces could never fire in
+        production: nginx serves these files straight off disk, so Flask sees
+        nothing. The old injected script had a second bug — it derived the slug
+        from location.pathname.split('/')[2], which is an artist page name on
+        the artist's own domain, not a slug. Both are fixed by baking the slug
+        in here as a literal at compile time.
+
+        Opt out with "analytics": false in the artist's config.
+        """
+        if artist_config.get('analytics') is False:
+            return html
+
+        slug_js = json.dumps(artist_slug)
+        script_block = (
+            self.ANALYTICS_MARKER +
+            '<script>(function(){var s=' + slug_js + ';'
+            # sessionStorage only: no cookies, no identifiers, no PII.
+            'try{fetch("/api/adze/pv",{method:"POST",keepalive:true,'
+            'headers:{"Content-Type":"application/json"},'
+            'body:JSON.stringify({slug:s,path:location.pathname})}).catch(function(){})}'
+            'catch(e){}'
+            'var k="_azs",id=sessionStorage.getItem(k);'
+            'if(!id){id=Math.random().toString(36).slice(2);sessionStorage.setItem(k,id)}'
+            'var pc=parseInt(sessionStorage.getItem("_azp")||"0",10)+1;'
+            'sessionStorage.setItem("_azp",String(pc));'
+            'var t0=Date.now();function send(){var d=Math.round((Date.now()-t0)/1000);'
+            'if(d<1)return;navigator.sendBeacon("/api/adze/beacon",'
+            '"sid="+id+"&slug="+s+"&dur="+d+"&pc="+pc)}'
+            'document.addEventListener("visibilitychange",function(){'
+            'if(document.visibilityState==="hidden")send()});'
+            'window.addEventListener("pagehide",send)})();</script>\n'
+        )
+        return html.replace('</body>', script_block + '</body>')
+
     @staticmethod
     def _hsl_hex(h, s, l):
         """HSL (h 0-360, s/l 0-100) -> #RRGGBB. Mirrors the dashboard's JS
@@ -464,6 +537,7 @@ class AdzeCompiler:
         # Feature injection (opt-in, no-op if not configured)
         full_html = self._inject_image_pipeline(full_html, artist_slug, artist_config, up_prefix)
         full_html = self._inject_loom(full_html, artist_config)
+        full_html = self._inject_analytics(full_html, artist_slug, artist_config)
 
         # Write to output/artists/{slug}/{page}/index.html (matches URL structure)
         out_dir = self.output_dir / 'artists' / artist_slug / page_rel
@@ -533,6 +607,7 @@ class AdzeCompiler:
             return False
 
         print(f"=== Compiling: {artist_slug} ===")
+        self._stamp_analytics_since(artist_dir)
 
         # Copy assets
         asset_count = self.copy_artist_assets(artist_slug)

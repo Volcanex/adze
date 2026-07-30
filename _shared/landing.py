@@ -189,7 +189,14 @@ def _register_one(app, admin, cfg, content_url):
         data = analytics_payload(slug)
         # When measurement started, so the page can tell "nobody came" apart
         # from "we weren't counting" — see the empty states in admin-landing.js.
-        data['analytics_since'] = cfg_now(slug).get('analytics_since')
+        # Sidecar rather than config.json; compile.py writes it (see there for
+        # why it stays out of the hand-authored config).
+        since = None
+        try:
+            since = json.loads((ARTISTS / slug / '.analytics.json').read_text()).get('since')
+        except (OSError, json.JSONDecodeError):
+            pass
+        data['analytics_since'] = since
         return jsonify(data)
 
     @admin.bp.route(f'{prefix}/status', endpoint=f'{slug}_landing_status')
