@@ -31,14 +31,22 @@ override value. This bit twice:
   to satisfy a doc parser is the wrong trade. The canonical block in
   `spacing.css` is the truth.
 
-## Not yet adopted
+## Adoption status
 
-Written 2026-07-30 and **not yet wired into any live surface.** The chrome
-files (`_shared/home.html`, `_shared/admin.html`, `_shared/dashboard.html`)
-and the content-admin shell (`_shared/shell/admin-shell.css`) still carry
-their own inline `:root` blocks. Adopting them is a separate job.
+**Adopted — artist custom admins** (`theirdomain.com/admin`), 2026-07-30.
+`_shared/shell/admin-shell.css` is now tokens-only and the five `content_admin`
+artists run on the six-var palette contract. The tokens are served **live from
+this directory** by `content_admin.py` (`TOKEN_FILES`), so editing a file here
+restyles every artist admin on the next page load — no copy step, nothing to
+keep in sync. `docker-compose.yml` mounts `./design-language` read-only for
+this; before that mount existed the container ran a stale copy from image-build
+time, and token requests 404'd.
 
-Until then, don't assume a token here matches what's on screen.
+**Not adopted — the Adze chrome.** `_shared/home.html`, `_shared/admin.html`
+and `_shared/dashboard.html` still carry their own inline `:root` blocks (four
+independent copies that have already drifted). Deliberately out of scope: the
+dashboard is the editor, a separate surface from the artist admins. Don't
+assume a token here matches what's on screen *there*.
 
 ## The one non-obvious mechanic — `.adze-theme`
 
@@ -85,8 +93,14 @@ contract and is **deliberately dropped** — a custom face invalidates every
 line-height in the type scale, and it fails invisibly on that one artist.
 
 Five artists currently set `admin_theme`: `alfiebruce`, `jackdt`, `lydialott`,
-`mariaslaughter`, `rose`. Three of them still carry a `font` key that this
-system ignores. `guidelines/color-artist-override.html` renders all five.
+`mariaslaughter`, `rose` — all five migrated to the six-key contract on
+2026-07-30, `font` removed from jackdt/rose/alfiebruce.
+`guidelines/color-artist-override.html` renders all five.
+
+**Opaque colours only.** alfiebruce's `border` was `rgba(255,255,255,0.15)`,
+which made every `color-mix()` derived from it semi-transparent too; it is now
+the composited `#262626`. A translucent value in any of the six poisons the
+whole derivation chain silently.
 
 Status colours (`success`/`warn`/`danger`) are not overridable — see the
 comment in `tokens/colors.css`.

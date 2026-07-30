@@ -486,7 +486,7 @@ card('guidelines/color-artist-override.html', 'Colour', 'Artist override',
     demo('mariaslaughter', '--adze-artist-bg:#281800;--adze-artist-surface:#1a1000;--adze-artist-text:#c9a573;--adze-artist-accent:#c9a573;--adze-artist-accent-text:#281800;--adze-artist-border:#4a3318;') +
     demo('rose', '--adze-artist-bg:#ffffff;--adze-artist-surface:#f8f8f8;--adze-artist-text:#000000;--adze-artist-accent:#000000;--adze-artist-accent-text:#ffffff;--adze-artist-border:#e8e8e8;') +
     demo('jackdt', '--adze-artist-bg:#f4f3ee;--adze-artist-surface:#fbfaf6;--adze-artist-text:#0b0d1a;--adze-artist-accent:#1a35ff;--adze-artist-accent-text:#ffffff;--adze-artist-border:#c7c5bd;') +
-    demo('alfiebruce', '--adze-artist-bg:#000000;--adze-artist-surface:#111111;--adze-artist-text:#ffffff;--adze-artist-accent:#ffffff;--adze-artist-accent-text:#000000;--adze-artist-border:rgba(255,255,255,0.15);') + """
+    demo('alfiebruce', '--adze-artist-bg:#000000;--adze-artist-surface:#111111;--adze-artist-text:#ffffff;--adze-artist-accent:#ffffff;--adze-artist-accent-text:#000000;--adze-artist-border:#262626;') + """
     </div>
   </div>
 </div>

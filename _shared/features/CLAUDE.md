@@ -42,8 +42,12 @@ To give an artist a custom admin:
      `config.json` — carry keys the compiler cares about that aren't
      title/description, e.g. `{"hidden": true, "categories": ["portfolio"]}`. This
      is what lets a hand-authored page keep its config when it becomes editable.
-3. Add an `admin_theme` block (CSS vars: `bg`, `surface`, `text`, `accent`,
-   `accentText`, `border`, `font`) to brand the admin.
+3. Add an `admin_theme` block to brand the admin. **Exactly six keys**: `bg`,
+   `surface`, `text`, `accent`, `accentText`, `border`. Opaque colours only —
+   an `rgba()` value poisons every `color-mix()` derivation downstream. There
+   is deliberately **no `font` key**: type belongs to the Adze design language,
+   colour belongs to the artist. See `/adze-content-admin` (the skill) and
+   `design-language/adze/CLAUDE.md` for the full contract.
 4. Write the per-artist Jinja templates named in `page.template` /
    `index_template`, under `artists/<slug>/templates/`. These hold the design;
    the engine fills them with data. Template output **is** the page `content.md`

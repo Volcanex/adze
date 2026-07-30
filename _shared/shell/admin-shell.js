@@ -31,13 +31,94 @@ window.AdminShell = (function () {
     setTimeout(() => { t.className = 'as-toast ' + (kind || ''); }, 2600);
   }
 
+  /* The artist palette contract: six vars, no more. They're set on
+   * documentElement (NOT a nested node) so every color-mix() derivation in
+   * tokens/colors.css recomputes against them — see the .adze-theme note in
+   * design-language/adze/CLAUDE.md for why nesting silently breaks this.
+   *
+   * `font` was in the old contract and is deliberately gone: a custom face
+   * invalidates every line-height in the type scale, and it fails invisibly
+   * on that one artist. Type belongs to Adze; colour belongs to the artist. */
   function applyTheme() {
     const th = SCHEMA.theme || {};
     const r = document.documentElement;
-    const map = { bg: '--as-bg', surface: '--as-surface', text: '--as-text',
-                  accent: '--as-accent', accentText: '--as-accent-text', border: '--as-border' };
+    const map = {
+      bg: '--adze-artist-bg', surface: '--adze-artist-surface',
+      text: '--adze-artist-text', accent: '--adze-artist-accent',
+      accentText: '--adze-artist-accent-text', border: '--adze-artist-border',
+    };
     Object.keys(map).forEach(k => { if (th[k]) r.style.setProperty(map[k], th[k]); });
-    if (th.font) r.style.setProperty('--as-font', th.font);
+  }
+
+  // ── feedback ──────────────────────────────────────────────────────────────
+  // Adze design-language components (components/feedback/*.jsx) as plain DOM.
+
+  /* Omit `tone` to inherit currentColor — required inside a filled button,
+   * where an --adze-accent spinner would be invisible against the accent. */
+  function spinner(size, tone) {
+    return el('span', `adze-spinner adze-spinner--${size || 'sm'}` + (tone ? ` adze-spinner--${tone}` : ''));
+  }
+
+  /* Skeleton rows sized to the real .as-row geometry, so the list doesn't jump
+   * when the data lands. Last line is short — a uniform block reads as a bug. */
+  function skeletonRows(n) {
+    const wrap = el('div', 'adze-skeleton-rows');
+    wrap.setAttribute('role', 'status');
+    wrap.setAttribute('aria-label', 'Loading');
+    for (let i = 0; i < (n || 4); i++) {
+      const row = el('div', 'adze-skeleton-row');
+      const text = el('div', 'adze-skeleton-row__text');
+      const a = el('div', 'adze-skeleton adze-skeleton--text');
+      a.style.width = '48%';
+      const b = el('div', 'adze-skeleton adze-skeleton--text');
+      b.style.width = i === (n || 4) - 1 ? '62%' : '30%';
+      text.append(a, b);
+      row.append(text);
+      wrap.appendChild(row);
+    }
+    return wrap;
+  }
+
+  function emptyState(title, body, action) {
+    const box = el('div', 'adze-empty');
+    box.appendChild(el('div', 'adze-empty__icon', '—'));
+    box.appendChild(el('div', 'adze-empty__title', title));
+    if (body) box.appendChild(el('p', 'adze-empty__body', body));
+    if (action) { const a = el('div', 'adze-empty__action'); a.appendChild(action); box.appendChild(a); }
+    return box;
+  }
+
+  function progressBar(label) {
+    const wrap = el('div', 'adze-progress adze-progress--indeterminate');
+    wrap.setAttribute('role', 'progressbar');
+    wrap.setAttribute('aria-label', label || 'Working');
+    if (label) {
+      const head = el('div', 'adze-progress__head');
+      head.appendChild(el('span', 'adze-label', label));
+      wrap.appendChild(head);
+    }
+    const track = el('div', 'adze-progress__track');
+    track.appendChild(el('div', 'adze-progress__bar'));
+    wrap.appendChild(track);
+    return wrap;
+  }
+
+  /* Wraps an async click so the button can't fire twice. The old code set
+   * `disabled` only after its await resolved, which left a window where a
+   * second click queued a second publish. is-busy sets pointer-events:none
+   * synchronously, before the await. */
+  async function withBusy(btn, fn) {
+    if (btn.classList.contains('is-busy')) return;
+    const label = btn.textContent;
+    btn.classList.add('is-busy');
+    btn.textContent = '';
+    btn.append(spinner('sm'), document.createTextNode(label));
+    try {
+      return await fn();
+    } finally {
+      btn.classList.remove('is-busy');
+      btn.textContent = label;
+    }
   }
 
   // ── login ─────────────────────────────────────────────────────────────────
@@ -55,8 +136,8 @@ window.AdminShell = (function () {
       });
       if (r.ok) boot(); else err.textContent = 'Wrong password.';
     }
-    btn.onclick = submit;
-    pw.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    btn.onclick = () => withBusy(btn, submit);
+    pw.addEventListener('keydown', e => { if (e.key === 'Enter') withBusy(btn, submit); });
     box.append(pw, btn, err);
     root.appendChild(box);
     pw.focus();
@@ -97,13 +178,21 @@ window.AdminShell = (function () {
 
     const foot = el('div', 'as-foot');
     const pub = el('button', 'as-btn', 'Publish changes');
-    pub.onclick = async () => {
-      pub.disabled = true; pub.textContent = 'Publishing…';
-      const r = await api('POST', '/compile');
-      pub.disabled = false; pub.textContent = 'Publish changes';
-      if (r && r.ok) toast('Published to the live site.', 'ok');
-      else toast('Publish failed.', 'err');
-    };
+    /* Publish rebuilds and recompiles the whole site — the one action here
+     * that can take several seconds. It gets a real progress bar, not just a
+     * disabled button, because a frozen screen is what made artists click
+     * Publish twice. */
+    pub.onclick = () => withBusy(pub, async () => {
+      const bar = progressBar('Publishing');
+      foot.insertBefore(bar, foot.firstChild);
+      try {
+        const r = await api('POST', '/compile');
+        if (r && r.ok) toast('Published to the live site.', 'ok');
+        else toast('Publish failed — your changes are still saved.', 'err');
+      } finally {
+        bar.remove();
+      }
+    });
     foot.appendChild(pub);
     if (SCHEMA.handoff) {
       const link = el('a', 'as-advanced', 'Advanced editing →');
@@ -134,11 +223,28 @@ window.AdminShell = (function () {
     bar.appendChild(add);
     main.appendChild(bar);
 
+    /* Skeleton while the fetch is in flight. Previously this was a blank gap
+     * of indeterminate length, which reads as a broken page on a slow phone. */
+    const placeholder = skeletonRows(4);
+    main.appendChild(placeholder);
     const r = await api('GET', '/' + state.type);
+    placeholder.remove();
     if (!r) return;
+    if (!r.ok) {
+      const fail = emptyState('Could not load ' + (tdef.label || state.type),
+                              'Check your connection and try again.');
+      fail.classList.add('adze-empty--error');
+      main.appendChild(fail);
+      return;
+    }
     const items = await r.json();
     const list = el('div', 'as-list');
-    if (!items.length) list.appendChild(el('div', 'as-empty', 'Nothing here yet.'));
+    if (!items.length) {
+      const addBtn = el('button', 'as-btn as-btn-sm', '+ Add the first one');
+      addBtn.onclick = () => renderEdit(null);
+      list.appendChild(emptyState('Nothing here yet',
+        'Anything you add will appear on your site the next time you publish.', addBtn));
+    }
     items.forEach(item => {
       const row = el('div', 'as-row');
       row.appendChild(el('div', 'as-row-title', itemTitle(item, tdef)));
@@ -198,7 +304,7 @@ window.AdminShell = (function () {
 
     const actions = el('div', 'as-actions');
     const save = el('button', 'as-btn', 'Save');
-    save.onclick = async () => {
+    save.onclick = () => withBusy(save, async () => {
       const body = {};
       Object.keys(editors).forEach(name => {
         if (editors[name].def.type === 'image') return;  // server owns images
@@ -212,7 +318,7 @@ window.AdminShell = (function () {
       const saved = await r.json();
       toast('Saved.', 'ok');
       if (!currentId) renderEdit(saved);  // reopen with id so images can be added
-    };
+    });
     actions.appendChild(save);
     main.appendChild(actions);
   }
@@ -249,7 +355,25 @@ window.AdminShell = (function () {
   }
 
   async function boot() {
-    const r = await fetch(PREFIX + '/schema');
+    /* The schema fetch decides the whole UI, so until it lands there is
+     * nothing to draw. A delayed spinner (not a skeleton) is right here: on a
+     * fast connection it never appears at all, which is the point. */
+    const wait = el('div', 'adze-empty');
+    wait.appendChild(spinner('lg', 'muted'));
+    root.appendChild(wait);
+    let r;
+    try {
+      r = await fetch(PREFIX + '/schema');
+    } catch (e) {
+      root.innerHTML = '';
+      const fail = emptyState('Can’t reach your site',
+                              'You appear to be offline. Nothing has been lost — try again in a moment.');
+      fail.classList.add('adze-empty--error');
+      root.appendChild(fail);
+      return;
+    } finally {
+      wait.remove();
+    }
     if (r.status === 401) { renderLogin(); return; }
     SCHEMA = await r.json();
     applyTheme();

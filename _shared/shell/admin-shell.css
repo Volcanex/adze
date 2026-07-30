@@ -1,171 +1,652 @@
-/* admin-shell.css — one theme for every artist admin.
- * Neutral defaults; each artist overrides via CSS vars from config.admin_theme
- * (applied by admin-shell.js applyTheme()). */
-:root {
-  --as-bg: #14140f;
-  --as-surface: #1e1e18;
-  --as-text: #e8e4d8;
-  --as-accent: #c9a573;
-  --as-accent-text: #14140f;
-  --as-border: #3a3a30;
-  --as-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --as-radius: 8px;
+/* admin-shell.css — the artist custom admin, built on the Adze design language.
+ *
+ * This file styles ONLY layout and component shape. Every colour, size,
+ * radius, duration and font comes from design-language/adze/tokens/*.css,
+ * which content_admin.py serves alongside this file. There are no literal
+ * colours here and no invented spacing — if a value isn't a token, it's a
+ * bug. That is what stops this drifting the way the old chrome did.
+ *
+ * ARTIST PALETTE: an artist's `admin_theme` sets six --adze-artist-* vars on
+ * :root via admin-shell.js applyTheme(). Everything else derives. Do not add
+ * a seventh; see design-language/adze/CLAUDE.md "Artist contract".
+ *
+ * CLASS NAMES are the contract with admin-shell.js and field-editors.js
+ * (as-* = shell chrome, af-* = field editors). Don't rename them here without
+ * changing both; the JS builds these strings literally.
+ */
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+#adze-admin-root {
+  max-width: var(--adze-width-content);
+  margin: 0 auto;
+  padding: 0 var(--adze-space-4) var(--adze-space-16);
 }
 
-* { box-sizing: border-box; }
-body {
-  margin: 0; background: var(--as-bg); color: var(--as-text);
-  font-family: var(--as-font); line-height: 1.5;
+.as-main {
+  animation: adze-fade-in var(--adze-dur) var(--adze-ease-out) both;
 }
-#adze-admin-root { max-width: 720px; margin: 0 auto; padding: 0 18px 120px; }
 
-/* header / nav */
+/* ── Header / nav ─────────────────────────────────────────────────────────── */
+
 .as-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 0 16px; border-bottom: 1px solid var(--as-border);
-  position: sticky; top: 0; background: var(--as-bg); z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--adze-space-4);
+  padding: var(--adze-space-5) 0 var(--adze-space-4);
+  border-bottom: 1px solid var(--adze-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--adze-bg);
+  /* The old header was flat against the content when scrolled. A blur plus a
+   * hairline is what reads as "layered" rather than "stuck". */
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
 }
-.as-brand { font-size: 20px; font-weight: 700; }
-.as-nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+
+.as-brand {
+  font-size: var(--adze-text-lg);
+  font-weight: var(--adze-weight-semibold);
+  letter-spacing: var(--adze-tracking-tight);
+}
+
+.as-nav {
+  display: flex;
+  gap: var(--adze-space-2);
+  flex-wrap: wrap;
+  margin: var(--adze-space-5) 0;
+}
+
 .as-tab {
-  border: 1px solid var(--as-border); background: transparent; color: var(--as-text);
-  font: inherit; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+  height: var(--adze-control-sm);
+  padding: 0 var(--adze-space-4);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-pill);
+  background: transparent;
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-sm);
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  transition: var(--adze-transition-color);
 }
-.as-tab.active { background: var(--as-accent); color: var(--as-accent-text); border-color: var(--as-accent); font-weight: 600; }
+.as-tab:hover { background: var(--adze-surface-hover); color: var(--adze-text); }
+.as-tab.active {
+  background: var(--adze-accent);
+  border-color: var(--adze-accent);
+  color: var(--adze-accent-text);
+}
 
-/* list */
-.as-listbar { display: flex; align-items: center; gap: 14px; margin: 24px 0 12px; }
-.as-listbar h2 { margin: 0; font-size: 18px; flex: 1; }
+/* ── List ─────────────────────────────────────────────────────────────────── */
+
+.as-listbar {
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-4);
+  margin: var(--adze-space-6) 0 var(--adze-space-3);
+}
+.as-listbar h2 {
+  margin: 0;
+  flex: 1;
+  font-size: var(--adze-text-lg);
+}
+
 .as-list { display: flex; flex-direction: column; }
+
 .as-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 0; border-bottom: 1px solid var(--as-border);
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-3);
+  padding: var(--adze-space-3) var(--adze-space-2);
+  margin: 0 calc(var(--adze-space-2) * -1);
+  border-bottom: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  transition: var(--adze-transition-color);
 }
-.as-row-title { flex: 1; font-weight: 600; }
-.as-row-actions { display: flex; gap: 12px; }
-.as-empty { color: #8a8a7a; font-style: italic; padding: 20px 0; }
+.as-row:hover { background: var(--adze-surface-hover); }
 
-/* form + fields */
-.as-form { margin: 8px 0 20px; }
-.af-field { margin-bottom: 18px; }
-.af-field > label { display: block; font-size: 11px; letter-spacing: .06em;
-  text-transform: uppercase; color: #b8b3a2; margin-bottom: 6px; }
-.af-req { color: var(--as-accent); }
+.as-row-title {
+  flex: 1;
+  font-weight: var(--adze-weight-medium);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-row-actions {
+  display: flex;
+  gap: var(--adze-space-3);
+  flex: 0 0 auto;
+}
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+
+.as-form { margin: var(--adze-space-2) 0 var(--adze-space-5); }
+
+.af-field { margin-bottom: var(--adze-space-5); }
+
+.af-field > label {
+  display: block;
+  margin-bottom: var(--adze-space-2);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-2xs);
+  letter-spacing: var(--adze-tracking-wide);
+  text-transform: uppercase;
+  color: var(--adze-text-muted);
+}
+
+.af-req { color: var(--adze-accent); }
+
 .af-input {
-  width: 100%; padding: 10px 12px; font: inherit; color: var(--as-text);
-  background: var(--as-surface); border: 1px solid var(--as-border); border-radius: var(--as-radius);
+  width: 100%;
+  min-height: var(--adze-control-md);
+  padding: var(--adze-space-2) var(--adze-space-3);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  transition: var(--adze-transition-color), box-shadow var(--adze-dur-fast) var(--adze-ease-out);
 }
-.af-input:focus { outline: none; border-color: var(--as-accent); }
-.af-textarea { min-height: 96px; resize: vertical; }
-.af-checkrow { display: flex; align-items: center; gap: 8px; }
-.af-check { width: 18px; height: 18px; accent-color: var(--as-accent); }
+.af-input::placeholder { color: var(--adze-text-faint); }
+.af-input:hover { border-color: var(--adze-border-strong); }
+/* The old shell removed the outline and only changed border colour, which
+ * disappears at low contrast. Ring + border, both. */
+.af-input:focus {
+  outline: none;
+  border-color: var(--adze-accent);
+  box-shadow: var(--adze-focus-ring);
+}
+.af-input:disabled {
+  background: var(--adze-bg-sunken);
+  color: var(--adze-text-faint);
+  cursor: not-allowed;
+}
 
-/* select: kill the native chrome, draw our own caret */
+.af-textarea { min-height: 120px; resize: vertical; line-height: var(--adze-leading-normal); }
+
+.af-checkrow { display: flex; align-items: center; gap: var(--adze-space-2); }
+.af-check {
+  width: 18px; height: 18px;
+  accent-color: var(--adze-accent);
+  cursor: pointer;
+}
+
 select.af-input {
-  appearance: none; -webkit-appearance: none; -moz-appearance: none;
-  padding-right: 36px; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23b8b3a2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 13px center;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: var(--adze-space-8);
+  cursor: pointer;
+  /* Caret uses currentColor so it follows the artist's text colour instead of
+   * the hardcoded grey the old shell baked into the data URI. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--adze-space-3) center;
 }
-select.af-input option { background: var(--as-surface); color: var(--as-text); }
-.af-note { font-size: 12px; color: #8a8a7a; font-style: italic; margin-top: 6px; }
+select.af-input option { background: var(--adze-surface); color: var(--adze-text); }
 
-/* tags */
-.af-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-  padding: 6px; background: var(--as-surface); border: 1px solid var(--as-border); border-radius: var(--as-radius); }
-.af-tags .af-input { flex: 1; min-width: 120px; border: none; background: transparent; padding: 4px; }
-.af-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--as-accent);
-  color: var(--as-accent-text); border-radius: 999px; padding: 3px 8px; font-size: 13px; }
-.af-chip button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0; }
+.af-note {
+  margin-top: var(--adze-space-2);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-faint);
+}
 
-/* richtext / images */
-.af-rich { background: var(--as-surface); color: var(--as-text); border-radius: var(--as-radius); }
-.af-gallery { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
-.af-thumb { position: relative; width: 96px; height: 96px; border-radius: var(--as-radius); overflow: hidden; border: 1px solid var(--as-border); }
+/* ── Tags ─────────────────────────────────────────────────────────────────── */
+
+.af-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--adze-space-1);
+  padding: var(--adze-space-1);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+}
+.af-tags:focus-within { border-color: var(--adze-accent); box-shadow: var(--adze-focus-ring); }
+.af-tags .af-input {
+  flex: 1;
+  min-width: 120px;
+  min-height: auto;
+  border: none;
+  background: transparent;
+  padding: var(--adze-space-1);
+}
+.af-tags .af-input:focus { box-shadow: none; }
+
+.af-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--adze-space-1);
+  padding: 2px var(--adze-space-2);
+  background: var(--adze-accent-soft);
+  color: var(--adze-accent);
+  border: 1px solid var(--adze-accent-line);
+  border-radius: var(--adze-radius-sm);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-xs);
+}
+.af-chip button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--adze-dur-instant) var(--adze-ease-out);
+}
+.af-chip button:hover { opacity: 1; }
+
+/* ── Rich text / images ───────────────────────────────────────────────────── */
+
+.af-rich {
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border-radius: var(--adze-radius-md);
+}
+
+.af-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--adze-space-2);
+  margin-bottom: var(--adze-space-2);
+}
+
+.af-thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  overflow: hidden;
+  background: var(--adze-bg-sunken);
+}
 .af-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.af-thumb button { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px;
-  border: none; border-radius: 50%; background: rgba(0,0,0,.65); color: #fff; cursor: pointer; }
-.af-file { display: block; font: inherit; color: #8a8a7a; }
-.af-file::file-selector-button {
-  font: inherit; font-weight: 600; margin-right: 12px; cursor: pointer;
-  padding: 8px 16px; border-radius: var(--as-radius);
-  border: 1px solid var(--as-accent); background: var(--as-accent); color: var(--as-accent-text);
+.af-thumb button {
+  position: absolute;
+  top: var(--adze-space-1);
+  right: var(--adze-space-1);
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: var(--adze-radius-pill);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--adze-dur-fast) var(--adze-ease-out);
 }
-.af-file::file-selector-button:hover { opacity: .9; }
+.af-thumb:hover button,
+.af-thumb button:focus-visible { opacity: 1; }
 
-/* buttons / footer */
-.as-btn { border: 1px solid var(--as-accent); background: var(--as-accent); color: var(--as-accent-text);
-  font: inherit; font-weight: 600; padding: 10px 22px; border-radius: var(--as-radius); cursor: pointer; }
-.as-btn:hover { opacity: .9; }
-.as-btn:disabled { opacity: .4; cursor: default; }
-.as-btn-sm { padding: 6px 14px; font-size: 13px; }
-.as-actions { display: flex; gap: 12px; margin: 4px 0 16px; }
-.as-link { background: none; border: none; color: var(--as-accent); font: inherit; cursor: pointer; padding: 0; text-decoration: none; }
-.as-link:hover { text-decoration: underline; }
-.as-danger { color: #e06a5a; }
-.as-foot { position: fixed; bottom: 0; left: 0; right: 0; background: var(--as-surface);
-  border-top: 1px solid var(--as-border); padding: 14px 18px; display: flex; align-items: center;
-  justify-content: space-between; gap: 16px; }
-.as-foot > * { max-width: 720px; }
-.as-advanced { font-size: 12px; color: #8a8a7a; text-decoration: none; }
-.as-advanced:hover { color: var(--as-accent); }
+.af-file { display: block; font-size: var(--adze-text-sm); color: var(--adze-text-muted); }
+.af-file::file-selector-button {
+  height: var(--adze-control-sm);
+  margin-right: var(--adze-space-3);
+  padding: 0 var(--adze-space-4);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  font: inherit;
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  transition: var(--adze-transition-color);
+}
+.af-file::file-selector-button:hover {
+  background: var(--adze-surface-hover);
+  border-color: var(--adze-border-strong);
+}
 
-/* login */
-.as-login { max-width: 320px; margin: 80px auto; text-align: center; }
-.as-login h1 { font-size: 22px; margin-bottom: 20px; }
-.as-login .af-input { margin-bottom: 14px; text-align: center; }
-.as-err { color: #e06a5a; font-size: 13px; min-height: 18px; margin-top: 10px; }
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
 
-/* toast */
-.as-toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: var(--as-surface); border: 1px solid var(--as-border); color: var(--as-text);
-  padding: 10px 18px; border-radius: var(--as-radius); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; }
+.as-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--adze-space-2);
+  height: var(--adze-control-md);
+  padding: 0 var(--adze-space-5);
+  border: 1px solid var(--adze-accent);
+  border-radius: var(--adze-radius-md);
+  background: var(--adze-accent);
+  color: var(--adze-accent-text);
+  font-size: var(--adze-text-sm);
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--adze-transition-color), transform var(--adze-dur-instant) var(--adze-ease-out);
+}
+.as-btn:hover:not(:disabled) { background: var(--adze-accent-hover); border-color: var(--adze-accent-hover); }
+.as-btn:active:not(:disabled) { transform: translateY(1px); }
+.as-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.as-btn-sm { height: var(--adze-control-sm); padding: 0 var(--adze-space-3); font-size: var(--adze-text-xs); }
+
+/* Secondary button — the old shell had only one button style, so "Cancel"
+ * shouted as loudly as "Publish". */
+.as-btn.as-btn-quiet {
+  background: var(--adze-surface);
+  border-color: var(--adze-border);
+  color: var(--adze-text);
+}
+.as-btn.as-btn-quiet:hover:not(:disabled) {
+  background: var(--adze-surface-hover);
+  border-color: var(--adze-border-strong);
+}
+
+/* Busy state: the spinner is injected by admin-shell.js. pointer-events:none
+ * is what actually prevents a double-publish — the old code set `disabled`
+ * only after its await had resolved. */
+.as-btn.is-busy { pointer-events: none; opacity: 0.75; }
+
+.as-actions { display: flex; gap: var(--adze-space-3); margin: var(--adze-space-1) 0 var(--adze-space-4); }
+
+.as-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--adze-accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--adze-transition-color);
+}
+.as-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.as-danger { color: var(--adze-danger); }
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.as-foot {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--adze-space-4);
+  /* The bar spans the viewport, but its CONTENTS must line up with the
+   * centred content column — otherwise Publish floats out at the window edge
+   * with nothing above it. The old `max-width` on the children didn't do this;
+   * it constrained their width without positioning them.
+   *
+   * The padding resolves to whatever gutter centres a --adze-width-content
+   * column, or the normal page padding on narrow screens, whichever is larger.
+   * Pure CSS, so the JS can keep appending children directly. */
+  padding-block: var(--adze-space-3);
+  padding-inline: max(
+    var(--adze-space-4),
+    calc((100% - var(--adze-width-content)) / 2)
+  );
+  background: var(--adze-surface);
+  border-top: 1px solid var(--adze-border);
+  box-shadow: var(--adze-shadow-md);
+}
+
+/* The publish progress bar takes its own full-width row above the buttons.
+ * Sharing the row squashes "Advanced editing" onto two lines. */
+.as-foot .adze-progress { flex: 1 1 100%; order: -1; }
+
+.as-advanced {
+  font-size: var(--adze-text-xs);
+  white-space: nowrap;
+  color: var(--adze-text-faint);
+  text-decoration: none;
+  transition: var(--adze-transition-color);
+}
+.as-advanced:hover { color: var(--adze-accent); }
+
+/* ── Login ────────────────────────────────────────────────────────────────── */
+
+.as-login {
+  max-width: 320px;
+  margin: var(--adze-space-16) auto;
+  text-align: center;
+  animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both;
+}
+.as-login h1 { font-size: var(--adze-text-xl); margin-bottom: var(--adze-space-5); }
+.as-login .af-input { margin-bottom: var(--adze-space-3); text-align: center; }
+.as-login .as-btn { width: 100%; }
+
+.as-err {
+  min-height: 18px;
+  margin-top: var(--adze-space-3);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-danger);
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+
+.as-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-2);
+  padding: var(--adze-space-2) var(--adze-space-4);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  box-shadow: var(--adze-shadow-lg);
+  font-size: var(--adze-text-sm);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+  transition: opacity var(--adze-dur) var(--adze-ease-out),
+              transform var(--adze-dur) var(--adze-ease-out);
+}
 .as-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.as-toast.ok { border-color: #5aa86a; }
-.as-toast.err { border-color: #e06a5a; }
+.as-toast.ok  { border-color: var(--adze-success); background: var(--adze-success-soft); color: var(--adze-success); }
+.as-toast.err { border-color: var(--adze-danger);  background: var(--adze-danger-soft);  color: var(--adze-danger); }
 
-/* modal (account / change password) */
-.as-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: center; z-index: 60; padding: 18px; }
-.as-modal { background: var(--as-surface); border: 1px solid var(--as-border);
-  border-radius: var(--as-radius); padding: 24px; width: 100%; max-width: 360px; }
-.as-modal h2 { margin: 0 0 18px; font-size: 18px; }
+/* ── Modal ────────────────────────────────────────────────────────────────── */
 
-/* ── vendor editors re-themed to the admin palette ──────────────────────────
- * EasyMDE (markdown) and Quill (richtext) ship light themes; without this they
- * render as white boxes inside the dark shell. Overrides scoped to their
- * containers so the vendored CSS stays untouched. */
+.as-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--adze-space-4);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: adze-fade-in var(--adze-dur-fast) var(--adze-ease-out) both;
+}
+
+.as-modal {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--adze-space-6);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-lg);
+  animation: adze-scale-in var(--adze-dur) var(--adze-ease-out) both;
+}
+.as-modal h2 { margin: 0 0 var(--adze-space-5); font-size: var(--adze-text-lg); }
+
+/* ── Feedback ─────────────────────────────────────────────────────────────────
+ * Ported from design-language/adze/components/feedback/*.jsx so class names and
+ * behaviour match the design system exactly. The old shell had no loading
+ * states at all: every fetch was a frozen screen. */
+
+.adze-progress { display: flex; flex-direction: column; gap: var(--adze-space-2); width: 100%; }
+.adze-progress__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--adze-space-3);
+}
+.adze-progress__meta { display: flex; align-items: baseline; gap: var(--adze-space-2); margin-left: auto; }
+.adze-progress__detail { font-size: var(--adze-text-xs); color: var(--adze-text-faint); }
+.adze-progress__value { font-size: var(--adze-text-2xs); color: var(--adze-text-muted); }
+.adze-progress__track {
+  position: relative; width: 100%; height: 6px;
+  background: var(--adze-bg-sunken);
+  border-radius: var(--adze-radius-pill);
+  overflow: hidden;
+}
+.adze-progress--sm .adze-progress__track { height: 4px; }
+.adze-progress__bar {
+  height: 100%; width: 0;
+  background: var(--adze-accent);
+  border-radius: var(--adze-radius-pill);
+  /* Width, not transform — a transform-scaled bar distorts the rounded cap. */
+  transition: width var(--adze-dur) var(--adze-ease-out);
+}
+.adze-progress--success .adze-progress__bar { background: var(--adze-success); }
+.adze-progress--danger  .adze-progress__bar { background: var(--adze-danger); }
+.adze-progress--indeterminate .adze-progress__bar {
+  width: 40%; transition: none; transform-origin: left center;
+  animation: adze-sweep 1.4s var(--adze-ease-in-out) infinite;
+}
+
+.adze-spinner {
+  display: inline-block; flex: 0 0 auto;
+  border-radius: var(--adze-radius-pill);
+  /* 3/4 arc, not a full ring — the gap is what makes rotation legible. */
+  border: 2px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-top-color: currentColor;
+  animation: adze-spin 0.7s linear infinite;
+  vertical-align: -0.125em;
+}
+.adze-spinner--sm { width: 12px; height: 12px; border-width: 1.5px; }
+.adze-spinner--md { width: 16px; height: 16px; }
+.adze-spinner--lg { width: 24px; height: 24px; border-width: 3px; }
+.adze-spinner--accent { color: var(--adze-accent); }
+.adze-spinner--muted  { color: var(--adze-text-faint); }
+.adze-spinner--delayed {
+  animation: adze-spin 0.7s linear infinite, adze-fade-in 1ms linear forwards;
+  opacity: 0;
+}
+
+.adze-skeleton {
+  display: block;
+  border-radius: var(--adze-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--adze-bg-sunken) 25%,
+    color-mix(in srgb, var(--adze-bg-sunken) 60%, var(--adze-surface)) 50%,
+    var(--adze-bg-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: adze-shimmer 1.6s linear infinite;
+}
+.adze-skeleton--text   { height: 13px; width: 100%; }
+.adze-skeleton--title  { height: 22px; width: 40%; }
+.adze-skeleton--block  { height: 120px; width: 100%; border-radius: var(--adze-radius-md); }
+.adze-skeleton--circle { height: 36px; width: 36px; border-radius: var(--adze-radius-pill); }
+.adze-skeleton--thumb  { height: 48px; width: 48px; border-radius: var(--adze-radius-md); flex: 0 0 auto; }
+.adze-skeleton-stack { display: flex; flex-direction: column; gap: var(--adze-space-2); }
+.adze-skeleton-rows { display: flex; flex-direction: column; }
+.adze-skeleton-row {
+  display: flex; align-items: center; gap: var(--adze-space-3);
+  padding: var(--adze-space-3) 0;
+  border-bottom: 1px solid var(--adze-border);
+}
+.adze-skeleton-row__text { display: flex; flex-direction: column; gap: var(--adze-space-2); flex: 1; }
+
+/* .as-empty is the legacy hook the JS still emits; .adze-empty is the design
+ * system name. Both render the same so either call site is correct. */
+.adze-empty, .as-empty {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: var(--adze-space-12) var(--adze-space-6);
+  color: var(--adze-text-muted);
+  font-style: normal;
+  animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both;
+}
+.adze-empty__icon {
+  display: grid; place-items: center;
+  width: 48px; height: 48px;
+  margin-bottom: var(--adze-space-4);
+  border-radius: var(--adze-radius-pill);
+  background: var(--adze-bg-sunken);
+  color: var(--adze-text-faint);
+  font-size: 22px;
+}
+.adze-empty--error .adze-empty__icon { background: var(--adze-danger-soft); color: var(--adze-danger); }
+.adze-empty__title {
+  font-size: var(--adze-text-md);
+  font-weight: var(--adze-weight-semibold);
+  color: var(--adze-text);
+  margin-bottom: var(--adze-space-2);
+}
+.adze-empty__body { font-size: var(--adze-text-sm); color: var(--adze-text-muted); max-width: 42ch; margin-bottom: 0; }
+.adze-empty__action { margin-top: var(--adze-space-6); }
+
+/* ── Vendor editors ───────────────────────────────────────────────────────────
+ * EasyMDE (markdown) and Quill (richtext) ship light themes. Without these
+ * overrides they render as foreign white boxes inside any artist palette that
+ * isn't near-white. Scoped to their own containers so the vendored CSS stays
+ * untouched and upgradeable. */
+
 .EasyMDEContainer .CodeMirror {
-  background: var(--as-surface); color: var(--as-text);
-  border-color: var(--as-border); border-radius: 0 0 var(--as-radius) var(--as-radius); }
-.EasyMDEContainer .CodeMirror-cursor { border-color: var(--as-text); }
+  background: var(--adze-surface); color: var(--adze-text);
+  border-color: var(--adze-border);
+  border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-sm);
+}
+.EasyMDEContainer .CodeMirror-cursor { border-color: var(--adze-text); }
 .EasyMDEContainer .editor-toolbar {
-  background: var(--as-surface); border-color: var(--as-border);
-  border-radius: var(--as-radius) var(--as-radius) 0 0; opacity: 1; }
-.EasyMDEContainer .editor-toolbar button { color: var(--as-text) !important; border-color: transparent; }
+  background: var(--adze-surface); border-color: var(--adze-border);
+  border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0; opacity: 1;
+}
+.EasyMDEContainer .editor-toolbar button { color: var(--adze-text) !important; border-color: transparent; }
 .EasyMDEContainer .editor-toolbar button:hover,
 .EasyMDEContainer .editor-toolbar button.active {
-  background: var(--as-border); border-color: var(--as-border); }
-.EasyMDEContainer .editor-toolbar i.separator { border-color: var(--as-border); }
-.EasyMDEContainer .editor-preview, .EasyMDEContainer .editor-preview-side {
-  background: var(--as-bg); color: var(--as-text); }
+  background: var(--adze-bg-sunken); border-color: var(--adze-border);
+}
+.EasyMDEContainer .editor-toolbar i.separator { border-color: var(--adze-border); }
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side { background: var(--adze-bg); color: var(--adze-text); }
 
 .ql-toolbar.ql-snow {
-  background: var(--as-surface); border-color: var(--as-border);
-  border-radius: var(--as-radius) var(--as-radius) 0 0; }
-.ql-container.ql-snow { border-color: var(--as-border);
-  border-radius: 0 0 var(--as-radius) var(--as-radius); }
-.af-rich .ql-editor { color: var(--as-text); min-height: 140px; }
-.af-rich .ql-editor.ql-blank::before { color: #8a8a7a; font-style: italic; }
-.ql-snow .ql-stroke { stroke: var(--as-text); }
-.ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--as-text); }
-.ql-snow .ql-picker { color: var(--as-text); }
+  background: var(--adze-surface); border-color: var(--adze-border);
+  border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0;
+}
+.ql-container.ql-snow {
+  border-color: var(--adze-border);
+  border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md);
+  font-family: var(--adze-font-ui);
+  font-size: var(--adze-text-sm);
+}
+.af-rich .ql-editor { color: var(--adze-text); min-height: 140px; }
+.af-rich .ql-editor.ql-blank::before { color: var(--adze-text-faint); font-style: normal; }
+.ql-snow .ql-stroke { stroke: var(--adze-text); }
+.ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--adze-text); }
+.ql-snow .ql-picker { color: var(--adze-text); }
 .ql-snow.ql-toolbar button:hover .ql-stroke,
-.ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: var(--as-accent); }
+.ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: var(--adze-accent); }
 .ql-snow.ql-toolbar button:hover .ql-fill,
-.ql-snow.ql-toolbar button.ql-active .ql-fill { fill: var(--as-accent); }
-.ql-snow .ql-picker-options { background: var(--as-surface); border-color: var(--as-border); }
-.ql-snow .ql-tooltip { background: var(--as-surface); border-color: var(--as-border);
-  color: var(--as-text); box-shadow: none; }
+.ql-snow.ql-toolbar button.ql-active .ql-fill { fill: var(--adze-accent); }
+.ql-snow .ql-picker-options { background: var(--adze-surface); border-color: var(--adze-border); }
+.ql-snow .ql-tooltip {
+  background: var(--adze-surface); border-color: var(--adze-border);
+  color: var(--adze-text); box-shadow: var(--adze-shadow-md);
+}
 .ql-snow .ql-tooltip input[type=text] {
-  background: var(--as-bg); border-color: var(--as-border); color: var(--as-text); }
+  background: var(--adze-bg); border-color: var(--adze-border); color: var(--adze-text);
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────────
+ * The control-height tokens already grow to 44px below 640px (spacing.css).
+ * These are the layout changes that don't follow from that. */
+@media (max-width: 640px) {
+  #adze-admin-root { padding: 0 var(--adze-space-3) 140px; }
+  .as-listbar { flex-wrap: wrap; }
+  .as-foot {
+    flex-direction: column; align-items: stretch; gap: var(--adze-space-2);
+    padding-inline: var(--adze-space-3);
+  }
+  .as-foot .as-actions { margin: 0; }
+  .as-foot .as-btn { flex: 1; }
+}

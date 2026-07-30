@@ -61,8 +61,7 @@
         "text": "#ffffff",
         "accent": "#ffffff",
         "accentText": "#000000",
-        "border": "rgba(255,255,255,0.15)",
-        "font": "'Helvetica Neue', Helvetica, Arial, sans-serif"
+        "border": "#262626"
     },
     "handover_token": "988EF5j8n36yDxiwYz7-tOJOZ3nSlR5y"
 }

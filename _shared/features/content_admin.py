@@ -66,6 +66,16 @@ except ImportError:
 CONTENT_FILE = 'content.json'
 SHELL_DIR = Path(__file__).resolve().parent.parent / 'shell'     # _shared/shell
 VENDOR_DIR = Path(__file__).resolve().parent.parent / 'vendor'   # _shared/vendor
+
+# The Adze design language, served straight from its source tree rather than
+# copied here. A second copy would drift; this way editing design-language/
+# restyles every artist admin at once. Order matters — it is a cascade.
+# fonts.css is deliberately NOT served: it @imports Google Fonts, which is
+# render-blocking and serial inside a linked sheet. The bootstrap <head> uses
+# a <link> + preconnect instead.
+TOKENS_DIR = Path(__file__).resolve().parent.parent.parent / 'design-language' / 'adze' / 'tokens'
+TOKEN_FILES = ['colors.css', 'typography.css', 'spacing.css', 'motion.css', 'base.css']
+
 _IMG_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'}
 
 # Set per-artist inside create_blueprint so flask_server can map /admin -> it.
@@ -310,6 +320,7 @@ def create_blueprint(artist_slug):
         'admin-shell.css': (SHELL_DIR / 'admin-shell.css', 'text/css'),
         'field-editors.js': (SHELL_DIR / 'field-editors.js', 'application/javascript'),
     }
+    _TOKEN_ASSETS = {f'tokens/{n}': (TOKENS_DIR / n, 'text/css') for n in TOKEN_FILES}
     _VENDOR_FILES = {
         'easymde.js':  (VENDOR_DIR / 'easymde.min.js',  'application/javascript'),
         'easymde.css': (VENDOR_DIR / 'easymde.min.css', 'text/css'),
@@ -322,6 +333,8 @@ def create_blueprint(artist_slug):
         entry = _SHELL_FILES.get(name)
         if entry is None and name.startswith('vendor/'):
             entry = _VENDOR_FILES.get(name[len('vendor/'):])
+        if entry is None:
+            entry = _TOKEN_ASSETS.get(name)
         if entry is None:
             return jsonify({'error': 'not found'}), 404
         path, ctype = entry
@@ -510,9 +523,18 @@ _PANEL_BOOTSTRAP = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>{title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{prefix}/asset/vendor/easymde.css">
 <link rel="stylesheet" href="{prefix}/asset/vendor/quill.css">
+<link rel="stylesheet" href="{prefix}/asset/tokens/colors.css">
+<link rel="stylesheet" href="{prefix}/asset/tokens/typography.css">
+<link rel="stylesheet" href="{prefix}/asset/tokens/spacing.css">
+<link rel="stylesheet" href="{prefix}/asset/tokens/motion.css">
+<link rel="stylesheet" href="{prefix}/asset/tokens/base.css">
 <link rel="stylesheet" href="{prefix}/asset/admin-shell.css">
 </head>
 <body>

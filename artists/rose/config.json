@@ -76,8 +76,7 @@
         "text": "#000000",
         "accent": "#000000",
         "accentText": "#ffffff",
-        "border": "#e8e8e8",
-        "font": "'Quasimoda', -apple-system, sans-serif"
+        "border": "#e8e8e8"
     },
     "handover_token": "wW2VrDkKJhwT2FEU9dEULbVNxPCw31Uy",
     "slack_figma_msg_ts": "1782309445.249019"

@@ -11,6 +11,11 @@ services:
       - ./_shared:/app/_shared
       - ./flask_server.py:/app/flask_server.py
       - ./compile.py:/app/compile.py
+      # The Adze design language. content_admin.py serves tokens/*.css straight
+      # from here, so every artist admin restyles when this tree changes. Was
+      # unmounted until 2026-07-30, which meant the container ran a stale copy
+      # baked in at image-build time. Read-only: nothing writes to it at runtime.
+      - ./design-language:/app/design-language:ro
       # Data — persisted on host
       - ./artists:/app/artists
       - ./output:/app/output
