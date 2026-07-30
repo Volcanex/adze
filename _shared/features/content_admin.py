@@ -230,13 +230,15 @@ def make_render(slug, cfg):
             items = content.get(ctype, [])
             if not isinstance(items, list):
                 items = []
+            # Every type publishes its data to a web-served location, whether or
+            # not it also renders a page — a hand-authored page (a homepage
+            # teaser, say) can then fetch the same items the generated page uses
+            # instead of carrying a hand-copied duplicate that goes stale.
+            data_file = _artist_dir(slug) / 'assets' / 'data' / f'{ctype}.json'
+            data_file.parent.mkdir(parents=True, exist_ok=True)
+            data_file.write_text(json.dumps(items, indent=2, ensure_ascii=False),
+                                 encoding='utf-8')
             if mode == 'none':
-                # No page is rendered, but publish the data to a web-served
-                # location so client-side grids can fetch it at runtime.
-                data_file = _artist_dir(slug) / 'assets' / 'data' / f'{ctype}.json'
-                data_file.parent.mkdir(parents=True, exist_ok=True)
-                data_file.write_text(json.dumps(items, indent=2, ensure_ascii=False),
-                                     encoding='utf-8')
                 continue
             parent = _norm_parent(page, ctype)
             label = tdef.get('label', ctype)

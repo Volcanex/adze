@@ -518,6 +518,15 @@ window.addEventListener('pagehide',send);
             else:
                 print(f"Warning: admin_api.py doesn't have a 'bp' blueprint")
 
+            # Account routes (sign-in, resolve, password reset). Separate
+            # blueprint so admin_api.py, already 7000+ lines, doesn't grow.
+            try:
+                import accounts_api
+                self.app.register_blueprint(accounts_api.bp)
+                print("Registered account endpoints on /api/adze/account")
+            except Exception as e:
+                print(f"Error loading account API: {e}")
+
         except Exception as e:
             print(f"Error loading artist admin API: {e}")
 

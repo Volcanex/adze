@@ -2,7 +2,7 @@
     "name": "sandbox",
     "slug": "sandbox",
     "domain": "sandbox.com",
-    "admin_token": "tempPass123",
+    "admin_token": "resetPass456",
     "description": "SANDBOX",
     "contact_email": "",
     "lead": {

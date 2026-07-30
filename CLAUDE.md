@@ -10,6 +10,34 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 - `restart.sh` in the repo is stale; do **not** use it (no `venv/` exists here either).
 - Studio admin state lives under `data/` (`hours.json`, `leads.json`, `pinned_order.json`, `todos.json`), bind-mounted via `./data:/app/data` (docker-compose.yml) — so it persists across both `docker restart` and `docker compose down/up`. Each blob is read/written through `_read_studio_json`/`_write_studio_json` in `admin_api.py`; super-admin only.
 
+## ⚠ Outbound mail is on the wrong domain — KNOWN BROKEN, NEEDS FIXING
+
+Password-reset and artist-feedback email currently sends from
+**`noreply@lastplace.co.uk`**, not `noreply@adze.studio`. Artists resetting an
+Adze password get mail from a Last Place address.
+
+**Why:** Purelymail holds exactly one domain — `lastplace.co.uk`. `adze.studio`
+is not registered there at all (`createUser` → `Unknown domain "adze.studio"`),
+and `PURELYMAIL_API_TOKEN` is an account API token which *cannot* authenticate
+an SMTP session, so a real mailbox is required either way.
+
+**To fix:** add `adze.studio` in the Purelymail UI, set its MX + DKIM records,
+provision `noreply@adze.studio`, then change `ADZE_SMTP_USER` / `ADZE_SMTP_FROM`
+in `.env` and `docker compose up -d`. Nothing in the code needs touching —
+`_shared/mailer.py` is entirely env-driven.
+
+**Also outstanding, and it matters more:** `lastplace.co.uk` has no SPF/DKIM/
+DMARC aimed at Purelymail as far as we know, and deliverability was never
+verified beyond "the SMTP handshake succeeded". Until those records exist,
+**assume reset emails land in spam.** The reset flow warns the recipient about
+this in the mail body *and* on the confirmation screen, because a warning
+inside a mail nobody sees is useless.
+
+**Port gotcha:** this Hetzner host blocks outbound **465, 25 and 2525**; only
+**587** is open. A blocked port presents as a bare connect *timeout*, not a
+refusal, so it looks exactly like a wrong password. `mailer.py` uses STARTTLS on
+587 for this reason — don't "fix" a timeout by rotating credentials.
+
 ## Layout
 - `artists/<slug>/config.json` — `name`, `slug`, `domain`, `admin_token`
   - SEO fields (edited in the dashboard **Presence** tab): `seo` (Person/MusicGroup/Organization site identity → JSON-LD), `robots` (custom robots.txt override). `compile.py` generates per-page meta description + Open Graph/Twitter + JSON-LD (`_build_seo_head`) and writes `sitemap.xml` + `robots.txt` at each site root (`_write_artist_seo_files`). adze.studio's own robots/sitemap/favicon are Flask routes in `admin_api.py` mapped at the site root by `nginx/sites-available/adze.studio`.
@@ -87,5 +115,5 @@ hand-edit between the markers.
 | `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-07-30 08:08 UTC — 13 doc(s) found._
+_Auto-compiled 2026-07-30 09:36 UTC — 13 doc(s) found._
 <!-- DOCS:END -->

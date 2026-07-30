@@ -25,6 +25,7 @@ services:
       - ./uploads:/app/uploads    # admin-uploaded assets (images, files)
       - ./_vibe_sessions:/app/_vibe_sessions  # vibe_agent conversation history
       - ./nginx/sites-available:/app/nginx/sites-available
+      - ./scripts:/app/scripts:ro
       # Lets Auto-Code (sandbox.py/artist_repos.py) create/manage the
       # per-artist adze-terminal-<slug> sandbox containers.
       - /var/run/docker.sock:/var/run/docker.sock
@@ -36,6 +37,15 @@ services:
       - LASTPLACE_SLACK_TOKEN=${LASTPLACE_SLACK_TOKEN}
       - LASTPLACE_SLACK_URL=${LASTPLACE_SLACK_URL}
       - PURELYMAIL_API_TOKEN=${PURELYMAIL_API_TOKEN}
+      # Outbound mail. NOTE: sending from lastplace.co.uk because
+      # adze.studio is not registered in Purelymail -- see CLAUDE.md.
+      - ADZE_SMTP_HOST=${ADZE_SMTP_HOST}
+      - ADZE_SMTP_PORT=${ADZE_SMTP_PORT}
+      - ADZE_SMTP_USER=${ADZE_SMTP_USER}
+      - ADZE_SMTP_PASSWORD=${ADZE_SMTP_PASSWORD}
+      - ADZE_SMTP_FROM=${ADZE_SMTP_FROM}
+      - ADZE_SMTP_REPLY_TO=${ADZE_SMTP_REPLY_TO}
+      - ADZE_FEEDBACK_TO=${ADZE_FEEDBACK_TO}
       - ADZE_ADMIN_BASE_URL=${ADZE_ADMIN_BASE_URL:-https://adze.studio}
       - CERTBOT_EMAIL=${CERTBOT_EMAIL}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
