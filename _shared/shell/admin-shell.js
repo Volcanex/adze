@@ -38,8 +38,8 @@ window.AdminShell = (function () {
     who.type = 'text';
     who.placeholder = 'Your name or email (optional)';
     who.autocomplete = 'username';
-    const pw = el('input', 'af-input');
-    pw.type = 'password'; pw.placeholder = 'Password'; pw.autocomplete = 'current-password';
+    const pwf = window.AdzeUI.passwordField('Password');
+    const pw = pwf.input;
     const err = el('div', 'as-err');
     const btn = el('button', 'as-btn', 'Enter');
     async function submit() {
@@ -60,7 +60,7 @@ window.AdminShell = (function () {
     btn.onclick = () => withBusy(btn, submit);
     [who, pw].forEach(i => i.addEventListener(
       'keydown', e => { if (e.key === 'Enter') withBusy(btn, submit); }));
-    box.append(who, pw, btn, err);
+    box.append(who, pwf.wrap, btn, err);
     root.appendChild(box);
     pw.focus();
   }

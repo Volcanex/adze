@@ -199,8 +199,14 @@ class ArtistAdmin:
             # Password-only: the domain already says which artist this is, so
             # the identifier is optional here. Try the account first so the
             # cookie becomes an opaque session, then fall back to the raw token.
+            # Strip server-side as well as client-side: a stale cached bundle
+            # would otherwise send a pasted trailing space and get told the
+            # password is wrong. Nobody intends whitespace at the end of one.
             password = (data.get('password') or data.get('token') or '').strip()
             identifier = (data.get('identifier') or '').strip()
+
+            if not password:
+                return jsonify({'ok': False, 'error': 'Invalid token'}), 401
             if password:
                 try:
                     import accounts
@@ -220,6 +226,23 @@ class ArtistAdmin:
 
             if password and password == admin.token():
                 return _ok(admin.token())
+
+            # Diagnostic on failure only. Never logs the password itself --
+            # length plus a short digest is enough to tell "wrong password"
+            # from "whitespace/encoding mangled it in transit".
+            try:
+                import hashlib
+                digest = hashlib.sha256(password.encode()).hexdigest()[:8]
+                # flush: stdout is block-buffered in the container, so an
+                # unflushed print never reaches docker logs. Werkzeug's own
+                # request lines go to stderr, which is why they show up and
+                # this did not.
+                print(f'[login] FAIL slug={admin.slug} identifier={identifier!r} '
+                      f'pw_len={len(password)} pw_sha8={digest} '
+                      f'resolved={"yes" if identifier else "(blank)"}',
+                      flush=True)
+            except Exception:
+                pass
             return jsonify({'ok': False, 'error': 'Invalid token'}), 401
 
         @admin.bp.route(f'{admin.prefix}/logout', methods=['POST'])

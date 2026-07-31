@@ -50,6 +50,39 @@ window.AdzeUI = (function () {
     Object.keys(map).forEach(k => { if (th[k]) r.style.setProperty(map[k], th[k]); });
   }
 
+  /* A password input with a show/hide toggle.
+   *
+   * Returns {wrap, input} — append `wrap`, read `input.value`. Both login
+   * screens use this, so the reveal behaves identically in the content admin
+   * and the landing page.
+   *
+   * Worth having beyond convenience: a masked field gives you no way to tell
+   * a typo from a wrong password, or to spot a password manager silently
+   * overwriting what you typed. */
+  function passwordField(placeholder, autocomplete) {
+    const wrap = el('div', 'as-pw');
+    const input = el('input', 'af-input');
+    input.type = 'password';
+    input.placeholder = placeholder || 'Password';
+    input.autocomplete = autocomplete || 'current-password';
+
+    const toggle = el('button', 'as-pw__toggle', 'Show');
+    toggle.type = 'button';                 // never submits the surrounding form
+    toggle.setAttribute('aria-label', 'Show password');
+    toggle.setAttribute('aria-pressed', 'false');
+    toggle.onclick = () => {
+      const shown = input.type === 'text';
+      input.type = shown ? 'password' : 'text';
+      toggle.textContent = shown ? 'Show' : 'Hide';
+      toggle.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+      toggle.setAttribute('aria-pressed', shown ? 'false' : 'true');
+      input.focus();
+    };
+
+    wrap.append(input, toggle);
+    return { wrap, input };
+  }
+
   // ── feedback ──────────────────────────────────────────────────────────────
   // Adze design-language components (components/feedback/*.jsx) as plain DOM.
 
@@ -121,5 +154,6 @@ window.AdzeUI = (function () {
     }
   }
 
-  return { el, toast, applyTheme, spinner, skeletonRows, emptyState, progressBar, withBusy };
+  return { el, toast, applyTheme, passwordField, spinner, skeletonRows,
+           emptyState, progressBar, withBusy };
 })();

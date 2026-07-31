@@ -408,6 +408,30 @@ select.af-input option { background: var(--adze-surface); color: var(--adze-text
   text-align: center;
   animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both;
 }
+/* Password field with its reveal toggle. The toggle sits inside the field's
+ * box, so the input needs room for it — otherwise long passwords run under. */
+.as-pw { position: relative; display: block; }
+.as-pw .af-input { width: 100%; box-sizing: border-box; padding-right: var(--adze-space-12); }
+.as-pw__toggle {
+  position: absolute;
+  right: var(--adze-space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  padding: var(--adze-space-1) var(--adze-space-2);
+  cursor: pointer;
+  color: var(--adze-text-muted);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: var(--adze-radius-sm);
+}
+.as-pw__toggle:hover { color: var(--adze-text); }
+/* The login inputs are centred; the toggle must not be, or it drifts. */
+.as-login .as-pw .af-input { text-align: center; }
+
 .as-login h1 { font-size: var(--adze-text-xl); margin-bottom: var(--adze-space-5); }
 .as-login .af-input { margin-bottom: var(--adze-space-3); text-align: center; }
 .as-login .as-btn { width: 100%; }
