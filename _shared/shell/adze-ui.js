@@ -50,6 +50,24 @@ window.AdzeUI = (function () {
     Object.keys(map).forEach(k => { if (th[k]) r.style.setProperty(map[k], th[k]); });
   }
 
+  /* Phosphor-style eye, inline. Stroked rather than filled so it inherits
+   * currentColor and sits at the same visual weight as the label type.
+   * Inline because the artist admin has no external origins — an icon font or
+   * a CDN sprite would be the only thing on the page reaching off-host. */
+  const _svg = (inner) =>
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' +
+    inner + '</svg>';
+
+  const EYE = _svg(
+    '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>' +
+    '<circle cx="12" cy="12" r="3.1"/>');
+
+  const EYE_OFF = _svg(
+    '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>' +
+    '<circle cx="12" cy="12" r="3.1"/>' +
+    '<path d="M4 20 20 4"/>');
+
   /* A password input with a show/hide toggle.
    *
    * Returns {wrap, input} — append `wrap`, read `input.value`. Both login
@@ -66,15 +84,19 @@ window.AdzeUI = (function () {
     input.placeholder = placeholder || 'Password';
     input.autocomplete = autocomplete || 'current-password';
 
-    const toggle = el('button', 'as-pw__toggle', 'Show');
+    const toggle = el('button', 'as-pw__toggle');
     toggle.type = 'button';                 // never submits the surrounding form
+    toggle.innerHTML = EYE;
     toggle.setAttribute('aria-label', 'Show password');
     toggle.setAttribute('aria-pressed', 'false');
+    toggle.setAttribute('title', 'Show password');
     toggle.onclick = () => {
       const shown = input.type === 'text';
       input.type = shown ? 'password' : 'text';
-      toggle.textContent = shown ? 'Show' : 'Hide';
-      toggle.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+      toggle.innerHTML = shown ? EYE : EYE_OFF;
+      const label = shown ? 'Show password' : 'Hide password';
+      toggle.setAttribute('aria-label', label);
+      toggle.setAttribute('title', label);
       toggle.setAttribute('aria-pressed', shown ? 'false' : 'true');
       input.focus();
     };

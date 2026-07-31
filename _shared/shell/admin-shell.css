@@ -411,24 +411,29 @@ select.af-input option { background: var(--adze-surface); color: var(--adze-text
 /* Password field with its reveal toggle. The toggle sits inside the field's
  * box, so the input needs room for it — otherwise long passwords run under. */
 .as-pw { position: relative; display: block; }
-.as-pw .af-input { width: 100%; box-sizing: border-box; padding-right: var(--adze-space-12); }
+.as-pw .af-input { width: 100%; box-sizing: border-box; padding-right: var(--adze-space-10); }
 .as-pw__toggle {
   position: absolute;
   right: var(--adze-space-2);
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--adze-control-sm);
+  height: var(--adze-control-sm);
   background: none;
   border: 0;
-  padding: var(--adze-space-1) var(--adze-space-2);
+  padding: 0;
   cursor: pointer;
-  color: var(--adze-text-muted);
-  font-family: var(--adze-font-mono);
-  font-size: var(--adze-text-2xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--adze-text-faint);
   border-radius: var(--adze-radius-sm);
+  transition: color var(--adze-dur-fast) var(--adze-ease-out);
 }
-.as-pw__toggle:hover { color: var(--adze-text); }
+.as-pw__toggle svg { width: 18px; height: 18px; display: block; }
+.as-pw__toggle:hover { color: var(--adze-text-muted); }
+/* Revealed is a state worth seeing at a glance, so it takes the accent. */
+.as-pw__toggle[aria-pressed="true"] { color: var(--adze-accent); }
 /* The login inputs are centred; the toggle must not be, or it drifts. */
 .as-login .as-pw .af-input { text-align: center; }
 
