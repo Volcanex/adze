@@ -3470,7 +3470,6 @@ def _brand_substitutions(cfg):
         '{{BRAND_SITE_URL}}': site_url,
         '{{BRAND_WELCOME_HEADING}}': brand.get('welcome_heading') or 'Welcome to the Adze Studio',
         '{{BRAND_WELCOME_COPY}}': (brand.get('welcome_copy') or
-            'Built by Gabriel for friends and the clients of <strong>LastPlace</strong>. '
             'This portal is your way in — drop work above, or sign into the editor to '
             'shape your site directly.'),
         '{{BRAND_CSS_LINK}}': css_link,

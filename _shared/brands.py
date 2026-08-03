@@ -26,10 +26,12 @@ def brand_json(workspace):
 
 
 def brand_link_base(workspace):
-    """Absolute URL base for artist-facing links (handover/intake) when the
-    workspace brand declares a link_domain, else '' (caller stays relative)."""
+    """Absolute URL base for artist-facing links (handover/intake). A brand pack
+    may override the host via link_domain (e.g. lastplace.co.uk); with no pack
+    the scope is Adze's own, so links come from adze.studio rather than going
+    relative — an intake link has to be a full URL you can paste to an artist."""
     domain = brand_json(workspace).get('link_domain')
-    return f'https://{domain}' if domain else ''
+    return f'https://{domain}' if domain else 'https://adze.studio'
 
 
 def brand_asset_path(workspace, filename):
