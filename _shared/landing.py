@@ -227,6 +227,36 @@ def _register_one(app, admin, cfg, content_url):
                         max_age=30 * 24 * 3600, path='/')
         return resp
 
+    @admin.bp.route(f'{prefix}/enter', endpoint=f'{slug}_landing_enter')
+    def enter():
+        """Cross-origin bridge from the intake portal. Consume a one-time nonce
+        minted on adze.studio and set a first-party {slug}_admin cookie on THIS
+        domain, then bounce to the clean panel URL with the nonce stripped. A
+        spent or expired nonce just lands on the panel's own login — no error."""
+        from flask import redirect
+        admin.domain_guard()
+        cookie_value = None
+        try:
+            import accounts
+            acct_id = accounts.consume_handoff(request.args.get('h', ''), slug)
+            if acct_id is not None:
+                cookie_value = accounts.create_session(
+                    acct_id, slug,
+                    ip=request.headers.get('X-Real-IP') or request.remote_addr,
+                    ua=request.headers.get('User-Agent'))
+        except Exception:
+            pass
+        resp = redirect(admin.panel_url, code=302)
+        # The nonce rode in the URL; keep it out of any Referer the panel's
+        # third-party assets (fonts) would otherwise leak it through.
+        resp.headers['Referrer-Policy'] = 'no-referrer'
+        if cookie_value:
+            resp.set_cookie(admin.cookie, cookie_value, httponly=True,
+                            samesite='Strict',
+                            secure=request.headers.get('X-Forwarded-Proto') == 'https',
+                            max_age=30 * 24 * 3600, path='/')
+        return resp
+
     @admin.bp.route(f'{prefix}/feedback', methods=['POST'], endpoint=f'{slug}_landing_feedback')
     @admin.auth_required
     def feedback():

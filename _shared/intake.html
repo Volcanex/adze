@@ -646,6 +646,7 @@ if (localStorage.getItem('adze-theme') === 'dark') {
 const ARTIST_SLUG   = '{{ARTIST_SLUG}}';
 const INTAKE_TOKEN  = '{{INTAKE_TOKEN}}';
 const ADMIN_TOKEN   = '{{ADMIN_TOKEN}}';
+const ARTIST_DOMAIN = '{{ARTIST_DOMAIN}}';
 const BRAND_FOOTER  = '{{BRAND_FOOTER}}';
 document.getElementById('footerEl').innerHTML =
     BRAND_FOOTER + '<span class="powered-by">Powered by Adze</span>';
@@ -957,15 +958,22 @@ async function loginToEditor() {
     btn.disabled = true;
     btn.innerHTML = '<i class="ph ph-circle-notch"></i> Signing in…';
     try {
-        // Sets the adze_session cookie; the dashboard's whoami auto-login then
-        // picks it up on the next page load — so this signs them straight in.
-        const r = await fetch('/api/adze/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slug: ARTIST_SLUG, token: ADMIN_TOKEN }),
-        });
+        // The server owns the destination: with a domain it mints a one-time
+        // handoff link to the artist's own /admin (a cookie set here can't be
+        // read there); without one it returns the same-origin control panel,
+        // which still needs the adze_session login below.
+        const r = await fetch(`${API_BASE}/handoff`, { method: 'POST' });
         if (!r.ok) throw new Error('Login failed');
-        window.location.href = `/api/adze/dashboard?slug=${encodeURIComponent(ARTIST_SLUG)}`;
+        const { url } = await r.json();
+        if (!ARTIST_DOMAIN) {
+            const lr = await fetch('/api/adze/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug: ARTIST_SLUG, token: ADMIN_TOKEN }),
+            });
+            if (!lr.ok) throw new Error('Login failed');
+        }
+        window.location.href = url;
     } catch (err) {
         toast(err.message || 'Could not sign in', true);
         btn.disabled = false;

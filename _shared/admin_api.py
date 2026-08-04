@@ -3498,11 +3498,38 @@ def intake_portal(slug, token):
         '{{ARTIST_SLUG}}': slug,
         '{{INTAKE_TOKEN}}': token,
         '{{ADMIN_TOKEN}}': cfg.get('admin_token') or '',
+        '{{ARTIST_DOMAIN}}': _strip_domain_scheme(cfg.get('domain') or ''),
         **_brand_substitutions(cfg),
     }
     for placeholder, value in subs.items():
         html = html.replace(placeholder, value)
     return html, 200, {'Content-Type': 'text/html', 'Cache-Control': 'no-cache'}
+
+
+@bp.route('/intake/<slug>/<token>/handoff', methods=['POST'])
+def intake_handoff(slug, token):
+    """Where the intake page's 'Open the editor' actually sends the artist.
+
+    A cookie set here on adze.studio can't be read on the artist's own domain,
+    so for a domained artist we mint a one-time nonce and hand back a URL to
+    their domain's /enter, which swaps it for a first-party session. Artists
+    with no domain yet have no landing page to land on — they keep the
+    same-origin control panel (the client logs them in before following it).
+
+    Gated by the intake token, which already grants full write access to the
+    artist's library, so minting a session from it widens no trust boundary."""
+    cfg, _ = _intake_validate(slug, token)
+    domain = _strip_domain_scheme(cfg.get('domain') or '')
+    if not domain:
+        return jsonify({'url': f'/api/adze/dashboard?slug={slug}'})
+    import accounts
+    acct = accounts.account_for_slug(slug)
+    if not acct:
+        # Legacy artist with no account row: no session to mint, so land on the
+        # domain's own login with the token already shown on the intake page.
+        return jsonify({'url': f'https://{domain}/admin'})
+    raw = accounts.create_handoff(acct['id'], slug)
+    return jsonify({'url': f'https://{domain}/api/landing/{slug}/enter?h={raw}'})
 
 
 def _handover_validate(slug, token):

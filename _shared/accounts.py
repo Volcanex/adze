@@ -38,6 +38,7 @@ DB_PATH = Path('data/accounts.db')
 SESSION_PREFIX = 'as1_'
 SESSION_TTL = 30 * 24 * 3600        # 30 days, rolling
 RESET_TTL = 60 * 60                 # 1 hour, single use
+HANDOFF_TTL = 60                    # 60 s, single use — intake -> own-domain hop
 _SESSION_CACHE_TTL = 60             # seconds; sessions are read on every request
 _LAST_SEEN_INTERVAL = 3600          # don't write last_seen_at more than hourly
 
@@ -120,6 +121,19 @@ def _init_schema(conn):
             expires_at INTEGER NOT NULL,
             used_at    INTEGER,
             ip         TEXT
+        );
+
+        -- One-time nonce that carries an intake-portal login across to the
+        -- artist's own domain, where /enter swaps it for a session cookie. Same
+        -- hash-at-rest shape as password_resets; slug-bound so a nonce minted
+        -- for one artist can never authenticate another.
+        CREATE TABLE IF NOT EXISTS handoff_nonces (
+            token_hash TEXT PRIMARY KEY,
+            account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+            slug       TEXT    NOT NULL,
+            created_at INTEGER NOT NULL,
+            expires_at INTEGER NOT NULL,
+            used_at    INTEGER
         );
     ''')
     conn.commit()
@@ -350,6 +364,42 @@ def consume_reset(raw_token):
     if not row or row['used_at'] or row['expires_at'] < time.time():
         return None
     db.execute('UPDATE password_resets SET used_at = ? WHERE token_hash = ?',
+               (int(time.time()), row['token_hash']))
+    db.commit()
+    return row['account_id']
+
+
+# ── intake -> own-domain handoff ──────────────────────────────────────────────
+
+def create_handoff(account_id, slug):
+    """One-time, 60-second token that carries an intake-portal login across to
+    the artist's own domain, where /enter swaps it for a first-party session
+    cookie. Only the hash is stored; the raw value lives in the redirect URL for
+    exactly one hop — like a password reset but far shorter-lived and weaker (it
+    grants a session, not a password change)."""
+    raw = secrets.token_urlsafe(32)
+    now = int(time.time())
+    db = get_db()
+    db.execute('INSERT INTO handoff_nonces (token_hash, account_id, slug, '
+               'created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+               (_hash_token(raw), account_id, slug, now, now + HANDOFF_TTL))
+    db.commit()
+    return raw
+
+
+def consume_handoff(raw_token, slug):
+    """Single use. Returns account_id only if the nonce is live AND was minted
+    for `slug` — so a nonce for one artist can't authenticate another. Marks it
+    spent so a leaked URL can't be replayed."""
+    if not raw_token:
+        return None
+    db = get_db()
+    row = db.execute('SELECT * FROM handoff_nonces WHERE token_hash = ?',
+                     (_hash_token(raw_token),)).fetchone()
+    if not row or row['used_at'] or row['expires_at'] < time.time() \
+            or row['slug'] != slug:
+        return None
+    db.execute('UPDATE handoff_nonces SET used_at = ? WHERE token_hash = ?',
                (int(time.time()), row['token_hash']))
     db.commit()
     return row['account_id']
