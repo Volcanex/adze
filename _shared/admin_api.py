@@ -839,6 +839,29 @@ def get_dashboard_theme():
 
 # ── Super-Admin Dashboard ─────────────────────────────────────────────────────
 
+def _artist_for_domain(host):
+    """Slug of the artist whose configured domain is `host`, else None — so an
+    artist's own {slug}.adze.studio (or real domain) serves their landing at
+    /admin rather than the studio-wide hub, which is only for workspace
+    subdomains (lastplace.adze.studio) and adze.studio itself."""
+    host = (host or '').strip().lower()
+    if not host:
+        return None
+    adir = Path('artists')
+    if not adir.is_dir():
+        return None
+    for d in sorted(adir.iterdir()):
+        if not d.is_dir() or d.name.startswith('_'):
+            continue
+        try:
+            cfg = json.loads((d / 'config.json').read_text(encoding='utf-8'))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if _strip_domain_scheme(cfg.get('domain') or '').lower() == host:
+            return d.name
+    return None
+
+
 @bp.route('/admin')
 @bp.route('/admin/artist/<slug>')
 @bp.route('/admin/artist')
@@ -849,6 +872,10 @@ def serve_admin(slug=None):
     /admin/artist/<slug> so the client-side router can resolve the URL on
     refresh / direct link. Slug is read by JS from window.location.pathname.
     """
+    from flask import redirect
+    artist = _artist_for_domain((request.host or '').split(':')[0])
+    if artist:
+        return redirect(f'/api/landing/{artist}/panel', code=302)
     admin_path = Path(__file__).parent / 'admin.html'
     if not admin_path.exists():
         return 'Admin dashboard not found', 404
