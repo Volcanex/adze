@@ -137,7 +137,7 @@ a { color: inherit; text-decoration: none; }
     -webkit-text-fill-color: var(--ink);
 }
 
-/* ── Slim masthead (top-left name + right-side vertical nav) ── */
+/* ── Slim masthead (top-left name + right-side nav) ── */
 .masthead {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -189,7 +189,7 @@ a { color: inherit; text-decoration: none; }
    Five sections do not fit beside the name on a phone. The control is a
    LABEL over a hidden checkbox rather than a button, so the menu opens with
    no JavaScript at all — a nav that needs a script to be reachable is a nav
-   that can disappear. The script at the foot only adds Escape-to-close. */
+   that can disappear. The script below only adds Escape-to-close on top. */
 .nav-check { position: absolute; opacity: 0; pointer-events: none; }
 .nav-toggle {
     display: none;
@@ -220,7 +220,7 @@ a { color: inherit; text-decoration: none; }
         background: rgba(244, 243, 238, 0.97);
     }
 
-    .nav-toggle { display: block; position: relative; z-index: 101; }
+    .nav-toggle { display: block; }
     .top-nav {
         position: fixed;
         inset: 0;
@@ -238,8 +238,6 @@ a { color: inherit; text-decoration: none; }
         font-size: clamp(38px, 11vw, 74px);
         line-height: 0.9;
         letter-spacing: 0.02em;
-        /* visibility, not display:none — the links keep their place in the
-           accessibility tree and the fade has something to animate */
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s;
@@ -247,9 +245,9 @@ a { color: inherit; text-decoration: none; }
     .nav-check:checked ~ .top-nav { opacity: 1; visibility: visible; }
     .top-nav a::after { display: none; }
     .top-nav a:hover, .top-nav a.active { color: var(--blue); }
-    .nav-check:checked ~ .nav-toggle::after { content: ' \00d7'; }
+    .nav-toggle { position: relative; z-index: 101; }
+    .nav-check:checked ~ .nav-toggle::after { content: ' ×'; }
 }
-
 
 /* ── Page head ── */
 .wrap {
@@ -275,13 +273,7 @@ h1 {
     text-transform: uppercase;
     font-size: clamp(58px, 12vw, 150px);
     margin-bottom: 48px;
-    /* blue text with a faint texture overlay clipped to the glyphs */
     background-image: var(--blue-fill);
-    /* cover: the plate is scaled to fill the box, so which patch lands in the
-       glyphs follows the element's aspect ratio. Upscaling on the big elements
-       is fine here in a way it never was for the old grain tile — this plate
-       carries broad tonal drift, not fine grain, and drift survives being
-       enlarged. */
     background-size: cover, var(--fill-size);
     background-position: center;
     background-repeat: no-repeat, no-repeat;
@@ -290,13 +282,7 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
-
-/* ── Tag filters ──
-   Same idea as lydialott's works browser: a plain row of text, no pills or
-   boxes, active one in the accent. Set here in Bebas (--display) rather than
-   the body face — it is the only nav on the page and it should read as Jack's
-   own type. Horizontally scrollable rather than wrapping, so the row never
-   becomes two lines on a phone. */
+/* ── Tag filters — the same row as /writing, labels derived from the data ── */
 .filters {
     display: flex;
     gap: 22px;
@@ -336,47 +322,101 @@ h1 {
     opacity: 0.55;
 }
 
-/* Lazy reveal: everything renders server-side (so the page works with no JS and
-   is fully crawlable), then the script hides all but the first chunk and hands
-   them back a chunk at a time as the sentinel comes into view. The images are
-   loading="lazy", so a hidden plate never costs a request. */
-.entry[hidden] { display: none; }
-.sentinel { height: 1px; }
-.empty-note {
-    font-family: var(--body);
-    font-weight: 200;
-    font-style: italic;
-    font-size: 16px;
-    color: var(--muted);
-}
-
-/* ── Article plates — four across, square, in colour ──
-   Same rendering as the home page's latest-four block. These used to be
-   full-width rows with a greyscale thumbnail and a 2px rule; the plates read
-   better and the covers are the point, so they run as shot. */
+/* ── Video plates ──
+   16:9 rather than the writing page's square: a video frame has a shape and
+   cropping it to a square throws away the composition. Three across on
+   desktop, one on a phone — a 16:9 plate two-across at 390px is 185px wide,
+   which is not a video, it is a stamp. */
 .grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: clamp(18px, 2vw, 30px) clamp(14px, 1.6vw, 26px);
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(26px, 3vw, 44px) clamp(14px, 1.6vw, 26px);
 }
-.entry { display: block; }
-.entry .thumb {
-    aspect-ratio: 1;
+.item { display: block; }
+.item[hidden] { display: none; }
+
+/* The frame is a FACADE until it is clicked: a poster image and a play mark,
+   with the real player swapped in on demand. Sixteen YouTube iframes on one
+   page is several megabytes of third-party script and sixteen live players
+   before anybody has asked to watch anything — the thing the mobile-smoothness
+   rules in this site's CLAUDE.md exist to prevent. */
+.frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
-    background: var(--paper);
+    background: var(--ink);
+    cursor: pointer;
 }
-.entry .thumb img {
+.frame img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform var(--t-image, 0.4s ease);
+    transition: transform var(--t-image, 0.4s ease), opacity var(--t-hover);
 }
-.entry:hover .thumb img { transform: scale(1.04); }
-/* the only plate that keeps a frame — a missing image still reads as a slot */
-.entry .thumb.empty { border: 2px dashed var(--ink); opacity: 0.5; }
+.item:hover .frame img { transform: scale(1.04); opacity: 0.9; }
+.frame iframe, .frame video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    background: #000;
+}
+.frame.empty { border: 2px dashed var(--ink); opacity: 0.5; background: none; }
 
-.entry .meta {
+/* Hover preview for videos Jack has uploaded himself (never for a YouTube
+   link — that would mean loading a third-party player on hover, which is the
+   thing the facade above exists to avoid). Muted, looping, and it only starts
+   fetching when the pointer arrives. pointer-events:none so the click still
+   lands on .frame and opens the real player. */
+.frame .preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+    pointer-events: none;
+}
+.play { z-index: 2; }
+
+/* Play mark — a triangle in the blue, no icon font, no CDN. */
+.play {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 62px; height: 62px;
+    border-radius: 50%;
+    background: rgba(244, 243, 238, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--t-hover), transform var(--t-hover);
+    pointer-events: none;
+}
+.play::after {
+    content: '';
+    margin-left: 5px;
+    border-style: solid;
+    border-width: 11px 0 11px 19px;
+    border-color: transparent transparent transparent var(--blue);
+}
+.item:hover .play { background: #fff; transform: translate(-50%, -50%) scale(1.06); }
+
+/* A duration badge only exists when Jack has filled one in. */
+.dur {
+    position: absolute;
+    right: 8px; bottom: 8px;
+    padding: 2px 6px;
+    background: rgba(11, 13, 26, 0.8);
+    color: #fff;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+}
+
+.item .meta {
     margin-top: 10px;
     font-family: var(--body);
     font-weight: 700;
@@ -385,7 +425,7 @@ h1 {
     text-transform: uppercase;
     color: var(--blue);
 }
-.entry .title {
+.item .title {
     margin-top: 4px;
     font-family: var(--display);
     font-weight: 400;
@@ -395,7 +435,23 @@ h1 {
     text-transform: uppercase;
     color: var(--ink);
 }
-.entry:hover .title { color: var(--blue); }
+.item:hover .title { color: var(--blue); }
+.item .blurb {
+    margin-top: 6px;
+    font-family: var(--body);
+    font-weight: 200;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--muted);
+}
+
+.empty-note {
+    font-family: var(--body);
+    font-weight: 200;
+    font-style: italic;
+    font-size: 16px;
+    color: var(--muted);
+}
 
 .foot {
     text-align: center;
@@ -430,11 +486,6 @@ h1 {
    too: background-clip would paint a visible box behind the SVGs. */
 .brand {
     background-image: var(--blue-fill);
-    /* cover: the plate is scaled to fill the box, so which patch lands in the
-       glyphs follows the element's aspect ratio. Upscaling on the big elements
-       is fine here in a way it never was for the old grain tile — this plate
-       carries broad tonal drift, not fine grain, and drift survives being
-       enlarged. */
     background-size: cover, var(--fill-size);
     background-position: center;
     background-repeat: no-repeat, no-repeat;
@@ -443,17 +494,17 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
+@media (max-width: 1000px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 640px) {
     .masthead { padding: 14px 18px; }
     .wrap { padding: 110px 22px 80px; }
-    /* stack the card: thumb on top, text under */
-    .grid { grid-template-columns: 1fr 1fr; }
+    .grid { grid-template-columns: 1fr; }
+    .play { width: 52px; height: 52px; }
 }
 /* Touch devices: the masthead's backdrop blur is recomputed on every scroll
-   frame and it is the single most expensive thing on the page on a phone.
-   Trade it for an almost-opaque bar — visually near-identical, no per-frame
-   filter. Keyed on (hover: none) rather than a width so a large tablet gets it
-   too; the cost is the GPU, not the viewport. */
+   frame and it is the single most expensive thing on the page on a phone. */
 @media (hover: none) {
     .masthead {
         backdrop-filter: none;
@@ -472,34 +523,69 @@ h1 {
     <label for="nav-open" class="nav-toggle" aria-label="Menu">Menu</label>
     <nav class="top-nav">
         <a href="../about/">About</a>
-        <a href="../writing/" class="active">Writing</a>
+        <a href="../writing/">Writing</a>
         <a href="../photography/">Photography</a>
         <a href="../music/">Music</a>
-        <a href="../video/">Video</a>
+        <a href="../video/" class="active">Video</a>
         <a href="../multimedia/">Multimedia</a>
     </nav>
 </header>
 
-<section class="wrap">
-    <div class="eyebrow">Selected Work</div>
-    <h1>Writing</h1>
-
-{% set TAGS = [('all', 'Latest'), ('music', 'Music'), ('culture', 'Culture'), ('politics', 'Politics'), ('economy', 'Economy'), ('society', 'Society')] %}
+{#- A video is EITHER a link (YouTube, Vimeo) or a file Jack uploaded. The id
+    is parsed here rather than stored, so whatever he pastes into the admin
+    works without a second field he has to fill in correctly. -#}
 {% set rows = items | sort(attribute='date', reverse=true) %}
-    <nav class="filters" id="filters" aria-label="Filter writing by subject">
-{% for tid, label in TAGS %}{% set ns = namespace(n=0) %}{% for p in rows %}{% if tid == 'all' or tid in (p.tags or []) %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}{% if ns.n %}        <button type="button" class="filter{% if tid == 'all' %} is-active{% endif %}" data-tag="{{ tid }}">{{ label }}<span class="n">{{ ns.n }}</span></button>
+{% set ns = namespace(tags=[]) %}
+{% for v in rows %}{% for t in (v.tags or []) %}{% if t not in ns.tags %}{% set ns.tags = ns.tags + [t] %}{% endif %}{% endfor %}{% endfor %}
+
+<section class="wrap">
+    <div class="eyebrow" data-copy="eyebrow">Selected Work</div>
+    <h1>Video</h1>
+
+{% if ns.tags %}    <nav class="filters" id="filters" aria-label="Filter video by subject">
+        <button type="button" class="filter is-active" data-tag="all">All<span class="n">{{ rows | length }}</span></button>
+{% for t in ns.tags | sort %}{% set c = namespace(n=0) %}{% for v in rows %}{% if t in (v.tags or []) %}{% set c.n = c.n + 1 %}{% endif %}{% endfor %}{% if c.n %}        <button type="button" class="filter" data-tag="{{ t }}">{{ t }}<span class="n">{{ c.n }}</span></button>
 {% endif %}{% endfor %}    </nav>
+{% endif %}
 
     <div class="grid" id="grid">
-{% for p in rows %}        <a class="entry" href="{{ p.url }}" target="_blank" rel="noopener" data-tags="{{ (p.tags or []) | join(' ') }}">
-{% if p.image and p.image.src %}            <div class="thumb"><img src="../assets/{{ p.image.src }}" alt="" loading="lazy" decoding="async"></div>
-{% else %}            <div class="thumb empty"></div>
-{% endif %}            <div class="meta">{{ p.meta }}</div>
-            <div class="title">{{ p.title }}</div>
-        </a>
-{% else %}        <p class="empty-note">No articles yet.</p>
+{% for v in rows %}
+{%- set url = v.url or '' -%}
+{%- set yt = 'youtube.com' in url or 'youtu.be' in url -%}
+{%- set vimeo = 'vimeo.com' in url -%}
+{%- if yt -%}
+{%- if 'v=' in url -%}{% set vid = url.split('v=')[1].split('&')[0] %}
+{%- else -%}{% set vid = url.rstrip('/').split('/')[-1].split('?')[0] %}
+{%- endif -%}
+{%- set embed = 'https://www.youtube-nocookie.com/embed/' ~ vid ~ '?autoplay=1&rel=0' -%}
+{%- elif vimeo -%}
+{%- set vid = url.rstrip('/').split('/')[-1].split('?')[0] -%}
+{%- set embed = 'https://player.vimeo.com/video/' ~ vid ~ '?autoplay=1' -%}
+{%- else -%}
+{%- set embed = '' -%}
+{%- endif -%}
+        <article class="item" data-tags="{{ (v.tags or []) | join(' ') }}">
+{% if embed %}            <div class="frame" data-embed="{{ embed }}" role="button" tabindex="0" aria-label="Play {{ v.title }}">
+{% elif v.video and v.video.src %}            <div class="frame" data-file="../assets/{{ v.video.src }}" role="button" tabindex="0" aria-label="Play {{ v.title }}">
+{% else %}            <div class="frame empty">
+{% endif %}
+{%- if v.poster and v.poster.src %}
+                <img src="../assets/{{ v.poster.src }}" alt="" loading="lazy" decoding="async">
+{%- elif yt %}
+                {#- No poster uploaded: fall back to YouTube's own still. The
+                    only third-party asset on the site, and only ever a
+                    fallback — the backfill stores local thumbnails. -#}
+                <img src="https://i.ytimg.com/vi/{{ vid }}/hqdefault.jpg" alt="" loading="lazy" decoding="async">
+{%- endif %}
+{% if embed or (v.video and v.video.src) %}                <span class="play"></span>
+{% endif %}{% if v.duration %}                <span class="dur">{{ v.duration }}</span>
+{% endif %}            </div>
+{% if v.meta %}            <div class="meta">{{ v.meta }}</div>
+{% endif %}            <h2 class="title">{% if url %}<a href="{{ url }}" target="_blank" rel="noopener">{{ v.title }}</a>{% else %}{{ v.title }}{% endif %}</h2>
+{% if v.description %}            <p class="blurb">{{ v.description }}</p>
+{% endif %}        </article>
+{% else %}        <p class="empty-note">No video yet.</p>
 {% endfor %}    </div>
-    <div class="sentinel" id="sentinel"></div>
     <p class="empty-note" id="none" hidden>Nothing filed under that yet.</p>
 </section>
 
@@ -509,6 +595,11 @@ h1 {
             <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="32" y="48" width="192" height="160" rx="10"/>
                 <path d="M224 56 128 144 32 56"/>
+            </svg>
+        </a>
+        <a href="https://www.youtube.com/channel/UC8wJrBxVPJrZTqmJ7fRLSlQ" target="_blank" rel="noopener" aria-label="YouTube">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M234 74a26 26 0 0 0 -18-18C199 51 128 51 128 51s-71 0-88 5a26 26 0 0 0 -18 18c-5 18-5 54-5 54s0 36 5 54a26 26 0 0 0 18 18c17 5 88 5 88 5s71 0 88-5a26 26 0 0 0 18-18c5-18 5-54 5-54s0-36-5-54Zm-129 87V95l56 33Z"/>
             </svg>
         </a>
         <a href="https://soundcloud.com/user-216694930" target="_blank" rel="noopener" aria-label="SoundCloud">
@@ -551,82 +642,126 @@ h1 {
     });
 })();
 
-/* Filter + lazy reveal for the writing index. The plates are all in the HTML
-   already; this only decides which of them are shown, a chunk at a time.
-   With JS off every plate is visible and the page still reads correctly. */
+/* Filters + the facade swap. With JS off every plate still shows its poster
+   and its title still links out to YouTube, so the page is a working index —
+   it just doesn't play inline. */
 (function () {
     var grid = document.getElementById('grid');
     if (!grid) return;
-    var entries  = Array.prototype.slice.call(grid.querySelectorAll('.entry'));
-    var bar      = document.getElementById('filters');
-    var sentinel = document.getElementById('sentinel');
-    var none     = document.getElementById('none');
-    /* Half a chunk on a phone: the plates are two-across there, so 24 is four
-       screens of images to download before the first scroll. */
-    var CHUNK    = window.innerWidth < 640 ? 12 : 24;
-    var active   = 'all';
-    var shown    = 0;
+    var items = Array.prototype.slice.call(grid.querySelectorAll('.item'));
+    var bar   = document.getElementById('filters');
+    var none  = document.getElementById('none');
+    var active = 'all';
 
     function matches(el) {
         return active === 'all' || (' ' + el.dataset.tags + ' ').indexOf(' ' + active + ' ') >= 0;
     }
-    /* Hand back the next CHUNK of matching plates. Returns how many are still
-       held back, so the sentinel knows whether there is more to come. */
-    function reveal() {
-        var left = 0, given = 0;
-        for (var i = 0; i < entries.length; i++) {
-            var e = entries[i];
-            if (!matches(e)) continue;
-            if (e.hidden) {
-                if (given < CHUNK) { e.hidden = false; given++; shown++; }
-                else left++;
-            }
-        }
-        return left;
-    }
     function setTag(tag) {
         active = tag;
-        shown = 0;
-        entries.forEach(function (e) { e.hidden = true; });
-        var left = reveal();
-        none.hidden = shown > 0;
-        sentinel.style.display = left ? '' : 'none';
+        var shown = 0;
+        items.forEach(function (it) {
+            var ok = matches(it);
+            it.hidden = !ok;
+            if (ok) shown++;
+        });
+        if (none) none.hidden = shown > 0;
         if (history.replaceState) {
             history.replaceState(null, '', tag === 'all' ? location.pathname : '#' + tag);
         }
-        Array.prototype.forEach.call(bar.querySelectorAll('.filter'), function (b) {
-            b.classList.toggle('is-active', b.dataset.tag === tag);
+        if (bar) {
+            Array.prototype.forEach.call(bar.querySelectorAll('.filter'), function (b) {
+                b.classList.toggle('is-active', b.dataset.tag === tag);
+            });
+        }
+    }
+
+    if (bar) {
+        bar.addEventListener('click', function (ev) {
+            var b = ev.target.closest ? ev.target.closest('.filter') : null;
+            if (b) setTag(b.dataset.tag);
+        });
+        function fromHash() {
+            var h = (location.hash || '').replace('#', '');
+            return bar.querySelector('.filter[data-tag="' + h + '"]') ? h : 'all';
+        }
+        window.addEventListener('hashchange', function () {
+            var t = fromHash();
+            if (t !== active) setTag(t);
+        });
+        setTag(fromHash());
+    }
+
+    /* Swap the poster for a real player, once, on demand. A frame that has
+       already been swapped has no data-embed/data-file left, so a second
+       click lands on the player itself and is left alone. */
+    function play(frame) {
+        var embed = frame.dataset.embed, file = frame.dataset.file;
+        var node;
+        if (embed) {
+            node = document.createElement('iframe');
+            node.src = embed;
+            node.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+            node.allowFullscreen = true;
+            node.title = frame.getAttribute('aria-label') || 'Video';
+        } else if (file) {
+            node = document.createElement('video');
+            node.src = file;
+            node.controls = true;
+            node.autoplay = true;
+            node.playsInline = true;
+            node.preload = 'metadata';
+        } else {
+            return;
+        }
+        delete frame.dataset.embed;
+        delete frame.dataset.file;
+        frame.innerHTML = '';
+        frame.style.cursor = 'default';
+        frame.removeAttribute('role');
+        frame.removeAttribute('tabindex');
+        frame.appendChild(node);
+    }
+
+    /* Silent hover preview, uploaded files only.
+       Gated on (hover: hover) so a phone never starts fetching video because a
+       thumb brushed a tile, and on reduced-motion because a looping clip is
+       motion whatever its volume. Nothing is requested until the pointer
+       actually arrives, so the page still costs one poster per plate. */
+    var canHover = window.matchMedia &&
+                   window.matchMedia('(hover: hover)').matches &&
+                   !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (canHover) {
+        Array.prototype.forEach.call(grid.querySelectorAll('.frame[data-file]'), function (f) {
+            var prev = null;
+            f.addEventListener('mouseenter', function () {
+                if (!f.dataset.file) return;   // already swapped for the real player
+                if (!prev) {
+                    prev = document.createElement('video');
+                    prev.src = f.dataset.file;
+                    prev.muted = true; prev.loop = true;
+                    prev.playsInline = true; prev.preload = 'metadata';
+                    prev.className = 'preview';
+                    f.appendChild(prev);
+                }
+                prev.play().catch(function () { /* refused — the poster stands */ });
+            });
+            f.addEventListener('mouseleave', function () {
+                if (!prev) return;
+                prev.pause();
+                prev.currentTime = 0;          // next hover restarts, not resumes
+            });
         });
     }
 
-    bar.addEventListener('click', function (ev) {
-        var b = ev.target.closest ? ev.target.closest('.filter') : null;
-        if (b) setTag(b.dataset.tag);
+    grid.addEventListener('click', function (ev) {
+        var f = ev.target.closest ? ev.target.closest('.frame') : null;
+        if (f && (f.dataset.embed || f.dataset.file)) play(f);
     });
-
-    if (window.IntersectionObserver) {
-        new IntersectionObserver(function (es) {
-            if (!es[0].isIntersecting) return;
-            var left = reveal();
-            if (!left) sentinel.style.display = 'none';
-        }, { rootMargin: '600px' }).observe(sentinel);
-    } else {
-        /* No observer: show everything rather than stranding the archive. */
-        CHUNK = entries.length;
-    }
-
-    function fromHash() {
-        var h = (location.hash || '').replace('#', '');
-        return bar.querySelector('.filter[data-tag="' + h + '"]') ? h : 'all';
-    }
-    /* A hash change on an already-loaded page (an external #music link landing
-       here, someone editing the address bar) has to re-filter — the initial
-       read alone only covers a cold load. */
-    window.addEventListener('hashchange', function () {
-        var t = fromHash();
-        if (t !== active) setTag(t);
+    grid.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        var f = ev.target.closest ? ev.target.closest('.frame') : null;
+        if (f && (f.dataset.embed || f.dataset.file)) { ev.preventDefault(); play(f); }
     });
-    setTag(fromHash());
 })();
 </script>
 </html>

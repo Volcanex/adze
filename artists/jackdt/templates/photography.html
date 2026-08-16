@@ -137,7 +137,7 @@ a { color: inherit; text-decoration: none; }
     -webkit-text-fill-color: var(--ink);
 }
 
-/* ── Slim masthead (top-left name + right-side vertical nav) ── */
+/* ── Slim masthead (top-left name + right-side nav) ── */
 .masthead {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -189,7 +189,7 @@ a { color: inherit; text-decoration: none; }
    Five sections do not fit beside the name on a phone. The control is a
    LABEL over a hidden checkbox rather than a button, so the menu opens with
    no JavaScript at all — a nav that needs a script to be reachable is a nav
-   that can disappear. The script at the foot only adds Escape-to-close. */
+   that can disappear. The script below only adds Escape-to-close on top. */
 .nav-check { position: absolute; opacity: 0; pointer-events: none; }
 .nav-toggle {
     display: none;
@@ -220,7 +220,7 @@ a { color: inherit; text-decoration: none; }
         background: rgba(244, 243, 238, 0.97);
     }
 
-    .nav-toggle { display: block; position: relative; z-index: 101; }
+    .nav-toggle { display: block; }
     .top-nav {
         position: fixed;
         inset: 0;
@@ -238,8 +238,8 @@ a { color: inherit; text-decoration: none; }
         font-size: clamp(38px, 11vw, 74px);
         line-height: 0.9;
         letter-spacing: 0.02em;
-        /* visibility, not display:none — the links keep their place in the
-           accessibility tree and the fade has something to animate */
+        /* visibility, not display:none — the links stay in the accessibility
+           tree order and the fade has something to animate */
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s;
@@ -247,13 +247,14 @@ a { color: inherit; text-decoration: none; }
     .nav-check:checked ~ .top-nav { opacity: 1; visibility: visible; }
     .top-nav a::after { display: none; }
     .top-nav a:hover, .top-nav a.active { color: var(--blue); }
-    .nav-check:checked ~ .nav-toggle::after { content: ' \00d7'; }
+    /* the label sits above the open overlay so the same control closes it */
+    .nav-toggle { position: relative; z-index: 101; }
+    .nav-check:checked ~ .nav-toggle::after { content: ' ×'; }
 }
-
 
 /* ── Page head ── */
 .wrap {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: clamp(120px, 18vh, 200px) 32px 120px;
 }
@@ -277,11 +278,6 @@ h1 {
     margin-bottom: 48px;
     /* blue text with a faint texture overlay clipped to the glyphs */
     background-image: var(--blue-fill);
-    /* cover: the plate is scaled to fill the box, so which patch lands in the
-       glyphs follows the element's aspect ratio. Upscaling on the big elements
-       is fine here in a way it never was for the old grain tile — this plate
-       carries broad tonal drift, not fine grain, and drift survives being
-       enlarged. */
     background-size: cover, var(--fill-size);
     background-position: center;
     background-repeat: no-repeat, no-repeat;
@@ -290,13 +286,10 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
-
-/* ── Tag filters ──
-   Same idea as lydialott's works browser: a plain row of text, no pills or
-   boxes, active one in the accent. Set here in Bebas (--display) rather than
-   the body face — it is the only nav on the page and it should read as Jack's
-   own type. Horizontally scrollable rather than wrapping, so the row never
-   becomes two lines on a phone. */
+/* ── Tag filters — the same row as /writing ──
+   Plain text, no pills, active one in the accent, set in Bebas. The labels
+   here are DERIVED from the tags Jack puts on his sets rather than hardcoded,
+   because unlike the writing archive nobody has fixed what the subjects are. */
 .filters {
     display: flex;
     gap: 22px;
@@ -336,12 +329,57 @@ h1 {
     opacity: 0.55;
 }
 
-/* Lazy reveal: everything renders server-side (so the page works with no JS and
-   is fully crawlable), then the script hides all but the first chunk and hands
-   them back a chunk at a time as the sentinel comes into view. The images are
-   loading="lazy", so a hidden plate never costs a request. */
-.entry[hidden] { display: none; }
-.sentinel { height: 1px; }
+/* ── The wall ──
+   Photographs are not cropped here. The writing plates are squares because a
+   masthead crop is a thumbnail; a photograph is the work, so portrait and
+   landscape keep their own shape and the column takes whatever height that
+   costs. CSS columns rather than a JS masonry: the layout then survives with
+   no JavaScript, and every tile carries an aspect-ratio from the stored `ar`
+   so the page never reflows as the images decode.
+
+   Deliberately NOT chunk-revealed like /writing. The images are lazy, so a
+   tile below the fold costs no request either way, and revealing into balanced
+   columns makes every tile jump sideways as the next chunk lands. */
+.wall {
+    column-count: 3;
+    column-gap: clamp(14px, 1.6vw, 26px);
+}
+.tile {
+    display: block;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    margin-bottom: clamp(14px, 1.6vw, 26px);
+    position: relative;
+    background: var(--paper);
+    cursor: zoom-in;
+}
+.tile img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: opacity var(--t-hover);
+}
+.tile:hover img { opacity: 0.86; }
+.tile[hidden] { display: none; }
+
+/* The set's name, only on hover — the photographs carry the page, and a
+   caption under every frame would turn the wall into a contact sheet. */
+.tile .cap {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 26px 12px 10px;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #fff;
+    background: linear-gradient(transparent, rgba(11, 13, 26, 0.72));
+    opacity: 0;
+    transition: opacity var(--t-hover);
+}
+.tile:hover .cap, .tile:focus-visible .cap { opacity: 1; }
+
 .empty-note {
     font-family: var(--body);
     font-weight: 200;
@@ -350,52 +388,52 @@ h1 {
     color: var(--muted);
 }
 
-/* ── Article plates — four across, square, in colour ──
-   Same rendering as the home page's latest-four block. These used to be
-   full-width rows with a greyscale thumbnail and a 2px rule; the plates read
-   better and the covers are the point, so they run as shot. */
-.grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: clamp(18px, 2vw, 30px) clamp(14px, 1.6vw, 26px);
+/* ── Lightbox ── */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 13, 26, 0.96);
+    padding: 40px;
+    cursor: zoom-out;
 }
-.entry { display: block; }
-.entry .thumb {
-    aspect-ratio: 1;
-    overflow: hidden;
-    background: var(--paper);
-}
-.entry .thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.lightbox.open { display: flex; }
+.lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
     display: block;
-    transition: transform var(--t-image, 0.4s ease);
 }
-.entry:hover .thumb img { transform: scale(1.04); }
-/* the only plate that keeps a frame — a missing image still reads as a slot */
-.entry .thumb.empty { border: 2px dashed var(--ink); opacity: 0.5; }
-
-.entry .meta {
-    margin-top: 10px;
+.lightbox .lb-cap {
+    position: absolute;
+    left: 0; right: 0; bottom: 18px;
+    text-align: center;
     font-family: var(--body);
     font-weight: 700;
     font-size: 10px;
     letter-spacing: 0.22em;
     text-transform: uppercase;
-    color: var(--blue);
+    color: rgba(255, 255, 255, 0.65);
 }
-.entry .title {
-    margin-top: 4px;
+.lightbox button {
+    position: absolute;
+    background: none;
+    border: 0;
+    color: rgba(255, 255, 255, 0.55);
     font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(17px, 1.35vw, 24px);
-    line-height: 0.98;
-    letter-spacing: 0.012em;
-    text-transform: uppercase;
-    color: var(--ink);
+    font-size: 40px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 12px 18px;
+    transition: color var(--t-hover);
 }
-.entry:hover .title { color: var(--blue); }
+.lightbox button:hover { color: #fff; }
+.lb-prev { left: 6px; top: 50%; transform: translateY(-50%); }
+.lb-next { right: 6px; top: 50%; transform: translateY(-50%); }
+.lb-close { right: 10px; top: 10px; font-size: 30px; }
 
 .foot {
     text-align: center;
@@ -430,11 +468,6 @@ h1 {
    too: background-clip would paint a visible box behind the SVGs. */
 .brand {
     background-image: var(--blue-fill);
-    /* cover: the plate is scaled to fill the box, so which patch lands in the
-       glyphs follows the element's aspect ratio. Upscaling on the big elements
-       is fine here in a way it never was for the old grain tile — this plate
-       carries broad tonal drift, not fine grain, and drift survives being
-       enlarged. */
     background-size: cover, var(--fill-size);
     background-position: center;
     background-repeat: no-repeat, no-repeat;
@@ -443,23 +476,30 @@ h1 {
     -webkit-text-fill-color: transparent;
 }
 
+@media (max-width: 1000px) {
+    .wall { column-count: 2; }
+}
 @media (max-width: 640px) {
     .masthead { padding: 14px 18px; }
     .wrap { padding: 110px 22px 80px; }
-    /* stack the card: thumb on top, text under */
-    .grid { grid-template-columns: 1fr 1fr; }
+    /* Stays at two columns rather than going full width: `sizes` below tells
+       the browser each tile is ~50vw, which keeps it on the 480px card tier
+       instead of pulling 2000px display files onto a phone. */
+    .wall { column-count: 2; }
+    .lightbox { padding: 16px; }
 }
 /* Touch devices: the masthead's backdrop blur is recomputed on every scroll
    frame and it is the single most expensive thing on the page on a phone.
-   Trade it for an almost-opaque bar — visually near-identical, no per-frame
-   filter. Keyed on (hover: none) rather than a width so a large tablet gets it
-   too; the cost is the GPU, not the viewport. */
+   Trade it for an almost-opaque bar. Keyed on (hover: none) rather than a
+   width so a large tablet gets it too; the cost is the GPU, not the viewport. */
 @media (hover: none) {
     .masthead {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
         background: rgba(244, 243, 238, 0.97);
     }
+    /* No hover on touch, so the set name would never be reachable. */
+    .tile .cap { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -472,36 +512,57 @@ h1 {
     <label for="nav-open" class="nav-toggle" aria-label="Menu">Menu</label>
     <nav class="top-nav">
         <a href="../about/">About</a>
-        <a href="../writing/" class="active">Writing</a>
-        <a href="../photography/">Photography</a>
+        <a href="../writing/">Writing</a>
+        <a href="../photography/" class="active">Photography</a>
         <a href="../music/">Music</a>
         <a href="../video/">Video</a>
         <a href="../multimedia/">Multimedia</a>
     </nav>
 </header>
 
+{#- One item is a SET (a shoot), and the wall is every photograph across every
+    set, newest set first. Tagging happens per set, so each tile inherits its
+    set's tags — that is what makes the filter row here mean the same thing it
+    means on /writing without asking Jack to tag 200 frames one at a time. -#}
+{% set sets = items | sort(attribute='date', reverse=true) %}
+{% set ns = namespace(tags=[]) %}
+{% for s in sets %}{% for t in (s.tags or []) %}{% if t not in ns.tags %}{% set ns.tags = ns.tags + [t] %}{% endif %}{% endfor %}{% endfor %}
+
 <section class="wrap">
-    <div class="eyebrow">Selected Work</div>
-    <h1>Writing</h1>
+    <div class="eyebrow" data-copy="eyebrow">Selected Work</div>
+    <h1>Photography</h1>
 
-{% set TAGS = [('all', 'Latest'), ('music', 'Music'), ('culture', 'Culture'), ('politics', 'Politics'), ('economy', 'Economy'), ('society', 'Society')] %}
-{% set rows = items | sort(attribute='date', reverse=true) %}
-    <nav class="filters" id="filters" aria-label="Filter writing by subject">
-{% for tid, label in TAGS %}{% set ns = namespace(n=0) %}{% for p in rows %}{% if tid == 'all' or tid in (p.tags or []) %}{% set ns.n = ns.n + 1 %}{% endif %}{% endfor %}{% if ns.n %}        <button type="button" class="filter{% if tid == 'all' %} is-active{% endif %}" data-tag="{{ tid }}">{{ label }}<span class="n">{{ ns.n }}</span></button>
+{% if ns.tags %}    <nav class="filters" id="filters" aria-label="Filter photographs by subject">
+        <button type="button" class="filter is-active" data-tag="all">All<span class="n">{% set c = namespace(n=0) %}{% for s in sets %}{% set c.n = c.n + (s.images or []) | length %}{% endfor %}{{ c.n }}</span></button>
+{% for t in ns.tags | sort %}{% set c = namespace(n=0) %}{% for s in sets %}{% if t in (s.tags or []) %}{% set c.n = c.n + (s.images or []) | length %}{% endif %}{% endfor %}{% if c.n %}        <button type="button" class="filter" data-tag="{{ t }}">{{ t }}<span class="n">{{ c.n }}</span></button>
 {% endif %}{% endfor %}    </nav>
+{% endif %}
 
-    <div class="grid" id="grid">
-{% for p in rows %}        <a class="entry" href="{{ p.url }}" target="_blank" rel="noopener" data-tags="{{ (p.tags or []) | join(' ') }}">
-{% if p.image and p.image.src %}            <div class="thumb"><img src="../assets/{{ p.image.src }}" alt="" loading="lazy" decoding="async"></div>
-{% else %}            <div class="thumb empty"></div>
-{% endif %}            <div class="meta">{{ p.meta }}</div>
-            <div class="title">{{ p.title }}</div>
-        </a>
-{% else %}        <p class="empty-note">No articles yet.</p>
+    <div class="wall" id="wall">
+{% for s in sets %}{% for im in (s.images or []) %}{% if im.src %}        <a class="tile" href="../assets/{{ im.src }}" data-tags="{{ (s.tags or []) | join(' ') }}" data-full="../assets/{{ im.src }}" data-cap="{{ s.title }}">
+            <img src="../assets/{{ im.card or im.src }}"
+{#- Only offer two candidates when there really are two files. An image stored
+    before the card tier existed has card == src, and describing one file as
+    both 480w and 2000w tells the browser something untrue. -#}
+{% if im.card and im.card != im.src %}                 srcset="../assets/{{ im.card }} 480w, ../assets/{{ im.src }} 2000w"
+                 sizes="(max-width: 1000px) 50vw, 33vw"
+{% endif %}
+                 style="aspect-ratio: {{ im.ar or 1.5 }}"
+                 alt="{{ s.title }}" loading="lazy" decoding="async">
+{% if s.title %}            <span class="cap">{{ s.title }}</span>
+{% endif %}        </a>
+{% endif %}{% endfor %}{% else %}        <p class="empty-note">No photographs yet.</p>
 {% endfor %}    </div>
-    <div class="sentinel" id="sentinel"></div>
     <p class="empty-note" id="none" hidden>Nothing filed under that yet.</p>
 </section>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photograph">
+    <button type="button" class="lb-prev" aria-label="Previous">‹</button>
+    <img id="lb-img" src="" alt="">
+    <button type="button" class="lb-next" aria-label="Next">›</button>
+    <button type="button" class="lb-close" aria-label="Close">×</button>
+    <div class="lb-cap" id="lb-cap"></div>
+</div>
 
 <footer class="foot">
     <div class="social">
@@ -551,82 +612,104 @@ h1 {
     });
 })();
 
-/* Filter + lazy reveal for the writing index. The plates are all in the HTML
-   already; this only decides which of them are shown, a chunk at a time.
-   With JS off every plate is visible and the page still reads correctly. */
+/* Filter + lightbox. Every tile is in the HTML already and the wall lays out
+   in CSS, so with JS off the page is a complete, scrollable, crawlable gallery
+   whose tiles link straight to the full images. This only adds the filtering
+   and the overlay. */
 (function () {
-    var grid = document.getElementById('grid');
-    if (!grid) return;
-    var entries  = Array.prototype.slice.call(grid.querySelectorAll('.entry'));
-    var bar      = document.getElementById('filters');
-    var sentinel = document.getElementById('sentinel');
-    var none     = document.getElementById('none');
-    /* Half a chunk on a phone: the plates are two-across there, so 24 is four
-       screens of images to download before the first scroll. */
-    var CHUNK    = window.innerWidth < 640 ? 12 : 24;
-    var active   = 'all';
-    var shown    = 0;
+    var wall = document.getElementById('wall');
+    if (!wall) return;
+    var tiles = Array.prototype.slice.call(wall.querySelectorAll('.tile'));
+    var bar   = document.getElementById('filters');
+    var none  = document.getElementById('none');
+    var active = 'all';
 
     function matches(el) {
         return active === 'all' || (' ' + el.dataset.tags + ' ').indexOf(' ' + active + ' ') >= 0;
     }
-    /* Hand back the next CHUNK of matching plates. Returns how many are still
-       held back, so the sentinel knows whether there is more to come. */
-    function reveal() {
-        var left = 0, given = 0;
-        for (var i = 0; i < entries.length; i++) {
-            var e = entries[i];
-            if (!matches(e)) continue;
-            if (e.hidden) {
-                if (given < CHUNK) { e.hidden = false; given++; shown++; }
-                else left++;
-            }
-        }
-        return left;
-    }
     function setTag(tag) {
         active = tag;
-        shown = 0;
-        entries.forEach(function (e) { e.hidden = true; });
-        var left = reveal();
-        none.hidden = shown > 0;
-        sentinel.style.display = left ? '' : 'none';
+        var shown = 0;
+        tiles.forEach(function (t) {
+            var ok = matches(t);
+            t.hidden = !ok;
+            if (ok) shown++;
+        });
+        if (none) none.hidden = shown > 0;
         if (history.replaceState) {
             history.replaceState(null, '', tag === 'all' ? location.pathname : '#' + tag);
         }
-        Array.prototype.forEach.call(bar.querySelectorAll('.filter'), function (b) {
-            b.classList.toggle('is-active', b.dataset.tag === tag);
+        if (bar) {
+            Array.prototype.forEach.call(bar.querySelectorAll('.filter'), function (b) {
+                b.classList.toggle('is-active', b.dataset.tag === tag);
+            });
+        }
+    }
+
+    if (bar) {
+        bar.addEventListener('click', function (ev) {
+            var b = ev.target.closest ? ev.target.closest('.filter') : null;
+            if (b) setTag(b.dataset.tag);
         });
+        function fromHash() {
+            var h = (location.hash || '').replace('#', '');
+            return bar.querySelector('.filter[data-tag="' + h + '"]') ? h : 'all';
+        }
+        window.addEventListener('hashchange', function () {
+            var t = fromHash();
+            if (t !== active) setTag(t);
+        });
+        setTag(fromHash());
     }
 
-    bar.addEventListener('click', function (ev) {
-        var b = ev.target.closest ? ev.target.closest('.filter') : null;
-        if (b) setTag(b.dataset.tag);
+    /* The lightbox steps through the tiles that are CURRENTLY VISIBLE, not all
+       of them — arrowing out of the filter you chose into photographs you just
+       filtered away is the kind of thing that reads as a bug. */
+    var box = document.getElementById('lightbox');
+    var img = document.getElementById('lb-img');
+    var cap = document.getElementById('lb-cap');
+    if (!box || !img) return;
+    var visible = [], at = -1;
+
+    function show(i) {
+        if (!visible.length) return;
+        at = (i + visible.length) % visible.length;
+        var t = visible[at];
+        img.src = t.dataset.full;
+        img.alt = t.dataset.cap || '';
+        cap.textContent = t.dataset.cap || '';
+    }
+    function open(t) {
+        visible = tiles.filter(function (x) { return !x.hidden; });
+        show(visible.indexOf(t));
+        box.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function close() {
+        box.classList.remove('open');
+        document.body.style.overflow = '';
+        img.src = '';   // stop a large image decoding behind a closed overlay
+    }
+
+    wall.addEventListener('click', function (ev) {
+        var t = ev.target.closest ? ev.target.closest('.tile') : null;
+        if (!t) return;
+        ev.preventDefault();   // the href is the no-JS path; here we overlay
+        open(t);
     });
-
-    if (window.IntersectionObserver) {
-        new IntersectionObserver(function (es) {
-            if (!es[0].isIntersecting) return;
-            var left = reveal();
-            if (!left) sentinel.style.display = 'none';
-        }, { rootMargin: '600px' }).observe(sentinel);
-    } else {
-        /* No observer: show everything rather than stranding the archive. */
-        CHUNK = entries.length;
-    }
-
-    function fromHash() {
-        var h = (location.hash || '').replace('#', '');
-        return bar.querySelector('.filter[data-tag="' + h + '"]') ? h : 'all';
-    }
-    /* A hash change on an already-loaded page (an external #music link landing
-       here, someone editing the address bar) has to re-filter — the initial
-       read alone only covers a cold load. */
-    window.addEventListener('hashchange', function () {
-        var t = fromHash();
-        if (t !== active) setTag(t);
+    box.addEventListener('click', function (ev) {
+        var b = ev.target.closest ? ev.target.closest('button') : null;
+        if (!b) { close(); return; }   // clicking the backdrop closes
+        if (b.classList.contains('lb-prev')) show(at - 1);
+        else if (b.classList.contains('lb-next')) show(at + 1);
+        else close();
     });
-    setTag(fromHash());
+    document.addEventListener('keydown', function (ev) {
+        if (!box.classList.contains('open')) return;
+        if (ev.key === 'Escape') close();
+        else if (ev.key === 'ArrowLeft') show(at - 1);
+        else if (ev.key === 'ArrowRight') show(at + 1);
+    });
 })();
 </script>
 </html>

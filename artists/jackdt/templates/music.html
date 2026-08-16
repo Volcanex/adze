@@ -1,0 +1,898 @@
+<style>
+@font-face {
+    font-family: 'Bebas Neue';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/bebas-neue-400.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 400;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-400.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 700;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-700.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 200;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-200.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
+    font-style: italic;
+    font-weight: 200;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-200-italic.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'Cardo';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Regular.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cardo';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Bold.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Cardo';
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/Cardo-Italic.woff2') format('woff2');
+}
+
+/* Metric-matched local fallback so the Barlow swap settles rather than jumps.
+   Source: JackDT — Design Language, tokens/typography.css */
+@font-face {
+    font-family: 'Barlow Fallback';
+    src: local('Helvetica Neue'), local('Helvetica'), local('Arial');
+    size-adjust: 97%;
+    ascent-override: 96%;
+    descent-override: 24%;
+}
+
+:root {
+    /* Values below are pulled from the claude.ai/design project
+       "JackDT — Design Language" (tokens/colors.css, typography.css,
+       motion.css, print.css). Change them there first, then here. */
+    --blue: #2b3ecd;
+    --blue-deep: #1a2792;
+    --ink: #0b0d1a;
+    --bg: #f4f3ee;
+    --paper: #fbfaf6;
+    --muted: #4a4d5c;
+    --display: 'Bebas Neue', 'Barlow', 'Barlow Fallback', sans-serif;
+    --body: 'Barlow', 'Barlow Fallback', sans-serif;
+    --serif: 'Cardo', Georgia, 'Times New Roman', serif;
+    /* photographic blue ink, clipped into display glyphs — never a flat swatch.
+       The plate is the middle 80% of a cyanotype wash; raw at
+       assets/intake/blue-wash-source.jpg. The 0.30 tint is low because this
+       plate is a duller, greener blue than --blue and the old 0.65 flattened
+       it back into a swatch. */
+    --blue-fill:
+        linear-gradient(rgba(43, 62, 205, 0.30), rgba(43, 62, 205, 0.30)),
+        url('../assets/images/ink-wash-plate.jpg');
+    /* cover, not a tile size. An 80% crop of a real sheet has no seamless
+       edges, so it cannot repeat; cover is the only value that fills every
+       consumer from a 302x29 wordmark to a 1550x177 marquee unit without
+       per-element tuning. .cta overrides it with an explicit size. */
+    --fill-size: cover;
+    /* motion is either a 0.2s hover acknowledgement or very slow ambient drift */
+    --t-hover: 0.2s ease;
+    --t-marquee: 150s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: var(--body);
+    color: var(--ink);
+    background: var(--bg);
+    background-image: url('../assets/ink-texture.jpg');
+    background-size: 900px auto;
+    background-repeat: repeat;
+    line-height: 1.5;
+    font-weight: 400;
+    overflow-x: hidden;
+    opacity: 0;
+    animation: pageIn 0.6s ease-out forwards;
+}
+@keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Selection is a highlighter, not the browser's blue ──
+   The site is a reading surface; a marker line belongs on it and Chrome's
+   default blue does not. Declared inline rather than as a :root token — it is
+   one surface's colour, the same call as .player's four locals on /music. If
+   anything else ever needs it, promote it to the design project's
+   tokens/colors.css first, then hoist it here.
+
+   `-webkit-text-fill-color` is the part that matters. The selection background
+   paints immediately BELOW the text but ABOVE the element background, so on
+   the display glyphs — which are painted through background-clip: text with a
+   transparent fill — it covers the ink grain and leaves a yellow block with
+   invisible letters. Repainting the fill in ink for the selected state is what
+   keeps a selected headline readable. */
+::selection {
+    background: #ffef5a;
+    color: var(--ink);
+    -webkit-text-fill-color: var(--ink);
+}
+
+/* ── Slim masthead (top-left name + right-side nav) ── */
+.masthead {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 32px;
+    background: rgba(244, 243, 238, 0.82);
+    backdrop-filter: saturate(140%) blur(8px);
+    -webkit-backdrop-filter: saturate(140%) blur(8px);
+    border-bottom: 1px solid rgba(11, 13, 26, 0.08);
+}
+.brand {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(20px, 2.4vw, 32px);
+    letter-spacing: 0.06em;
+    line-height: 0.9;
+    color: var(--blue);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.top-nav {
+    display: flex;
+    flex-direction: row;
+    gap: 26px;
+    align-items: center;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+}
+.top-nav a { position: relative; }
+.top-nav a.active { color: var(--blue); }
+.top-nav a::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: -4px;
+    width: 0; height: 2px;
+    background: var(--blue);
+    transition: width 0.25s ease;
+}
+.top-nav a:hover::after, .top-nav a.active::after { width: 100%; }
+
+/* ── Menu, under 900px ──
+   Five sections do not fit beside the name on a phone. The control is a
+   LABEL over a hidden checkbox rather than a button, so the menu opens with
+   no JavaScript at all — a nav that needs a script to be reachable is a nav
+   that can disappear. The script below only adds Escape-to-close on top. */
+.nav-check { position: absolute; opacity: 0; pointer-events: none; }
+.nav-toggle {
+    display: none;
+    font-family: var(--body);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.nav-toggle:hover { color: var(--blue); }
+.nav-check:focus-visible ~ .nav-toggle { outline: 2px solid var(--blue); outline-offset: 4px; }
+
+@media (max-width: 900px) {
+    /* The overlay is position:fixed, but a backdrop-filter on an ancestor makes
+       that ancestor the containing block for its fixed descendants — so
+       `inset: 0` resolved to the masthead's own 50px-tall box and the menu
+       rendered clipped and see-through inside the header. Dropping the filter
+       at this width hands the viewport back. It is also what the touch rule
+       further down wants anyway (rule 1 of the mobile-smoothness notes: no
+       backdrop blur on touch), so the two agree rather than fight. */
+    .masthead {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(244, 243, 238, 0.97);
+    }
+
+    .nav-toggle { display: block; }
+    .top-nav {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: clamp(10px, 3vh, 26px);
+        padding: 0 clamp(24px, 8vw, 120px);
+        background: var(--bg);
+        background-image: url('../assets/ink-texture.jpg');
+        background-size: 900px auto;
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(38px, 11vw, 74px);
+        line-height: 0.9;
+        letter-spacing: 0.02em;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s;
+    }
+    .nav-check:checked ~ .top-nav { opacity: 1; visibility: visible; }
+    .top-nav a::after { display: none; }
+    .top-nav a:hover, .top-nav a.active { color: var(--blue); }
+    .nav-toggle { position: relative; z-index: 101; }
+    .nav-check:checked ~ .nav-toggle::after { content: ' ×'; }
+}
+
+/* ── Page head ── */
+.wrap { max-width: 1150px; margin: 0 auto; padding: clamp(120px, 18vh, 200px) 32px 200px; }
+.eyebrow {
+    font-family: var(--body); font-weight: 700; font-size: 12px;
+    letter-spacing: 0.32em; text-transform: uppercase; color: var(--blue);
+    margin-bottom: 22px;
+}
+h1 {
+    font-family: var(--display); font-weight: 400; color: var(--blue);
+    line-height: 0.84; letter-spacing: 0.01em; text-transform: uppercase;
+    font-size: clamp(58px, 12vw, 150px); margin-bottom: 30px;
+    background-image: var(--blue-fill);
+    background-size: cover, var(--fill-size);
+    background-position: center; background-repeat: no-repeat, no-repeat;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.lede {
+    max-width: 620px; margin-bottom: 40px;
+    font-family: var(--body); font-weight: 200; font-size: 17px;
+    line-height: 1.6; color: var(--muted);
+}
+
+.filters {
+    display: flex; gap: 22px; align-items: baseline; margin-bottom: 10px;
+    overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 2px;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(19px, 1.8vw, 27px); line-height: 1; letter-spacing: 0.03em;
+    text-transform: uppercase; color: var(--ink); background: none; border: 0;
+    padding: 0 0 3px; cursor: pointer; white-space: nowrap;
+    border-bottom: 2px solid transparent; transition: color var(--t-hover);
+}
+.filter:hover { color: var(--blue); }
+.filter.is-active { color: var(--blue); border-bottom-color: var(--blue); }
+.filter .n {
+    font-family: var(--body); font-weight: 700; font-size: 10px;
+    letter-spacing: 0.1em; vertical-align: super; margin-left: 3px; opacity: 0.55;
+}
+
+/* ── Years ── */
+.year { margin-top: 52px; }
+.year[hidden] { display: none; }
+.year h2 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(34px, 5vw, 64px); line-height: 0.9; letter-spacing: 0.02em;
+    color: var(--ink); padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink); margin-bottom: 4px;
+}
+.year h2 .c {
+    font-family: var(--body); font-weight: 700; font-size: 11px;
+    letter-spacing: 0.18em; color: var(--muted); margin-left: 10px; vertical-align: super;
+}
+
+/* ── Track rows — a catalogue entry, not a card ──
+   Sleeve on the left, everything known about the track set beside it on the
+   right: name, length, project, date, format, and the waveform. Reads as a
+   specimen sheet rather than a shop, which suits 20 unreleased experiments
+   better than a grid of identical squares did. */
+.row {
+    display: grid;
+    grid-template-columns: 116px 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 18px 8px;
+    border-bottom: 1px solid rgba(11, 13, 26, 0.14);
+    cursor: pointer;
+    color: inherit;
+    transition: background var(--t-hover);
+}
+.row:hover { background: rgba(43, 62, 205, 0.05); }
+.row[hidden] { display: none; }
+
+.cover { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--paper); }
+.cover img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform var(--t-image, 0.4s ease);
+}
+.row:hover .cover img { transform: scale(1.05); }
+.cover.none { border: 2px dashed var(--ink); opacity: 0.45; }
+.cover .cplay {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: rgba(244, 243, 238, 0.94);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity var(--t-hover), transform var(--t-hover);
+}
+.cover .cplay::after {
+    content: ''; margin-left: 3px; border-style: solid;
+    border-width: 7px 0 7px 12px;
+    border-color: transparent transparent transparent var(--blue);
+}
+.row:hover .cplay { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.row.is-playing .cplay { opacity: 1; }
+.row.is-playing .cplay::after {
+    margin-left: 0; border: 0; width: 11px; height: 11px; background: var(--blue);
+}
+
+.detail { min-width: 0; }
+.rhead { display: flex; align-items: baseline; gap: 14px; }
+.rtitle {
+    flex: 1; min-width: 0;
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(20px, 2.1vw, 30px); line-height: 1;
+    letter-spacing: 0.012em; text-transform: uppercase; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.row:hover .rtitle, .row.is-playing .rtitle { color: var(--blue); }
+.rlen {
+    flex: none;
+    font-family: var(--body); font-weight: 700; font-size: 11px;
+    letter-spacing: 0.16em; color: var(--muted);
+}
+/* The micrographic line: small caps, wide tracking, facts only. */
+.rmeta {
+    margin-top: 5px;
+    font-family: var(--body); font-weight: 700; font-size: 10px;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--blue);
+    opacity: 0.75;
+}
+
+/* Waveform — drawn from peaks computed at build time, so nothing is decoded
+   in the browser. Click anywhere along it to seek. */
+.wave {
+    display: block; width: 100%; height: 46px; margin-top: 10px;
+    cursor: pointer; touch-action: none;
+}
+
+/* ── Sticky player ──
+   Laid out as one more catalogue row — sleeve, title left, length right — so
+   the bar reads as the page's own vocabulary rather than as a widget bolted
+   under it. Squared off throughout: no pill slider, no round button, no fill
+   behind the glyphs. The transport is the only cluster with weight in it. */
+.player {
+    /* Local to the bar. Deliberately below --ink (the footer's black) so the
+       player reads as a separate surface laid over the page, not as more of
+       it — and so the type on it can stay quiet and still be legible. */
+    --pbg:   #05060d;
+    --prule: rgba(244, 243, 238, 0.13);
+    --pdim:  rgba(244, 243, 238, 0.48);
+    /* --blue at full strength is 2.2:1 on that ground — a 2px line in it
+       barely shows. This is the same hue lifted towards --bg (62/38) for use
+       on the dark surface only. Nothing else on the site needs it yet; if a
+       second dark surface appears, promote it to the design project. */
+    --pblue: #7783d9;
+
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    display: none; align-items: center; gap: clamp(12px, 1.6vw, 20px);
+    padding: 11px clamp(14px, 4vw, 32px);
+    background: var(--pbg); color: var(--bg);
+    box-shadow: 0 -16px 40px rgba(11, 13, 26, 0.16);
+}
+.player.on { display: flex; }
+
+/* The seek sits in the bar, immediately right of the transport. It is the
+   native range — dragging, tabbing and arrow keys come free — with every
+   default part replaced: a solid blue block set to the height of the title
+   beside it, scrubbed portion in the darker blue, square ends. It reads as a
+   measure of the track rather than as a control, which is the same thing the
+   waveforms on the rows are doing.
+
+   THIS is where full-strength --blue belongs on the dark ground, even though
+   the note about --pblue says otherwise: the contrast that has to work here is
+   block against block, not a hairline against near-black.
+
+   The fill is a hard-stopped gradient driven by --p, which the script sets
+   from playback and from the drag. Firefox's ::-moz-range-progress would do
+   the same job on its own, but one gradient covers both engines, so there is
+   one thing to keep true rather than two. */
+.player .seek {
+    --pseek-h: 21px;
+    flex: 1 1 auto; min-width: 80px; height: var(--pseek-h);
+    margin: 0; padding: 0;
+    -webkit-appearance: none; appearance: none;
+    background: transparent; cursor: pointer;
+}
+.player .seek::-webkit-slider-runnable-track {
+    height: var(--pseek-h);
+    background: linear-gradient(to right,
+        var(--blue) var(--p, 0%), var(--pblue) var(--p, 0%));
+}
+.player .seek::-moz-range-track {
+    height: var(--pseek-h);
+    background: linear-gradient(to right,
+        var(--blue) var(--p, 0%), var(--pblue) var(--p, 0%));
+}
+/* The playhead is the seam between the two blues; the tick just makes it
+   grabbable. Thumb and track are the same height, so no centring offset. */
+.player .seek::-webkit-slider-thumb {
+    -webkit-appearance: none; margin-top: 0;
+    width: 3px; height: var(--pseek-h);
+    border: 0; border-radius: 0; background: var(--bg);
+}
+.player .seek::-moz-range-thumb {
+    width: 3px; height: var(--pseek-h);
+    border: 0; border-radius: 0; background: var(--bg);
+}
+.player .seek:focus-visible { outline: 2px solid var(--pblue); outline-offset: 3px; }
+
+.player img {
+    width: 44px; height: 44px; object-fit: cover;
+    display: block; flex: none; background: var(--pbg);
+}
+
+/* ── Transport ── */
+.player .pnav { display: flex; align-items: center; gap: 4px; flex: none; }
+.player .pbtn {
+    flex: none; border: 0; background: none; padding: 0;
+    color: var(--bg); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color var(--t-hover), opacity var(--t-hover);
+}
+.player .pbtn:hover { color: var(--pblue); }
+.player .pbtn:focus-visible { outline: 2px solid var(--pblue); outline-offset: 2px; }
+.player .pbtn[disabled] { opacity: 0.28; cursor: default; }
+.player .pbtn[disabled]:hover { color: var(--bg); }
+
+/* Glyphs are drawn, not typed. The old ▶ / ❚❚ entities rendered in whatever
+   fallback face had them and sat off their own centre; these are the same
+   border construction as .cplay on the rows. */
+.player .pplay { width: 34px; height: 34px; }
+.player .pplay::before {
+    content: ''; margin-left: 3px;
+    border-style: solid; border-width: 8px 0 8px 13px;
+    border-color: transparent transparent transparent currentColor;
+}
+.player.playing .pplay::before {
+    margin-left: 0; border: 0;
+    width: 4px; height: 15px; background: currentColor;
+    box-shadow: 7px 0 0 currentColor; transform: translateX(-3.5px);
+}
+
+/* One shape for both steps: bar + triangle, laid out reversed so the bar
+   leads, then mirrored for next. */
+.player .pstep {
+    width: 28px; height: 34px; color: var(--pdim);
+    flex-direction: row-reverse; gap: 2px;
+}
+.player .pstep::before {
+    content: ''; border-style: solid; border-width: 6px 9px 6px 0;
+    border-color: transparent currentColor transparent transparent;
+}
+.player .pstep::after { content: ''; width: 2px; height: 12px; background: currentColor; }
+.player .pnext { transform: scaleX(-1); }
+
+/* Last in the bar and hard against the right edge, so the controls keep the
+   left where they have always been. A fixed slot, not a flexible one: sized
+   to its text it would change width on every track change, and the seek —
+   which absorbs the slack — would jump with it. Long titles ellipsise. */
+.player .ptitle {
+    flex: 0 0 clamp(160px, 21vw, 300px); min-width: 0; text-align: right;
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(17px, 1.7vw, 23px); line-height: 1;
+    letter-spacing: 0.02em; text-transform: uppercase;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.player .ptime {
+    flex: none;
+    font-family: var(--body); font-weight: 700; font-size: 10px;
+    letter-spacing: 0.16em; color: var(--pdim);
+    font-variant-numeric: tabular-nums;
+}
+
+.empty-note { font-family: var(--body); font-weight: 200; font-style: italic; font-size: 16px; color: var(--muted); }
+
+.foot {
+    text-align: center; padding: 60px 32px; background: var(--ink);
+    color: rgba(255,255,255,0.6); font-family: var(--body);
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+}
+.social { display: flex; justify-content: center; gap: 30px; margin-top: 34px; }
+.social a {
+    display: inline-flex; width: 34px; height: 34px;
+    color: rgba(255, 255, 255, 0.55);
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.social a:hover { color: var(--blue); transform: translateY(-2px); }
+.social svg { width: 100%; height: 100%; display: block; }
+.brand {
+    background-image: var(--blue-fill);
+    background-size: cover, var(--fill-size);
+    background-position: center; background-repeat: no-repeat, no-repeat;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 640px) {
+    .masthead { padding: 14px 18px; }
+    .wrap { padding: 110px 22px 190px; }
+    .row { grid-template-columns: 78px 1fr; gap: 14px; padding: 14px 4px; }
+    .wave { height: 34px; margin-top: 8px; }
+    /* The sleeve is the first thing to go — the transport and the title are
+       what the bar is for, and both need the width. Four things on one line at
+       390px left the seek about 80px wide and the title ellipsised to nothing,
+       so the seek wraps to its own full-width row underneath and the transport
+       leads. Two rows, ~84px of bar. */
+    .player img { display: none; }
+    .player { gap: 10px; row-gap: 9px; padding: 10px 14px; flex-wrap: wrap; }
+    .player .pnav { order: -1; }
+    .player .pstep { width: 24px; }
+    /* On its own row the title follows the transport, so it reads from the
+       left again rather than hugging the bar's right edge. */
+    .player .ptitle { flex: 1 1 auto; font-size: 16px; text-align: left; order: 1; }
+    .player .ptime { order: 2; }
+    .player .seek { order: 3; flex: 1 0 100%; --pseek-h: 18px; }
+}
+@media (hover: none) {
+    .masthead {
+        backdrop-filter: none; -webkit-backdrop-filter: none;
+        background: rgba(244, 243, 238, 0.97);
+    }
+    .cover .cplay { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+
+<html>
+<header class="masthead">
+    <a href="../home/" class="brand">Jack Dennison Thompson</a>
+    <input type="checkbox" id="nav-open" class="nav-check" hidden>
+    <label for="nav-open" class="nav-toggle" aria-label="Menu">Menu</label>
+    <nav class="top-nav">
+        <a href="../about/">About</a>
+        <a href="../writing/">Writing</a>
+        <a href="../photography/">Photography</a>
+        <a href="../music/" class="active">Music</a>
+        <a href="../video/">Video</a>
+        <a href="../multimedia/">Multimedia</a>
+    </nav>
+</header>
+
+{#- Grouped by year, newest first. Both the year list and the project filter
+    are derived from the data, so a year leaves the page when its last track
+    does and the filter row appears only once there is more than one project. -#}
+{% set rows = items | sort(attribute='date', reverse=true) %}
+{% set MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+{% set ns = namespace(years=[], tags=[]) %}
+{% for t in rows %}
+{%- set y = (t.date or '')[:4] or 'Undated' -%}
+{%- if y not in ns.years %}{% set ns.years = ns.years + [y] %}{% endif -%}
+{%- for g in (t.tags or []) %}{% if g not in ns.tags %}{% set ns.tags = ns.tags + [g] %}{% endif %}{% endfor -%}
+{% endfor %}
+
+<section class="wrap">
+    <div class="eyebrow" data-copy="eyebrow">Keskesay</div>
+    <h1>Music</h1>
+    <p class="lede" data-copy-rich="lede">Making music since 2020, for personal satisfaction rather than release. Syncopated rhythms sit atop lucid ambient chords and fall-to-the-floor kick drums. Influenced by Vegyn, Aphex Twin and Mall Grab &mdash; though it sits between those influences rather than mirroring them.</p>
+
+{% if ns.tags | length > 1 %}    <nav class="filters" id="filters" aria-label="Filter music">
+        <button type="button" class="filter is-active" data-tag="all">All<span class="n">{{ rows | length }}</span></button>
+{% for g in ns.tags | sort %}{% set c = namespace(n=0) %}{% for t in rows %}{% if g in (t.tags or []) %}{% set c.n = c.n + 1 %}{% endif %}{% endfor %}        <button type="button" class="filter" data-tag="{{ g }}">{{ g }}<span class="n">{{ c.n }}</span></button>
+{% endfor %}    </nav>
+{% endif %}
+
+    <div id="years">
+{% for y in ns.years %}{% set yn = namespace(n=0) %}{% for t in rows %}{% if ((t.date or '')[:4] or 'Undated') == y %}{% set yn.n = yn.n + 1 %}{% endif %}{% endfor %}        <section class="year" data-year="{{ y }}">
+            <h2>{{ y }}<span class="c">{{ yn.n }} track{{ '' if yn.n == 1 else 's' }}</span></h2>
+{% for t in rows %}{% if ((t.date or '')[:4] or 'Undated') == y and t.track and t.track.src %}
+{%- set d = t.date or '' -%}
+{%- set day = d[8:10] | int if d else 0 -%}
+{%- set mon = MON[(d[5:7] | int) - 1] if d and (d[5:7] | int) >= 1 and (d[5:7] | int) <= 12 else '' -%}
+{%- set fmt = (t.track.name or '').split('.')[-1] | upper -%}
+            <a class="row" href="../assets/{{ t.track.src }}"
+               data-src="../assets/{{ t.track.src }}"
+               data-title="{{ t.title }}"
+               data-tags="{{ (t.tags or []) | join(' ') }}"
+               data-peaks="{{ t.peaks or '' }}"{% if t.artwork and t.artwork.src %}
+               data-art="../assets/{{ t.artwork.src }}"{% endif %}>
+{% if t.artwork and t.artwork.src %}                <div class="cover"><img src="../assets/{{ t.artwork.src }}" alt="" loading="lazy" decoding="async"><span class="cplay"></span></div>
+{% else %}                <div class="cover none"><span class="cplay"></span></div>
+{% endif %}                <div class="detail">
+                    <div class="rhead"><span class="rtitle">{{ t.title }}</span><span class="rlen">{{ t.duration }}</span></div>
+                    <div class="rmeta">{% if mon %}{{ day }} {{ mon }} {{ d[:4] }}{% endif %}{% if fmt %} &middot; {{ fmt }}{% endif %}</div>
+                    <canvas class="wave" aria-hidden="true"></canvas>
+                </div>
+            </a>
+{% endif %}{% endfor %}        </section>
+{% else %}        <p class="empty-note">No tracks yet.</p>
+{% endfor %}    </div>
+    <p class="empty-note" id="none" hidden>Nothing under that yet.</p>
+</section>
+
+<div class="player" id="player">
+    <img id="p-art" src="" alt="">
+    <div class="pnav">
+        <button type="button" class="pbtn pstep" id="p-prev" aria-label="Previous track"></button>
+        <button type="button" class="pbtn pplay" id="p-toggle" aria-label="Play or pause"></button>
+        <button type="button" class="pbtn pstep pnext" id="p-next" aria-label="Next track"></button>
+    </div>
+    <input type="range" class="seek" id="p-seek" value="0" min="0" max="1000" step="1" aria-label="Seek">
+    <div class="ptime" id="p-time">0:00 / 0:00</div>
+    <div class="ptitle" id="p-title"></div>
+    <audio id="p-audio" preload="none"></audio>
+</div>
+
+<footer class="foot">
+    <div class="social">
+        <a href="mailto:jackdt26@outlook.com" aria-label="Email Jack">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="32" y="48" width="192" height="160" rx="10"/>
+                <path d="M224 56 128 144 32 56"/>
+            </svg>
+        </a>
+        <a href="https://www.youtube.com/channel/UC8wJrBxVPJrZTqmJ7fRLSlQ" target="_blank" rel="noopener" aria-label="YouTube">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M234 74a26 26 0 0 0 -18-18C199 51 128 51 128 51s-71 0-88 5a26 26 0 0 0 -18 18c-5 18-5 54-5 54s0 36 5 54a26 26 0 0 0 18 18c17 5 88 5 88 5s71 0 88-5a26 26 0 0 0 18-18c5-18 5-54 5-54s0-36-5-54Zm-129 87V95l56 33Z"/>
+            </svg>
+        </a>
+        <a href="https://soundcloud.com/user-216694930" target="_blank" rel="noopener" aria-label="SoundCloud">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <rect x="16" y="140" width="15" height="62" rx="7.5"/>
+                <rect x="50" y="118" width="15" height="84" rx="7.5"/>
+                <rect x="84" y="100" width="15" height="102" rx="7.5"/>
+                <path d="M126 202a8 8 0 0 1 -8 -8V86a8 8 0 0 1 5.6 -7.6 62 62 0 0 1 79.4 52.2 44 44 0 0 1 -8 71.4Z"/>
+            </svg>
+        </a>
+        <a href="https://www.instagram.com/jack.dennison.thompson/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg viewBox="0 0 256 256" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="36" y="36" width="184" height="184" rx="48"/>
+                <circle cx="128" cy="128" r="40"/>
+                <circle cx="180" cy="76" r="10" fill="currentColor" stroke="none"/>
+            </svg>
+        </a>
+        <a href="https://substack.com/@jackdennisonthompson" target="_blank" rel="noopener" aria-label="Substack">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M56 40h144v26H56z"/>
+                <path d="M56 90h144v26H56z"/>
+                <path d="M56 140v76l72-40 72 40v-76z"/>
+            </svg>
+        </a>
+        <a href="https://www.linkedin.com/in/jack-dennison-thompson-a4668126a" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M212 28H44a16 16 0 0 0 -16 16v168a16 16 0 0 0 16 16h168a16 16 0 0 0 16 -16V44a16 16 0 0 0 -16 -16ZM96 184a8 8 0 0 1 -16 0v-72a8 8 0 0 1 16 0Zm-8-88a12 12 0 1 1 12-12 12 12 0 0 1 -12 12Zm96 88a8 8 0 0 1 -16 0v-40a20 20 0 0 0 -40 0v40a8 8 0 0 1 -16 0v-72a8 8 0 0 1 15.8 -1.8A36 36 0 0 1 184 144Z"/>
+            </svg>
+        </a>
+    </div>
+</footer>
+<script>
+/* Menu: the checkbox does the opening, so this only adds Escape. */
+(function () {
+    var check = document.getElementById('nav-open');
+    if (!check) return;
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && check.checked) check.checked = false;
+    });
+})();
+
+(function () {
+    var host = document.getElementById('years');
+    var bar  = document.getElementById('player');
+    var au   = document.getElementById('p-audio');
+    if (!host || !bar || !au) return;
+    var rows   = Array.prototype.slice.call(host.querySelectorAll('.row'));
+    var groups = Array.prototype.slice.call(host.querySelectorAll('.year'));
+    var fbar   = document.getElementById('filters');
+    var none   = document.getElementById('none');
+    var art    = document.getElementById('p-art');
+    var title  = document.getElementById('p-title');
+    var time   = document.getElementById('p-time');
+    var seek   = document.getElementById('p-seek');
+    var toggle = document.getElementById('p-toggle');
+    var prev   = document.getElementById('p-prev');
+    var next   = document.getElementById('p-next');
+    var at = -1, seeking = false, active = 'all';
+
+    var INK  = 'rgba(11, 13, 26, 0.22)';
+    var BLUE = '#2b3ecd';
+
+    /* The peaks were computed at build time and shipped as one base36 char per
+       bucket, so nothing is decoded or analysed in the browser — drawing is a
+       loop over a short string. */
+    function decode(s) {
+        var out = [];
+        for (var i = 0; i < s.length; i++) out.push(parseInt(s[i], 36) / 35);
+        return out;
+    }
+    function draw(row, progress) {
+        var cv = row.querySelector('.wave');
+        if (!cv) return;
+        var peaks = row._peaks || (row._peaks = decode(row.dataset.peaks || ''));
+        if (!peaks.length) return;
+        var dpr = window.devicePixelRatio || 1;
+        var w = cv.clientWidth, h = cv.clientHeight;
+        if (!w || !h) return;
+        if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+        var g = cv.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        var n = peaks.length, bw = w / n, gap = bw > 3 ? 1 : 0, mid = h / 2;
+        var upto = (progress == null ? -1 : progress * n);
+        for (var i = 0; i < n; i++) {
+            var v = Math.max(0.03, peaks[i]);
+            var bh = v * (h - 2);
+            g.fillStyle = (i < upto) ? BLUE : INK;
+            g.fillRect(i * bw, mid - bh / 2, Math.max(1, bw - gap), bh);
+        }
+    }
+    function drawAll() { rows.forEach(function (r) { draw(r, r === rows[at] ? cur() : null); }); }
+    function cur() { return (au.duration ? au.currentTime / au.duration : 0); }
+    /* The seek's two-tone fill is a gradient stop, not an element — the track
+       pseudo-element reads --p off the input. */
+    function setFill(f) { seek.style.setProperty('--p', (f * 100) + '%'); }
+
+    function clock(s) {
+        if (!isFinite(s) || s < 0) s = 0;
+        var m = Math.floor(s / 60), r = Math.floor(s % 60);
+        return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+    function mark() { rows.forEach(function (r, i) { r.classList.toggle('is-playing', i === at); }); }
+    function load(i, play) {
+        if (i < 0 || i >= rows.length) return;
+        var was = at;
+        at = i;
+        var r = rows[i];
+        au.src = r.dataset.src;
+        title.textContent = r.dataset.title || '';
+        if (r.dataset.art) { art.src = r.dataset.art; art.style.display = ''; }
+        else { art.removeAttribute('src'); art.style.display = 'none'; }
+        bar.classList.add('on');
+        mark();
+        if (was >= 0 && rows[was]) draw(rows[was], null);   // clear old progress
+        draw(r, 0);
+        setFill(0);
+        seek.value = 0;
+        syncNav();
+        if (play) au.play().catch(function () { /* autoplay refused — leave paused */ });
+    }
+    function nextVisible(from) {
+        for (var i = from + 1; i < rows.length; i++) if (!rows[i].hidden) return i;
+        return -1;
+    }
+    function prevVisible(from) {
+        for (var i = from - 1; i >= 0; i--) if (!rows[i].hidden) return i;
+        return -1;
+    }
+    /* Next goes dead at the end of the visible list rather than wrapping —
+       same rule the `ended` handler already follows, so the button and
+       autoplay never disagree about where the list stops. Previous is never
+       dead: on the first track it restarts it, which is also what it does
+       anywhere past the first few seconds. */
+    function syncNav() { next.disabled = at >= 0 && nextVisible(at) < 0; }
+
+    host.addEventListener('click', function (ev) {
+        var r = ev.target.closest ? ev.target.closest('.row') : null;
+        if (!r) return;
+        ev.preventDefault();          // the href is the no-JS path
+        var i = rows.indexOf(r);
+        /* Clicking the waveform of the track already playing means "seek here",
+           not "toggle" — that is what the waveform is for. */
+        var cv = ev.target.closest('.wave');
+        if (cv && i === at && au.duration) {
+            var b = cv.getBoundingClientRect();
+            au.currentTime = Math.min(1, Math.max(0, (ev.clientX - b.left) / b.width)) * au.duration;
+            return;
+        }
+        if (i === at) { au.paused ? au.play() : au.pause(); return; }
+        load(i, true);
+    });
+
+    toggle.addEventListener('click', function () {
+        if (at < 0) { var f = nextVisible(-1); if (f >= 0) load(f, true); return; }
+        au.paused ? au.play() : au.pause();
+    });
+    /* Past the first few seconds, "previous" means "start this one again" —
+       the same call every hardware transport makes, and it saves the usual
+       double-press to get back to the top of a track. */
+    prev.addEventListener('click', function () {
+        if (at < 0) return;
+        var p = prevVisible(at);
+        if (au.currentTime > 3 || p < 0) { au.currentTime = 0; au.play().catch(function () {}); return; }
+        load(p, true);
+    });
+    next.addEventListener('click', function () {
+        var n = nextVisible(at);
+        if (n >= 0) load(n, true);
+    });
+    au.addEventListener('play',  function () { bar.classList.add('playing'); });
+    au.addEventListener('pause', function () { bar.classList.remove('playing'); });
+    au.addEventListener('ended', function () { var n = nextVisible(at); if (n >= 0) load(n, true); });
+    au.addEventListener('timeupdate', function () {
+        time.textContent = clock(au.currentTime) + ' / ' + clock(au.duration);
+        var p = cur();
+        if (!seeking && au.duration) seek.value = Math.round(p * 1000);
+        if (!seeking) setFill(p);
+        if (at >= 0) draw(rows[at], p);
+    });
+    seek.addEventListener('input',  function () { seeking = true; setFill(seek.value / 1000); });
+    seek.addEventListener('change', function () {
+        if (au.duration) au.currentTime = seek.value / 1000 * au.duration;
+        seeking = false;
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== ' ' || at < 0) return;
+        var t = e.target.tagName;
+        if (t === 'INPUT' || t === 'TEXTAREA' || e.target.isContentEditable) return;
+        e.preventDefault();
+        au.paused ? au.play() : au.pause();
+    });
+
+    /* Canvases have no intrinsic size, so they have to be redrawn whenever the
+       column width changes. Debounced — resize fires continuously on a drag. */
+    var rt;
+    window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(drawAll, 150); });
+    drawAll();
+
+    if (!fbar) return;
+    function setTag(tag) {
+        active = tag;
+        var shown = 0;
+        rows.forEach(function (r) {
+            var ok = tag === 'all' || (' ' + r.dataset.tags + ' ').indexOf(' ' + tag + ' ') >= 0;
+            r.hidden = !ok;
+            if (ok) shown++;
+        });
+        /* A year with nothing left in it hides its heading too, so filtering
+           doesn't leave a column of bare years over empty space. */
+        groups.forEach(function (g) {
+            g.hidden = !Array.prototype.some.call(g.querySelectorAll('.row'), function (r) { return !r.hidden; });
+        });
+        if (none) none.hidden = shown > 0;
+        syncNav();          // the visible list just changed under the transport
+        if (history.replaceState) {
+            history.replaceState(null, '', tag === 'all' ? location.pathname : '#' + tag);
+        }
+        Array.prototype.forEach.call(fbar.querySelectorAll('.filter'), function (b) {
+            b.classList.toggle('is-active', b.dataset.tag === tag);
+        });
+        drawAll();   // rows revealed while hidden have zero width until now
+    }
+    fbar.addEventListener('click', function (ev) {
+        var b = ev.target.closest ? ev.target.closest('.filter') : null;
+        if (b) setTag(b.dataset.tag);
+    });
+    function fromHash() {
+        var h = (location.hash || '').replace('#', '');
+        return fbar.querySelector('.filter[data-tag="' + h + '"]') ? h : 'all';
+    }
+    window.addEventListener('hashchange', function () {
+        var t = fromHash(); if (t !== active) setTag(t);
+    });
+    setTag(fromHash());
+})();
+</script>
+</html>

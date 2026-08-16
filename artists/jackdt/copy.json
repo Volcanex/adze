@@ -1,0 +1,36 @@
+{
+  "about": {
+    "bio-reporting": "Jack Dennison Thompson is a journalist covering music, culture and contemporary life. Originally from Newcastle and now based in London, he writes features, interviews and criticism with a focus on grassroots music, nightlife and the communities shaping culture beyond the mainstream.<br>His work has appeared in Clash Music, Huck, The Big Issue, Campaign, The Cold Magazine, Maghrebi, X City and GTFO. He holds an MA in Magazine Journalism from City St George's, University of London.",
+    "lede": "Jack Dennison Thompson is a music and culture journalist in Clapton, London, studying for an <strong>MA in Magazine Journalism at City, University of London.</strong>",
+    "bio-beyond-writing": "Beyond writing he produces content for his own YouTube channel and radio show, and works in Adobe Creative Suite, Ableton and WordPress. He is originally from Newcastle.",
+    "seeking-work": "",
+    "experience-clash": "<strong>Contributing Writer</strong> — Clash Music Group, Huck, The Cold Magazine",
+    "experience-gtfo": "<strong>Deputy Multimedia Editor</strong> — GTFO Magazine",
+    "experience-campaign": "",
+    "experience-contributor": "<strong>Contributor</strong> — Huck, Clash Music Group, The Cold Magazine, The Big Issue, Campaign, Maghrebi.org, Folk &amp; Honey, The Indiependent"
+  },
+  "home": {
+    "tagline": "<em>Music</em> &amp; <em>culture</em> journalist, Homerton, London",
+    "intro": "<strong>Jack Dennison Thompson </strong>is a journalist covering music, culture and contemporary life. Originally from Newcastle and now based in London, he writes features, interviews and criticism with a focus on grassroots music, nightlife and the communities shaping culture beyond the mainstream.<br>His work has appeared in Clash Music, Huck, The Big Issue, Campaign, The Cold Magazine, Maghrebi, X City and GTFO. He holds an MA in Magazine Journalism from City St George's, University of London.",
+    "bio-bylines": "He is a contributing writer at <strong>Clash Music Group, Huck, and The Cold Magazine</strong> with bylines for <strong>The Big Issue</strong>, <strong>Campaign</strong>, <strong>Maghrebi</strong>, <strong>X City</strong> and <strong>GTFO</strong>.",
+    "bio-beyond-writing": "Journalist and MA Magazine Journalism graduate at City St George’s, University\nof London, with experience writing news, features, reviews and profiles across\ngeopolitics, music, culture and the arts. Currently writing for Clash Music, Huck\nand The Cold Magazine, with previous newsroom experience at Campaign and\nBig Issue. ",
+    "contact-heading": "Get in touch",
+    "blurb-music": "Jack has been making music since 2020, for personal satisfaction rather than release. Syncopated rhythms sit atop lucid ambient chords and fall-to-the-floor kick drums. Influenced by <strong>Vegyn</strong>, <strong>Aphex Twin</strong> and <strong>Mall Grab</strong> - though it sits between those influences rather than mirroring them.",
+    "blurb-video": "Video essays on literature and philosophy, published as <strong>Keskesay</strong> - Murakami, Kafka, Hemingway, Hunter S. Thompson and the writers he keeps coming back to.",
+    "blurb-multimedia": "Work that refuses to sit in one format - picture, sound, video and document held together in a single piece.",
+    "blurb-photography": "Photographs made alongside the reporting, on assignment and off it."
+  },
+  "music": {
+    "lede": "Jack has been making music since 2020, but only developed an addiction to Ableton Live at university. In his recent work you'll find syncopated rhythms floating atop lucid ambient chords and fall-to-the-floor kick drums. Influenced by Vegyn, Aphex Twin and Mall Grab. Jack's influences are gently audible in his music and create a satisfying lineage between the artists who inspire him and his own sound, which reveals itself as both energetic and nostalgic. It's distinct in his production style and choice of digital equipment, especially across his more recent work.",
+    "eyebrow": "Keskesay"
+  },
+  "multimedia": {
+    "eyebrow": "Selected Work"
+  },
+  "photography": {
+    "eyebrow": "Selected Work"
+  },
+  "video": {
+    "eyebrow": "Selected Work"
+  }
+}

@@ -2,7 +2,7 @@
     "name": "Jack Dennison-Thompson",
     "slug": "jackdt",
     "domain": "jackdt.com",
-    "admin_token": "jack123",
+    "admin_token": "jack2002",
     "description": "Journalism portfolio",
     "contact_email": "jackdt26@outlook.com",
     "features": [
@@ -12,17 +12,217 @@
         "posts": {
             "label": "Posts",
             "item": {
-                "title": {"type": "text", "required": true, "slug_source": true},
-                "meta": {"type": "text", "label": "Publication & date"},
-                "image": {"type": "image", "label": "Thumbnail"},
-                "url": {"type": "text", "required": true, "format": "url", "label": "Link"}
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "meta": {
+                    "type": "text",
+                    "label": "Publication & date"
+                },
+                "image": {
+                    "type": "image",
+                    "label": "Thumbnail"
+                },
+                "url": {
+                    "type": "text",
+                    "required": true,
+                    "format": "url",
+                    "label": "Link"
+                },
+                "date": {
+                    "type": "date",
+                    "label": "Published"
+                },
+                "tags": {
+                    "type": "tags",
+                    "label": "Tags (music, culture, politics, economy, society)"
+                },
+                "featured": {
+                    "type": "boolean",
+                    "label": "Show on home page"
+                }
             },
             "page": {
                 "mode": "single",
                 "parent": "writing",
-                "title": "Writing — Jack Dennison Thompson",
-                "description": "Selected journalism and writing by Jack Dennison Thompson",
+                "title": "Writing \u2014 Jack Dennison Thompson",
+                "description": "Journalism by Jack Dennison Thompson \u2014 music, culture and North Africa reporting",
                 "template": "templates/writing.html"
+            }
+        },
+        "photos": {
+            "label": "Photo sets",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true,
+                    "label": "Set name"
+                },
+                "images": {
+                    "type": "image",
+                    "multiple": true,
+                    "label": "Photographs"
+                },
+                "date": {
+                    "type": "date",
+                    "label": "Shot"
+                },
+                "tags": {
+                    "type": "tags",
+                    "label": "Tags — these become the filters on the page"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "photography",
+                "title": "Photography — Jack Dennison Thompson",
+                "description": "Photography by Jack Dennison Thompson",
+                "template": "templates/photography.html"
+            }
+        },
+        "videos": {
+            "label": "Video",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "url": {
+                    "type": "text",
+                    "format": "url",
+                    "label": "YouTube or Vimeo link"
+                },
+                "video": {
+                    "type": "file",
+                    "accept": [
+                        "video"
+                    ],
+                    "max_mb": 200,
+                    "label": "… or upload a video file"
+                },
+                "poster": {
+                    "type": "image",
+                    "label": "Thumbnail"
+                },
+                "description": {
+                    "type": "textarea",
+                    "label": "Blurb"
+                },
+                "meta": {
+                    "type": "text",
+                    "label": "Channel & date"
+                },
+                "duration": {
+                    "type": "text",
+                    "label": "Duration (e.g. 12:04)"
+                },
+                "date": {
+                    "type": "date",
+                    "label": "Published"
+                },
+                "tags": {
+                    "type": "tags",
+                    "label": "Tags — these become the filters on the page"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "video",
+                "title": "Video — Jack Dennison Thompson",
+                "description": "Video by Jack Dennison Thompson",
+                "template": "templates/video.html"
+            }
+        },
+        "music": {
+            "label": "Music",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true,
+                    "label": "Track"
+                },
+                "track": {
+                    "type": "file",
+                    "accept": [
+                        "audio"
+                    ],
+                    "max_mb": 200,
+                    "label": "Audio file"
+                },
+                "artwork": {
+                    "type": "image",
+                    "label": "Artwork"
+                },
+                "duration": {
+                    "type": "text",
+                    "label": "Duration (e.g. 3:42)"
+                },
+                "date": {
+                    "type": "date",
+                    "label": "Released"
+                },
+                "tags": {
+                    "type": "tags",
+                    "label": "Tags — these become the filters on the page"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "music",
+                "title": "Music — Jack Dennison Thompson",
+                "description": "Music by Jack Dennison Thompson",
+                "template": "templates/music.html"
+            }
+        },
+        "multimedia": {
+            "label": "Multimedia",
+            "item": {
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "body": {
+                    "type": "textarea",
+                    "label": "Description"
+                },
+                "media": {
+                    "type": "file",
+                    "multiple": true,
+                    "accept": [
+                        "image",
+                        "video",
+                        "audio",
+                        "doc"
+                    ],
+                    "max_mb": 200,
+                    "label": "Files — pictures, video, audio or PDF"
+                },
+                "embed": {
+                    "type": "text",
+                    "format": "url",
+                    "label": "Embed link (YouTube, Vimeo, SoundCloud, Spotify)"
+                },
+                "date": {
+                    "type": "date",
+                    "label": "Published"
+                },
+                "tags": {
+                    "type": "tags",
+                    "label": "Tags — these become the filters on the page"
+                }
+            },
+            "page": {
+                "mode": "single",
+                "parent": "multimedia",
+                "title": "Multimedia — Jack Dennison Thompson",
+                "description": "Multimedia work by Jack Dennison Thompson",
+                "template": "templates/multimedia.html"
             }
         }
     },
@@ -41,5 +241,8 @@
     "slack_announced": true,
     "intake_token": "vCXRfGPWVqL3gDox_V1VXUl-uyAV19eH",
     "figma_url": "",
-    "handover_token": "ITxGTZbanL6zoDKRxMYcxVRgPGucT2Rd"
+    "handover_token": "ITxGTZbanL6zoDKRxMYcxVRgPGucT2Rd",
+    "platform_widgets": [
+        "loom"
+    ]
 }
