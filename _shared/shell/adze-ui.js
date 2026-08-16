@@ -105,6 +105,220 @@ window.AdzeUI = (function () {
     return { wrap, input };
   }
 
+  /* ── the visible viewport ───────────────────────────────────────────────────
+   *
+   * dvh solves the URL bar. It does NOT solve the software keyboard — nothing
+   * in CSS does, because the keyboard doesn't change the layout viewport at all
+   * on iOS and only sometimes does on Android.
+   *
+   * That is a real defect in the copy editor rather than a polish item. Its
+   * preview is `height: min(46dvh, 420px)` and sticky, sized against a viewport
+   * the artist can only see half of once they tap a field: on a 780px phone
+   * with a 340px keyboard the preview keeps its ~360px and the box being typed
+   * into gets what's left, which is a line and a half. The feature that exists
+   * so an artist can see their words in place is the thing covering them.
+   *
+   * So: publish the VISIBLE height as `--as-vvh` (one hundredth of it, so CSS
+   * can multiply it like a vh unit) and flag the keyboard with `is-kb`.
+   * `is-vv` says the measurement is real — without it the CSS keeps its dvh
+   * rules rather than falling back to a var that resolves to the wrong thing.
+   *
+   * Idempotent: both shells call it at boot and one of them may mount twice. */
+  let _vvTracking = false;
+
+  function trackViewport() {
+    const vv = window.visualViewport;
+    if (_vvTracking || !vv) return;
+    _vvTracking = true;
+    const r = document.documentElement;
+    r.classList.add('is-vv');
+    let raf = null;
+
+    function measure() {
+      raf = null;
+      r.style.setProperty('--as-vvh', (vv.height / 100) + 'px');
+      /* 150px, not a percentage. A URL bar collapsing costs 60–120px and must
+       * not read as a keyboard; a keyboard is 250px+ on the smallest phone
+       * anyone edits on. The gap between those two is where the threshold goes,
+       * and it is absolute because both are absolute. */
+      r.classList.toggle('is-kb', (window.innerHeight - vv.height) > 150);
+    }
+
+    // Coalesced into a frame: visualViewport fires resize AND scroll
+    // continuously while the keyboard animates in, and each one here would
+    // otherwise write a custom property that invalidates layout.
+    const onChange = () => { if (raf === null) raf = requestAnimationFrame(measure); };
+    vv.addEventListener('resize', onChange);
+    vv.addEventListener('scroll', onChange);
+    measure();
+  }
+
+  /* ── re-auth ────────────────────────────────────────────────────────────────
+   *
+   * A 401 arriving MID-SESSION must not rebuild the page.
+   *
+   * Both shells used to answer every 401 by calling their own renderLogin(),
+   * which starts `root.innerHTML = ''`. In the content admin that is a data-loss
+   * path with a straight face: autosave's failure line says "your words are
+   * still here, and this keeps trying" while the element holding those words is
+   * being removed from the document. Nothing had made it reachable — until
+   * changing your password did, because that endpoint dual-writes admin_token
+   * and calls revoke_all_for_account, so every other open tab's next autosave
+   * is a 401. The artist most likely to hit it is the one with the editor open
+   * in another tab, which is to say the one with the most to lose.
+   *
+   * So: sign back in OVER the page, leaving the DOM beneath it untouched. The
+   * pending write is not retried here — autosave's own `isDirty` is still true
+   * and its next keystroke or flush sends it, which is the path that was
+   * already tested.
+   *
+   * `onDone` runs after a successful re-auth. Concurrent 401s share one
+   * overlay: several in-flight requests failing together is the NORMAL case, and
+   * four stacked password prompts would be worse than the bug. */
+  let _reauthOpen = null;
+
+  function reauth(opts) {
+    const o = opts || {};
+    const host = o.host || document.body;
+    if (_reauthOpen) return _reauthOpen;
+
+    const over = el('div', 'as-reauth');
+    const box = el('div', 'as-reauth__box');
+    box.appendChild(el('h2', 'as-reauth__title', 'Signed out'));
+    box.appendChild(el('p', 'as-reauth__body',
+      o.message || 'Your session ended. Sign in again to carry on — '
+        + 'nothing you have typed has been lost.'));
+
+    const pwf = passwordField('Password');
+    const err = el('div', 'as-err');
+    const btn = el('button', 'as-btn', 'Sign back in');
+
+    async function submit() {
+      err.textContent = '';
+      let r;
+      try {
+        r = await fetch(o.prefix + '/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: '', password: pwf.input.value.trim() }),
+        });
+      } catch (e) {
+        err.textContent = 'Couldn’t reach the server. Check your connection and try again.';
+        return;
+      }
+      if (r.ok) {
+        over.remove();
+        _reauthOpen = null;
+        if (o.onDone) o.onDone();
+        return;
+      }
+      err.textContent = r.status === 429
+        ? 'Too many attempts just now. Wait a minute and try again.'
+        : r.status >= 500 ? 'Something broke at our end — not your password.'
+        : 'Wrong password.';
+    }
+
+    btn.onclick = () => withBusy(btn, submit);
+    pwf.input.addEventListener('keydown',
+      e => { if (e.key === 'Enter') withBusy(btn, submit); });
+
+    box.append(pwf.wrap, btn, err);
+    over.appendChild(box);
+    host.appendChild(over);
+    pwf.input.focus();
+
+    _reauthOpen = over;
+    return over;
+  }
+
+  /* ── change password ────────────────────────────────────────────────────────
+   *
+   * Returns {el} — mount it wherever the surface wants the control.
+   *
+   * Collapsed by default behind its own toggle. Changing a password is a thing
+   * you do once a year, and an open three-field form is three empty boxes on a
+   * page whose job is to get the artist into their editor. Pass `open: true`
+   * where the surface has already asked the question — inside a modal titled
+   * "Change password", a link saying "Change your password" is the same
+   * sentence twice.
+   *
+   * The warning about other devices is not politeness. POST {prefix}/password
+   * rewrites admin_token in config.json (it is still the editor's API key) and
+   * revokes every other session, so an artist who does this with the editor open
+   * elsewhere has just signed that tab out. Saying so is cheaper than the
+   * support message. */
+  function passwordChangeForm(opts) {
+    const o = opts || {};
+    const wrap = el('div', 'as-account__item');
+
+    const alwaysOpen = o.open === true;
+    const toggle = el('button', 'as-link', 'Change your password');
+    const form = el('div', 'as-account__form');
+    form.hidden = !alwaysOpen;
+
+    const cur = passwordField('Current password', 'current-password');
+    const nu = passwordField('New password', 'new-password');
+    const conf = passwordField('Repeat the new password', 'new-password');
+    const err = el('div', 'as-err');
+    // The only feedback this form gives, and it renders below the button that
+    // caused it — announce it rather than relying on the artist looking down.
+    err.setAttribute('role', 'status');
+    err.setAttribute('aria-live', 'polite');
+    const save = el('button', 'as-btn as-btn-quiet', 'Change password');
+    const acts = el('div', 'as-actions');
+    acts.appendChild(save);
+
+    const hint = el('p', 'as-account__hint',
+      'At least 6 characters. This signs you out on your other devices.');
+
+    toggle.onclick = () => {
+      form.hidden = !form.hidden;
+      toggle.textContent = form.hidden ? 'Change your password' : 'Never mind';
+      if (!form.hidden) cur.input.focus();
+    };
+
+    save.onclick = () => withBusy(save, async () => {
+      err.textContent = '';
+      // Checked here as well as on the server: a mistyped repeat is the common
+      // case, and a round trip to be told so is a round trip that ends with the
+      // artist signed out of their other tab for nothing.
+      if (nu.input.value !== conf.input.value) {
+        err.textContent = 'Those two don’t match.';
+        return;
+      }
+      if (nu.input.value.trim().length < 6) {
+        err.textContent = 'New password must be at least 6 characters.';
+        return;
+      }
+      let r;
+      try {
+        r = await fetch(o.prefix + '/password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current: cur.input.value.trim(), new: nu.input.value.trim() }),
+        });
+      } catch (e) {
+        err.textContent = 'Couldn’t reach the server. Try again.';
+        return;
+      }
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        err.textContent = body.error || 'That didn’t work.';
+        return;
+      }
+      [cur, nu, conf].forEach(f => { f.input.value = ''; });
+      if (!alwaysOpen) {
+        form.hidden = true;
+        toggle.textContent = 'Change your password';
+      }
+      if (o.onDone) o.onDone();
+    });
+
+    form.append(cur.wrap, nu.wrap, conf.wrap, hint, acts, err);
+    if (!alwaysOpen) wrap.appendChild(toggle);
+    wrap.appendChild(form);
+    return { el: wrap, focus: () => cur.input.focus() };
+  }
+
   // ── feedback ──────────────────────────────────────────────────────────────
   // Adze design-language components (components/feedback/*.jsx) as plain DOM.
 
@@ -176,6 +390,7 @@ window.AdzeUI = (function () {
     }
   }
 
-  return { el, toast, applyTheme, passwordField, spinner, skeletonRows,
-           emptyState, progressBar, withBusy };
+  return { el, toast, applyTheme, trackViewport, passwordField, reauth,
+           passwordChangeForm, spinner, skeletonRows, emptyState, progressBar,
+           withBusy };
 })();
