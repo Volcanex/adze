@@ -12,6 +12,16 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   Purelymail account (`integrations/purelymail.py`, workspace 'email' config).
 - `features/` — modular site-wide capabilities (e.g. `bookings.py`). See
   `features/CLAUDE.md`.
+- `shell_assets.py` — **the one declaration of what the artist admin shell
+  loads**: `SHELL_DIR`, `VENDOR_DIR`, `TOKENS_DIR`, and `TOKEN_FILES` (the
+  design-language cascade, order-significant), plus `token_assets()`,
+  `shell_assets(*entry)` and `token_links(prefix)` for the bootstrap `<head>`.
+  Both surfaces that mount the shell — `landing.py` (the dash) and
+  `features/content_admin.py` (the editor) — import from here. Before it, the
+  token list existed in four places (a constant and a hand-written `<head>`
+  block in each), and since the two share `admin-shell.css`, a file added to
+  one and not the other renders the same stylesheet two ways with nothing
+  failing. Don't reintroduce local copies of these constants.
 - `autocode_proxy.py` — Flask reverse-proxy for the Auto-Code chat tab.
   Spawns `opencode serve` inside each per-artist sandbox container and
   forwards REST + `/global/event` SSE under `/api/adze/autocode/*`. The
@@ -80,6 +90,65 @@ sole consumer of the shared per-artist sandbox container
 (`sandbox.py`/`artist_repos.py`). If you find a stray reference to
 Terminal Access, tmux sessions, or `previewFrameClaude`/`claudeInput`
 elsewhere, it's stale — flag and remove it.
+
+## Artist sign-in — the three front doors
+
+An artist can arrive at one of three places, and they are deliberately not
+the same thing:
+
+1. `theirdomain.com/admin` — the **landing page** (`landing.py`): five
+   sections behind a pill row — Overview (the editor button, site links and
+   QR, status, a one-line visit count, feedback), Files (a read-only browser
+   and rich viewer), History (saved versions, restore), Export (the site as a
+   zip), Account. Plus `handoff` into the editor with no second login. This is
+   the intended home for anyone who has a live domain.
+
+   **It writes nothing.** Every file route is read-only and the single
+   mutating route (`/history/restore`) calls a function the control panel
+   already owns. Editing lives in the control panel, which owns autosave,
+   publish and snapshot semantics; a second writer here would be a second set
+   of rules for the same files.
+
+   Its data comes from `admin_api.py` **payload functions**, never from
+   re-walking the artist dir: `artist_files_payload`, `read_artist_file_payload`,
+   `export_site_zip`, `snapshots_payload`, `restore_snapshot_for` — each one
+   also backing the `/api/adze/*` route it was extracted from. `admin_api`
+   owns path safety (`_resolve_artist_file`) and the definition of what an
+   export or a snapshot *is*; a copy in `landing.py` would be a second thing
+   to get wrong.
+
+   **`include_assets` is the browse/edit split.** The Manual Edit tab hides
+   `assets/` and `widgets/` (`FILES_TREE_HIDDEN_DIRS`) because a dedicated tab
+   owns them; the landing's browser shows them (`FILES_BROWSE_HIDDEN_DIRS`)
+   because an artist looking at their own site expects their pictures to be
+   in it. Browse mode additionally refuses **dotfiles** — `.analytics.json`
+   and `.generated.json` are machine-written and `.env` is a secret store.
+   Every writer passes `include_assets=False`, so nothing new became writable.
+2. `adze.studio/dashboard` — the **editor** (`dashboard.html`). Its sign-in
+   screen is identifier-first: name/email/slug, then password. It posts
+   `{identifier, password, slug?}` to `/api/adze/login`, which has accepted
+   that shape alongside legacy `{slug, token}` since the account store
+   landed. `choose: true` in the reply means the account owns several sites
+   and the caller must pick one — never guess.
+3. `adze.studio/admin` — the **super-admin** SPA, unrelated to the above.
+
+Step one of (2) calls `/api/adze/account/resolve`, which redirects to (1)
+when the artist has a domain that actually reaches Adze. **`config.json`'s
+`domain` is not evidence of that** — most artists have one set with no
+vhost anywhere, and redirecting them there strands them on a parked domain.
+`_landing_url()` in `accounts_api.py` therefore requires
+`nginx/sites-available/<domain>` to exist. Declining to redirect is the safe
+failure (they just sign in on adze.studio); the reverse locks people out.
+
+**Consequence:** an artist whose vhost lives only in the host's
+`/etc/nginx/sites-enabled` and not in this repo silently keeps getting the
+editor instead of their landing page. The repo dir is the SSOT — put the
+vhost here and the redirect turns itself on.
+
+`domain_guard` in `features/artist_admin.py` hard-404s the landing page on
+any host but the artist's own, so the landing page cannot be reached on
+adze.studio at all. That is why (2) exists as a real destination and not
+just a redirector.
 
 ## Workspace subdomains ({workspace}.adze.studio)
 
@@ -159,3 +228,55 @@ in client comms); "draft" means substitution only, sending is manual.
   `_shared/` only.
 - Changes here take effect after `docker restart adze-flask` (source is
   bind-mounted, no rebuild needed).
+
+## `copy_slots.py` — the sitewide copy override layer (2026-07-31)
+
+New module. Artist pages are hand-authored HTML/CSS where only *marked* runs of
+text are editable (`data-copy` / `data-copy-rich` — see
+[../artists/CLAUDE.md](../artists/CLAUDE.md)). This module scans a page for
+slots, and substitutes overrides from `artists/<slug>/copy.json` at compile time.
+
+**The text in `content.md` stays the default and the source of truth.**
+`copy.json` is an override layer only, so an artist with no overrides compiles
+byte-identically — verified: after marking rose, 42 of her 45 pages were
+byte-identical and the three that changed differed only by the inert attribute.
+
+`sanitize_rich(value, domain=None)` is **the** gate, and runs on write. The
+client-side restriction in `field-editors.js` is a convenience, not a control.
+`_RICH_TAGS` is `{b, strong, i, em, a, br}` — note there is **no `p`**, which is
+why a rich editor must emit an inline fragment (a `<p>` is not nested, it is
+stripped, silently merging paragraphs).
+
+Two things in `_clean_href` that look over-careful and are not:
+
+- It **HTML-unescapes and strips C0 controls BEFORE** the scheme check.
+  Browsers drop tab/CR/LF inside a URL, so `java&#9;script:` reaches the parser
+  as `javascript:`. A scheme check on the raw string — the obvious way to write
+  it — walks straight past both that and `java&#115;cript:`.
+- `target`/`rel` are **DERIVED from the href, never copied from input**. Quill
+  stamps `target="_blank"` on every link it makes including internal ones, while
+  a hand-authored source default may carry a `target` the editor never sees.
+  This is the only place that sees the final href, so it is the only place that
+  can be right. External → `target="_blank" rel="noopener noreferrer"`;
+  internal, `mailto:`, `tel:` → neither. An anchor left with no usable href is
+  unwrapped to its text rather than published dead.
+
+## `asset_store.py` — the card tier
+
+`store_image` produces three tiers: `full` (original), `display` (≤2000px), and
+**`card` (≤480px, q82)** for admin thumbnails and card grids. `store_fileobj`
+additionally writes a 64px `.thumbs` sidecar for the asset browser.
+
+The card tier is not cosmetic. Before it existed the admin's 96px thumbnails
+loaded the ~1MB display tier, so a grid of Rose's 32 works was ~25MB on 4G.
+Rose's `work-tara` card is **56KB against 1.6MB**.
+
+Image entries are `{src, full, card, ar, aspect}`. **`src` still means the
+display tier** — artist templates consume `src` and `full`, so `card` was added
+purely additively. The client fallback chain is
+`entry.card || entry.src || entry.full || entry`.
+
+Backfill existing entries with `scripts/backfill-card-tier.py [--artist SLUG]
+[--dry-run]`. It is idempotent and refuses to run on the host (no werkzeug) —
+run it in the container. 540 derivatives were backfilled across the five
+`content_admin` artists on 2026-07-31.

@@ -2785,6 +2785,14 @@ def edit_page():
 FILES_TREE_HIDDEN_DIRS = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups', '.git'}
 FILES_HIDDEN_NAMES = {'.DS_Store'}
 
+# The landing page's file browser is a different surface with a different job:
+# it shows an artist everything their site is made of, so `assets/` and
+# `widgets/` belong in it. Machine-managed dirs stay hidden in both. Kept as a
+# second set rather than a looser FILES_TREE_HIDDEN_DIRS because Manual Edit's
+# tree must not change shape — it is an editor, and assets are owned by the
+# Assets tab there.
+FILES_BROWSE_HIDDEN_DIRS = {'.snapshots', '__pycache__', 'backups', '.git'}
+
 # Extensions the Manual Edit panel knows how to render.
 FILES_TEXT_EXTENSIONS = {
     '.md', '.html', '.htm', '.css', '.js', '.json', '.py', '.txt', '.env',
@@ -2808,12 +2816,17 @@ def _file_kind(path):
     return 'binary'
 
 
-def _resolve_artist_file(artist_slug, rel_path):
+def _resolve_artist_file(artist_slug, rel_path, include_assets=False):
     """
     Resolve `rel_path` inside the artist dir, rejecting any escape attempt.
     Returns (artist_path, file_path) — never raises; returns (None, None)
     on rejection. Symlinks, '..', absolute paths, and hidden-dir traversal
     are all blocked.
+
+    `include_assets` widens the allowed set to the browse list (assets and
+    widgets readable, machine-managed dirs still refused). It is a read-only
+    concession for the landing page's file viewer — every writer leaves it
+    False, so nothing new becomes writable.
     """
     if not rel_path or '\x00' in rel_path:
         return None, None
@@ -2830,22 +2843,28 @@ def _resolve_artist_file(artist_slug, rel_path):
     if target.is_symlink():
         return None, None
     # Refuse to touch anything under a hidden/managed folder.
+    hidden = FILES_BROWSE_HIDDEN_DIRS if include_assets else FILES_TREE_HIDDEN_DIRS
     parts = target.relative_to(artist_root).parts
-    if any(p in FILES_TREE_HIDDEN_DIRS for p in parts):
+    if any(p in hidden for p in parts):
+        return None, None
+    # Browsing also refuses dotfiles. Every one of them is machine-written
+    # (.analytics.json, .generated.json) or a secret store (.env, empty today
+    # and staying unreadable if it ever isn't) — nothing an artist put there,
+    # and nothing the read-only viewer should hand out. Manual Edit keeps its
+    # access: it is a deliberate power-user surface with `env` in _file_kind.
+    if include_assets and any(p.startswith('.') for p in parts):
         return None, None
     return artist_path, target
 
 
-@bp.route('/list-artist-files', methods=['GET'])
-def list_artist_files():
-    """Return every editable file in the artist dir, with kind hints for the UI."""
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401)
+def artist_files_payload(artist_slug, include_assets=False):
+    """{'files': [...]} for the artist's file tree. Shared by the Manual Edit
+    tab (editable subset) and the landing page's browser (include_assets)."""
     artist_path = get_artist_path(artist_slug)
     if not artist_path.exists():
-        return jsonify({'files': []})
+        return {'files': []}
 
+    hidden = FILES_BROWSE_HIDDEN_DIRS if include_assets else FILES_TREE_HIDDEN_DIRS
     files = []
     for p in sorted(artist_path.rglob('*')):
         if not p.is_file() or p.is_symlink():
@@ -2853,7 +2872,11 @@ def list_artist_files():
         if p.name in FILES_HIDDEN_NAMES:
             continue
         rel = p.relative_to(artist_path)
-        if any(part in FILES_TREE_HIDDEN_DIRS for part in rel.parts):
+        if any(part in hidden for part in rel.parts):
+            continue
+        # Same dotfile rule as _resolve_artist_file's browse mode — the list and
+        # what it can open have to agree, or the viewer offers a dead row.
+        if include_assets and any(part.startswith('.') for part in rel.parts):
             continue
         try:
             size = p.stat().st_size
@@ -2866,7 +2889,37 @@ def list_artist_files():
         })
         if len(files) >= 1000:
             break
-    return jsonify({'files': files})
+    return {'files': files}
+
+
+def read_artist_file_payload(artist_slug, rel, include_assets=False):
+    """(payload, status) for one text file. Binary, oversized and non-UTF-8
+    files are refused with the same codes the Manual Edit tab already handles."""
+    artist_path, target = _resolve_artist_file(artist_slug, rel, include_assets)
+    if target is None:
+        return {'error': 'Invalid path'}, 400
+    if not target.exists() or not target.is_file():
+        return {'error': 'Not found'}, 404
+    kind = _file_kind(target)
+    if kind == 'binary' or kind == 'image':
+        return {'error': 'Binary file — open in a dedicated tab', 'kind': kind, 'size': target.stat().st_size}, 415
+    size = target.stat().st_size
+    if size > FILES_MAX_TEXT_BYTES:
+        return {'error': f'File too large for inline editing ({size} bytes)', 'kind': kind, 'size': size}, 413
+    try:
+        content = target.read_text(encoding='utf-8')
+    except UnicodeDecodeError:
+        return {'error': 'File is not valid UTF-8 text', 'kind': 'binary'}, 415
+    return {'path': rel, 'kind': kind, 'size': size, 'content': content}, 200
+
+
+@bp.route('/list-artist-files', methods=['GET'])
+def list_artist_files():
+    """Return every editable file in the artist dir, with kind hints for the UI."""
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+    return jsonify(artist_files_payload(artist_slug))
 
 
 @bp.route('/read-artist-file', methods=['GET'])
@@ -2875,23 +2928,8 @@ def read_artist_file():
     artist_slug = get_authenticated_artist()
     if not artist_slug:
         abort(401)
-    rel = request.args.get('path', '')
-    artist_path, target = _resolve_artist_file(artist_slug, rel)
-    if target is None:
-        return jsonify({'error': 'Invalid path'}), 400
-    if not target.exists() or not target.is_file():
-        return jsonify({'error': 'Not found'}), 404
-    kind = _file_kind(target)
-    if kind == 'binary' or kind == 'image':
-        return jsonify({'error': 'Binary file — open in a dedicated tab', 'kind': kind, 'size': target.stat().st_size}), 415
-    size = target.stat().st_size
-    if size > FILES_MAX_TEXT_BYTES:
-        return jsonify({'error': f'File too large for inline editing ({size} bytes)', 'kind': kind, 'size': size}), 413
-    try:
-        content = target.read_text(encoding='utf-8')
-    except UnicodeDecodeError:
-        return jsonify({'error': 'File is not valid UTF-8 text', 'kind': 'binary'}), 415
-    return jsonify({'path': rel, 'kind': kind, 'size': size, 'content': content})
+    payload, status = read_artist_file_payload(artist_slug, request.args.get('path', ''))
+    return jsonify(payload), status
 
 
 @bp.route('/write-artist-file', methods=['POST'])
@@ -5823,26 +5861,19 @@ def check_domain():
 
 # ── Export Site ────────────────────────────────────────────────────────────
 
-@bp.route('/export-site', methods=['GET'])
-def export_site():
-    """
-    Export the artist's site as a downloadable .zip.
-    Includes: compiled HTML, assets, api.py source, and a README.
-    Headers: X-Artist-Slug, X-Admin-Token
-    """
+def export_site_zip(artist_slug):
+    """(BytesIO, download_name) for the artist's site export, or (None, None)
+    when nothing is compiled yet. Shared by the control panel's Export tab and
+    the landing page's Export section — one definition of what an export IS."""
     import zipfile
     import io
     import time
-
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401, description='Authentication required')
 
     artist_path = get_artist_path(artist_slug)
     output_path = Path('output/artists') / artist_slug
 
     if not output_path.exists():
-        return jsonify({'error': 'No compiled site found. Save a page first.'}), 404
+        return None, None
 
     # Build zip in memory
     buf = io.BytesIO()
@@ -5907,7 +5938,23 @@ in this export. The api.py file contains only your custom endpoints.
 
     buf.seek(0)
     timestamp = time.strftime('%Y%m%d', time.gmtime())
-    filename = f'{artist_slug}-export-{timestamp}.zip'
+    return buf, f'{artist_slug}-export-{timestamp}.zip'
+
+
+@bp.route('/export-site', methods=['GET'])
+def export_site():
+    """
+    Export the artist's site as a downloadable .zip.
+    Includes: compiled HTML, assets, api.py source, and a README.
+    Headers: X-Artist-Slug, X-Admin-Token
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401, description='Authentication required')
+
+    buf, filename = export_site_zip(artist_slug)
+    if buf is None:
+        return jsonify({'error': 'No compiled site found. Save a page first.'}), 404
 
     return send_file(
         buf,
@@ -5985,20 +6032,11 @@ def _parse_snapshot_filename(f):
     }
 
 
-@bp.route('/list-snapshots', methods=['GET'])
-def list_snapshots():
-    """
-    List all snapshots for an artist.
-    Headers: X-Artist-Slug, X-Admin-Token
-    Returns: { "snapshots": [...], "autosave": {...} | null }
-    """
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401)
-
+def snapshots_payload(artist_slug):
+    """{'snapshots': [...], 'autosave': {...}|None}, newest first."""
     snap_dir = get_artist_path(artist_slug) / '.snapshots'
     if not snap_dir.exists():
-        return jsonify({'snapshots': [], 'autosave': None})
+        return {'snapshots': [], 'autosave': None}
 
     snapshots = []
     autosave = None
@@ -6014,7 +6052,21 @@ def list_snapshots():
             continue
         snapshots.append(_parse_snapshot_filename(f))
 
-    return jsonify({'snapshots': snapshots, 'autosave': autosave})
+    return {'snapshots': snapshots, 'autosave': autosave}
+
+
+@bp.route('/list-snapshots', methods=['GET'])
+def list_snapshots():
+    """
+    List all snapshots for an artist.
+    Headers: X-Artist-Slug, X-Admin-Token
+    Returns: { "snapshots": [...], "autosave": {...} | null }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    return jsonify(snapshots_payload(artist_slug))
 
 
 @bp.route('/create-snapshot', methods=['POST'])
@@ -6083,30 +6135,20 @@ def autosave_snapshot():
         return jsonify({'error': f'Autosave failed: {str(e)}'}), 500
 
 
-@bp.route('/restore-snapshot', methods=['POST'])
-def restore_snapshot():
-    """
-    Restore a snapshot. Extracts the tarball over the artist directory
-    (replacing pages, config, api.py — but NOT assets/ or widgets/).
-    Headers: X-Artist-Slug, X-Admin-Token
-    Body: { "filename": "2026-03-27T08-15-30_name.tar.gz" }
-    """
+def restore_snapshot_for(artist_slug, filename):
+    """(payload, status) for restoring one snapshot over the artist dir.
+    Does NOT recompile — the caller decides what happens next (the control
+    panel asks the artist to Save; the landing page rebuilds immediately)."""
     import tarfile
 
-    artist_slug = get_authenticated_artist()
-    if not artist_slug:
-        abort(401)
-
-    data = request.get_json() or {}
-    filename = data.get('filename', '')
     if not filename or '..' in filename:
-        return jsonify({'error': 'Invalid filename'}), 400
+        return {'error': 'Invalid filename'}, 400
 
     artist_path = get_artist_path(artist_slug)
     snap_path = artist_path / '.snapshots' / filename
 
     if not snap_path.exists():
-        return jsonify({'error': 'Snapshot not found'}), 404
+        return {'error': 'Snapshot not found'}, 404
 
     PRESERVE_DIRS = {'assets', 'widgets', '.snapshots', '__pycache__', 'backups'}
 
@@ -6124,10 +6166,27 @@ def restore_snapshot():
         with tarfile.open(str(snap_path), 'r:gz') as tar:
             tar.extractall(str(artist_path))
 
-        return jsonify({'ok': True, 'message': 'Snapshot restored. Click Save to recompile.'})
+        return {'ok': True, 'message': 'Snapshot restored. Click Save to recompile.'}, 200
 
     except Exception as e:
-        return jsonify({'error': f'Restore failed: {str(e)}'}), 500
+        return {'error': f'Restore failed: {str(e)}'}, 500
+
+
+@bp.route('/restore-snapshot', methods=['POST'])
+def restore_snapshot():
+    """
+    Restore a snapshot. Extracts the tarball over the artist directory
+    (replacing pages, config, api.py — but NOT assets/ or widgets/).
+    Headers: X-Artist-Slug, X-Admin-Token
+    Body: { "filename": "2026-03-27T08-15-30_name.tar.gz" }
+    """
+    artist_slug = get_authenticated_artist()
+    if not artist_slug:
+        abort(401)
+
+    data = request.get_json() or {}
+    payload, status = restore_snapshot_for(artist_slug, data.get('filename', ''))
+    return jsonify(payload), status
 
 
 @bp.route('/delete-snapshot', methods=['POST'])

@@ -221,17 +221,22 @@ def save_temp_upload(fileobj):
 
 # ── tiered image storage ─────────────────────────────────────────────────────
 # One scheme for every content-driven admin (replaces Rose's -full/-good and
-# Lydia's thumbs split): the upload is the canonical "full" file, and a
-# down-scaled "display" sibling (<stem>.display.<ext>) is what pages reference.
+# Lydia's thumbs split): the upload is the canonical "full" file, and two
+# down-scaled siblings sit beside it — <stem>.display.<ext> (what a page
+# references) and <stem>.card.<ext> (what a thumbnail grid references). Without
+# the card tier the only sizes available were 64px and 2000px, so an admin grid
+# of 32 works pulled ~25MB of display-tier JPEGs to draw postage stamps.
 # The 64px .thumbs sidecar for the asset browser still comes from store_fileobj.
 _DISPLAY_MAX_PX = 2000
 _DISPLAY_QUALITY = 85
+_CARD_MAX_PX = 480
+_CARD_QUALITY = 82
 
 
-def _make_display(slug, rel, max_px):
-    """Write a down-scaled display sibling next to `rel` and mirror it to
-    output/. Returns the display rel, or None if the original is already small
-    enough / not a raster image / PIL is unavailable (caller falls back to full)."""
+def _make_derivative(slug, rel, max_px, quality, suffix):
+    """Write a down-scaled `<stem>.<suffix>.<ext>` sibling next to `rel` and
+    mirror it to output/. Returns its rel, or None if the original is already
+    small enough / not a raster image / PIL is unavailable (caller falls back)."""
     ext = rel.rsplit('.', 1)[-1].lower() if '.' in rel else ''
     if ext not in _THUMB_IMAGE_EXTS or ext == 'gif':
         return None
@@ -239,20 +244,36 @@ def _make_display(slug, rel, max_px):
         from PIL import Image
         src = assets_dir(slug) / rel
         stem, _, e = rel.rpartition('.')
-        disp_rel = f'{stem}.display.{e}'
-        dest = assets_dir(slug) / disp_rel
+        out_rel = f'{stem}.{suffix}.{e}'
+        dest = assets_dir(slug) / out_rel
         with Image.open(src) as img:
             if max(img.size) <= max_px:
                 return None
-            img = img.convert('RGB')
+            # JPEG has no alpha channel, so it must be flattened; every other
+            # format keeps it. Flattening unconditionally turned a transparent
+            # PNG into a black rectangle, which is very visible at card size.
+            if e.lower() in ('jpg', 'jpeg'):
+                img = img.convert('RGB')
+            elif img.mode not in ('RGB', 'RGBA', 'L'):
+                img = img.convert('RGBA')
             img.thumbnail((max_px, max_px), Image.LANCZOS)
             dest.parent.mkdir(parents=True, exist_ok=True)
-            img.save(str(dest), quality=_DISPLAY_QUALITY)
-        _mirror_to_output(slug, disp_rel)
-        return disp_rel
+            img.save(str(dest), quality=quality)
+        _mirror_to_output(slug, out_rel)
+        return out_rel
     except Exception as e:
-        logging.debug('display tier skipped for %s: %s', rel, e)
+        logging.debug('%s tier skipped for %s: %s', suffix, rel, e)
         return None
+
+
+def _make_display(slug, rel, max_px):
+    return _make_derivative(slug, rel, max_px, _DISPLAY_QUALITY, 'display')
+
+
+def make_card(slug, rel, max_px=_CARD_MAX_PX):
+    """The card-tier derivative for an already-stored asset. Public because the
+    backfill script generates cards for images that predate this pipeline."""
+    return _make_derivative(slug, rel, max_px, _CARD_QUALITY, 'card')
 
 
 def _aspect_ratio(path):
@@ -269,13 +290,17 @@ def _aspect_ratio(path):
 
 def store_image(slug, rel, fileobj, *, uploaded_by, uploaded_at=None,
                 labels=None, display_max=_DISPLAY_MAX_PX):
-    """Store an uploaded image at `rel` (canonical/full) and generate a
-    display-tier derivative. Returns {'full': rel, 'display': display_rel,
-    'ar': aspect_ratio} (display falls back to full when no derivative was
-    needed/possible; ar may be None), or None if `rel` sanitised to nothing."""
+    """Store an uploaded image at `rel` (canonical/full) and generate the
+    display- and card-tier derivatives. Returns {'full': rel, 'display':
+    display_rel, 'card': card_rel, 'ar': aspect_ratio}, or None if `rel`
+    sanitised to nothing. Each tier falls back to the next size up when no
+    derivative was needed or possible, so all three keys are always usable;
+    `ar` may be None."""
     rel = store_fileobj(slug, rel, fileobj, uploaded_by=uploaded_by,
                         uploaded_at=uploaded_at, labels=labels)
     if not rel:
         return None
     disp = _make_display(slug, rel, display_max)
-    return {'full': rel, 'display': disp or rel, 'ar': _aspect_ratio(assets_dir(slug) / rel)}
+    card = make_card(slug, rel)
+    return {'full': rel, 'display': disp or rel, 'card': card or disp or rel,
+            'ar': _aspect_ratio(assets_dir(slug) / rel)}

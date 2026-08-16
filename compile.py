@@ -17,6 +17,12 @@ from urllib.parse import quote
 from pathlib import Path
 from datetime import datetime
 
+# Appended, not inserted, so nothing in _shared/ can shadow a stdlib module.
+# copy_slots is stdlib-only by design — this import must work under the bare
+# host python as well as inside the container.
+sys.path.append(str(Path(__file__).resolve().parent / '_shared'))
+import copy_slots
+
 
 class AdzeCompiler:
     def __init__(self, artists_dir="artists", shared_dir="_shared", output_dir="output"):
@@ -109,6 +115,15 @@ class AdzeCompiler:
                 continue
             out = dst / rel
             out.parent.mkdir(parents=True, exist_ok=True)
+            # assets/data/<type>.json is the item feed a hand-authored page
+            # fetches at runtime — the one published artefact that isn't a page
+            # we generated. content_admin already drops drafts before writing
+            # it; this is the last gate before the live domain, and the cost of
+            # missing one is an artist publishing a blank item.
+            if rel.parts[0] == 'data' and f.suffix == '.json' \
+                    and self._copy_live_items(f, out):
+                count += 1
+                continue
             try:
                 shutil.copyfile(f, out)
             except (PermissionError, OSError):
@@ -118,6 +133,38 @@ class AdzeCompiler:
                     pass  # file exists in output and is host-owned; already served, skip
             count += 1
         return count
+
+    @staticmethod
+    def _copy_live_items(src, out):
+        """Mirror an item feed with draft items removed. Returns False if the
+        file isn't a list of items, so the caller copies it verbatim instead."""
+        try:
+            items = json.loads(src.read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            return False
+        if not isinstance(items, list):
+            return False
+        live = [it for it in items
+                if not (isinstance(it, dict) and it.get('_draft'))]
+        try:
+            out.write_text(json.dumps(live, indent=2, ensure_ascii=False),
+                           encoding='utf-8')
+        except OSError:
+            return False
+        return True
+
+    def _apply_copy_overrides(self, html_content, artist_slug, page_rel):
+        """Swap in the artist's copy.json overrides for this page's slots.
+
+        The text in content.md is the default and stays put; copy.json only
+        overrides it, so an artist with no overrides compiles byte-identically
+        to before. See _shared/copy_slots.py for the convention.
+        """
+        values = copy_slots.load_store(self.artists_dir / artist_slug).get(
+            page_rel.as_posix())
+        if not values:
+            return html_content
+        return copy_slots.apply_overrides(html_content, values)
 
     def _build_schema_blocks(self, artist_config, page_config):
         """Collect JSON-LD blocks from artist + page config and serialize to <script> tags."""
@@ -316,35 +363,48 @@ class AdzeCompiler:
         return html
 
     def _inject_data_placeholders(self, html_content, artist_slug):
-        """Replace data placeholders in HTML with content derived from information.json.
+        """Replace data placeholders in a hand-authored page with generated content.
 
-        <!-- EXHIBITIONS_BLOCK --> → <p> lines for each exhibition, newest first.
-        No-op if information.json is absent or the placeholder isn't present.
+        <!-- EXHIBITIONS_BLOCK --> → one run-on list of every exhibition, newest
+        first, each linking to its own page.
+
+        The source is `assets/data/exhibitions.json` — the published feed the
+        content admin writes on every rebuild, which is also what generates the
+        `/exhibitions/` index and the per-item pages. Reading the same feed is
+        what guarantees a CV entry always has a page behind it (and that drafts
+        never appear): the list and the pages come off one source, not two.
+        No-op if the feed is absent or the placeholder isn't present.
         """
         if '<!-- EXHIBITIONS_BLOCK -->' not in html_content:
             return html_content
 
-        info_path = self.artists_dir / artist_slug / 'information.json'
-        if not info_path.exists():
+        feed = self.artists_dir / artist_slug / 'assets' / 'data' / 'exhibitions.json'
+        if not feed.exists():
             return html_content
 
         try:
-            info = json.loads(info_path.read_text(encoding='utf-8'))
+            exhibitions = json.loads(feed.read_text(encoding='utf-8'))
         except Exception:
             return html_content
+        if not isinstance(exhibitions, list):
+            return html_content
 
-        exhibitions = info.get('exhibitions', [])
-        # Sort newest first, stable on title
-        exhibitions = sorted(exhibitions, key=lambda e: -e.get('year', 0))
+        # Sort newest first, stable on the feed's own order within a year.
+        exhibitions = sorted(exhibitions, key=lambda e: -(e.get('year') or 0))
 
         entries = []
         for e in exhibitions:
-            year = html.escape(str(e.get('year', '')))
+            year = html.escape(str(e.get('year') or ''))
             title = e.get('title', '')
             etype = (e.get('type') or '').lower()
             location = e.get('location', '')
-            rest = ', '.join(p for p in [title, etype, location] if p)
-            entries.append(f'<span class="exh-year">{year}</span> {html.escape(rest)}')
+            rest = html.escape(', '.join(p for p in [title, etype, location] if p))
+            item = f'<span class="exh-year">{year}</span> {rest}'
+            iid = e.get('id')
+            if iid:
+                href = html.escape(f'/exhibitions/{iid}/', quote=True)
+                item = f'<a href="{href}">{item}</a>'
+            entries.append(item)
 
         sep = ' <span class="exh-sep">/</span> '
         block = '        <p class="exh-list">' + sep.join(entries) + '</p>'
@@ -490,9 +550,10 @@ class AdzeCompiler:
         """Compile a single page into output/{slug}/{page}/index.html."""
         config = json.loads((page_dir / 'config.json').read_text(encoding='utf-8'))
         html_content, css_content, meta_tags = self.parse_content(page_dir)
-        html_content = self._inject_data_placeholders(html_content, artist_slug)
         artist_root = self.artists_dir / artist_slug
         page_rel = page_dir.relative_to(artist_root)
+        html_content = self._apply_copy_overrides(html_content, artist_slug, page_rel)
+        html_content = self._inject_data_placeholders(html_content, artist_slug)
         page_name = str(page_rel)
         depth = len(page_rel.parts)
         up_prefix = '../' * depth

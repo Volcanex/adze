@@ -9,7 +9,9 @@ would otherwise have every future reset silently swallowed, and the whole point
 of this system is that Gabriel stops being the reset mechanism.
 """
 
+import json
 import os
+from pathlib import Path
 
 from flask import Blueprint, jsonify, make_response, redirect, request
 
@@ -62,16 +64,37 @@ def resolve():
     sites = accounts.sites_for(acct['id'])
     out = {'found': True, 'name': acct['display_name'], 'sites': sites}
     if len(sites) == 1:
-        cfg = _artist_cfg(sites[0])
-        domain = (cfg.get('domain') or '').replace('https://', '').replace('http://', '').strip('/')
-        if domain:
-            out['redirect'] = f'https://{domain}/admin'
+        redirect_to = _landing_url(sites[0])
+        if redirect_to:
+            out['redirect'] = redirect_to
     return jsonify(out)
 
 
+VHOSTS = Path('nginx/sites-available')
+
+
+def _landing_url(slug):
+    """The artist's own landing page, but only if that domain really reaches us.
+
+    config.json's `domain` is an aspiration, not a fact: most artists have one
+    set and no vhost anywhere. Sending them to it would strand them on a parked
+    domain with no way back, whereas declining to redirect just signs them in
+    here -- so the check errs towards staying put, and a domain starts
+    redirecting on its own the moment its vhost lands in nginx/sites-available.
+    """
+    domain = (_artist_cfg(slug).get('domain') or '').strip()
+    for p in ('https://', 'http://', 'www.'):
+        if domain.startswith(p):
+            domain = domain[len(p):]
+    domain = domain.rstrip('/')
+    if not domain or '{{' in domain:
+        return None
+    if not (VHOSTS / domain).exists():
+        return None
+    return f'https://{domain}/admin'
+
+
 def _artist_cfg(slug):
-    import json
-    from pathlib import Path
     try:
         return json.loads((Path('artists') / slug / 'config.json').read_text())
     except Exception:
