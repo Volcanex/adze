@@ -16,6 +16,7 @@ Each content type declares its data shape and how it becomes pages:
           "title":  {"type": "text",  "required": true, "slug_source": true},
           "year":   {"type": "text"},
           "images": {"type": "image", "multiple": true},
+          "media":  {"type": "file", "multiple": true, "accept": ["video", "audio"]},
           "body":   {"type": "richtext"}
         },
         "page": {
@@ -33,6 +34,15 @@ Jinja templates), never hand-edited — the rebuild transaction (ArtistAdmin) ma
 them read-only to /edit-page. `mode:"none"` skips render (client-side grids that
 fetch content.json at runtime); the site still recompiles so the JSON ships.
 
+An item is created the moment the artist opens the "new" form (POST
+`<ctype>/draft`) so uploads have an id to attach to; it carries `_draft` until
+its first save and is filtered out of everything published until then. Abandoned
+drafts are swept on list.
+
+Prose on the artist's *hand-authored* pages is editable through a separate,
+bounded layer: elements marked `data-copy` / `data-copy-rich` in content.md are
+overridable from `copy.json`, applied by compile.py. See _shared/copy_slots.py.
+
 `page` may also carry a `config` dict, merged verbatim into the generated page's
 config.json (e.g. `{"hidden": true}`) — this lets a hand-authored page keep its
 config once it's converted to an editable one. A `single`-mode type with one
@@ -43,19 +53,28 @@ See _shared/features/CLAUDE.md → "Custom artist admins" for the author guide.
 """
 import json
 import shutil
+import time
+import uuid
 from pathlib import Path
 
 from flask import request, jsonify, make_response, redirect
 from werkzeug.utils import secure_filename
 
 try:
-    from features.artist_admin import ArtistAdmin, generated_pages
+    from features.artist_admin import ArtistAdmin, generated_pages, GENERATED_MANIFEST
     from features._common import valid_slug, slugify, unique_slug
 except ImportError:  # loaded flat via importlib with _shared on sys.path
-    from artist_admin import ArtistAdmin, generated_pages
+    from artist_admin import ArtistAdmin, generated_pages, GENERATED_MANIFEST
     from _common import valid_slug, slugify, unique_slug
 
 import asset_store
+import copy_slots
+import shell_assets
+
+try:
+    import external_artist
+except ImportError:
+    external_artist = None
 
 try:
     import jinja2
@@ -64,19 +83,46 @@ except ImportError:
 
 
 CONTENT_FILE = 'content.json'
-SHELL_DIR = Path(__file__).resolve().parent.parent / 'shell'     # _shared/shell
-VENDOR_DIR = Path(__file__).resolve().parent.parent / 'vendor'   # _shared/vendor
 
-# The Adze design language, served straight from its source tree rather than
-# copied here. A second copy would drift; this way editing design-language/
-# restyles every artist admin at once. Order matters — it is a cascade.
-# fonts.css is deliberately NOT served: it @imports Google Fonts, which is
-# render-blocking and serial inside a linked sheet. The bootstrap <head> uses
-# a <link> + preconnect instead.
-TOKENS_DIR = Path(__file__).resolve().parent.parent.parent / 'design-language' / 'adze' / 'tokens'
-TOKEN_FILES = ['colors.css', 'typography.css', 'spacing.css', 'motion.css', 'base.css']
+# Shell paths, the design-language token list and its cascade order all live in
+# shell_assets — the landing page mounts the same front-end, and a second copy
+# of that list is how the dash and the editor come to render one stylesheet two
+# ways. Don't reintroduce local constants for these; ask shell_assets for the
+# vendored libs this surface loads (vendor_assets) rather than naming files.
 
 _IMG_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'}
+
+# The `file` field type — anything the artist's pages can actually render,
+# grouped by how a template has to treat it. The template dispatches on the
+# stored `kind`, never on the extension: the extension is parsed once, here,
+# so a page never has to carry a second copy of this table that drifts out of
+# step with what uploads are accepted.
+_FILE_KINDS = {
+    'image': {'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'},
+    'video': {'mp4', 'mov', 'webm', 'm4v'},
+    'audio': {'mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'},
+    'doc':   {'pdf'},
+}
+
+
+def _kind_for_ext(ext):
+    for kind, exts in _FILE_KINDS.items():
+        if ext in exts:
+            return kind
+    return None
+
+
+def _accepted_exts(fdef):
+    """The extensions one `file` field will take. `accept` lists kinds
+    (`["video"]`), not extensions — an artist config should say what the field
+    is for, and let this module own which containers that means today."""
+    kinds = fdef.get('accept') or list(_FILE_KINDS)
+    if isinstance(kinds, str):
+        kinds = [kinds]
+    exts = set()
+    for k in kinds:
+        exts |= _FILE_KINDS.get(k, set())
+    return exts
 
 # Set per-artist inside create_blueprint so flask_server can map /admin -> it.
 # Safe as a module global because flask_server exec's this file fresh per artist.
@@ -105,9 +151,46 @@ def _save_content(slug, data):
         json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8')
 
 
+def _unpublished(slug):
+    """True when the artist has saved something the live site was not rebuilt
+    for. The admin autosaves, so "saved" no longer implies "shipped" and the
+    footer has to be able to say which.
+
+    Derived from mtimes, never stored. A stored flag would be a second source
+    of truth for something the filesystem already knows, and it is the copy
+    that goes stale — a publish that dies inside compile.py would clear a flag
+    while leaving the built site behind. `.generated.json` is written by
+    ArtistAdmin.rebuild() as part of the same transaction, so it moves only
+    when a publish actually got that far.
+
+    Unknown counts as unpublished: an artist told "everything is live" about a
+    site that isn't has no reason to press the button, which is the failure
+    that matters here."""
+    d = _artist_dir(slug)
+    try:
+        built = (d / GENERATED_MANIFEST).stat().st_mtime
+    except OSError:
+        return True
+    newest = 0.0
+    for name in (CONTENT_FILE, copy_slots.COPY_FILE):
+        try:
+            newest = max(newest, (d / name).stat().st_mtime)
+        except OSError:
+            pass
+    return newest > built
+
+
 def _items(slug, ctype):
     items = _load_content(slug).get(ctype, [])
     return items if isinstance(items, list) else []
+
+
+def _live(items):
+    """The items that may be published. An item is created the moment the
+    artist opens the "new" form (so image uploads have somewhere to go) and
+    carries `_draft` until its first successful save — until then it is an
+    empty shell that must never reach the artist's real domain."""
+    return [it for it in items if not it.get('_draft')]
 
 
 def _set_items(slug, ctype, items):
@@ -142,6 +225,21 @@ def _image_fields(item_schema):
             if isinstance(f, dict) and f.get('type') == 'image'}
 
 
+def _file_fields(item_schema):
+    return {name: f for name, f in item_schema.items()
+            if isinstance(f, dict) and f.get('type') == 'file'}
+
+
+def _managed_fields(item_schema):
+    """Fields whose value the SERVER owns — written only by the upload and
+    delete routes, never by a JSON body. Both media types belong here: a
+    plain text save that happened to carry a stale `files` array would
+    otherwise silently revert an upload the artist just made."""
+    d = dict(_image_fields(item_schema))
+    d.update(_file_fields(item_schema))
+    return d
+
+
 def _normalize(value, fdef):
     """Light per-field normalisation. `format:"url"` prefixes a bare host with
     https:// (parity with the old hand-rolled link admins)."""
@@ -154,12 +252,12 @@ def _normalize(value, fdef):
 
 
 def _clean_item(body, item_schema):
-    """Keep only declared, non-image fields from a request body (image fields
-    are managed through the upload routes, not the JSON body)."""
-    imgs = _image_fields(item_schema)
+    """Keep only declared, unmanaged fields from a request body (image and file
+    fields are managed through the upload routes, not the JSON body)."""
+    managed = _managed_fields(item_schema)
     out = {}
     for name, f in item_schema.items():
-        if name in imgs:
+        if name in managed:
             continue
         if name in body:
             out[name] = _normalize(body[name], f)
@@ -230,6 +328,10 @@ def make_render(slug, cfg):
             items = content.get(ctype, [])
             if not isinstance(items, list):
                 items = []
+            # THE draft gate. Every published artefact below — the data feed,
+            # the listing page, each per-item page, and so everything compile.py
+            # derives from them (sitemap included) — comes off this one list.
+            items = _live(items)
             # Every type publishes its data to a web-served location, whether or
             # not it also renders a page — a hand-authored page (a homepage
             # teaser, say) can then fetch the same items the generated page uses
@@ -293,6 +395,99 @@ def _find(items, iid):
     return None
 
 
+# ── drafts (created on open, swept if abandoned) ─────────────────────────────
+DRAFT_TTL = 24 * 60 * 60
+
+
+def _item_asset_rel(ctype, iid):
+    """The rel dir an item's uploads live under, or None if either component
+    would be rewritten by the path sanitiser (i.e. isn't safe to delete)."""
+    rel = f'{ctype}/{iid}'
+    return rel if iid and asset_store.safe_rel(rel) == rel else None
+
+
+def _delete_item_images(slug, ctype, iid):
+    rel = _item_asset_rel(ctype, iid)
+    if not rel:
+        return
+    for base in (asset_store.assets_dir(slug), asset_store.output_dir(slug)):
+        d = base / rel
+        if d.is_dir():
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def _sweep_drafts(slug, ctype, items):
+    """Drop drafts abandoned for more than DRAFT_TTL, with their uploads.
+
+    This is the whole garbage collector: the admin lists a type before it can
+    show anything, so listing is the one event guaranteed to happen. A draft
+    whose `_draft_at` is missing or not an int is deliberately left alone —
+    it never publishes, so lingering costs nothing, while deleting work in
+    progress on a malformed timestamp costs the artist their afternoon.
+    """
+    now = int(time.time())
+    keep, dropped = [], []
+    for it in items:
+        at = it.get('_draft_at')
+        if it.get('_draft') and isinstance(at, int) and not isinstance(at, bool) \
+                and now - at > DRAFT_TTL:
+            dropped.append(it)
+        else:
+            keep.append(it)
+    for it in dropped:
+        _delete_item_images(slug, ctype, it.get('id'))
+    return keep, bool(dropped)
+
+
+# ── copy slots (data-copy / data-copy-rich in hand-authored pages) ───────────
+_PAGE_SKIP = {'assets', 'widgets', 'templates', '_templates', '__pycache__',
+              '.snapshots', 'backups'}
+
+
+def _page_dirs(slug):
+    """Every page dir under the artist (a dir with content.md + config.json),
+    matching what compile.py compiles."""
+    base = _artist_dir(slug)
+    found = []
+
+    def walk(d):
+        for child in sorted(d.iterdir()):
+            if not child.is_dir() or child.name in _PAGE_SKIP or child.name.startswith('.'):
+                continue
+            if (child / 'content.md').exists() and (child / 'config.json').exists():
+                found.append(child)
+            walk(child)
+
+    if base.is_dir():
+        walk(base)
+    return found
+
+
+def _page_label(key):
+    return key.rsplit('/', 1)[-1].replace('-', ' ').replace('_', ' ').title()
+
+
+def _scan_copy_slots(slug):
+    """[(page_key, [slot, ...]), ...] read out of the artists' own content.md.
+    The source is the schema — copy.json only ever overrides it."""
+    if external_artist is not None and external_artist.is_remote(slug):
+        # External artists live in a remote Seed repo; their local dir is a
+        # config skeleton with no pages to scan. One SSH round trip per page to
+        # discover nothing is not worth it — report no slots.
+        return []
+    base = _artist_dir(slug)
+    out = []
+    for d in _page_dirs(slug):
+        try:
+            src = (d / 'content.md').read_text(encoding='utf-8')
+        except OSError:
+            continue
+        slots = copy_slots.find_slots(src)
+        if slots:
+            out.append((d.relative_to(base).as_posix(), slots))
+    return out
+
+
 def create_blueprint(artist_slug):
     global PANEL_URL
     slug = artist_slug
@@ -313,23 +508,15 @@ def create_blueprint(artist_slug):
     # all served (single-source from _shared) under this artist's own prefix so
     # no shared/live files are touched.
     panel_html = _PANEL_BOOTSTRAP.format(
-        title=f"Admin — {cfg.get('name', slug)}", prefix=prefix)
+        title=f"Admin — {cfg.get('name', slug)}", prefix=prefix,
+        token_links=shell_assets.token_links(prefix))
     admin.register_core(panel_html)
 
     # ── shared front-end assets (single source on disk, per-artist route) ─────
-    _SHELL_FILES = {
-        'adze-ui.js':      (SHELL_DIR / 'adze-ui.js',      'application/javascript'),
-        'admin-shell.js':  (SHELL_DIR / 'admin-shell.js',  'application/javascript'),
-        'admin-shell.css': (SHELL_DIR / 'admin-shell.css', 'text/css'),
-        'field-editors.js': (SHELL_DIR / 'field-editors.js', 'application/javascript'),
-    }
-    _TOKEN_ASSETS = {f'tokens/{n}': (TOKENS_DIR / n, 'text/css') for n in TOKEN_FILES}
-    _VENDOR_FILES = {
-        'easymde.js':  (VENDOR_DIR / 'easymde.min.js',  'application/javascript'),
-        'easymde.css': (VENDOR_DIR / 'easymde.min.css', 'text/css'),
-        'quill.js':    (VENDOR_DIR / 'quill.min.js',    'application/javascript'),
-        'quill.css':   (VENDOR_DIR / 'quill.snow.css',  'text/css'),
-    }
+    _SHELL_FILES = shell_assets.shell_assets('admin-shell.js', 'field-editors.js')
+    _TOKEN_ASSETS = shell_assets.token_assets()
+    _VENDOR_FILES = shell_assets.vendor_assets(
+        'easymde.js', 'easymde.css', 'quill.js', 'quill.css')
 
     @bp.route(f'{prefix}/asset/<path:name>')
     def shell_asset(name):
@@ -352,12 +539,24 @@ def create_blueprint(artist_slug):
     @bp.route(f'{prefix}/schema', methods=['GET'])
     @admin.auth_required
     def get_schema():
+        # `copy` decides whether the shell shows a Text section at all, so it
+        # has to answer from the pages themselves, not from config.
+        try:
+            has_copy = bool(_scan_copy_slots(slug))
+        except Exception:
+            has_copy = False
         return jsonify({
             'name': cfg.get('name', slug),
             'slug': slug,
             'content_types': content_types,
             'theme': cfg.get('admin_theme', {}),
             'handoff': f'{prefix}/handoff',
+            'copy': has_copy,
+            # Seeds the footer on load. It has to come from the server, not
+            # from what this tab happens to have typed: an artist who saves,
+            # closes the tab and comes back tomorrow must still be told their
+            # work isn't live.
+            'unpublished': _unpublished(slug),
         })
 
     # ── generic CRUD, one implementation for every type ───────────────────────
@@ -373,7 +572,39 @@ def create_blueprint(artist_slug):
         tdef, err = _require_type(ctype)
         if err:
             return err
-        return jsonify(_items(slug, ctype))
+        # Drafts are included — the admin has to show the artist their unsaved
+        # work — and the sweep runs here, which is why a GET can write.
+        items, swept = _sweep_drafts(slug, ctype, _items(slug, ctype))
+        if swept:
+            _set_items(slug, ctype, items)
+        return jsonify(items)
+
+    @bp.route(f'{prefix}/<ctype>/draft', methods=['POST'])
+    @admin.auth_required
+    def create_draft(ctype):
+        """Create the item up front, before it has any content.
+
+        Uploads land at {prefix}/<ctype>/<id>/image, so an item with no id yet
+        has nowhere to put an image — which made adding pictures while creating
+        impossible. The draft exists from the moment the form opens; the first
+        successful PUT promotes it.
+        """
+        tdef, err = _require_type(ctype)
+        if err:
+            return err
+        ischema = _item_schema(tdef)
+        items = _items(slug, ctype)
+        # The real create derives the id from the slug_source field, which is
+        # by definition empty here, so fall back to a random one. It sticks:
+        # the promoting PUT does not rename the item.
+        iid = unique_slug(f'draft-{uuid.uuid4().hex[:8]}',
+                          [it.get('id') for it in items])
+        item = {'id': iid, '_draft': True, '_draft_at': int(time.time())}
+        for name, f in _managed_fields(ischema).items():
+            item[name] = [] if f.get('multiple') else None
+        items.append(item)
+        _set_items(slug, ctype, items)
+        return jsonify(item), 201
 
     @bp.route(f'{prefix}/<ctype>', methods=['POST'])
     @admin.auth_required
@@ -392,8 +623,8 @@ def create_blueprint(artist_slug):
         iid = unique_slug(base, [it.get('id') for it in items])
         item = _clean_item(body, ischema)
         item['id'] = iid
-        for name in _image_fields(ischema):
-            item.setdefault(name, [] if _image_fields(ischema)[name].get('multiple') else None)
+        for name, f in _managed_fields(ischema).items():
+            item.setdefault(name, [] if f.get('multiple') else None)
         items.append(item)
         _set_items(slug, ctype, items)
         return jsonify(item), 201
@@ -421,6 +652,10 @@ def create_blueprint(artist_slug):
         if item is None:
             return jsonify({'error': 'not found'}), 404
         item.update(_clean_item(request.get_json(silent=True) or {}, ischema))
+        # A saved draft is no longer a draft: this is the only promotion path,
+        # and it is what lets the item start publishing.
+        item.pop('_draft', None)
+        item.pop('_draft_at', None)
         _set_items(slug, ctype, items)
         return jsonify(item)
 
@@ -430,8 +665,14 @@ def create_blueprint(artist_slug):
         tdef, err = _require_type(ctype)
         if err:
             return err
+        gone = _find(_items(slug, ctype), iid)
         items = [it for it in _items(slug, ctype) if it.get('id') != iid]
         _set_items(slug, ctype, items)
+        # Discarding a draft is the main way one gets abandoned, so its uploads
+        # go with it — otherwise the sweep only ever collects the drafts nobody
+        # bothered to cancel. A real item's images are left where they are.
+        if gone is not None and gone.get('_draft'):
+            _delete_item_images(slug, ctype, iid)
         return jsonify(items)
 
     # ── image upload / removal (via asset_store tiers) ────────────────────────
@@ -463,7 +704,10 @@ def create_blueprint(artist_slug):
         stored = asset_store.store_image(slug, rel, f, uploaded_by=slug)
         if not stored:
             return jsonify({'error': 'store failed'}), 500
-        entry = {'src': stored['display'], 'full': stored['full']}
+        # 'src' stays the display tier — artist templates already consume it,
+        # and 'card' is purely additive for the admin's thumbnail grid.
+        entry = {'src': stored['display'], 'full': stored['full'],
+                 'card': stored.get('card') or stored['display']}
         if stored.get('ar'):
             entry['ar'] = stored['ar']
             entry['aspect'] = stored['ar']  # alias some templates use
@@ -502,6 +746,157 @@ def create_blueprint(artist_slug):
         _set_items(slug, ctype, items)
         return jsonify(item)
 
+    # ── file upload / removal (any renderable type, via asset_store) ──────────
+    # Separate from the image routes rather than folded into them: an `image`
+    # field promises a raster the page can size and crop (it has tiers and an
+    # aspect ratio), and half the point of a `file` field is that it does not.
+    # Merging them would mean every consumer of an image field having to cope
+    # with an entry that turns out to be an mp3.
+    @bp.route(f'{prefix}/<ctype>/<iid>/file', methods=['POST'])
+    @admin.auth_required
+    def upload_item_file(ctype, iid):
+        tdef, err = _require_type(ctype)
+        if err:
+            return err
+        ischema = _item_schema(tdef)
+        files = _file_fields(ischema)
+        if not files:
+            return jsonify({'error': 'type has no file field'}), 400
+        field = request.args.get('field') or next(iter(files))
+        fdef = files.get(field)
+        if fdef is None:
+            return jsonify({'error': 'unknown file field'}), 400
+        f = request.files.get('file')
+        if not f or not f.filename:
+            return jsonify({'error': 'no file'}), 400
+        ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+        if ext not in _accepted_exts(fdef):
+            return jsonify({'error': f'unsupported file type .{ext}'}), 400
+        items = _items(slug, ctype)
+        item = _find(items, iid)
+        if item is None:
+            return jsonify({'error': 'not found'}), 404
+
+        kind = _kind_for_ext(ext)
+        rel = f'{ctype}/{iid}/{secure_filename(f.filename)}'
+        # An image still goes through the tiered path — a photograph dropped
+        # into a mixed-media field should not lose its card/display sizes just
+        # because it arrived through the generic route.
+        if kind == 'image':
+            stored = asset_store.store_image(slug, rel, f, uploaded_by=slug)
+            if not stored:
+                return jsonify({'error': 'store failed'}), 500
+            entry = {'src': stored['display'], 'full': stored['full'],
+                     'card': stored.get('card') or stored['display']}
+            if stored.get('ar'):
+                entry['ar'] = stored['ar']
+        else:
+            saved = asset_store.store_fileobj(slug, rel, f, uploaded_by=slug)
+            if not saved:
+                return jsonify({'error': 'store failed'}), 500
+            entry = {'src': saved, 'full': saved}
+        entry['kind'] = kind
+        entry['name'] = f.filename
+        try:
+            entry['size'] = (asset_store.assets_dir(slug) / entry['full']).stat().st_size
+        except OSError:
+            pass
+
+        if fdef.get('multiple'):
+            item.setdefault(field, [])
+            if not isinstance(item[field], list):
+                item[field] = []
+            item[field].append(entry)
+        else:
+            item[field] = entry
+        _set_items(slug, ctype, items)
+        return jsonify(item)
+
+    @bp.route(f'{prefix}/<ctype>/<iid>/file', methods=['DELETE'])
+    @admin.auth_required
+    def delete_item_file(ctype, iid):
+        tdef, err = _require_type(ctype)
+        if err:
+            return err
+        ischema = _item_schema(tdef)
+        files = _file_fields(ischema)
+        field = request.args.get('field') or (next(iter(files)) if files else None)
+        idx = request.args.get('index')
+        items = _items(slug, ctype)
+        item = _find(items, iid)
+        if item is None or field is None:
+            return jsonify({'error': 'not found'}), 404
+        val = item.get(field)
+        if isinstance(val, list) and idx is not None:
+            try:
+                val.pop(int(idx))
+            except (ValueError, IndexError):
+                pass
+        else:
+            item[field] = [] if files.get(field, {}).get('multiple') else None
+        _set_items(slug, ctype, items)
+        return jsonify(item)
+
+    # ── copy slots (sitewide text editing) ────────────────────────────────────
+    # `_copy`, not `copy`: the CRUD routes are `{prefix}/<ctype>`, and Werkzeug
+    # matches a static rule ahead of the converter, so any static sibling named
+    # like a content type silently steals that type's list/save. mariaslaughter
+    # already has a type called `copy` (her "Home text" singleton), so
+    # `{prefix}/copy` would have broken her live editor. Content-type names are
+    # slugs — leading alnum — so a leading underscore cannot collide with one.
+    @bp.route(f'{prefix}/_copy', methods=['GET'])
+    @admin.auth_required
+    def get_copy():
+        store = copy_slots.load_store(_artist_dir(slug))
+        pages, seen = [], {}
+        for key, slots in _scan_copy_slots(slug):
+            values = store.get(key) or {}
+            seen[key] = {s['id'] for s in slots}
+            pages.append({
+                'page': key,
+                'label': _page_label(key),
+                'slots': [{
+                    'id': s['id'],
+                    'rich': s['rich'],
+                    'default': s['inner'].strip() if s['rich'] else copy_slots.plain_text(s['inner']),
+                    'value': values.get(s['id']),
+                } for s in slots],
+            })
+        # An override whose element has since been renamed or deleted is
+        # surfaced, never dropped: silently discarding an artist's words the
+        # first time someone edits the layout is how trust in this goes.
+        orphans = [{'page': page, 'id': sid}
+                   for page, values in store.items()
+                   for sid in values if sid not in seen.get(page, ())]
+        return jsonify({'pages': pages, 'orphans': orphans})
+
+    @bp.route(f'{prefix}/_copy', methods=['PUT'])
+    @admin.auth_required
+    def put_copy():
+        body = request.get_json(silent=True) or {}
+        rich = {page: {s['id'] for s in slots if s['rich']}
+                for page, slots in _scan_copy_slots(slug)}
+        store = copy_slots.load_store(_artist_dir(slug))
+        for page, values in body.items():
+            if not isinstance(values, dict):
+                continue
+            current = dict(store.get(page) or {})
+            for sid, value in values.items():
+                if value is None:
+                    current.pop(sid, None)  # null reverts to the content.md default
+                elif sid in rich.get(page, ()):
+                    # The domain decides target/rel: a link to the artist's own
+                    # site must not open in a new tab.
+                    current[sid] = copy_slots.sanitize_rich(value, cfg.get('domain'))
+                else:
+                    current[sid] = str(value)
+            if current:
+                store[page] = current
+            else:
+                store.pop(page, None)
+        copy_slots.save_store(_artist_dir(slug), store)
+        return jsonify(store)
+
     # ── control-panel handoff (the "Advanced editing" link) ───────────────────
     @bp.route(f'{prefix}/handoff', methods=['GET'])
     @admin.auth_required
@@ -533,11 +928,7 @@ _PANEL_BOOTSTRAP = """<!DOCTYPE html>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="{prefix}/asset/vendor/easymde.css">
 <link rel="stylesheet" href="{prefix}/asset/vendor/quill.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/colors.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/typography.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/spacing.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/motion.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/base.css">
+{token_links}
 <link rel="stylesheet" href="{prefix}/asset/admin-shell.css">
 </head>
 <body>

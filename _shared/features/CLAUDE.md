@@ -30,12 +30,19 @@ To give an artist a custom admin:
    and a `page` block:
    - **field types** (→ editors in the shared shell's `field-editors.js`
      registry): `text`, `textarea`, `number`, `date`, `boolean`, `select`
-     (+`options`), `tags`, `image` (+`multiple`), `markdown` (EasyMDE),
+     (+`options`), `tags`, `image` (+`multiple`), `file` (+`multiple`,
+     `accept`, `max_mb` — see below), `markdown` (EasyMDE),
      `richtext` (Quill). Field opts: `required`, `slug_source` (which field
      becomes the item `id`), `format:"url"`, `label`.
    - **page.mode**: `single` (one page lists all items), `per_item` (a page per
-     item + an optional index via `index_template`), `none` (no page — items are
-     published to `assets/data/<type>.json` for a client-side grid to `fetch`).
+     item + an optional index via `index_template`), `none` (no page at all).
+   - **Every mode publishes `assets/data/<type>.json`** on rebuild, not just
+     `none`. A hand-authored page can `fetch` it for a teaser grid instead of
+     carrying a hand-copied duplicate that goes stale the next time the artist
+     publishes (jackdt's homepage does this for its latest-four block). Note the
+     root `CLAUDE.md` "asset URLs must be flat" gotcha: `/assets/data/x.json`
+     resolves fine through nginx in production but 404s in the dashboard's
+     preview iframe, so any consumer must degrade quietly.
    - `page.parent` is the URL dir; `"."` = the artist root (siblings of static
      pages like `home/`).
    - `page.config` (optional dict) is merged verbatim into the generated page's
@@ -75,6 +82,39 @@ make.
 `{src, full, ar}` per image. Paths are relative to the artist's `assets/` dir;
 the shell renders admin thumbnails from `/assets/<src>` (served by the artist
 domain's nginx). No per-artist upload code.
+
+### The `file` field type — video, audio, PDFs (added 2026-08-05, for jackdt)
+
+`image` promises a raster the page can crop and size: it has display/card tiers
+and an aspect ratio. `file` is for everything else a page can render. They are
+**deliberately separate types with separate routes**
+(`{prefix}/<ctype>/<iid>/file`, mirroring the image pair) — folding them
+together would mean every existing consumer of an image field having to cope
+with an entry that turns out to be an mp3.
+
+- `accept` lists **kinds**, not extensions: `["video"]`, `["image","video",
+  "audio","doc"]`. The extension table lives in `_FILE_KINDS` in
+  `content_admin.py` and nowhere else, so an artist config says what a field is
+  *for* and this module owns what containers that means today.
+- Each stored entry carries `{src, full, kind, name, size}`, plus `card`/`ar`
+  when the upload was an image (an image dropped into a mixed field still goes
+  through `store_image`, so it keeps its tiers). **Templates dispatch on
+  `kind`** and must never re-parse the extension — that would be a second copy
+  of the table.
+- `max_mb` is the client-side guard, and it exists because the **real** limit is
+  `client_max_body_size` on the artist's nginx vhost. Over that, nginx returns
+  its own 413 HTML page, which the admin's `fetch` can only report as a bare
+  failure — after the artist has waited out the whole upload. Set `max_mb` just
+  under the vhost value and **change the two together**. jackdt: 200MB field /
+  220M vhost. Remember assets are stored twice (canonical + `output/` mirror),
+  so a 200MB file costs 400MB of disk.
+
+**Both media types are server-owned.** `_managed_fields()` covers `image` *and*
+`file`, so `_clean_item` strips them from any JSON body: a save that happened to
+carry a stale array cannot revert an upload. The shell has the matching
+`SERVER_OWNED` list. If a third media type is ever added, those two lists are
+what it has to join — verified by trying to PUT `{"video": "HIJACKED"}`, which
+is discarded.
 
 **Control-panel handoff**: the shell's "Advanced editing →" link hits
 `{prefix}/handoff`, which (once the artist is logged in) mints the `adze_session`
@@ -132,3 +172,54 @@ per-module `DASHBOARD_INFO` export is gone with the bespoke modules.
 - **Feature**: a system spanning multiple pages or long-running state.
 
 If you're unsure which, start with a widget.
+
+## content_admin: drafts and the copy routes (2026-07-31)
+
+**Items are created as drafts.** `POST {prefix}/{ctype}/draft` creates an empty
+item immediately and returns it with `_draft: true` and `_draft_at`, so image
+uploads (which need `{ctype}/{id}/image`) have an id from the first second.
+`PUT` clears both flags on save. `GET {prefix}/{ctype}` returns drafts *and*
+sweeps any older than 24h — no cron.
+
+**THE draft gate is one line**: `items = _live(items)` at the top of
+`make_render`'s per-type loop. The data feed, the listing page, the per-item
+index and every per-item page all come off that filtered list, so there is no
+way to add a published artefact that bypasses it. `compile.py`'s
+`_copy_live_items` is a second layer when mirroring feeds to `output/`. A draft
+reaching a live domain is the worst failure this feature could have; keep the
+single choke point rather than filtering at N call sites.
+
+**The copy routes are `{prefix}/_copy`, not `{prefix}/copy`** — mariaslaughter
+has a content type literally named `copy`, so the bare path collides with the
+generic `{prefix}/{ctype}` route and would shadow her real content. `GET`
+returns `{pages:[{page,label,slots:[{id,rich,default,value}]}], orphans:[]}`;
+`PUT` merges. `GET {prefix}/schema` carries a boolean `copy`, which is how the
+front-end decides whether the Text section exists at all — so rollout is
+per-artist by construction, with no feature flag.
+
+`put_copy` **re-derives which slots are rich from the artist's markup** and never
+trusts the client, so a plain-value-into-a-rich-slot mismatch is not expressible.
+Orphans (overrides whose slot no longer exists in source) are surfaced, never
+silently dropped.
+
+## `schema.unpublished` — saved is no longer the same as live (2026-07-31)
+
+The admin autosaves (see `shell/CLAUDE.md`), so a write no longer implies the
+artist meant to ship. `_unpublished(slug)` answers whether the compiled site is
+behind what has been saved, and the schema carries it so the footer can say so on
+first paint rather than only after the artist types something.
+
+It is **derived from mtimes, never stored**: `content.json` and `copy.json`
+against `.generated.json`. A stored flag would be a second source of truth for
+something the filesystem already knows, and it is the copy that goes stale — a
+publish that died inside `compile.py` would clear the flag while leaving the old
+built site in place. `.generated.json` is written by `ArtistAdmin.rebuild()` as
+part of the same transaction, so it only moves when a publish actually got that
+far.
+
+Unknown counts as unpublished. An artist told "everything is live" about a site
+that isn't has no reason to press the button, which is the failure that matters.
+
+Write paths that bypass these two files (a route that edits config, say) will not
+show up here. If one is added and should count, extend the tuple in
+`_unpublished` rather than introducing a flag.

@@ -12,6 +12,14 @@ sets the SAME `{slug}_admin` cookie the content admin uses. That is the whole
 trick: one login covers both surfaces, so the big button is a plain link that
 lands already authenticated rather than a second sign-in.
 
+Five sections: Overview, Files, History, Export, Account. The last four are
+served by the routes below, and every one of them reads through an admin_api
+payload function rather than walking the artist directory here — admin_api
+owns path safety and the definition of what an export or a snapshot is.
+Nothing on this page writes a file; the single mutating route (restore) calls
+the control panel's own function and then rebuilds, because restoring without
+republishing leaves the source and the live site disagreeing.
+
 Registered from flask_server after _register_artist_features(), which hands
 over its domain -> content-panel map so the button knows where to point.
 """
@@ -21,14 +29,13 @@ import time
 import uuid
 from pathlib import Path
 
-from flask import jsonify, make_response, request
+from flask import jsonify, make_response, request, send_file
 
 from features.artist_admin import ArtistAdmin
+import shell_assets
 
 ARTISTS = Path('artists')
-SHELL_DIR = Path('_shared/shell')
-TOKENS_DIR = Path('design-language/adze/tokens')
-TOKEN_FILES = ['colors.css', 'typography.css', 'spacing.css', 'motion.css', 'base.css']
+OUTPUT = Path('output/artists')
 
 # One pool for the whole studio, not per-artist — the point is a single place
 # to read everyone's problems. JSONL because the /contact precedent rewrites
@@ -101,6 +108,64 @@ def _status_payload(slug):
     return {'editor': editor, 'site': site, 'checked': now, 'note': note}
 
 
+def _site_payload(slug, cfg):
+    """The artist's site as it actually stands, read from compiled output
+    rather than from the source tree: a page an artist can't reach isn't a
+    page, and the whole point of this block is links they can click.
+
+    URL shape follows flask_server's artist routing — `home` is the site root,
+    every other page is `/<page>/`. Nested pages keep their full path.
+    """
+    domain = _strip_domain(cfg.get('domain'))
+    base = f'https://{domain}' if domain else f'/preview/{slug}'
+    out_root = OUTPUT / slug
+
+    pages = []
+    published = None
+    if out_root.is_dir():
+        for idx in sorted(out_root.rglob('index.html')):
+            rel = idx.parent.relative_to(out_root).as_posix()
+            if rel == '.':
+                continue          # the root redirect stub, not a page
+            title = rel
+            try:
+                page_cfg = json.loads((ARTISTS / slug / rel / 'config.json').read_text())
+                title = page_cfg.get('title') or rel
+            except (OSError, json.JSONDecodeError):
+                pass
+            pages.append({
+                'path': rel,
+                'title': title,
+                'url': base + ('/' if rel == 'home' else f'/{rel}/'),
+                'home': rel == 'home',
+            })
+            try:
+                mtime = int(idx.stat().st_mtime)
+                published = mtime if published is None else max(published, mtime)
+            except OSError:
+                pass
+
+    pages.sort(key=lambda p: (not p['home'], p['path']))
+    return {'domain': domain, 'url': base, 'pages': pages, 'published': published}
+
+
+def _export_info(slug):
+    """Size of what an export would contain, without building the zip twice.
+    Uncompressed bytes on disk — honest, and cheap enough to read on load."""
+    out_root = OUTPUT / slug
+    files = 0
+    total = 0
+    if out_root.is_dir():
+        for p in out_root.rglob('*'):
+            if p.is_file():
+                files += 1
+                try:
+                    total += p.stat().st_size
+                except OSError:
+                    pass
+    return {'files': files, 'bytes': total, 'ready': files > 0}
+
+
 def _append_feedback(rec):
     FEEDBACK_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(FEEDBACK_PATH, 'a', encoding='utf-8') as fh:
@@ -149,6 +214,7 @@ def _register_one(app, admin, cfg, content_url):
     bootstrap = _BOOTSTRAP.format(
         prefix=prefix,
         title=(cfg.get('name') or slug),
+        token_links=shell_assets.token_links(prefix),
         boot=json.dumps({
             'prefix': prefix,
             'slug': slug,
@@ -163,12 +229,14 @@ def _register_one(app, admin, cfg, content_url):
     )
     admin.register_core(bootstrap)
 
-    _ASSETS = {
-        'adze-ui.js':       (SHELL_DIR / 'adze-ui.js', 'application/javascript'),
-        'admin-shell.css':  (SHELL_DIR / 'admin-shell.css', 'text/css'),
-        'admin-landing.js': (SHELL_DIR / 'admin-landing.js', 'application/javascript'),
-    }
-    _ASSETS.update({f'tokens/{n}': (TOKENS_DIR / n, 'text/css') for n in TOKEN_FILES})
+    _ASSETS = shell_assets.shell_assets('admin-landing.js', 'file-viewer.js')
+    _ASSETS.update(shell_assets.token_assets())
+    # Vendored, never CDN — same rule as the content admin's editors. Served
+    # under `vendor/` so the two surfaces address them identically.
+    _ASSETS.update({
+        f'vendor/{k}': v
+        for k, v in shell_assets.vendor_assets('highlight.js', 'qrcode.js').items()
+    })
 
     @admin.bp.route(f'{prefix}/asset/<path:name>', endpoint=f'{slug}_landing_asset')
     def asset(name):
@@ -203,6 +271,92 @@ def _register_one(app, admin, cfg, content_url):
     @admin.auth_required
     def status():
         return jsonify(_status_payload(slug))
+
+    # ── the artist's own site: links, files, export, history ─────────────────
+    #
+    # Every route below reads through admin_api's payload functions rather than
+    # re-walking the artist directory here. admin_api owns the path-safety
+    # rules (_resolve_artist_file) and the definition of what an export or a
+    # snapshot IS; a second copy in this file would be a second thing to get
+    # wrong. Nothing here writes a file — the one mutating route (restore)
+    # calls a function the control panel already uses.
+
+    @admin.bp.route(f'{prefix}/site', endpoint=f'{slug}_landing_site')
+    @admin.auth_required
+    def site():
+        return jsonify(_site_payload(slug, cfg_now(slug)))
+
+    @admin.bp.route(f'{prefix}/files', endpoint=f'{slug}_landing_files')
+    @admin.auth_required
+    def files():
+        from admin_api import artist_files_payload
+        return jsonify(artist_files_payload(slug, include_assets=True))
+
+    @admin.bp.route(f'{prefix}/file', endpoint=f'{slug}_landing_file')
+    @admin.auth_required
+    def file_read():
+        from admin_api import read_artist_file_payload
+        payload, code = read_artist_file_payload(
+            slug, request.args.get('path', ''), include_assets=True)
+        return jsonify(payload), code
+
+    @admin.bp.route(f'{prefix}/file-raw', endpoint=f'{slug}_landing_file_raw')
+    @admin.auth_required
+    def file_raw():
+        """Bytes — images inline, anything with ?download=1 as an attachment."""
+        from admin_api import _resolve_artist_file
+        _, target = _resolve_artist_file(
+            slug, request.args.get('path', ''), include_assets=True)
+        if target is None or not target.is_file():
+            return jsonify({'error': 'Not found'}), 404
+        return send_file(str(target), max_age=0,
+                         as_attachment=request.args.get('download') == '1',
+                         download_name=target.name)
+
+    @admin.bp.route(f'{prefix}/export-info', endpoint=f'{slug}_landing_export_info')
+    @admin.auth_required
+    def export_info():
+        return jsonify(_export_info(slug))
+
+    @admin.bp.route(f'{prefix}/export', endpoint=f'{slug}_landing_export')
+    @admin.auth_required
+    def export():
+        from admin_api import export_site_zip
+        buf, filename = export_site_zip(slug)
+        if buf is None:
+            return jsonify({'error': 'Nothing has been published yet, so there '
+                                     'is nothing to export.'}), 404
+        return send_file(buf, mimetype='application/zip',
+                         as_attachment=True, download_name=filename)
+
+    @admin.bp.route(f'{prefix}/history', endpoint=f'{slug}_landing_history')
+    @admin.auth_required
+    def history():
+        from admin_api import snapshots_payload
+        return jsonify(snapshots_payload(slug))
+
+    @admin.bp.route(f'{prefix}/history/restore', methods=['POST'],
+                    endpoint=f'{slug}_landing_history_restore')
+    @admin.auth_required
+    def history_restore():
+        """Restore, then rebuild here rather than telling the artist to go and
+        press Save somewhere else. Restoring and not republishing leaves the
+        source and the live site disagreeing, which is the one state nobody on
+        this page could diagnose."""
+        from admin_api import restore_snapshot_for
+        data = request.get_json(silent=True) or {}
+        payload, code = restore_snapshot_for(slug, data.get('filename', ''))
+        if code != 200:
+            return jsonify(payload), code
+        ok, err = admin.rebuild()
+        if not ok:
+            return jsonify({
+                'ok': False,
+                'restored': True,
+                'error': f'Restored your files, but rebuilding the site failed: {err}',
+            }), 500
+        return jsonify({'ok': True, 'restored': True,
+                        'message': 'Restored and republished.'})
 
     @admin.bp.route(f'{prefix}/handoff', endpoint=f'{slug}_landing_handoff')
     @admin.auth_required
@@ -328,17 +482,16 @@ _BOOTSTRAP = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="{prefix}/asset/tokens/colors.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/typography.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/spacing.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/motion.css">
-<link rel="stylesheet" href="{prefix}/asset/tokens/base.css">
+{token_links}
 <link rel="stylesheet" href="{prefix}/asset/admin-shell.css">
 </head>
 <body>
 <div id="adze-admin-root"></div>
 <script>window.ADZE_LANDING = {boot};</script>
+<script src="{prefix}/asset/vendor/highlight.js"></script>
+<script src="{prefix}/asset/vendor/qrcode.js"></script>
 <script src="{prefix}/asset/adze-ui.js"></script>
+<script src="{prefix}/asset/file-viewer.js"></script>
 <script src="{prefix}/asset/admin-landing.js"></script>
 </body>
 </html>
