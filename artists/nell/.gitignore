@@ -1,0 +1,31 @@
+# Inner per-artist repo — opencode worktrees live elsewhere
+# (~/.local/share/opencode/worktree/<projectID>/<name>/), so we only
+# need to keep large/regen-able junk out of the artist's own history.
+.snapshots/
+backups/
+analytics.json
+analytics.json.bak
+data.db
+data.db-shm
+data.db-wal
+.aider.chat.history.md
+.aider.input.history
+.adze-context.md
+.env
+ssh_key
+ssh_key.pub
+.adze-remote.cache.json
+
+# Raw media. This repo tracks small assets (fonts, meta, favicons) unlike the
+# outer adze repo, which gitignores artists/*/assets/ wholesale — but source
+# video is backed up separately and does not belong in git history. One .MOV
+# here was 1.3GB; committed once, every future clone pays for it forever.
+*.MOV
+*.mov
+*.mp4
+*.MP4
+
+# Runtime state, written by compile.py. The outer repo ignores this same file;
+# nell's own ignore only had the undotted `analytics.json`, so this one slipped
+# through.
+.analytics.json

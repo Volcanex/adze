@@ -1,0 +1,30 @@
+{
+    "name": "Nell",
+    "slug": "nell",
+    "domain": "nellburgess.co.uk",
+    "admin_token": "tallcape",
+    "description": "Creative Free Reign. Placeholder for degree show, to be fleshed out",
+    "contact_email": "",
+    "workspace": "lastplace",
+    "slack_announced": true,
+    "slack_channel_id": "C0B6PQFC8BC",
+    "slack_pinned_ts": "1779961045.758139",
+    "figma_url": "",
+    "lead": {
+        "active": true,
+        "contact": "",
+        "stage": "3",
+        "fish_size": "xs",
+        "instagram": "",
+        "work": "",
+        "discount": "Pro Bone",
+        "notes": "Log in, namecheap\nUsername: Heavenlypotat03s\nPassword: Heavenlypotat03s",
+        "clive_hours": 0.0,
+        "gabe_hours": 0.0,
+        "contacted": false,
+        "original_lead_id": null,
+        "created_at": 1779961046,
+        "updated_at": 1779981453
+    },
+    "intake_token": "4OfA9a4FoqeSBH4EpEx1kjf5Cl-6qhOX"
+}
