@@ -1,0 +1,2291 @@
+<!-- @dsCard group="Surfaces" name="Copy editor (phone)" subtitle="The split wraps: preview on top, sticky, then the editors" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adze — Copy editor (phone)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>/* Adze — colour tokens
+ *
+ * Two layers, and the distinction is the whole architecture:
+ *
+ *   1. The ARTIST CONTRACT (--adze-artist-*) — six variables an artist may
+ *      set on their own content admin. Nothing else is themeable.
+ *   2. The SYSTEM TOKENS (--adze-*) — what components actually consume.
+ *      Each falls back to an Adze default when the artist sets nothing.
+ *
+ * Components must only ever read system tokens. Never read an --adze-artist-*
+ * variable directly and never hardcode a hex value: that is what breaks the
+ * override, and it breaks silently on one artist's admin only.
+ *
+ * Derived values use color-mix() against the accent/text so that an artist
+ * supplying six colours still gets tints, hovers and focus rings for free.
+ */
+
+:root {
+    /* ── Artist contract defaults (light) ─────────────────────────────── */
+    --adze-bg:              var(--adze-artist-bg,           #fbfbfd);
+    --adze-surface:         var(--adze-artist-surface,      #ffffff);
+    --adze-text:            var(--adze-artist-text,         #1d1d1f);
+    --adze-accent:          var(--adze-artist-accent,       #1c4f82);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #ffffff);
+    --adze-border:          var(--adze-artist-border,       #e3e3e8);
+
+    /* ── Derived surfaces ─────────────────────────────────────────────── */
+    --adze-bg-sunken:       color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover:   color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong:   color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+
+    /* ── Derived text ─────────────────────────────────────────────────── */
+    --adze-text-muted:      color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint:      color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-text-on-accent:  var(--adze-accent-text);
+
+    /* ── Derived accent ───────────────────────────────────────────────── */
+    --adze-accent-hover:    color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft:     color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line:     color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+
+    /* ── Status ───────────────────────────────────────────────────────────
+     * Not artist-overridable. Status must mean the same thing on every
+     * admin — an artist whose accent is red should not get a red "saved". */
+    --adze-success:         #1a8a52;
+    --adze-success-soft:    color-mix(in srgb, #1a8a52 12%, var(--adze-surface));
+    --adze-warn:            #a86b00;
+    --adze-warn-soft:       color-mix(in srgb, #a86b00 12%, var(--adze-surface));
+    --adze-danger:          #c8362a;
+    --adze-danger-soft:     color-mix(in srgb, #c8362a 12%, var(--adze-surface));
+
+    /* ── Focus ────────────────────────────────────────────────────────────
+     * One ring, everywhere, always visible. See guidelines/color-focus.html */
+    --adze-focus-ring:      0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+}
+
+/* ── Scoped themes — .adze-theme ───────────────────────────────────────────
+ * IMPORTANT, and not obvious: custom properties resolve where they are
+ * DECLARED, not where they are used. Every derived token above is declared on
+ * :root, so it re-derives only when the six contract vars are set on :root
+ * too. That is the normal case — the shell's applyTheme() writes them to
+ * document.documentElement, the same element, so overriding works.
+ *
+ * It does NOT work if you set the contract vars on a nested element: the
+ * derived tokens keep resolving against :root's values and you get, say, a
+ * light-grey sunken surface inside a dark artist theme.
+ *
+ * Put `.adze-theme` on any element that carries its own contract vars and the
+ * derivations are recomputed at that scope. Needed for:
+ *   - a live theme preview in the dashboard (several artists on one page)
+ *   - the specimen cards in guidelines/
+ *   - any same-document embed of another artist's admin
+ *
+ * Keep this list in exact sync with the :root blocks above — BOTH the contract
+ * mapping and the derivations. Missing the contract mapping is a silent
+ * failure: the scoped element inherits :root's already-resolved --adze-bg and
+ * the theme simply doesn't apply, with no error anywhere. */
+.adze-theme {
+    /* Re-map the contract at this scope. Without these six lines the element
+     * inherits :root's resolved values and setting --adze-artist-* does
+     * nothing at all. */
+    --adze-bg:              var(--adze-artist-bg,           #fbfbfd);
+    --adze-surface:         var(--adze-artist-surface,      #ffffff);
+    --adze-text:            var(--adze-artist-text,         #1d1d1f);
+    --adze-accent:          var(--adze-artist-accent,       #1c4f82);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #ffffff);
+    --adze-border:          var(--adze-artist-border,       #e3e3e8);
+
+    --adze-bg-sunken:       color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover:   color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong:   color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+
+    --adze-text-muted:      color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint:      color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-text-on-accent:  var(--adze-accent-text);
+
+    --adze-accent-hover:    color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft:     color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line:     color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+
+    /* Status hues stay fixed, but their soft backgrounds must re-derive
+     * against the scoped surface or a green chip sits on a light plate
+     * inside a dark admin. */
+    --adze-success-soft:    color-mix(in srgb, var(--adze-success) 12%, var(--adze-surface));
+    --adze-warn-soft:       color-mix(in srgb, var(--adze-warn) 12%, var(--adze-surface));
+    --adze-danger-soft:     color-mix(in srgb, var(--adze-danger) 12%, var(--adze-surface));
+
+    --adze-focus-ring:      0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+
+    background: var(--adze-bg);
+    color: var(--adze-text);
+}
+
+/* ── Dark ──────────────────────────────────────────────────────────────────
+ * Artists may supply a dark palette by setting the contract vars inside their
+ * own [data-theme="dark"] block. These are the Adze fallbacks. Because every
+ * derived token above is a color-mix against bg/text/accent, the derivations
+ * invert correctly on their own — only the six roots need restating. */
+[data-theme="dark"] {
+    --adze-bg:              var(--adze-artist-bg,           #131316);
+    --adze-surface:         var(--adze-artist-surface,      #1c1c20);
+    --adze-text:            var(--adze-artist-text,         #f0f0f2);
+    --adze-accent:          var(--adze-artist-accent,       #99cdff);
+    --adze-accent-text:     var(--adze-artist-accent-text,  #131316);
+    --adze-border:          var(--adze-artist-border,       #2e2e34);
+
+    --adze-success:         #4fc084;
+    --adze-warn:            #e0b055;
+    --adze-danger:          #f0685c;
+}
+
+/* Adze — type tokens
+ *
+ * Two typefaces with a strict division of labour. This is the "halfway
+ * between Apple and mono" rule, made mechanical:
+ *
+ *   Inter (--adze-font-ui)   — anything a person READS.
+ *                              Headings, body, buttons, form values, prose.
+ *   JetBrains Mono (--adze-font-mono) — anything a person SCANS.
+ *                              Field labels, section headers, counts, dates,
+ *                              file sizes, IDs, status chips, the wordmark.
+ *
+ * The test: if you'd read it aloud in a sentence, it's Inter. If your eye
+ * lands on it to find a value, it's mono. Getting this wrong in either
+ * direction is what makes the old chrome read as a control panel — mono
+ * headings shout, and Inter labels disappear.
+ *
+ * Base is 13px. The previous chrome ran at 10–11px; that density is why it
+ * felt cramped. Do not reintroduce sizes below --adze-text-2xs, and 2xs is
+ * mono-only.
+ */
+
+:root {
+    --adze-font-ui:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --adze-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Monaco, Menlo, 'Courier New', monospace;
+
+    /* ── Size scale ───────────────────────────────────────────────────────
+     * ~1.2 ratio, tuned to land on whole pixels at every step. */
+    --adze-text-2xs:     11px;   /* mono labels ONLY — never body */
+    --adze-text-xs:      12px;   /* secondary metadata, chip text */
+    --adze-text-sm:      13px;   /* BASE — body, inputs, buttons, table cells */
+    --adze-text-md:      15px;   /* lead paragraphs, card titles */
+    --adze-text-lg:      18px;   /* section headings (h3) */
+    --adze-text-xl:      22px;   /* page headings (h2) */
+    --adze-text-2xl:     28px;   /* screen title (h1) */
+    --adze-text-3xl:     36px;   /* marketing headline */
+    --adze-text-display: 48px;   /* landing hero only */
+
+    /* ── Weight ───────────────────────────────────────────────────────────
+     * Four weights. 500 is the workhorse for UI chrome — 400 reads limp on
+     * small sizes, 700 is reserved for genuine emphasis. */
+    --adze-weight-normal:   400;
+    --adze-weight-medium:   500;
+    --adze-weight-semibold: 600;
+    --adze-weight-bold:     700;
+
+    /* ── Line height ──────────────────────────────────────────────────── */
+    --adze-leading-tight:   1.2;   /* display + large headings */
+    --adze-leading-snug:    1.35;  /* small headings, single-line UI */
+    --adze-leading-normal:  1.55;  /* BASE — body, form help text */
+    --adze-leading-relaxed: 1.7;   /* long-form prose blocks */
+
+    /* ── Tracking ─────────────────────────────────────────────────────────
+     * Large type tightens, small mono labels open up. The uppercase-mono
+     * label at 0.08em is the single most recognisable Adze signature —
+     * keep it consistent. */
+    --adze-tracking-display: -0.02em;
+    --adze-tracking-tight:   -0.01em;
+    --adze-tracking-normal:  0;
+    --adze-tracking-label:   0.08em;
+}
+
+/* ── The mono label ────────────────────────────────────────────────────────
+ * Used for every field label and section header in the admin. Defined once
+ * here as a class so it can never drift the way the old inline
+ * `text-transform:uppercase; letter-spacing:0.5px` variants did — there were
+ * six different tracking values across the old chrome. */
+.adze-label {
+    font-family: var(--adze-font-mono);
+    font-size: var(--adze-text-2xs);
+    font-weight: var(--adze-weight-medium);
+    line-height: var(--adze-leading-snug);
+    letter-spacing: var(--adze-tracking-label);
+    text-transform: uppercase;
+    color: var(--adze-text-muted);
+}
+
+/* Tabular numerals for anything that sits in a column and changes —
+ * counts, sizes, percentages, dates. Stops the layout twitching on update. */
+.adze-numeric {
+    font-family: var(--adze-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+}
+
+/* Adze — spacing, radius and elevation
+ *
+ * The old chrome had no spacing scale at all: `2px 6px`, `4px 10px`,
+ * `5px 11px`, `7px 10px`, `6px 8px` — every value invented at the call site.
+ * That is why nothing lines up. Use these; if a value isn't here, the layout
+ * is asking the wrong question.
+ *
+ * 4px base grid. Every step is a multiple of 4 so that any two components
+ * stacked together agree on their rhythm.
+ */
+
+:root {
+    /* ── Space scale ──────────────────────────────────────────────────── */
+    --adze-space-1:   4px;   /* icon↔label, chip padding-y */
+    --adze-space-2:   8px;   /* inside a control, tight stacks */
+    --adze-space-3:  12px;   /* input padding-x, list row gap */
+    --adze-space-4:  16px;   /* BASE — between fields, card padding */
+    --adze-space-5:  20px;
+    --adze-space-6:  24px;   /* between form groups, card padding (roomy) */
+    --adze-space-8:  32px;   /* between sections */
+    --adze-space-10: 40px;
+    --adze-space-12: 48px;   /* between major page blocks */
+    --adze-space-16: 64px;   /* page top/bottom padding */
+
+    /* ── Control heights ──────────────────────────────────────────────────
+     * Three sizes, shared by every button, input and select so they line up
+     * when placed side by side in a row. */
+    --adze-control-sm: 28px;
+    --adze-control-md: 36px;   /* BASE */
+    --adze-control-lg: 44px;   /* touch target minimum on mobile */
+    /* These three are the canonical values. See the <640px bump below. */
+
+    /* ── Radius ───────────────────────────────────────────────────────────
+     * The old chrome declared --radius:4px then hardcoded 8px 32 times,
+     * 6px 25 times, and 3/2/5/10/12/20 besides. Four values, no more. */
+    --adze-radius-sm:   4px;   /* chips, tags, inline code */
+    --adze-radius-md:   8px;   /* BASE — buttons, inputs, cards */
+    --adze-radius-lg:  12px;   /* modals, panels, images */
+    --adze-radius-pill: 999px; /* tabs, avatars, toggles */
+
+    /* ── Layout widths ────────────────────────────────────────────────── */
+    --adze-width-prose:   68ch;   /* readable text column */
+    --adze-width-form:    560px;  /* single-column form */
+    --adze-width-content: 720px;  /* content admin main column */
+    --adze-width-wide:   1140px;  /* dashboard / multi-column */
+
+    /* The auto-fit column floor. `repeat(auto-fit, minmax(var(--adze-col-min),
+     * 1fr))` is how this system reflows a group of short form fields — by
+     * available width, with no breakpoint to maintain. It is a token because
+     * the number is doctrine, not taste: it is the width below which a label
+     * and its input stop reading as one field. Left as a literal it drifted to
+     * 180 or 240 at each new call site, which is exactly how a grid stops
+     * agreeing with the one above it. See guidelines/layout-columns.html. */
+    --adze-col-min: 200px;
+
+    /* ── Elevation ────────────────────────────────────────────────────────
+     * Two-layer shadows (a tight contact shadow plus a soft ambient one).
+     * A single-layer shadow is the main thing that makes a UI read as dated. */
+    --adze-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04),
+                      0 1px 3px rgba(0, 0, 0, 0.06);
+    --adze-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.04),
+                      0 8px 20px rgba(0, 0, 0, 0.08);
+    --adze-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.04),
+                      0 16px 40px rgba(0, 0, 0, 0.10);
+}
+
+/* ── Touch targets ─────────────────────────────────────────────────────────
+ * Below 640px every interactive control grows to the 44px minimum. The old
+ * admin had 28px-tall buttons on mobile, which is the main reason it was
+ * unpleasant to use on a phone — where artists actually use it.
+ *
+ * Kept here rather than in base.css so it sits directly under the canonical
+ * declarations. Caveat: the design-system manifest compiler flattens @media
+ * blocks last-wins, so the token panel reports these mobile values (36/44/48)
+ * rather than the canonical 28/36/44. The CSS is right; the generated doc is
+ * not. Don't restructure working CSS to satisfy the doc parser — read the
+ * canonical block above. */
+@media (max-width: 640px) {
+    :root {
+        --adze-control-sm: 36px;
+        --adze-control-md: 44px;
+        --adze-control-lg: 48px;
+    }
+}
+
+/* Dark mode needs deeper, tighter shadows — the soft ambient layer is
+ * invisible against a dark background and just muddies the edge. */
+[data-theme="dark"] {
+    --adze-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --adze-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.45),
+                      0 8px 24px rgba(0, 0, 0, 0.35);
+    --adze-shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.5),
+                      0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+/* Adze — motion
+ *
+ * The old chrome had four durations by accident (0.12s, 0.15s, 0.2s, 0.3s)
+ * and no easing at all, so everything moved linearly. Linear motion is the
+ * single clearest tell of a dated interface: real objects don't start and
+ * stop instantly.
+ *
+ * Three rules:
+ *   1. Anything that changes state visibly gets a transition.
+ *   2. Things ENTERING use --adze-ease-out (fast start, soft landing).
+ *      Things LEAVING use --adze-ease-in and a shorter duration — nobody
+ *      wants to wait for a dismissal.
+ *   3. Nothing exceeds --adze-dur-slower. If it needs longer, it's a
+ *      progress state, not a transition — use a ProgressBar.
+ */
+
+:root {
+    /* ── Duration ─────────────────────────────────────────────────────── */
+    --adze-dur-instant: 80ms;    /* colour-only: hover tints, borders */
+    --adze-dur-fast:   140ms;    /* BASE — buttons, inputs, small toggles */
+    --adze-dur:        220ms;    /* panels, tabs, list reordering */
+    --adze-dur-slow:   320ms;    /* modals, drawers, page transitions */
+    --adze-dur-slower: 480ms;    /* deliberate, once-per-screen reveals */
+
+    /* ── Easing ───────────────────────────────────────────────────────────
+     * ease-out is the workhorse and the source of the "slick" feel: motion
+     * arrives quickly then settles. Use it unless you have a reason. */
+    --adze-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+    --adze-ease-in:     cubic-bezier(0.4, 0, 1, 1);
+    --adze-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --adze-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);  /* toggles, checks — overshoots slightly */
+
+    /* ── Composed shorthands ──────────────────────────────────────────── */
+    --adze-transition:       all var(--adze-dur-fast) var(--adze-ease-out);
+    --adze-transition-color: color var(--adze-dur-instant) var(--adze-ease-out),
+                             background-color var(--adze-dur-instant) var(--adze-ease-out),
+                             border-color var(--adze-dur-instant) var(--adze-ease-out);
+    --adze-transition-panel: transform var(--adze-dur) var(--adze-ease-out),
+                             opacity var(--adze-dur) var(--adze-ease-out);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────────
+ * Shared by the feedback components. Defined here so a spinner and a skeleton
+ * pulse to the same clock rather than each inventing a rhythm. */
+
+@keyframes adze-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Indeterminate progress — a band that sweeps the track. */
+@keyframes adze-sweep {
+    0%   { transform: translateX(-100%) scaleX(0.4); }
+    50%  { transform: translateX(0%)    scaleX(0.7); }
+    100% { transform: translateX(220%)  scaleX(0.4); }
+}
+
+/* Skeleton shimmer — a highlight passing left to right. */
+@keyframes adze-shimmer {
+    from { background-position: -200% 0; }
+    to   { background-position:  200% 0; }
+}
+
+@keyframes adze-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Entrances rise slightly as they fade. 6px, not 20px — restraint is the
+ * difference between "considered" and "bouncy". */
+@keyframes adze-rise-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes adze-scale-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * Non-negotiable, and it is genuinely load-bearing here: an animated progress
+ * bar that can't be turned off is a problem for people with vestibular
+ * disorders. Durations collapse rather than transitions being removed, so
+ * state changes still land — they just land immediately. */
+@media (prefers-reduced-motion: reduce) {
+    /* NOTE: deliberately does NOT redefine --adze-dur-*. The universal
+     * !important rule below already overrides every transition and animation,
+     * including inline styles, so collapsing the tokens too was redundant.
+     *
+     * It was also actively harmful to documentation: the design-system
+     * manifest compiler flattens @media blocks last-wins and ignores the
+     * query context, so it reported every duration as "1ms" — the exact
+     * opposite of what the system specifies. The tokens now stay the design
+     * values; this block enforces the behaviour. */
+    *, *::before, *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+    /* Looping feedback keeps animating — it communicates "still working" —
+     * but slowly and without translation. */
+    .adze-spinner, .adze-progress__bar {
+        animation-duration: 1.6s !important;
+        animation-iteration-count: infinite !important;
+    }
+}
+
+/* Adze — base / reset
+ *
+ * Minimal. Sets the document defaults so an unstyled element already looks
+ * like Adze, and establishes the accessibility floor (focus, targets,
+ * selection) once rather than per component.
+ */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--adze-bg);
+    color: var(--adze-text);
+    font-family: var(--adze-font-ui);
+    font-size: var(--adze-text-sm);
+    font-weight: var(--adze-weight-normal);
+    line-height: var(--adze-leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Inter's optical sizing + contextual alternates — the difference between
+     * Inter looking generic and looking intentional. */
+    font-feature-settings: 'cv05' 1, 'ss01' 1;
+}
+
+/* ── Headings ──────────────────────────────────────────────────────────────
+ * Inter, not mono. Mono headings are what made the old chrome shout. */
+h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-family: var(--adze-font-ui);
+    font-weight: var(--adze-weight-semibold);
+    line-height: var(--adze-leading-tight);
+    letter-spacing: var(--adze-tracking-tight);
+    color: var(--adze-text);
+}
+
+h1 { font-size: var(--adze-text-2xl); }
+h2 { font-size: var(--adze-text-xl); }
+h3 { font-size: var(--adze-text-lg); line-height: var(--adze-leading-snug); }
+h4 { font-size: var(--adze-text-md); line-height: var(--adze-leading-snug); }
+h5, h6 { font-size: var(--adze-text-sm); line-height: var(--adze-leading-snug); }
+
+p {
+    margin: 0 0 var(--adze-space-4);
+    max-width: var(--adze-width-prose);
+}
+p:last-child { margin-bottom: 0; }
+
+a {
+    color: var(--adze-accent);
+    text-decoration: none;
+    transition: var(--adze-transition-color);
+}
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+code, kbd, samp, pre {
+    font-family: var(--adze-font-mono);
+    font-size: 0.92em;
+}
+
+code {
+    background: var(--adze-bg-sunken);
+    border-radius: var(--adze-radius-sm);
+    padding: 0.1em 0.35em;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--adze-border);
+    margin: var(--adze-space-6) 0;
+}
+
+img, svg, video, canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Form elements do not inherit font by default — the commonest reason an
+ * input looks foreign to the rest of a page. */
+button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    color: inherit;
+}
+
+/* ── Focus ─────────────────────────────────────────────────────────────────
+ * :focus-visible only, so a mouse click doesn't ring but a Tab does. Never
+ * set `outline: none` without providing this — several places in the old
+ * chrome removed the outline and replaced it with a border colour change,
+ * which fails at low contrast and disappears entirely in dark mode. */
+:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: var(--adze-focus-ring);
+    border-radius: var(--adze-radius-sm);
+}
+
+::selection {
+    background: color-mix(in srgb, var(--adze-accent) 24%, transparent);
+    color: var(--adze-text);
+}
+
+/* Scrollbars — thin, neutral, and themed. Firefox first, then WebKit. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--adze-border-strong) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--adze-border-strong);
+    border-radius: var(--adze-radius-pill);
+    border: 3px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--adze-text-faint);
+    background-clip: content-box;
+}
+
+/* Touch targets: the <640px control-height bump lives in spacing.css, beside
+ * the canonical declarations it overrides. */
+
+/* admin-shell.css — the artist custom admin, built on the Adze design language.
+ *
+ * This file styles ONLY layout and component shape. Every colour, size,
+ * radius, duration and font comes from design-language/adze/tokens/*.css,
+ * which content_admin.py serves alongside this file. There are no literal
+ * colours here and no invented spacing — if a value isn't a token, it's a
+ * bug. That is what stops this drifting the way the old chrome did.
+ *
+ * ARTIST PALETTE: an artist's `admin_theme` sets six --adze-artist-* vars on
+ * :root via admin-shell.js applyTheme(). Everything else derives. Do not add
+ * a seventh; see design-language/adze/CLAUDE.md "Artist contract".
+ *
+ * CLASS NAMES are the contract with admin-shell.js and field-editors.js
+ * (as-* = shell chrome, af-* = field editors). Don't rename them here without
+ * changing both; the JS builds these strings literally.
+ */
+
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+
+/* ONE COLUMN WIDTH PER VIEW, and one variable that owns it.
+ *
+ * --as-col is how wide the page currently is. The fixed footer reads the same
+ * variable — it is a DOM child of root even though it positions off the
+ * viewport, so it inherits the value — which is what keeps Publish lined up
+ * with the column instead of drifting to the window edge whenever the column
+ * changes. Two places used to state 720px; now one does.
+ *
+ * The doctrine: A WIDER VIEWPORT MEANS MORE COLUMNS, NEVER LONGER LINES. Only
+ * the card grid earns the wide column, because a grid is the only thing here
+ * that turns extra width into extra columns. Rows, forms and text would just
+ * get longer — a 1000px-wide text input is measurably worse to use than a
+ * 560px one, and a title 900px from its Edit link is worse to scan.
+ *
+ * Derived with :has() rather than a class the JS toggles, because the width is
+ * a fact about what is on the page and deriving it means there is no second
+ * place to forget. Where :has() is unsupported the whole declaration is
+ * dropped and every view keeps today's --adze-width-content; nothing depends
+ * on it, because .as-form below carries its own max-width regardless.
+ *
+ * The bottom padding has to clear the FIXED footer, not just end the page.
+ * At a flat --adze-space-16 the bar is 61px tall against 64px of padding, so
+ * the last list row sat 3px clear of it and read as cut off. */
+#adze-admin-root {
+  --as-col: var(--adze-width-content);
+  max-width: var(--as-col);
+  margin: 0 auto;
+  padding: 0 var(--adze-space-4) calc(var(--adze-space-16) + var(--adze-space-8));
+}
+#adze-admin-root:has(.as-grid) { --as-col: var(--adze-width-wide); }
+/* The copy view earns the wide column ONLY while the live preview is beside
+ * it, because then the extra width really is a second COLUMN and not a longer
+ * line — the editing pane keeps its 560px cap either way. Derived from the
+ * pane being in the DOM rather than from a class the JS toggles, same reason
+ * as the grid rule above: hiding the preview removes the node, and the view
+ * goes back to exactly the 720/560 it has always had with nothing to reset. */
+#adze-admin-root:has(.as-copy-preview) { --as-col: var(--adze-width-wide); }
+
+/* The editing column is narrower than the chrome around it, and it is LEFT
+ * aligned inside it on purpose: the form, the form head, the Save row and the
+ * footer's Publish then all share one left edge, so nothing appears to move
+ * sideways between the list and the form. Centring the form would break that
+ * line and gain nothing.
+ *
+ * .as-copy is here for the same reason as .as-form — it is a stack of text
+ * boxes an artist types into, and the argument against long lines is stronger
+ * for prose than for anything else on the screen. The exception is the split:
+ * with the preview beside it, #as-main spans both panes and .as-copy-pane
+ * carries the cap instead. */
+/* Narrow for a bare form or a bare copy list; WIDE the moment a preview pane is
+ * present, because then the 560 belongs to the editing column and the surplus
+ * is the second column. A singleton form with a preview contains a .as-form
+ * too, so it needs the same exclusion the copy view already had — without it
+ * #as-main clamps to 560, the split cannot fit two panes, and the preview wraps
+ * underneath the form looking like it is simply broken. */
+#as-main:has(.as-form):not(:has(.as-copy-preview)),
+#as-main:has(.as-copy):not(:has(.as-copy-preview)) { max-width: var(--adze-width-form); }
+
+/* The animation belongs to the app ARRIVING. On .as-main itself it re-fired on
+ * every re-render — every save, every tab switch, every delete — so the panel
+ * flashed while the artist was doing nothing more dramatic than fixing a
+ * title. admin-shell.js adds --enter once, when it builds the frame. */
+.as-main--enter {
+  animation: adze-fade-in var(--adze-dur) var(--adze-ease-out) both;
+}
+
+/* ── Header / nav ─────────────────────────────────────────────────────────── */
+
+.as-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--adze-space-4);
+  padding: var(--adze-space-5) 0 var(--adze-space-4);
+  border-bottom: 1px solid var(--adze-border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--adze-bg);
+  /* The old header was flat against the content when scrolled. A blur plus a
+   * hairline is what reads as "layered" rather than "stuck". */
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+.as-brand {
+  font-size: var(--adze-text-lg);
+  font-weight: var(--adze-weight-semibold);
+  letter-spacing: var(--adze-tracking-tight);
+}
+
+.as-nav {
+  display: flex;
+  gap: var(--adze-space-2);
+  flex-wrap: wrap;
+  margin: var(--adze-space-5) 0;
+}
+
+.as-tab {
+  height: var(--adze-control-sm);
+  padding: 0 var(--adze-space-4);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-pill);
+  background: transparent;
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-sm);
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  transition: var(--adze-transition-color);
+}
+.as-tab:hover { background: var(--adze-surface-hover); color: var(--adze-text); }
+.as-tab.active {
+  background: var(--adze-accent);
+  border-color: var(--adze-accent);
+  color: var(--adze-accent-text);
+}
+
+/* ── List ─────────────────────────────────────────────────────────────────── */
+
+.as-listbar {
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-4);
+  margin: var(--adze-space-6) 0 var(--adze-space-4);
+}
+.as-listbar h2 {
+  margin: 0;
+  flex: 1;
+  font-size: var(--adze-text-lg);
+}
+
+.as-list { display: flex; flex-direction: column; }
+
+.as-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-4);
+  padding: var(--adze-space-4) var(--adze-space-3);
+  margin-inline: calc(var(--adze-space-3) * -1);
+  border-radius: var(--adze-radius-md);
+  transition: var(--adze-transition-color);
+}
+/* The divider is a pseudo-element, not a border-bottom. A bottom-only border
+ * on a box that also has border-radius curls up at both ends and stops short
+ * of the column edge — that artifact, repeated down a long list, is what made
+ * this read as a stack of broken trays rather than a list.
+ *
+ * Inset by exactly the row's own negative margin, so the line lands flush
+ * under the header rule and the column edge, while the hover band still
+ * bleeds into the gutter. */
+.as-row::after {
+  content: '';
+  position: absolute;
+  inset-inline: var(--adze-space-3);
+  bottom: 0;
+  height: 1px;
+  background: var(--adze-border);
+}
+.as-row:last-child::after { display: none; }
+.as-row:hover { background: var(--adze-surface-hover); }
+
+.as-row-title {
+  flex: 1;
+  font-weight: var(--adze-weight-medium);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.as-row-actions {
+  display: flex;
+  gap: var(--adze-space-4);
+  flex: 0 0 auto;
+}
+
+/* ── Visual list ──────────────────────────────────────────────────────────────
+ * Content types that carry an image render as cards instead of rows. Rose has
+ * 32 works; a list of 32 titles is an index of a thing nobody indexes by title.
+ *
+ * ONE auto-fit grid, NO breakpoints. The column count falls out of the
+ * available width, which means there is no viewport this was tuned for and no
+ * second viewport where it is wrong. The card stays about 160–210px wide at
+ * every size — two up on a phone, six across the wide column — so a wider
+ * screen adds columns and never stretches a card into a banner. That is the
+ * same doctrine as the column width above, one level down.
+ *
+ * 160px is the min track, not a token, because there is no token for "how wide
+ * is a thumbnail" — it is chosen so that the narrowest phone still gets two
+ * columns (2 × 160 + 16 = 336, inside a 360px viewport's content box). Raising
+ * it to 200 drops phones to one column, and a single 350px-wide card with a
+ * 260px picture on it is two thumbs of scrolling per work. */
+.as-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--adze-space-4);
+}
+
+.as-card-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--adze-space-2);
+  padding: var(--adze-space-3);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-sm);
+  transition: var(--adze-transition-color),
+              box-shadow var(--adze-dur-fast) var(--adze-ease-out);
+}
+/* Same hover as .as-row — the two are the same object in two shapes, and an
+ * artist who has both content types should not learn two hover languages. */
+.as-card-item:hover {
+  background: var(--adze-surface-hover);
+  border-color: var(--adze-border-strong);
+  box-shadow: var(--adze-shadow-md);
+}
+
+/* The media box keeps its ratio whether or not there is a picture in it. An
+ * item with no image yet gets the sunken surface as a placeholder rather than
+ * collapsing to nothing: a card missing its top half reads as a different kind
+ * of card, not as an empty one, and the grid rows go ragged. */
+.as-card-item__media {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--adze-radius-md);
+  background: var(--adze-bg-sunken);
+  /* The hairline is what makes the EMPTY box legible, and it is an inset
+   * shadow rather than a border for two reasons: it adds no size to the ratio
+   * box, and an inset shadow paints under the element's content, so the
+   * picture covers it the moment there is one. Without it the placeholder
+   * vanishes on the near-monochrome palettes — alfiebruce's sunken surface is
+   * #0f0f0f against a #111111 card, a difference of two values. */
+  box-shadow: inset 0 0 0 1px var(--adze-border);
+  overflow: hidden;
+}
+/* height:100% overrides base.css's `img { height: auto }`, which would
+ * otherwise let a tall image push the box past its ratio. */
+.as-card-item__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Two lines, then ellipsis. One line cuts most painting titles mid-word at
+ * this width; unbounded, one long title makes its whole row taller. */
+.as-card-item__title {
+  font-weight: var(--adze-weight-medium);
+  line-height: var(--adze-leading-snug);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.as-card-item__meta {
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* margin-top:auto is what makes the actions sit on one line across a row of
+ * cards: grid items stretch to the tallest in their row, so without it Edit
+ * lands under a one-line title on one card and a two-line title on the next. */
+.as-card-item__actions {
+  display: flex;
+  gap: var(--adze-space-4);
+  margin-top: auto;
+}
+/* A text link is a 17px-tall tap target. Giving it the control height makes it
+ * a real one — and because --adze-control-sm itself grows to 36px below 640px,
+ * the phone case is handled by the token rather than by a rule here. */
+.as-card-item__actions .as-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--adze-control-sm);
+}
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+
+/* A section heading must sit further from its first field than the fields sit
+ * from each other, or the hierarchy inverts. --adze-space-4 here plus the
+ * listbar's own bottom margin clears the --adze-space-5 between fields.
+ *
+ * The max-width is the form half of the width doctrine, and it is stated HERE
+ * rather than only on #as-main above so that it holds even where :has() does
+ * not: a form that quietly inherited the list's wide column would be the exact
+ * failure the doctrine exists to prevent. Two declarations, one rule; the one
+ * on #as-main brings the head and the Save row along with it. */
+.as-form {
+  margin: var(--adze-space-4) 0 var(--adze-space-6);
+  max-width: var(--adze-width-form);
+}
+
+/* .as-form-head is .as-listbar plus a name — admin-shell.js gives it and the
+ * row the artist clicked the SAME view-transition-name, which is what makes
+ * one grow into the other rather than the two views cross-fading past each
+ * other. It deliberately has no box of its own: a heading that acquired a
+ * surface halfway through the transition would read as a third element
+ * arriving, which is precisely what the shared name exists to deny. Style the
+ * timing (see "View transitions"), not the head.
+ *
+ * The two declarations it does get: a control-height floor, so the box the row
+ * morphs INTO is a bar rather than a 24px line of text, and a heading that
+ * truncates instead of shoving "← Back" off its own row. */
+.as-form-head { min-height: var(--adze-control-md); }
+.as-form-head h2 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.af-field { margin-bottom: var(--adze-space-5); }
+
+/* The short scalars — year, medium, dimensions, a date, a yes/no — share a
+ * line instead of each owning one. Stacked full width they ran Rose's form
+ * four screens long, and none of them is more than a few characters wide.
+ *
+ * auto-fit again, no breakpoint: at the 560px form the --adze-col-min track
+ * gives two per row, on a phone it gives one, and nothing had to name a
+ * viewport for that to happen. A field that needs the whole row asks for it by
+ * class. The floor is a token because it is doctrine — the width below which a
+ * label and its input stop reading as one field — and left as a literal it
+ * drifted at every call site.
+ *
+ * ONE SPACING OWNER: .af-field carries a --adze-space-5 bottom margin of its
+ * own, and inside a grid that also has a gap the two STACK — the same form
+ * would run 36px between rows here against 20px everywhere else. The gap owns
+ * the rhythm; the margins stand down, exactly as .as-feedback does it. The
+ * group then takes the margin the fields gave up, so that from outside it
+ * behaves as one field in the stack. */
+.as-fieldgroup {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--adze-col-min), 1fr));
+  gap: var(--adze-space-5) var(--adze-space-4);
+  margin-bottom: var(--adze-space-5);
+}
+.as-fieldgroup > .af-field { margin-bottom: 0; }
+
+/* Also used outside the group, where grid-column is simply inert — a field is
+ * full width there already, so the same class means the same thing in both
+ * places and the JS never has to ask which context it is in. */
+.af-field--full { grid-column: 1 / -1; }
+
+/* These declarations ARE .adze-label from typography.css — field labels are
+ * built in JS without a class hook, so the rule restates it. Keep the two in
+ * step; the letter-spacing here was --adze-tracking-wide, which doesn't
+ * exist, so every label silently lost the 0.08em Adze signature. */
+.af-field > label {
+  display: block;
+  margin-bottom: var(--adze-space-2);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-2xs);
+  font-weight: var(--adze-weight-medium);
+  line-height: var(--adze-leading-snug);
+  letter-spacing: var(--adze-tracking-label);
+  text-transform: uppercase;
+  color: var(--adze-text-muted);
+}
+
+.af-req { color: var(--adze-accent); }
+
+.af-input {
+  width: 100%;
+  min-height: var(--adze-control-md);
+  padding: var(--adze-space-2) var(--adze-space-3);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  transition: var(--adze-transition-color), box-shadow var(--adze-dur-fast) var(--adze-ease-out);
+}
+.af-input::placeholder { color: var(--adze-text-faint); }
+.af-input:hover { border-color: var(--adze-border-strong); }
+/* The old shell removed the outline and only changed border colour, which
+ * disappears at low contrast. Ring + border, both. */
+.af-input:focus {
+  outline: none;
+  border-color: var(--adze-accent);
+  box-shadow: var(--adze-focus-ring);
+}
+.af-input:disabled {
+  background: var(--adze-bg-sunken);
+  color: var(--adze-text-faint);
+  cursor: not-allowed;
+}
+
+.af-textarea { min-height: 120px; resize: vertical; line-height: var(--adze-leading-normal); }
+
+.af-checkrow { display: flex; align-items: center; gap: var(--adze-space-2); }
+.af-check {
+  width: 18px; height: 18px;
+  accent-color: var(--adze-accent);
+  cursor: pointer;
+}
+
+select.af-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: var(--adze-space-8);
+  cursor: pointer;
+  /* Caret uses currentColor so it follows the artist's text colour instead of
+   * the hardcoded grey the old shell baked into the data URI. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='currentColor' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--adze-space-3) center;
+}
+select.af-input option { background: var(--adze-surface); color: var(--adze-text); }
+
+.af-note {
+  margin-top: var(--adze-space-2);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-faint);
+}
+
+/* ── Tags ─────────────────────────────────────────────────────────────────── */
+
+.af-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--adze-space-1);
+  padding: var(--adze-space-1);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+}
+.af-tags:focus-within { border-color: var(--adze-accent); box-shadow: var(--adze-focus-ring); }
+.af-tags .af-input {
+  flex: 1;
+  min-width: 120px;
+  min-height: auto;
+  border: none;
+  background: transparent;
+  padding: var(--adze-space-1);
+}
+.af-tags .af-input:focus { box-shadow: none; }
+
+.af-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--adze-space-1);
+  padding: 2px var(--adze-space-2);
+  background: var(--adze-accent-soft);
+  color: var(--adze-accent);
+  border: 1px solid var(--adze-accent-line);
+  border-radius: var(--adze-radius-sm);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-xs);
+}
+.af-chip button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--adze-dur-instant) var(--adze-ease-out);
+}
+.af-chip button:hover { opacity: 1; }
+
+/* ── Rich text / images ───────────────────────────────────────────────────── */
+
+.af-rich {
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border-radius: var(--adze-radius-md);
+}
+
+.af-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--adze-space-2);
+  margin-bottom: var(--adze-space-2);
+  border-radius: var(--adze-radius-md);
+  transition: var(--adze-transition-color);
+}
+
+/* Dragging a file over the gallery. An outline rather than a border so the
+ * thumbs don't shift 2px sideways the moment the pointer arrives, and a
+ * min-height because an empty gallery is a zero-height box — the artist with
+ * no pictures yet is exactly the one who needs to see where to drop. That
+ * height appearing on dragover is the point, not a jump to be avoided. */
+.af-gallery--dropping {
+  outline: 2px dashed var(--adze-accent);
+  outline-offset: var(--adze-space-1);
+  background: var(--adze-accent-soft);
+  min-height: var(--adze-space-16);
+}
+
+.af-thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  overflow: hidden;
+  background: var(--adze-bg-sunken);
+}
+.af-thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* A thumbnail that just landed. field-editors.js removes the class on
+ * animationend, so this must be an animation and not a transition — and it
+ * still fires under reduced motion, where the duration collapses to 1ms. */
+.af-thumb--new { animation: adze-scale-in var(--adze-dur) var(--adze-ease-out) both; }
+.af-thumb button {
+  position: absolute;
+  top: var(--adze-space-1);
+  right: var(--adze-space-1);
+  width: 22px; height: 22px;
+  border: none;
+  border-radius: var(--adze-radius-pill);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--adze-dur-fast) var(--adze-ease-out);
+}
+.af-thumb:hover button,
+.af-thumb button:focus-visible { opacity: 1; }
+
+.af-file { display: block; font-size: var(--adze-text-sm); color: var(--adze-text-muted); }
+.af-file::file-selector-button {
+  height: var(--adze-control-sm);
+  margin-right: var(--adze-space-3);
+  padding: 0 var(--adze-space-4);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  font: inherit;
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  transition: var(--adze-transition-color);
+}
+.af-file::file-selector-button:hover {
+  background: var(--adze-surface-hover);
+  border-color: var(--adze-border-strong);
+}
+
+/* ── Copy editor ──────────────────────────────────────────────────────────────
+ * The words that are already on the artist's pages, grouped by the page they
+ * live on. It reads as a calm list of pages, not as a form of 40 fields: one
+ * card per page, a heading, then its slots. The cards are what stop 40 text
+ * boxes reading as one undifferentiated wall. */
+
+.as-copy { display: flex; flex-direction: column; gap: var(--adze-space-6); }
+
+.as-copy__page {
+  display: flex;
+  flex-direction: column;
+  /* One spacing owner again: the slots contain .af-field, which carries its
+   * own bottom margin. Here the gap owns the rhythm and those margins stand
+   * down (below) — otherwise a page card runs 36px between slots against the
+   * 20px the same fields use in the item form. */
+  gap: var(--adze-space-5);
+  padding: var(--adze-space-5);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-sm);
+}
+.as-copy__page .af-field { margin-bottom: 0; }
+
+/* The heading owns no bottom margin — the card's gap is doing that. It keeps
+ * its padding, because the rule has to sit off the text. */
+.as-copy__page-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--adze-space-3);
+  padding-bottom: var(--adze-space-3);
+  border-bottom: 1px solid var(--adze-border);
+}
+/* One step down from h3's own size: inside a card this is a card title, not a
+ * section heading, and at --adze-text-lg it competes with the page's h2. */
+.as-copy__page-hd h3 { font-size: var(--adze-text-md); }
+
+.as-copy__slot { display: flex; flex-direction: column; gap: var(--adze-space-1); }
+
+/* "about · intro" — where this text comes out on the live site. Mono because
+ * it is scanned rather than read (typography.css draws that line), and faint
+ * because it is an address, not a label: the artist reads the label above the
+ * box, and only looks at this when they are hunting for one particular line. */
+.as-copy__path {
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-2xs);
+  color: var(--adze-text-faint);
+  overflow-wrap: anywhere;
+}
+
+/* .af-copy is a modifier and always sits on .af-input (field-editors.js pairs
+ * them, as it does for .af-textarea). It exists to undo .af-textarea's fixed
+ * 120px: a copy slot is autosized from its content by the JS, so the height
+ * here is only a floor, and a floor of 120px makes every one-line tagline look
+ * like an essay box. resize:none because the same autosizing overwrites a
+ * manual drag on the next keystroke — a handle that visibly does nothing is
+ * worse than no handle. */
+.af-copy {
+  min-height: calc(var(--adze-control-md) * 2);
+  resize: none;
+}
+
+/* Quill mounts ON this element, so by the time an artist sees it this div also
+ * carries .ql-container.ql-snow and the toolbar has been inserted above it as
+ * a sibling. The vendor theming lower down does the palette; what belongs here
+ * is the height, because a rich box that starts one line tall jumps as soon as
+ * it is typed into. The floor on .af-copy above stays deliberately: Quill
+ * mounts a tick after the field renders, and without it the whole form shifts
+ * down as each editor appears. */
+.af-copy--rich .ql-editor {
+  min-height: calc(var(--adze-control-md) * 2);
+  padding: var(--adze-space-2) var(--adze-space-3);
+}
+
+/* The preview found no element for this slot on the published page — the page
+ * hasn't been published since the slot was added, or it was renamed, or the
+ * site has never been published at all. Warn, not danger: nothing is broken
+ * and nothing is lost, the words are saved and one Publish fixes it. It is
+ * never silent, because an editor that appears to do nothing is worse than
+ * one that says why. */
+.as-copy__flag {
+  font-size: var(--adze-text-xs);
+  color: var(--adze-warn);
+}
+
+/* ── Copy: the live preview ───────────────────────────────────────────────────
+ * The artist's own published page beside the boxes that edit it. Without it
+ * the Text view is a column of grey boxes: an artist editing "bio" cannot see
+ * where that text lands, how long is too long, or what it looks like in their
+ * own typeface. */
+
+/* ONE auto-fit grid, NO breakpoint: the pane count falls out of the width
+ * actually available, so the same rule gives a phone one column and a laptop
+ * two, and there is no viewport this was tuned for.
+ *
+ * THE TWO PANES ARE NOT PEERS, so this is not an equal auto-fit grid. The
+ * editing column has a fixed job and a fixed maximum — --adze-width-form, per
+ * the width doctrine — and every pixel a wide screen earns beyond that belongs
+ * to the preview. An equal split would spend half of a 1440 screen making the
+ * form wider than the doctrine allows it to be.
+ *
+ * flex-wrap, not a media query, is what expresses that WITHOUT naming a
+ * viewport: the two sit on one line while the line can hold both at their
+ * bases, and take a full line each the moment it can't. The grow factors are
+ * 1 against 999, which is how "the surplus is the preview's" is said in CSS.
+ * A breakpoint here would be a second number to maintain and would disagree
+ * with the next one somebody adds — see guidelines/layout-columns.html.
+ *
+ * 340px is the preview's BASIS, not a width it is often rendered at; its job
+ * is to set where the two stop fitting side by side (560 + 24 + 340 = 924px of
+ * content box, about a 956px viewport). So a laptop gets the split and a
+ * tablet held upright does not. It is deliberately NOT --adze-col-min: that
+ * token is the width below which a label and its input stop reading as one
+ * field, which is a different measure about a different object, and reaching
+ * for it because it exists would put the wrap at 784 and hand an artist two
+ * useless columns. Like .as-grid's 160px, it stays a stated literal.
+ *
+ * align-items:flex-start is what lets the preview be sticky — a sticky flex
+ * item travels inside the CONTAINER's content box, which is as tall as the
+ * editors beside it, and is exactly its own height once the two have wrapped.
+ * So the preview stops sticking on a phone without a query saying so. */
+.as-copy-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--adze-space-6);
+  margin-bottom: var(--adze-space-6);
+}
+
+/* The Save row lives INSIDE the editing pane, under the last page card.
+ * `.as-actions` carries only --adze-space-1 of its own top margin, which is
+ * right in the item form because `.as-form` already owns the gap beneath
+ * itself — but here nothing did, so the button sat 4px under the card and read
+ * as stuck to it.
+ *
+ * One spacing owner per stack: whatever the row follows supplies the gap, never
+ * the row. Matching --adze-space-6 means Save sits the same distance from the
+ * thing above it in both views, which is the whole point of a scale. */
+.as-copy-pane > .as-actions { margin-top: var(--adze-space-6); }
+/* A flex item's automatic minimum size is its content, so a long unbroken word
+ * in a copy box would push its own pane wider than its share. */
+.as-copy-split > * { min-width: 0; }
+
+/* The max-width is stated here as well as on #as-main above, for the same
+ * reason .as-form states its own: where :has() is unsupported the rule up
+ * there never matches, and a copy column that quietly inherited the wide
+ * layout would be the exact failure the width doctrine exists to prevent. It
+ * is also what holds the column at 560 rather than letting its grow factor
+ * take a share of the surplus. */
+.as-copy-pane {
+  flex: 1 1 var(--adze-width-form);
+  max-width: var(--adze-width-form);
+}
+
+/* The preview stays put while the editors scroll past it — one that leaves
+ * the screen the moment you start typing is a screenshot. The height clears
+ * the sticky header above (~61px) and the fixed footer below, which is why it
+ * is two --adze-space-16 and not page padding. dvh with a vh line first: on a
+ * phone the URL bar makes vh taller than the visible viewport, and this box is
+ * meant to end above the footer rather than behind it. */
+.as-copy-preview {
+  flex: 999 1 340px;
+  position: sticky;
+  top: var(--adze-space-16);
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--adze-space-16) - var(--adze-space-16));
+  height: calc(100dvh - var(--adze-space-16) - var(--adze-space-16));
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-sm);
+  overflow: hidden;
+}
+
+/* Once the two panes wrap, the preview lands BELOW every editor — measured at
+ * y=1240 on a 900px window, which is more than a full screen of scrolling past
+ * text boxes before the artist sees the page they are editing. That is the
+ * landing page's mistake repeated: the thing they came for, filed under the
+ * thing they didn't.
+ *
+ * So when it wraps it goes FIRST and stays stuck to the top while the editors
+ * scroll underneath it. The height drops too — a full-viewport preview above a
+ * form means neither is usable, and the artist needs to see the sentence they
+ * are typing, not the whole page.
+ *
+ * 959px is not an invented breakpoint: it is where this flex row actually
+ * wraps (560 pane + 340 preview + 24 gap + 32 root padding), so the query fires
+ * exactly when the layout changes and never in between. */
+@media (max-width: 959px) {
+  .as-copy-preview {
+    order: -1;
+    top: var(--adze-space-3);
+    height: min(46vh, 420px);
+    height: min(46dvh, 420px);
+    transition: height var(--adze-dur) var(--adze-ease-out);
+  }
+
+  /* The same 46%, but of what the artist can actually SEE. dvh is the viewport
+   * with the URL bar resolved, which is not the viewport with a keyboard over
+   * it — see trackViewport() in adze-ui.js. Scoped to .is-vv because the var
+   * only exists where that measurement is real; everywhere else the dvh line
+   * above stands. */
+  .is-vv .as-copy-preview { height: min(calc(46 * var(--as-vvh)), 420px); }
+
+  /* Keyboard up: the preview yields the screen entirely.
+   *
+   * Not a smaller preview — there is no size at which both fit. With a keyboard
+   * open a phone has ~350px of usable height, and a preview that keeps any of
+   * it leaves the artist typing into a slot they can't see. They are writing
+   * now, not reading; the preview re-renders on the same debounce and is back,
+   * scrolled to the slot and lit, the moment the keyboard goes down.
+   *
+   * Height rather than display:none so it collapses in one transition instead
+   * of teleporting the editors up the page mid-keystroke, and so the sticky
+   * box holds its place in the flow. */
+  .is-kb .as-copy-preview {
+    height: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+
+  /* The publish bar goes with it. On iOS a fixed footer doesn't move for the
+   * keyboard — it sits BEHIND it, invisible, still holding its clearance
+   * padding; on Android the viewport resizes and the bar takes 74px of the
+   * little that's left. Neither is a bar anyone can press while typing. */
+  .is-kb .as-foot { display: none; }
+}
+
+.as-copy-preview__hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--adze-space-3);
+  flex: 0 0 auto;
+  padding: var(--adze-space-3) var(--adze-space-4);
+  border-bottom: 1px solid var(--adze-border);
+}
+/* The page being shown. Mono and label-cased because it is the same kind of
+ * thing as .as-copy__path — an address, scanned rather than read. */
+.as-copy-preview__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-2xs);
+  font-weight: var(--adze-weight-medium);
+  letter-spacing: var(--adze-tracking-label);
+  text-transform: uppercase;
+  color: var(--adze-text-muted);
+}
+
+/* The stage is the layer that owns what is on screen: the frame sits in it and
+ * messages sit OVER it, so there is no path where a message and a half-loaded
+ * page are visible at once. */
+.as-copy-preview__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;              /* a flex child's default min-height is auto */
+  background: var(--adze-bg-sunken);
+  overflow: hidden;
+}
+/* display:block kills the inline baseline gap; width/height 100% is what stops
+ * an iframe rendering at its useless 300×150 default. */
+.as-copy-preview__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  /* The artist's page paints its own background; this only covers the sunken
+   * stage during the moment before it does. */
+  background: var(--adze-surface);
+}
+.as-copy-preview__over {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--adze-space-4);
+  background: var(--adze-bg-sunken);
+  overflow: auto;
+}
+/* .adze-empty already centres and pads generously; inside a pane this size
+ * that reads as a hole rather than a message. */
+.as-copy-preview__over .adze-empty { padding: 0; }
+
+/* The honest line, said permanently rather than once in a toast. It is the
+ * LAST PUBLISHED page with unsaved copy painted into it — an artist who reads
+ * it as "my site as it will be" is right about their words and wrong about
+ * everything else on the page. */
+.as-copy-preview__note {
+  flex: 0 0 auto;
+  padding: var(--adze-space-2) var(--adze-space-4);
+  border-top: 1px solid var(--adze-border);
+  font-size: var(--adze-text-2xs);
+  color: var(--adze-text-faint);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+
+.as-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--adze-space-2);
+  height: var(--adze-control-md);
+  padding: 0 var(--adze-space-5);
+  border: 1px solid var(--adze-accent);
+  border-radius: var(--adze-radius-md);
+  background: var(--adze-accent);
+  color: var(--adze-accent-text);
+  font-size: var(--adze-text-sm);
+  font-weight: var(--adze-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--adze-transition-color), transform var(--adze-dur-instant) var(--adze-ease-out);
+}
+.as-btn:hover:not(:disabled) { background: var(--adze-accent-hover); border-color: var(--adze-accent-hover); }
+.as-btn:active:not(:disabled) { transform: translateY(1px); }
+.as-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.as-btn-sm { height: var(--adze-control-sm); padding: 0 var(--adze-space-3); font-size: var(--adze-text-xs); }
+
+/* Secondary button — the old shell had only one button style, so "Cancel"
+ * shouted as loudly as "Publish". */
+.as-btn.as-btn-quiet {
+  background: var(--adze-surface);
+  border-color: var(--adze-border);
+  color: var(--adze-text);
+}
+.as-btn.as-btn-quiet:hover:not(:disabled) {
+  background: var(--adze-surface-hover);
+  border-color: var(--adze-border-strong);
+}
+
+/* Busy state: the spinner is injected by admin-shell.js. pointer-events:none
+ * is what actually prevents a double-publish — the old code set `disabled`
+ * only after its await had resolved. */
+.as-btn.is-busy { pointer-events: none; opacity: 0.75; }
+
+.as-actions { display: flex; gap: var(--adze-space-3); margin: var(--adze-space-1) 0 var(--adze-space-4); }
+
+.as-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--adze-accent);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--adze-transition-color);
+}
+.as-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.as-danger { color: var(--adze-danger); }
+
+/* ── Footer ───────────────────────────────────────────────────────────────── */
+
+.as-foot {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--adze-space-4);
+  /* The bar spans the viewport, but its CONTENTS must line up with the
+   * centred content column — otherwise Publish floats out at the window edge
+   * with nothing above it. The old `max-width` on the children didn't do this;
+   * it constrained their width without positioning them.
+   *
+   * The padding resolves to the gutter that centres the CURRENT column PLUS
+   * that column's own inline padding, or the normal page padding on narrow
+   * screens, whichever is larger. The `+ --adze-space-4` is the part that is
+   * easy to drop: without it the bar lines up with the column's border box and
+   * Publish sits exactly one page-padding to the LEFT of everything above it,
+   * which is near enough to right to survive a skim and wrong enough to see.
+   * --as-col is inherited from #adze-admin-root (this bar is its child; only
+   * its positioning is off the viewport), so a view that widens the column
+   * takes the footer with it and Publish never has to be told twice.
+   * Pure CSS, so the JS can keep appending children directly. */
+  padding-block: var(--adze-space-3);
+  padding-inline: max(
+    var(--adze-space-4),
+    calc((100% - var(--as-col, var(--adze-width-content))) / 2 + var(--adze-space-4))
+  );
+  background: var(--adze-surface);
+  border-top: 1px solid var(--adze-border);
+  box-shadow: var(--adze-shadow-md);
+}
+
+/* The publish progress bar takes its own full-width row above the buttons.
+ * Sharing the row squashes "Advanced editing" onto two lines. */
+.as-foot .adze-progress { flex: 1 1 100%; order: -1; }
+
+.as-advanced {
+  font-size: var(--adze-text-xs);
+  white-space: nowrap;
+  color: var(--adze-text-faint);
+  text-decoration: none;
+  transition: var(--adze-transition-color);
+}
+.as-advanced:hover { color: var(--adze-accent); }
+
+/* ── Autosave status ──────────────────────────────────────────────────────── */
+
+/* There is no Save button; this line is the whole of the feedback, so it has
+ * to be legible without being loud. Faint while idle, and it only earns a
+ * colour when something went wrong.
+ *
+ * `min-height` reserves the row even when the text is empty — without it the
+ * form jumps by a line the first time the artist types, which reads as the
+ * page reacting badly to their input. */
+.as-saved {
+  min-height: var(--adze-space-5);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-faint);
+  transition: var(--adze-transition-color);
+}
+.as-saved--busy { color: var(--adze-text-muted); }
+.as-saved--ok   { color: var(--adze-text-faint); }
+.as-saved--err  { color: var(--adze-danger); }
+
+/* Whether the compiled site matches what's been saved. It sits between Publish
+ * and the handoff link, and it is deliberately quiet when everything is live —
+ * a permanent notice nobody needs to act on is a notice they stop reading. */
+.as-livenote {
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-faint);
+  text-align: right;
+  flex: 1 1 auto;
+}
+.as-livenote--pending { color: var(--adze-warn); }
+
+/* ── Login ────────────────────────────────────────────────────────────────── */
+
+.as-login {
+  max-width: 320px;
+  margin: var(--adze-space-16) auto;
+  text-align: center;
+  animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both;
+}
+/* Password field with its reveal toggle. The toggle sits inside the field's
+ * box, so the input needs room for it — otherwise long passwords run under. */
+/* The wrapper carries the field's bottom margin, not the input. Otherwise the
+ * wrapper is taller than the input by that margin, and centring the toggle on
+ * the wrapper puts it half a margin too low (6px, and visible). */
+.as-pw { position: relative; display: block; margin-bottom: var(--adze-space-3); }
+.as-pw .af-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: var(--adze-space-10);
+  margin-bottom: 0;
+  /* display:block is load-bearing, not tidying. An input is inline-block by
+     default, so it sits on the wrapper's text baseline and leaves ~12px of
+     descender space underneath — the wrapper measured 50px around a 38px
+     input. The toggle below centres on the WRAPPER, so that phantom space
+     pushed it 6px low and it read as sitting on the floor of the field. */
+  display: block;
+}
+.as-pw__toggle {
+  position: absolute;
+  right: var(--adze-space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--adze-control-sm);
+  height: var(--adze-control-sm);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--adze-text-faint);
+  border-radius: var(--adze-radius-sm);
+  transition: color var(--adze-dur-fast) var(--adze-ease-out);
+}
+.as-pw__toggle svg { width: 18px; height: 18px; display: block; }
+.as-pw__toggle:hover { color: var(--adze-text-muted); }
+/* Revealed is a state worth seeing at a glance, so it takes the accent. */
+.as-pw__toggle[aria-pressed="true"] { color: var(--adze-accent); }
+/* The login inputs are centred; the toggle must not be, or it drifts. */
+.as-login .as-pw .af-input { text-align: center; }
+
+.as-login h1 { font-size: var(--adze-text-xl); margin-bottom: var(--adze-space-5); }
+.as-login .af-input { margin-bottom: var(--adze-space-3); text-align: center; }
+.as-login .as-btn { width: 100%; }
+
+.as-err {
+  min-height: 18px;
+  margin-top: var(--adze-space-3);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-danger);
+}
+
+/* ── Re-auth ──────────────────────────────────────────────────────────────────
+ * Signing back in WITHOUT losing the page underneath — see the reauth() comment
+ * in adze-ui.js for why a 401 must not rebuild the DOM.
+ *
+ * position:fixed rather than absolute inside the root: the artist may be
+ * scrolled anywhere down a long form when the session ends, and an absolutely
+ * positioned box would open at the top of the document, off screen, behind them.
+ * The overlay must be where they are looking. */
+.as-reauth {
+  position: fixed;
+  inset: 0;
+  z-index: 60;                  /* over .as-foot (40) and .as-toast (50) */
+  display: grid;
+  place-items: center;
+  padding: var(--adze-space-4);
+  /* Dims what's behind rather than hiding it — seeing your own work still
+     sitting there is the reassurance the message is making in words. */
+  background: color-mix(in srgb, var(--adze-bg) 82%, transparent);
+  backdrop-filter: blur(2px);
+  animation: adze-fade-in var(--adze-dur) var(--adze-ease-out) both;
+}
+.as-reauth__box {
+  width: 100%;
+  max-width: 320px;
+  padding: var(--adze-space-6);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-lg);
+  text-align: center;
+}
+.as-reauth__title { font-size: var(--adze-text-lg); margin-bottom: var(--adze-space-2); }
+.as-reauth__body {
+  margin-bottom: var(--adze-space-5);
+  font-size: var(--adze-text-sm);
+  color: var(--adze-text-muted);
+}
+.as-reauth .as-pw .af-input { text-align: center; }
+.as-reauth .as-btn { width: 100%; }
+
+/* ── Account row ──────────────────────────────────────────────────────────────
+ * The foot of the landing page: change password, and the quiet way through to
+ * the control panel. Everything here is rare and none of it is why anyone
+ * opened the page, so it reads as a footer — a hairline, faint labels, no card.
+ * A card would give it the same weight as the feedback box above it. */
+.as-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--adze-space-4);
+  padding-top: var(--adze-space-6);
+  border-top: 1px solid var(--adze-border);
+}
+/* align-items rather than the default stretch: a <button class="as-link"> is a
+ * block in a column flex container, so it takes the full width and its centred
+ * button text renders as a centred link in the middle of the page. Everything
+ * in this row reads left. */
+.as-account__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--adze-space-3);
+}
+/* The form is its own stack and owns the gap between its fields, so .as-pw's
+ * bottom margin is zeroed here — one spacing owner per stack. Without this the
+ * two add up and these fields sit further apart than the same fields do on the
+ * login screen. */
+.as-account__form { display: flex; flex-direction: column; gap: var(--adze-space-3); }
+
+/* REQUIRED, and not a tidying rule. `display: flex` above is a class selector
+ * and `[hidden] { display: none }` is a UA rule, so the class wins and
+ * `form.hidden = true` does nothing at all — the collapsed state simply never
+ * renders and the three password boxes sit open on the page permanently. Any
+ * element given a display here needs this line with it. */
+.as-account__form[hidden] { display: none; }
+
+.as-account__form .as-pw { margin-bottom: 0; align-self: stretch; }
+.as-account__form .as-actions { margin: 0; align-self: stretch; justify-content: flex-end; }
+/* The reserved error line makes sense on the login screen, where a jump would
+ * shift the button under the cursor. In a form that is collapsed until wanted
+ * it is 30px of nothing under the button, so it takes its space only when it
+ * has something to say. */
+.as-account__form .as-err { margin-top: 0; }
+.as-account__form .as-err:empty { display: none; }
+/* A <p>'s own bottom margin plus the stack's gap is two spacing owners, and it
+ * put 28px here against 12px everywhere else in the same form. */
+.as-account__hint {
+  margin: 0;
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-faint);
+}
+/* The control-panel link is body-sized here, not the --adze-text-xs it wears in
+ * the content admin's footer: in a fixed bar it sits beside a button that
+ * anchors it, and here it is a line on its own with nothing to be small next
+ * to. Same class, different context, re-checked — as the shell doc says to. */
+.as-account .as-advanced { font-size: var(--adze-text-sm); }
+
+/* ── Landing ──────────────────────────────────────────────────────────────────
+ * theirdomain.com/admin. Same stylesheet as the content admin on purpose:
+ * one file, one set of tokens, nothing to keep in sync. A literal colour or
+ * size in here is a bug — everything comes from design-language/adze/tokens.
+ */
+/* Two levels of rhythm, and they must differ or the page has none:
+ *   --adze-space-8  BETWEEN major blocks (header · analytics · action · feedback)
+ *   --adze-space-4  INSIDE the analytics block (.as-data)
+ * Before this the outer gap was the only one — the four analytics elements are
+ * children of a bare wrapper div, so they stacked at 0px while everything
+ * around them had 24px. Crammed inside, loose outside. */
+.as-landing {
+  max-width: var(--adze-width-content);
+  margin: 0 auto;
+  padding: var(--adze-space-8) var(--adze-space-4) var(--adze-space-12);
+  display: flex;
+  flex-direction: column;
+  gap: var(--adze-space-8);
+}
+
+/* The landing's sections are async slots that may render nothing — status is
+ * empty whenever there's no signal, which is the normal case. An empty flex
+ * child still claims a gap on each side, so it left a 48px hole between the
+ * numbers and the button. display:none removes the box and both gaps. */
+.as-landing > div:empty { display: none; }
+
+.as-data { display: flex; flex-direction: column; gap: var(--adze-space-4); }
+.as-landing__hd {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--adze-space-3);
+}
+.as-landing__who { display: flex; align-items: baseline; gap: var(--adze-space-3); }
+.as-landing__name { font-size: var(--adze-text-xl); font-weight: 600; }
+.as-landing__domain { color: var(--adze-text-muted); font-size: var(--adze-text-sm); }
+
+/* ── the one figure — now INSIDE the visits card ── */
+/* The value, its label and the delta sit on one baseline row and wrap as a
+ * unit. As a standalone .as-hero block above the card this was three stacked
+ * lines of near-empty width; it is the same information in a third of the
+ * height. */
+.as-figure {
+  display: flex; align-items: baseline; flex-wrap: wrap;
+  gap: var(--adze-space-2) var(--adze-space-3);
+  margin-bottom: var(--adze-space-4);
+}
+/* Proportional figures, NOT .adze-numeric: tabular digits read loose at this
+ * size. The stat tiles below do use .adze-numeric — they sit in a row and
+ * must not twitch when the numbers refresh. */
+/* One step down from --adze-text-display: it shares a row with its own label
+ * now rather than owning a block, and at display size it pushed the label onto
+ * its own line and undid the condensing. */
+.as-hero__value {
+  font-size: var(--adze-text-2xl);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.as-hero__label { color: var(--adze-text-muted); }
+.as-hero__delta {
+  display: flex; align-items: baseline; gap: var(--adze-space-1);
+  font-size: var(--adze-text-xs);
+  color: var(--adze-text-muted);
+}
+/* Colour is the third signal here. The glyph and the words carry the meaning,
+ * so this still reads correctly in greyscale — see "never colour alone". */
+.as-hero__delta--up   { color: var(--adze-success); }
+.as-hero__delta--down { color: var(--adze-text-muted); }
+
+.as-card {
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  padding: var(--adze-space-6);
+  box-shadow: var(--adze-shadow-sm);
+}
+.as-card__hd {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--adze-space-3);
+  margin-bottom: var(--adze-space-4);
+}
+.as-card__meta { color: var(--adze-text-faint); font-size: var(--adze-text-xs); }
+
+/* ── 30-day area chart ── */
+.as-chart { position: relative; }
+.as-chart__svg { width: 100%; height: 64px; display: block; overflow: visible; }
+.as-chart__axis {
+  display: flex; justify-content: space-between;
+  margin-top: var(--adze-space-2);
+  color: var(--adze-text-faint);
+}
+.as-chart__cursor {
+  position: absolute; top: 0; width: 1px; height: 64px;
+  background: var(--adze-border-strong);
+  pointer-events: none; opacity: 0;
+  transition: opacity var(--adze-dur-fast) var(--adze-ease-out);
+}
+.as-chart:hover .as-chart__cursor { opacity: 1; }
+.as-chart__tip {
+  position: absolute; top: 0; transform: translate(-50%, -100%);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-sm);
+  box-shadow: var(--adze-shadow-md);
+  padding: var(--adze-space-1) var(--adze-space-2);
+  font-size: var(--adze-text-xs);
+  white-space: nowrap; pointer-events: none; opacity: 0;
+}
+.as-chart:hover .as-chart__tip { opacity: 1; }
+
+/* ── stat tiles ── */
+.as-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--adze-space-3); }
+/* The tiles live INSIDE the visits card now, so they no longer need a surface
+ * of their own — nesting a shadowed, filled box inside a shadowed, filled box
+ * reads as two competing panels. A hairline top rule is enough separation.
+ * (Two columns, not three: "Avg. visit" is gone — see admin-landing.js.) */
+.as-stat {
+  border-top: 1px solid var(--adze-border);
+  padding-top: var(--adze-space-3);
+  display: flex; flex-direction: column; gap: var(--adze-space-1);
+}
+.as-stat__value { font-size: var(--adze-text-xl); font-weight: 500; }
+.as-stat__label { color: var(--adze-text-muted); }
+
+/* The chart, the tiles and the hourly strip stack inside one card. */
+.as-card--figure > * + * { margin-top: var(--adze-space-4); }
+.as-hourly > .adze-label { margin-bottom: var(--adze-space-2); display: block; }
+
+/* ── hourly strip: magnitude is bar height, never opacity ── */
+.as-hours {
+  display: grid; grid-template-columns: repeat(24, 1fr);
+  gap: 2px; height: 40px; align-items: end;
+}
+.as-hours__bar {
+  background: var(--adze-accent);
+  border-radius: var(--adze-radius-sm) var(--adze-radius-sm) 0 0;
+  min-height: 2px;
+}
+.as-hours__cap {
+  color: var(--adze-text-faint); font-size: var(--adze-text-xs);
+  margin-top: var(--adze-space-2);
+}
+
+/* ── the one primary action ── */
+.as-btn.as-cta {
+  width: 100%;
+  height: var(--adze-control-lg);
+  font-size: var(--adze-text-md);
+}
+.as-cta__sub {
+  text-align: center;
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-sm);
+  margin-top: var(--adze-space-3);
+}
+
+/* ── service status ── */
+.as-status {
+  display: flex; align-items: center; gap: var(--adze-space-2);
+  padding: var(--adze-space-3);
+  border-radius: var(--adze-radius-md);
+  font-size: var(--adze-text-sm);
+}
+.as-status__dot {
+  width: 8px; height: 8px; border-radius: var(--adze-radius-pill);
+  background: currentColor; flex: none;
+}
+.as-status--ok { color: var(--adze-text-muted); }
+.as-status--degraded { color: var(--adze-warn); background: var(--adze-warn-soft); }
+
+/* ── feedback ── */
+/* One spacing owner. The children are .af-field, which already carry a
+ * --adze-space-5 bottom margin, so the flex gap stacked on top of it and the
+ * fields sat 32px apart here against 20px in the content admin's form. The
+ * gap owns it; the margins stand down. */
+.as-feedback { display: flex; flex-direction: column; gap: var(--adze-space-5); }
+.as-feedback .af-field { margin-bottom: 0; }
+.as-feedback .as-actions { justify-content: flex-end; margin: 0; }
+/* .af-textarea is sized for the content admin's edit column; here it sits in
+ * a full-width card and must fill it. */
+.as-feedback .af-input,
+.as-feedback .af-textarea { width: 100%; box-sizing: border-box; }
+
+@media (max-width: 640px) {
+  .as-stats { grid-template-columns: 1fr 1fr; }
+  /* Three tiles in two columns leaves the third stranded at half width. Let
+   * it span the row so the block still reads as a rectangle. */
+  .as-stat:last-child { grid-column: 1 / -1; }
+  .as-landing { padding-top: var(--adze-space-6); }
+}
+
+/* ── Toast ────────────────────────────────────────────────────────────────── */
+
+.as-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--adze-space-2);
+  padding: var(--adze-space-2) var(--adze-space-4);
+  background: var(--adze-surface);
+  color: var(--adze-text);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-md);
+  box-shadow: var(--adze-shadow-lg);
+  font-size: var(--adze-text-sm);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(12px);
+  transition: opacity var(--adze-dur) var(--adze-ease-out),
+              transform var(--adze-dur) var(--adze-ease-out);
+}
+.as-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.as-toast.ok  { border-color: var(--adze-success); background: var(--adze-success-soft); color: var(--adze-success); }
+.as-toast.err { border-color: var(--adze-danger);  background: var(--adze-danger-soft);  color: var(--adze-danger); }
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+
+.as-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--adze-space-4);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: adze-fade-in var(--adze-dur-fast) var(--adze-ease-out) both;
+}
+
+.as-modal {
+  width: 100%;
+  max-width: 380px;
+  padding: var(--adze-space-6);
+  background: var(--adze-surface);
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-lg);
+  box-shadow: var(--adze-shadow-lg);
+  animation: adze-scale-in var(--adze-dur) var(--adze-ease-out) both;
+}
+.as-modal h2 { margin: 0 0 var(--adze-space-5); font-size: var(--adze-text-lg); }
+
+/* The shared password form lands here too (renderAccountModal). Its wrapper is
+ * flex-start-aligned for the landing's account row, where it sits in a column
+ * of prose; in a 380px modal it is the whole content and must fill it. */
+.as-modal .as-account__item { align-items: stretch; }
+/* The modal supplies its own Cancel row underneath, so the form's own trailing
+ * row must not double the gap between the two. */
+.as-modal > .as-actions { margin: var(--adze-space-4) 0 0; justify-content: flex-end; }
+
+/* ── Feedback ─────────────────────────────────────────────────────────────────
+ * Ported from design-language/adze/components/feedback/*.jsx so class names and
+ * behaviour match the design system exactly. The old shell had no loading
+ * states at all: every fetch was a frozen screen. */
+
+.adze-progress { display: flex; flex-direction: column; gap: var(--adze-space-2); width: 100%; }
+.adze-progress__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--adze-space-3);
+}
+.adze-progress__meta { display: flex; align-items: baseline; gap: var(--adze-space-2); margin-left: auto; }
+.adze-progress__detail { font-size: var(--adze-text-xs); color: var(--adze-text-faint); }
+.adze-progress__value { font-size: var(--adze-text-2xs); color: var(--adze-text-muted); }
+.adze-progress__track {
+  position: relative; width: 100%; height: 6px;
+  background: var(--adze-bg-sunken);
+  border-radius: var(--adze-radius-pill);
+  overflow: hidden;
+}
+.adze-progress--sm .adze-progress__track { height: 4px; }
+.adze-progress__bar {
+  height: 100%; width: 0;
+  background: var(--adze-accent);
+  border-radius: var(--adze-radius-pill);
+  /* Width, not transform — a transform-scaled bar distorts the rounded cap. */
+  transition: width var(--adze-dur) var(--adze-ease-out);
+}
+.adze-progress--success .adze-progress__bar { background: var(--adze-success); }
+.adze-progress--danger  .adze-progress__bar { background: var(--adze-danger); }
+.adze-progress--indeterminate .adze-progress__bar {
+  width: 40%; transition: none; transform-origin: left center;
+  animation: adze-sweep 1.4s var(--adze-ease-in-out) infinite;
+}
+
+.adze-spinner {
+  display: inline-block; flex: 0 0 auto;
+  border-radius: var(--adze-radius-pill);
+  /* 3/4 arc, not a full ring — the gap is what makes rotation legible. */
+  border: 2px solid color-mix(in srgb, currentColor 20%, transparent);
+  border-top-color: currentColor;
+  animation: adze-spin 0.7s linear infinite;
+  vertical-align: -0.125em;
+}
+.adze-spinner--sm { width: 12px; height: 12px; border-width: 1.5px; }
+.adze-spinner--md { width: 16px; height: 16px; }
+.adze-spinner--lg { width: 24px; height: 24px; border-width: 3px; }
+.adze-spinner--accent { color: var(--adze-accent); }
+.adze-spinner--muted  { color: var(--adze-text-faint); }
+.adze-spinner--delayed {
+  animation: adze-spin 0.7s linear infinite, adze-fade-in 1ms linear forwards;
+  opacity: 0;
+}
+
+.adze-skeleton {
+  display: block;
+  border-radius: var(--adze-radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--adze-bg-sunken) 25%,
+    color-mix(in srgb, var(--adze-bg-sunken) 60%, var(--adze-surface)) 50%,
+    var(--adze-bg-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: adze-shimmer 1.6s linear infinite;
+}
+.adze-skeleton--text   { height: 13px; width: 100%; }
+.adze-skeleton--title  { height: 22px; width: 40%; }
+.adze-skeleton--block  { height: 120px; width: 100%; border-radius: var(--adze-radius-md); }
+.adze-skeleton--circle { height: 36px; width: 36px; border-radius: var(--adze-radius-pill); }
+.adze-skeleton--thumb  { height: 48px; width: 48px; border-radius: var(--adze-radius-md); flex: 0 0 auto; }
+.adze-skeleton-stack { display: flex; flex-direction: column; gap: var(--adze-space-2); }
+.adze-skeleton-rows { display: flex; flex-direction: column; }
+.adze-skeleton-row {
+  display: flex; align-items: center; gap: var(--adze-space-3);
+  padding: var(--adze-space-3) 0;
+  border-bottom: 1px solid var(--adze-border);
+}
+.adze-skeleton-row__text { display: flex; flex-direction: column; gap: var(--adze-space-2); flex: 1; }
+
+/* .as-empty is the legacy hook the JS still emits; .adze-empty is the design
+ * system name. Both render the same so either call site is correct. */
+.adze-empty, .as-empty {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+  padding: var(--adze-space-12) var(--adze-space-6);
+  color: var(--adze-text-muted);
+  font-style: normal;
+  animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both;
+}
+.adze-empty__icon {
+  display: grid; place-items: center;
+  width: 48px; height: 48px;
+  margin-bottom: var(--adze-space-4);
+  border-radius: var(--adze-radius-pill);
+  background: var(--adze-bg-sunken);
+  color: var(--adze-text-faint);
+  font-size: 22px;
+}
+.adze-empty--error .adze-empty__icon { background: var(--adze-danger-soft); color: var(--adze-danger); }
+.adze-empty__title {
+  font-size: var(--adze-text-md);
+  font-weight: var(--adze-weight-semibold);
+  color: var(--adze-text);
+  margin-bottom: var(--adze-space-2);
+}
+.adze-empty__body { font-size: var(--adze-text-sm); color: var(--adze-text-muted); max-width: 42ch; margin-bottom: 0; }
+.adze-empty__action { margin-top: var(--adze-space-6); }
+
+/* ── Motion ───────────────────────────────────────────────────────────────────
+ * Everything here composes the tokens and keyframes in tokens/motion.css and
+ * invents neither. Its three rules hold: state changes get a transition,
+ * entrances use --adze-ease-out, exits use --adze-ease-in and a SHORTER
+ * duration. Nothing exceeds --adze-dur-slower, stagger included.
+ *
+ * There is deliberately no prefers-reduced-motion block below. motion.css
+ * already collapses every animation and transition in the document with a
+ * universal !important rule; a second one here could only disagree with it. */
+
+/* ── view transitions ──
+ * admin-shell.js wraps the list↔edit swap in document.startViewTransition()
+ * and gives the row (or card) the artist clicked and the form's heading the
+ * SAME view-transition-name, so the browser morphs one box into the other
+ * instead of cross-fading two screens.
+ *
+ * These rules select `*` rather than a name ON PURPOSE. The name is
+ * as-item-<id>, built from the item's id — this file cannot know it, and
+ * should not: the JS says which two boxes are the same object, the CSS says
+ * how fast that reads. A name pattern hardcoded here would be a second place
+ * to change when ids change, and it would fail silently. */
+::view-transition-group(*) {
+  animation-duration: var(--adze-dur);
+  animation-timing-function: var(--adze-ease-out);
+}
+/* Rule 2, applied inside the group: the old snapshot is LEAVING and the new
+ * one is ENTERING. An even cross-fade is what makes a morph read as two
+ * photographs dissolving; the old box has to clear early so that the geometry
+ * — the thing actually moving — is what the eye follows. */
+::view-transition-old(*) {
+  animation-duration: var(--adze-dur-fast);
+  animation-timing-function: var(--adze-ease-in);
+}
+::view-transition-new(*) {
+  animation-duration: var(--adze-dur);
+  animation-timing-function: var(--adze-ease-out);
+}
+/* The page is the backdrop to that morph, not the subject. It crosses over
+ * quickly so nothing competes with the box that is travelling. Stated after
+ * the wildcards deliberately — same cascade, later wins. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--adze-dur-fast);
+}
+
+/* ── stagger ──
+ * Children carry --as-i, 0..8, capped by the JS. The step is half of
+ * --adze-dur-instant rather than a number picked by eye: at the cap the last
+ * child starts 320ms in and has landed at 460ms, inside --adze-dur-slower for
+ * the whole list. A bigger step is a wave; --adze-dur-fast per child rather
+ * than --adze-dur is what keeps it crisp at that many of them. */
+.as-stagger > * {
+  animation: adze-rise-in var(--adze-dur-fast) var(--adze-ease-out) both;
+  animation-delay: calc(var(--as-i, 0) * var(--adze-dur-instant) / 2);
+}
+
+/* ── exit ──
+ * adze-scale-in played backwards, rather than a leave keyframe of our own:
+ * "the reverse of the entrance" said in CSS instead of said again in numbers,
+ * which is how two clocks start to disagree. reverse + both holds the finished
+ * state (invisible) until the JS removes the node.
+ *
+ * AFTER .as-stagger, and it has to stay after: the two rules have the same
+ * specificity and both set `animation`, so the later one is the one that wins
+ * when an artist deletes an item while its entrance is still running.
+ *
+ * --adze-dur-fast is also well inside the 400ms ceiling afterExit() uses as
+ * its fallback, so the row is gone before the timeout is ever reached. */
+.as-row--leaving,
+.as-card-item--leaving {
+  animation: adze-scale-in var(--adze-dur-fast) var(--adze-ease-in) reverse both;
+  pointer-events: none;
+}
+
+/* ── drafts ──
+ * Created by "+ Add" and never saved. Provisional, NOT wrong: dashed and
+ * quiet, and pointedly not --adze-danger — the artist has done nothing bad,
+ * they simply haven't finished. Both list shapes get it. */
+.as-draft .as-row-title,
+.as-draft .as-card-item__title { color: var(--adze-text-muted); }
+/* The row has no border of its own and must not gain one: a border would make
+ * exactly one row in a flush list 2px taller. The outline takes no space, and
+ * it traces the row's hover band rather than its divider — the band is the
+ * row's real extent, so the dashes agree with the shape the artist already
+ * sees when they point at it. */
+.as-row.as-draft {
+  outline: 1px dashed var(--adze-border-strong);
+  outline-offset: -1px;
+}
+/* The card already has a border, so it only changes style. It also drops its
+ * shadow: an unsaved thing shouldn't sit above the surface with the saved
+ * ones. */
+.as-card-item.as-draft {
+  border-style: dashed;
+  border-color: var(--adze-border-strong);
+  box-shadow: none;
+}
+
+/* ── Vendor editors ───────────────────────────────────────────────────────────
+ * EasyMDE (markdown) and Quill (richtext) ship light themes. Without these
+ * overrides they render as foreign white boxes inside any artist palette that
+ * isn't near-white. Scoped to their own containers so the vendored CSS stays
+ * untouched and upgradeable. */
+
+.EasyMDEContainer .CodeMirror {
+  background: var(--adze-surface); color: var(--adze-text);
+  border-color: var(--adze-border);
+  border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md);
+  font-family: var(--adze-font-mono);
+  font-size: var(--adze-text-sm);
+}
+.EasyMDEContainer .CodeMirror-cursor { border-color: var(--adze-text); }
+.EasyMDEContainer .editor-toolbar {
+  background: var(--adze-surface); border-color: var(--adze-border);
+  border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0; opacity: 1;
+}
+.EasyMDEContainer .editor-toolbar button { color: var(--adze-text) !important; border-color: transparent; }
+.EasyMDEContainer .editor-toolbar button:hover,
+.EasyMDEContainer .editor-toolbar button.active {
+  background: var(--adze-bg-sunken); border-color: var(--adze-border);
+}
+.EasyMDEContainer .editor-toolbar i.separator { border-color: var(--adze-border); }
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side { background: var(--adze-bg); color: var(--adze-text); }
+
+.ql-toolbar.ql-snow {
+  background: var(--adze-surface); border-color: var(--adze-border);
+  border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0;
+}
+.ql-container.ql-snow {
+  /* Quill's own container declares a border and no background, so on any
+   * artist palette that isn't near-white the editor was a hole in the card.
+   * The copy editor mounts Quill directly ON .af-copy--rich, which means the
+   * container IS the control there and nothing else is going to fill it. */
+  background: var(--adze-surface);
+  border-color: var(--adze-border);
+  border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md);
+  font-family: var(--adze-font-ui);
+  font-size: var(--adze-text-sm);
+}
+/* Both rich hosts, one rule — .af-rich (the richtext field type) and
+ * .af-copy--rich (a copy slot). They differ in height, not in palette. */
+.af-rich .ql-editor,
+.af-copy--rich .ql-editor { color: var(--adze-text); }
+.af-rich .ql-editor { min-height: 140px; }
+.af-rich .ql-editor.ql-blank::before,
+.af-copy--rich .ql-editor.ql-blank::before { color: var(--adze-text-faint); font-style: normal; }
+.ql-snow .ql-stroke { stroke: var(--adze-text); }
+.ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--adze-text); }
+.ql-snow .ql-picker { color: var(--adze-text); }
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke { stroke: var(--adze-accent); }
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill { fill: var(--adze-accent); }
+.ql-snow .ql-picker-options { background: var(--adze-surface); border-color: var(--adze-border); }
+.ql-snow .ql-tooltip {
+  background: var(--adze-surface); border-color: var(--adze-border);
+  color: var(--adze-text); box-shadow: var(--adze-shadow-md);
+}
+.ql-snow .ql-tooltip input[type=text] {
+  background: var(--adze-bg); border-color: var(--adze-border); color: var(--adze-text);
+}
+
+/* The copy toolbar is three buttons — bold, italic, link — and nothing else;
+ * see COPY_FORMATS in field-editors.js. At Quill's own sizing (28×24, an 8px
+ * strip, and 15px of margin after the last group) three lone buttons float in
+ * a wide empty bar and read as a toolbar that has lost most of itself. On the
+ * control scale they read as a small control group, which is what they are.
+ * Sized from --adze-control-sm, so they also become 36px tap targets below
+ * 640px without a rule here saying so. */
+.ql-snow.ql-toolbar { padding: var(--adze-space-1) var(--adze-space-2); }
+.ql-snow.ql-toolbar .ql-formats:last-child { margin-right: 0; }
+.ql-snow.ql-toolbar button {
+  width: var(--adze-control-sm);
+  height: var(--adze-control-sm);
+  padding: var(--adze-space-1);
+  border-radius: var(--adze-radius-sm);
+  transition: var(--adze-transition-color);
+}
+.ql-snow.ql-toolbar button:hover { background: var(--adze-bg-sunken); }
+
+/* ── Mobile ───────────────────────────────────────────────────────────────────
+ * The control-height tokens already grow to 44px below 640px (spacing.css).
+ * These are the layout changes that don't follow from that. */
+@media (max-width: 640px) {
+  /* The footer stacks to two rows here (74px), so it needs more clearance
+   * than the desktop bar. Composed from the scale — 140px was invented. */
+  #adze-admin-root { padding: 0 var(--adze-space-3) calc(var(--adze-space-16) * 2); }
+  .as-listbar { flex-wrap: wrap; }
+  .as-foot {
+    flex-direction: column; align-items: stretch; gap: var(--adze-space-2);
+    padding-inline: var(--adze-space-3);
+  }
+  .as-foot .as-actions { margin: 0; }
+  .as-foot .as-btn { flex: 1; }
+}
+</style>
+<style>
+:root { --as-vvh: 7.8px; --adze-artist-bg: #ffffff; --adze-artist-surface: #f8f8f8; --adze-artist-text: #000000; --adze-artist-accent: #000000; --adze-artist-accent-text: #ffffff; --adze-artist-border: #e8e8e8; }
+  body { margin: 0; background: var(--adze-bg); }
+  .kit { width: 390px; max-width: 100%; margin: 0 auto; }
+  .as-copy-preview { position: static !important; height: 460px !important; }
+  .as-foot { position: static !important; }
+  #adze-admin-root { padding-bottom: var(--adze-space-6) !important; }
+</style>
+</head>
+<body>
+<div class="kit"><div id="adze-admin-root"><div class="as-header"><div class="as-brand">Rose</div><div class="as-row-actions"><button class="as-link">Account</button><button class="as-link">Log out</button></div></div><div class="as-nav"><button class="as-tab" data-key="exhibitions">Exhibitions</button><button class="as-tab" data-key="works">Works</button><button class="as-tab active" data-key="@copy">Text</button></div><div class="as-main as-main--enter" id="as-main"><div class="as-listbar"><h2>Text</h2><button class="as-btn as-btn-sm as-btn-quiet">Hide preview</button></div><div class="as-copy-split"><div class="as-copy-pane"><div class="as-copy"><div class="as-copy__page"><div class="as-copy__page-hd"><h3>404</h3></div><div class="as-copy__slot"><div class="as-copy__path">404 · not-found-message</div><div class="af-field"><label>Not found message</label><textarea class="af-input af-textarea af-copy" style="height: 86px;">This page doesn't exist.</textarea></div></div></div><div class="as-copy__page"><div class="as-copy__page-hd"><h3>About</h3></div><div class="as-copy__slot"><div class="as-copy__path">about · bio</div><div class="af-field"><label>Bio</label><textarea class="af-input af-textarea af-copy" style="height: 97px;">Rose Jones (b. 2002) is a multidisciplinary artist. Her work spans painting, illustration, and writing. what I make is deeply ridiculous but equally important.</textarea></div></div><div class="as-copy__slot"><div class="as-copy__path">about · education-foundation</div><div class="af-field"><label>Education foundation</label><textarea class="af-input af-textarea af-copy" style="height: 86px;">Foundation Diploma, Colchester Institute, graduated 2021</textarea></div></div><div class="as-copy__slot"><div class="as-copy__path">about · education-bfa</div><div class="af-field"><label>Education bfa</label><textarea class="af-input af-textarea af-copy" style="height: 86px;">BFA, Slade School of Fine Art, graduating 2025</textarea></div></div></div><div class="as-copy__page"><div class="as-copy__page-hd"><h3>Contact</h3></div><div class="as-copy__slot"><div class="as-copy__path">contact · contact-intro</div><div class="af-field"><label>Contact intro</label><textarea class="af-input af-textarea af-copy" style="height: 86px;">For enquiries</textarea></div></div></div></div><div class="as-actions"><div class="as-saved"></div></div></div><div class="as-copy-preview"><div class="as-copy-preview__hd"><div class="as-copy-preview__name">404</div><button class="as-link">Reload</button></div><div class="as-copy-preview__stage"><div class="as-copy-preview__frame" style="display:grid;place-items:center;background:var(--adze-bg-sunken)"><span class="as-copy-preview__note" style="border:0">the artist’s published page, live</span></div></div><div class="as-copy-preview__note">Your published page. Text you type shows here straight away; every other change needs Publish.</div></div></div></div><div class="as-foot"><button class="as-btn">Publish changes</button><div class="as-livenote as-livenote--pending">Saved — but not on the live site until you publish.</div><a class="as-advanced" href="/api/content-admin/rose/handoff">Advanced editing →</a></div></div></div>
+</body>
+</html>

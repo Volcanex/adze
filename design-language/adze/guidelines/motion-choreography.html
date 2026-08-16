@@ -1,0 +1,434 @@
+<!-- @dsCard group="Motion" name="Motion choreography" subtitle="What moves, and why — arrival, exit, stagger, entrance" -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Adze — Motion choreography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2/src/regular/style.css">
+<style>
+:root {
+    --adze-bg: #fbfbfd; --adze-surface: #ffffff; --adze-text: #1d1d1f;
+    --adze-accent: #1c4f82; --adze-accent-text: #ffffff; --adze-border: #e3e3e8;
+    --adze-bg-sunken: color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover: color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong: color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+    --adze-text-muted: color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint: color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-accent-hover: color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft: color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line: color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+    --adze-success: #1a8a52; --adze-warn: #a86b00; --adze-danger: #c8362a;
+    --adze-success-soft: color-mix(in srgb, #1a8a52 12%, var(--adze-surface));
+    --adze-warn-soft: color-mix(in srgb, #a86b00 12%, var(--adze-surface));
+    --adze-danger-soft: color-mix(in srgb, #c8362a 12%, var(--adze-surface));
+    --adze-focus-ring: 0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+    --adze-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --adze-font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --adze-text-2xs: 11px; --adze-text-xs: 12px; --adze-text-sm: 13px;
+    --adze-text-md: 15px; --adze-text-lg: 18px; --adze-text-xl: 22px;
+    --adze-text-2xl: 28px; --adze-text-3xl: 36px; --adze-text-display: 48px;
+    --adze-weight-normal: 400; --adze-weight-medium: 500;
+    --adze-weight-semibold: 600; --adze-weight-bold: 700;
+    --adze-leading-tight: 1.2; --adze-leading-snug: 1.35;
+    --adze-leading-normal: 1.55; --adze-leading-relaxed: 1.7;
+    --adze-tracking-display: -0.02em; --adze-tracking-tight: -0.01em;
+    --adze-tracking-label: 0.08em;
+    --adze-space-1: 4px; --adze-space-2: 8px; --adze-space-3: 12px;
+    --adze-space-4: 16px; --adze-space-5: 20px; --adze-space-6: 24px;
+    --adze-space-8: 32px; --adze-space-10: 40px; --adze-space-12: 48px; --adze-space-16: 64px;
+    --adze-control-sm: 28px; --adze-control-md: 36px; --adze-control-lg: 44px;
+    --adze-radius-sm: 4px; --adze-radius-md: 8px; --adze-radius-lg: 12px; --adze-radius-pill: 999px;
+    --adze-width-form: 560px; --adze-width-content: 720px; --adze-col-min: 200px;
+    --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+    --adze-shadow-md: 0 2px 4px rgba(0,0,0,.04), 0 8px 20px rgba(0,0,0,.08);
+    --adze-shadow-lg: 0 4px 8px rgba(0,0,0,.04), 0 16px 40px rgba(0,0,0,.10);
+    --adze-dur-instant: 80ms; --adze-dur-fast: 140ms; --adze-dur: 220ms;
+    --adze-dur-slow: 320ms; --adze-dur-slower: 480ms;
+    --adze-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --adze-ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --adze-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --adze-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --adze-bg: #131316; --adze-surface: #1c1c20; --adze-text: #f0f0f2;
+        --adze-accent: #99cdff; --adze-accent-text: #131316; --adze-border: #2e2e34;
+        --adze-success: #4fc084; --adze-warn: #e0b055; --adze-danger: #f0685c;
+        --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+        --adze-shadow-md: 0 2px 6px rgba(0,0,0,.45), 0 8px 24px rgba(0,0,0,.35);
+        --adze-shadow-lg: 0 4px 12px rgba(0,0,0,.5), 0 16px 48px rgba(0,0,0,.4);
+    }
+}
+@keyframes adze-spin { to { transform: rotate(360deg); } }
+@keyframes adze-rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes adze-pulse { 50% { opacity: 0.55; } }
+
+* { box-sizing: border-box; }
+body {
+    margin: 0; padding: var(--adze-space-8);
+    background: var(--adze-bg); color: var(--adze-text);
+    font-family: var(--adze-font-ui); font-size: var(--adze-text-sm);
+    line-height: var(--adze-leading-normal); -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'cv05' 1, 'ss01' 1;
+}
+h1,h2,h3,h4 { margin: 0; font-weight: var(--adze-weight-semibold); line-height: var(--adze-leading-tight); letter-spacing: var(--adze-tracking-tight); }
+.wrap { max-width: 1100px; margin: 0 auto; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.panel { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); padding: var(--adze-space-6); box-shadow: var(--adze-shadow-sm); }
+.panel > h3 { font-size: var(--adze-text-md); margin-bottom: var(--adze-space-4); }
+.stack { display: flex; flex-direction: column; gap: var(--adze-space-4); }
+.row { display: flex; align-items: center; gap: var(--adze-space-3); flex-wrap: wrap; }
+.adze-label { font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); font-weight: var(--adze-weight-medium); letter-spacing: var(--adze-tracking-label); text-transform: uppercase; color: var(--adze-text-muted); line-height: var(--adze-leading-snug); }
+.adze-numeric { font-family: var(--adze-font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.note { font-size: var(--adze-text-xs); color: var(--adze-text-muted); max-width: 62ch; }
+
+.adze-theme {
+    --adze-bg: var(--adze-artist-bg, #fbfbfd);
+    --adze-surface: var(--adze-artist-surface, #ffffff);
+    --adze-text: var(--adze-artist-text, #1d1d1f);
+    --adze-accent: var(--adze-artist-accent, #1c4f82);
+    --adze-accent-text: var(--adze-artist-accent-text, #ffffff);
+    --adze-border: var(--adze-artist-border, #e3e3e8);
+    --adze-bg-sunken: color-mix(in srgb, var(--adze-bg) 94%, var(--adze-text));
+    --adze-surface-hover: color-mix(in srgb, var(--adze-surface) 96%, var(--adze-text));
+    --adze-border-strong: color-mix(in srgb, var(--adze-border) 55%, var(--adze-text));
+    --adze-text-muted: color-mix(in srgb, var(--adze-text) 62%, var(--adze-bg));
+    --adze-text-faint: color-mix(in srgb, var(--adze-text) 40%, var(--adze-bg));
+    --adze-accent-hover: color-mix(in srgb, var(--adze-accent) 86%, var(--adze-text));
+    --adze-accent-soft: color-mix(in srgb, var(--adze-accent) 10%, var(--adze-surface));
+    --adze-accent-line: color-mix(in srgb, var(--adze-accent) 32%, var(--adze-border));
+    --adze-success-soft: color-mix(in srgb, var(--adze-success) 12%, var(--adze-surface));
+    --adze-warn-soft: color-mix(in srgb, var(--adze-warn) 12%, var(--adze-surface));
+    --adze-danger-soft: color-mix(in srgb, var(--adze-danger) 12%, var(--adze-surface));
+    --adze-focus-ring: 0 0 0 3px color-mix(in srgb, var(--adze-accent) 30%, transparent);
+    background: var(--adze-bg); color: var(--adze-text);
+}
+.mono { font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); color: var(--adze-text-faint); }
+
+.adze-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--adze-space-2); height: var(--adze-control-md); padding: 0 var(--adze-space-4); border: 1px solid transparent; border-radius: var(--adze-radius-md); font-family: var(--adze-font-ui); font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); line-height: 1; white-space: nowrap; cursor: pointer; transition: background-color var(--adze-dur-instant) var(--adze-ease-out), border-color var(--adze-dur-instant) var(--adze-ease-out), color var(--adze-dur-instant) var(--adze-ease-out), box-shadow var(--adze-dur-fast) var(--adze-ease-out), transform var(--adze-dur-fast) var(--adze-ease-out); }
+.adze-btn i { font-size: 1.15em; }
+.adze-btn--sm { height: var(--adze-control-sm); padding: 0 var(--adze-space-3); font-size: var(--adze-text-xs); }
+.adze-btn--lg { height: var(--adze-control-lg); padding: 0 var(--adze-space-6); font-size: var(--adze-text-md); }
+.adze-btn:active:not(:disabled) { transform: scale(0.98); }
+.adze-btn:focus-visible { outline: none; box-shadow: var(--adze-focus-ring); }
+.adze-btn--primary { background: var(--adze-accent); color: var(--adze-accent-text); }
+.adze-btn--primary:hover:not(:disabled) { background: var(--adze-accent-hover); }
+.adze-btn--secondary { background: var(--adze-surface); color: var(--adze-text); border-color: var(--adze-border-strong); }
+.adze-btn--secondary:hover:not(:disabled) { background: var(--adze-surface-hover); border-color: var(--adze-text-faint); }
+.adze-btn--ghost { background: transparent; color: var(--adze-text-muted); }
+.adze-btn--ghost:hover:not(:disabled) { background: var(--adze-bg-sunken); color: var(--adze-text); }
+.adze-btn--danger { background: var(--adze-danger); color: #fff; }
+.adze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.adze-spinner { display: inline-block; flex: 0 0 auto; border-radius: var(--adze-radius-pill); border: 2px solid color-mix(in srgb, currentColor 20%, transparent); border-top-color: currentColor; animation: adze-spin 0.7s linear infinite; vertical-align: -0.125em; width: 16px; height: 16px; }
+.adze-spinner--sm { width: 12px; height: 12px; border-width: 1.5px; }
+
+.adze-tag { display: inline-flex; align-items: center; gap: var(--adze-space-1); padding: 3px var(--adze-space-2); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-2xs); font-weight: var(--adze-weight-medium); line-height: 1.4; letter-spacing: var(--adze-tracking-label); text-transform: uppercase; white-space: nowrap; }
+.adze-tag__dot { width: 5px; height: 5px; border-radius: var(--adze-radius-pill); background: currentColor; flex: 0 0 auto; }
+.adze-tag--neutral { background: var(--adze-bg-sunken); color: var(--adze-text-muted); }
+.adze-tag--accent { background: var(--adze-accent-soft); color: var(--adze-accent); }
+.adze-tag--success { background: var(--adze-success-soft); color: var(--adze-success); }
+.adze-tag--warn { background: var(--adze-warn-soft); color: var(--adze-warn); }
+.adze-tag--danger { background: var(--adze-danger-soft); color: var(--adze-danger); }
+
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.chor { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--adze-space-6); }
+.pane { min-height: 210px; background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-3); cursor: pointer; }
+
+.se__row { display: flex; align-items: center; gap: var(--adze-space-3); overflow: hidden; max-height: 60px; padding: var(--adze-space-2); margin-bottom: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); transition: opacity var(--adze-dur) var(--adze-ease-out), transform var(--adze-dur) var(--adze-ease-out), max-height var(--adze-dur) var(--adze-ease-out), margin var(--adze-dur) var(--adze-ease-out), padding var(--adze-dur) var(--adze-ease-out); }
+.se.is-open .se__row { opacity: 0; transform: translateY(-4px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; transition: opacity var(--adze-dur-fast) var(--adze-ease-in), transform var(--adze-dur-fast) var(--adze-ease-in), max-height var(--adze-dur-fast) var(--adze-ease-in), margin var(--adze-dur-fast) var(--adze-ease-in), padding var(--adze-dur-fast) var(--adze-ease-in); }
+.se.is-open .se__row.is-target { opacity: 1; transform: none; max-height: 180px; padding: var(--adze-space-3); border-width: 1px; align-items: flex-start; transition: max-height var(--adze-dur) var(--adze-ease-out), padding var(--adze-dur) var(--adze-ease-out); }
+.se__thumb { flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--adze-radius-sm); background: linear-gradient(150deg, color-mix(in srgb, var(--adze-accent) 26%, var(--adze-surface)), var(--adze-bg-sunken)); transition: width var(--adze-dur) var(--adze-ease-out), height var(--adze-dur) var(--adze-ease-out); }
+.se.is-open .is-target .se__thumb { width: 84px; height: 105px; }
+.se__t { font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); }
+.se__body { max-height: 0; opacity: 0; overflow: hidden; transition: opacity var(--adze-dur-fast) var(--adze-ease-in), max-height var(--adze-dur-fast) var(--adze-ease-in); }
+.se.is-open .is-target .se__body { max-height: 90px; opacity: 1; transition: opacity var(--adze-dur) var(--adze-ease-out) var(--adze-dur-fast), max-height var(--adze-dur) var(--adze-ease-out); }
+
+.xf { position: relative; }
+.xf__layer { position: absolute; inset: var(--adze-space-3); transition: opacity var(--adze-dur) var(--adze-ease-in-out); }
+.xf__layer--detail { opacity: 0; }
+.xf.is-open .xf__layer--list { opacity: 0; }
+.xf.is-open .xf__layer--detail { opacity: 1; }
+
+.ee { position: relative; height: 104px; display: grid; place-items: center; background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); }
+.ee__toast { display: inline-flex; align-items: center; gap: var(--adze-space-2); padding: var(--adze-space-2) var(--adze-space-4); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-pill); box-shadow: var(--adze-shadow-md); font-size: var(--adze-text-xs); opacity: 0; transform: translateY(8px); transition: opacity var(--adze-dur-fast) var(--adze-ease-in), transform var(--adze-dur-fast) var(--adze-ease-in); }
+.ee__toast.is-in { opacity: 1; transform: none; transition: opacity var(--adze-dur) var(--adze-ease-out), transform var(--adze-dur) var(--adze-ease-out); }
+.ee--wrong .ee__toast, .ee--wrong .ee__toast.is-in { transition: opacity var(--adze-dur-slow) var(--adze-ease-in-out), transform var(--adze-dur-slow) var(--adze-ease-in-out); }
+
+.stag { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--adze-space-2); }
+.stag__row { display: flex; align-items: center; gap: var(--adze-space-2); padding: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-size: var(--adze-text-xs); }
+.stag__thumb { flex: 0 0 auto; width: 18px; height: 18px; border-radius: var(--adze-radius-sm); background: var(--adze-accent-soft); }
+.stag.is-run .stag__row { animation: adze-rise-in var(--adze-dur) var(--adze-ease-out) both; }
+.stag--capped.is-run .stag__row { animation-delay: calc(min(var(--i), 8) * var(--adze-dur-fast) / 4); }
+.stag--free.is-run .stag__row { animation-delay: calc(var(--i) * var(--adze-dur-fast) / 4); }
+
+.re { background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-4); }
+.re__panel { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); box-shadow: var(--adze-shadow-sm); padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.re__panel.is-entering { animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both; }
+.re__chip { opacity: 0; }
+.re__chip.is-in { animation: adze-rise-in var(--adze-dur) var(--adze-ease-out) both; }
+
+@keyframes chor-fill { from { width: 6%; } to { width: 94%; } }
+.pbar { height: 6px; border-radius: var(--adze-radius-pill); background: var(--adze-bg-sunken); overflow: hidden; }
+.pbar > i { display: block; height: 100%; background: var(--adze-accent); border-radius: var(--adze-radius-pill); animation: chor-fill 2.4s var(--adze-ease-in-out) infinite alternate; }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="stack">
+  <div class="panel">
+    <h3>What moves, and why</h3>
+    <p class="note"><b>Timing &amp; easing</b> covers how long a movement takes and what curve it
+    rides. This covers the harder question: what should move at all, and what the movement is
+    telling the person watching it. Motion in this system has exactly one job — to explain
+    <b>where a thing came from and where it went</b>. Motion that decorates is motion that has to be
+    sat through, every time, forever.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">The test: remove the animation and ask
+    whether anything became harder to follow. If nothing did, the animation was never doing work.</p>
+  </div>
+
+  <div class="panel">
+    <h3>List to detail is one element moving, not two elements fading</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A crossfade says one screen ended and
+    another began. A shared element says <i>that row is this page</i> — the thumbnail the artist
+    clicked is the thumbnail they are now looking at, so they never have to work out where they
+    are. Reuse the element and let it transition; don't build a second copy and dissolve between
+    them. <b>Click either panel.</b></p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>crossfade — where did it go?</div>
+        <div class="pane xf" id="xf">
+          <div class="xf__layer xf__layer--list">
+<div class="se__row"><span class="se__thumb"></span><span class="se__t">Study in Ochre<br><span class="mono">2026 · oil</span></span></div>
+<div class="se__row"><span class="se__thumb"></span><span class="se__t">Untitled #4<br><span class="mono">2026 · print</span></span></div>
+<div class="se__row"><span class="se__thumb"></span><span class="se__t">Low Tide<br><span class="mono">2025 · oil</span></span></div>
+          </div>
+          <div class="xf__layer xf__layer--detail">
+            <div class="se__row" style="max-height:none;align-items:flex-start;padding:var(--adze-space-3)">
+              <span class="se__thumb" style="width:84px;height:105px"></span>
+              <span class="se__t">Study in Ochre<br><span class="mono">2026 · oil</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>shared element — the row becomes the page</div>
+        <div class="pane se" id="se">
+          <div class="se__row is-target">
+            <span class="se__thumb"></span>
+            <span class="se__t">Study in Ochre<br><span class="mono">2026 · oil</span>
+              <span class="se__body" style="display:block"><span class="note" style="display:block;margin-top:var(--adze-space-2)">Oil on linen, 120 × 90 cm. The detail view grew out of the row; nothing was replaced.</span></span>
+            </span>
+          </div>
+<div class="se__row"><span class="se__thumb"></span><span class="se__t">Untitled #4<br><span class="mono">2026 · print</span></span></div>
+<div class="se__row"><span class="se__thumb"></span><span class="se__t">Low Tide<br><span class="mono">2025 · oil</span></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">The siblings leave with
+    <code>--adze-ease-in</code> at <code>--adze-dur-fast</code> while the target arrives with
+    <code>--adze-ease-out</code> at <code>--adze-dur</code>. The thing you are going to is the
+    thing that gets the time.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Entering and leaving are not the same motion</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">Something arriving is announcing
+    itself: <code>--adze-ease-out</code>, fast start, soft landing, <code>--adze-dur</code>.
+    Something leaving is getting out of the way: <code>--adze-ease-in</code> and a
+    <b>shorter</b> duration — <code>--adze-dur-fast</code>. Nobody has ever wanted to wait for a
+    dismissal. Write the leave timing as the element's resting state and let the
+    <code>.is-in</code> class override it; then each direction is stated once and cannot drift.</p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>enters ease-out 220ms · leaves ease-in 140ms</div>
+        <div class="ee"><span class="ee__toast"><i class="ph ph-check-circle" style="color:var(--adze-success)"></i>Saved</span></div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>ease-in-out 320ms, both directions</div>
+        <div class="ee ee--wrong"><span class="ee__toast"><i class="ph ph-check-circle" style="color:var(--adze-success)"></i>Saved</span></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">The second one is not slower by much.
+    It just refuses to leave, and a person who saves twenty times an hour feels every one of them.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Stagger must be capped</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A per-row delay is lovely at six rows
+    and absurd at thirty-two. Cap the index at <b>8</b> — after that every remaining row shares the
+    last delay, so the wave still reads but the list finishes arriving. The step here is
+    <code>--adze-dur-fast / 4</code>, which puts the capped total inside
+    <code>--adze-dur-slow</code>. Uncapped, the last row of thirty-two lands past
+    <code>--adze-dur-slower</code>, at which point the system's own rule says it stopped being a
+    transition — and it is a very bad progress bar, because nothing is loading.</p>
+    <div class="row" style="margin-bottom:var(--adze-space-4)">
+      <button class="adze-btn adze-btn--primary adze-btn--sm" id="b-cap">Capped at 8</button>
+      <button class="adze-btn adze-btn--secondary adze-btn--sm" id="b-free">Uncapped</button>
+      <span class="note">last row arrives at <span class="adze-numeric" id="lastdelay">280ms</span></span>
+    </div>
+    <div class="stag stag--capped" id="stag">
+<div class="stag__row" style="--i:0"><span class="stag__thumb"></span><span>Work 01</span></div>
+<div class="stag__row" style="--i:1"><span class="stag__thumb"></span><span>Work 02</span></div>
+<div class="stag__row" style="--i:2"><span class="stag__thumb"></span><span>Work 03</span></div>
+<div class="stag__row" style="--i:3"><span class="stag__thumb"></span><span>Work 04</span></div>
+<div class="stag__row" style="--i:4"><span class="stag__thumb"></span><span>Work 05</span></div>
+<div class="stag__row" style="--i:5"><span class="stag__thumb"></span><span>Work 06</span></div>
+<div class="stag__row" style="--i:6"><span class="stag__thumb"></span><span>Work 07</span></div>
+<div class="stag__row" style="--i:7"><span class="stag__thumb"></span><span>Work 08</span></div>
+<div class="stag__row" style="--i:8"><span class="stag__thumb"></span><span>Work 09</span></div>
+<div class="stag__row" style="--i:9"><span class="stag__thumb"></span><span>Work 10</span></div>
+<div class="stag__row" style="--i:10"><span class="stag__thumb"></span><span>Work 11</span></div>
+<div class="stag__row" style="--i:11"><span class="stag__thumb"></span><span>Work 12</span></div>
+<div class="stag__row" style="--i:12"><span class="stag__thumb"></span><span>Work 13</span></div>
+<div class="stag__row" style="--i:13"><span class="stag__thumb"></span><span>Work 14</span></div>
+<div class="stag__row" style="--i:14"><span class="stag__thumb"></span><span>Work 15</span></div>
+<div class="stag__row" style="--i:15"><span class="stag__thumb"></span><span>Work 16</span></div>
+<div class="stag__row" style="--i:16"><span class="stag__thumb"></span><span>Work 17</span></div>
+<div class="stag__row" style="--i:17"><span class="stag__thumb"></span><span>Work 18</span></div>
+<div class="stag__row" style="--i:18"><span class="stag__thumb"></span><span>Work 19</span></div>
+<div class="stag__row" style="--i:19"><span class="stag__thumb"></span><span>Work 20</span></div>
+<div class="stag__row" style="--i:20"><span class="stag__thumb"></span><span>Work 21</span></div>
+<div class="stag__row" style="--i:21"><span class="stag__thumb"></span><span>Work 22</span></div>
+<div class="stag__row" style="--i:22"><span class="stag__thumb"></span><span>Work 23</span></div>
+<div class="stag__row" style="--i:23"><span class="stag__thumb"></span><span>Work 24</span></div>
+<div class="stag__row" style="--i:24"><span class="stag__thumb"></span><span>Work 25</span></div>
+<div class="stag__row" style="--i:25"><span class="stag__thumb"></span><span>Work 26</span></div>
+<div class="stag__row" style="--i:26"><span class="stag__thumb"></span><span>Work 27</span></div>
+<div class="stag__row" style="--i:27"><span class="stag__thumb"></span><span>Work 28</span></div>
+<div class="stag__row" style="--i:28"><span class="stag__thumb"></span><span>Work 29</span></div>
+<div class="stag__row" style="--i:29"><span class="stag__thumb"></span><span>Work 30</span></div>
+<div class="stag__row" style="--i:30"><span class="stag__thumb"></span><span>Work 31</span></div>
+<div class="stag__row" style="--i:31"><span class="stag__thumb"></span><span>Work 32</span></div>
+    </div>
+    <pre class="code" style="margin-top:var(--adze-space-4)"><b>animation</b>: adze-rise-in var(--adze-dur) var(--adze-ease-out) both;
+<b>animation-delay</b>: calc(min(var(--i), 8) * var(--adze-dur-fast) / 4);</pre>
+  </div>
+
+  <div class="panel">
+    <h3>An entrance fires on enter, not on every render</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A panel's entrance animation belongs
+    to the panel <i>appearing</i>. Tie it to a re-render instead and it replays on every state
+    change — which, in an admin, means it replays every time the artist saves. It does not read as
+    an animation at that point; it reads as <b>the screen flashing</b> whenever you touch anything.
+    This was a real bug here. Press each Save a few times.</p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>entrance bound to the render</div>
+        <div class="re">
+          <div class="re__panel" id="bad-panel">
+            <span style="font-size:var(--adze-text-md);font-weight:var(--adze-weight-semibold)">Work details</span>
+            <span class="mono">Study in Ochre · 2026</span>
+            <div class="row">
+              <button class="adze-btn adze-btn--primary adze-btn--sm" id="bad-save">Save</button>
+              <span class="adze-tag adze-tag--success re__chip" id="bad-chip"><span class="adze-tag__dot"></span>Saved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>entrance bound to mount</div>
+        <div class="re">
+          <div class="re__panel" id="good-panel">
+            <span style="font-size:var(--adze-text-md);font-weight:var(--adze-weight-semibold)">Work details</span>
+            <span class="mono">Study in Ochre · 2026</span>
+            <div class="row">
+              <button class="adze-btn adze-btn--primary adze-btn--sm" id="good-save">Save</button>
+              <span class="adze-tag adze-tag--success re__chip" id="good-chip"><span class="adze-tag__dot"></span>Saved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Only the thing that changed should move.
+    The panel did not arrive again; the save did.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Past --adze-dur-slower it is a progress state, not a transition</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">480ms is the ceiling. Anything longer
+    is not a transition that needs tuning — it is a wait, and a wait needs a component that says so:
+    a <code>Skeleton</code> when you know the shape of what is coming, a <code>ProgressBar</code>
+    when you know how far along you are, a <code>Spinner</code> when you know neither. Stretching an
+    animation to cover a slow request tells the person nothing except that the interface is fond of
+    itself.</p>
+    <div class="pbar"><i></i></div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Under
+    <code>prefers-reduced-motion</code> the choreography still holds — the order things happen in,
+    and which element is which, survive intact. Only the travel collapses. The autoplay loops on
+    this card stay parked in that mode; the buttons still work.</p>
+  </div>
+</div>
+
+<script>
+var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var se = document.getElementById('se'), xf = document.getElementById('xf');
+function detail(on) {
+  se.classList.toggle('is-open', on);
+  xf.classList.toggle('is-open', on);
+}
+se.addEventListener('click', function () { detail(!se.classList.contains('is-open')); });
+xf.addEventListener('click', function () { detail(!xf.classList.contains('is-open')); });
+
+var toasts = document.querySelectorAll('.ee__toast');
+function toast(on) {
+  toasts.forEach(function (t) { t.classList.toggle('is-in', on); });
+}
+
+var stag = document.getElementById('stag');
+var bCap = document.getElementById('b-cap'), bFree = document.getElementById('b-free');
+var lastDelay = document.getElementById('lastdelay');
+var capped = true;
+function replay() {
+  stag.classList.remove('is-run');
+  void stag.offsetWidth;
+  stag.classList.add('is-run');
+}
+function mode(cap) {
+  capped = cap;
+  stag.className = 'stag ' + (cap ? 'stag--capped' : 'stag--free');
+  bCap.className = 'adze-btn adze-btn--sm ' + (cap ? 'adze-btn--primary' : 'adze-btn--secondary');
+  bFree.className = 'adze-btn adze-btn--sm ' + (cap ? 'adze-btn--secondary' : 'adze-btn--primary');
+  lastDelay.textContent = cap ? '280ms' : '1,085ms';
+  replay();
+}
+bCap.addEventListener('click', function () { mode(true); });
+bFree.addEventListener('click', function () { mode(false); });
+
+function flash(id) {
+  var c = document.getElementById(id);
+  c.classList.remove('is-in');
+  void c.offsetWidth;
+  c.classList.add('is-in');
+}
+document.getElementById('bad-save').addEventListener('click', function () {
+  var p = document.getElementById('bad-panel');
+  p.classList.remove('is-entering');
+  void p.offsetWidth;
+  p.classList.add('is-entering');
+  flash('bad-chip');
+});
+document.getElementById('good-save').addEventListener('click', function () { flash('good-chip'); });
+
+function cycle() {
+  detail(true);
+  toast(true);
+  replay();
+  setTimeout(function () { detail(false); toast(false); }, 1900);
+}
+if (!RM) {
+  setTimeout(cycle, 500);
+  setInterval(cycle, 4200);
+}
+</script>
+
+</div></body>
+</html>

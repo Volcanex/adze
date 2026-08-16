@@ -1,9 +1,9 @@
-<!-- @dsCard group="Components" name="Forms" subtitle="Field, Input, Select, Checkbox, Switch" -->
+<!-- @dsCard group="Components" name="Bounded editors" subtitle="An editor may only offer what the page already styles" -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Adze — Forms</title>
+<title>Adze — Bounded editors</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -188,69 +188,191 @@ h1,h2,h3,h4 { margin: 0; font-weight: var(--adze-weight-semibold); line-height: 
 .adze-link--standalone:hover { text-decoration: underline; }
 .adze-link--quiet { color: var(--adze-text-muted); }
 .adze-link--quiet:hover { color: var(--adze-text); text-decoration: underline; }
+
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.page { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); padding: var(--adze-space-6); }
+.page__h { font-size: var(--adze-text-xl); font-weight: var(--adze-weight-semibold); letter-spacing: var(--adze-tracking-tight); margin-bottom: var(--adze-space-4); }
+.page__lede { margin: 0 0 var(--adze-space-4); font-size: var(--adze-text-lg); line-height: var(--adze-leading-snug); letter-spacing: var(--adze-tracking-tight); color: var(--adze-text); }
+.page__body { margin: 0; font-size: var(--adze-text-sm); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); }
+.slot { outline: 1px dashed var(--adze-accent-line); outline-offset: var(--adze-space-1); }
+.tb { display: flex; flex-wrap: wrap; align-items: center; gap: var(--adze-space-1); padding: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0; }
+.tb__sep { width: 1px; align-self: stretch; background: var(--adze-border); margin: 0 var(--adze-space-1); }
+.tb + .page { border-top: 0; border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md); }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
+.code s { color: var(--adze-danger); text-decoration: none; }
+.gate { display: flex; align-items: flex-start; gap: var(--adze-space-3); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); }
+.gate:last-child { border-bottom: 0; }
+.gate__n { flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--adze-radius-pill); background: var(--adze-accent-soft); color: var(--adze-accent); font-family: var(--adze-font-mono); font-size: 10px; }
+.gate__t { min-width: 0; }
+.gate__t code { font-size: var(--adze-text-xs); }
 </style>
 </head>
 <body><div class="wrap">
 
-<div class="grid">
+<div class="stack">
   <div class="panel">
-    <h3>Field + Input</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f1">Title<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f1" value="Study in Ochre">
-    </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f2">Website</label></div>
-      <div class="adze-input-group"><span class="adze-input-group__prefix">https://</span><input class="adze-input adze-input--bare" id="f2" placeholder="yoursite.com"></div>
-      <p class="adze-field__help">Where your work lives online.</p>
-    </div>
-    <div class="adze-field adze-field--error">
-      <div class="adze-field__head"><label class="adze-label" for="f3">Slug<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f3" value="">
-      <p class="adze-field__error"><i class="ph ph-warning-circle"></i>Add a slug so this work can be found.</p>
-    </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f4">Bio</label><span class="adze-field__hint adze-numeric">128/280</span></div>
-      <textarea class="adze-input adze-input--textarea" id="f4">Painter working between London and Margate.</textarea>
-    </div>
+    <h3>An editor may only offer formatting the page already styles</h3>
+    <p class="note">A rich-text editor embedded in a designed page is not a document editor that
+    happens to be small. It is a hole cut in someone's layout, and everything it permits will
+    eventually appear there. In this system the permitted set is <b>bold, italic, link</b> — because
+    those are the three the page CSS styles — and nothing else.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">An unbounded toolbar is how a design gets
+    destroyed by the person it was built for. Not maliciously: the artist wants their exhibition
+    title to stand out, finds a heading button, and uses it. The button was the promise that it
+    would work.</p>
   </div>
 
   <div class="panel">
-    <h3>Select + toggles</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f5">Category</label></div>
-      <div class="adze-select-wrap">
-        <select class="adze-input adze-select" id="f5"><option>Painting</option><option>Sculpture</option><option>Print</option></select>
-        <i class="ph ph-caret-down adze-select__caret"></i>
+    <h3>What it prevents</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-6)">The same slot in the same designed
+    page — a lede the type scale already sized, tracked and coloured. On the left, a paste from Word
+    carrying its own font, size and colour, plus a heading and a list the page never anticipated.
+    On the right, the same words through a bounded editor.</p>
+    <div class="two">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>unbounded — the design is gone</div>
+        <div class="tb">
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-b"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-italic"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-link"></i></span>
+          <span class="tb__sep"></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Heading 1"><i class="ph ph-text-h-one"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Heading 2"><i class="ph ph-text-h-two"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Font size"><i class="ph ph-text-aa"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Colour"><i class="ph ph-palette"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Highlight"><i class="ph ph-paint-bucket"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Align"><i class="ph ph-text-align-left"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Bullets"><i class="ph ph-list-bullets"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Numbers"><i class="ph ph-list-numbers"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Blockquote"><i class="ph ph-quotes"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Code"><i class="ph ph-code"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Image"><i class="ph ph-image"></i></span>
+<span class="adze-btn adze-btn--ghost adze-btn--sm" title="Table"><i class="ph ph-table"></i></span>
+        </div>
+        <div class="page">
+          <div class="page__h">About</div>
+          <p class="page__lede slot"><span style="font-family:Calibri,sans-serif;font-size:19pt;color:#1F497D">Painter working</span> between London and <span style="background:#FFFF00">Margate</span>.</p>
+          <h1 style="font-family:'Times New Roman',serif;font-size:2em;color:#C00000;margin:0 0 8px">Recent work</h1>
+          <ul style="margin:0;padding-left:22px;font-family:Calibri,sans-serif;font-size:11pt">
+            <li>tidal light</li>
+            <li>a flat horizon</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>bounded — bold, italic, link</div>
+        <div class="tb">
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-b"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-italic"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-link"></i></span>
+        </div>
+        <div class="page">
+          <div class="page__h">About</div>
+          <p class="page__lede slot"><b>Painter working</b> between London and <i>Margate</i>. Recent work is at <a class="adze-link adze-link--inline" href="#">the Turner</a>.</p>
+          <p class="page__body">Recent work is concerned with tidal light and the way a flat horizon refuses to hold still for long enough to be painted.</p>
+        </div>
       </div>
     </div>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input" checked>
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Feature on homepage</span>
-      <span class="adze-check__desc">Shows in the top row of your gallery.</span></span>
-    </label>
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input">
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Show in search results</span></span>
-    </label>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-switch">
-      <span class="adze-switch__text"><span class="adze-switch__label">Site is live</span>
-      <span class="adze-switch__desc">Visitors can reach lydialott.co.uk</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" checked>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <label class="adze-switch is-pending">
-      <span class="adze-switch__text"><span class="adze-switch__label">Accept enquiries</span>
-      <span class="adze-switch__desc">Saving…</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" disabled>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <p class="note" style="margin-top:var(--adze-space-4)"><b>Checkbox</b> = takes effect on Save.
-    <b>Switch</b> = takes effect immediately, and must show a pending state while the write is in flight.</p>
+    <p class="note" style="margin-top:var(--adze-space-6)">Nothing on the left is a bug. Every one
+    of those marks is a feature working exactly as offered.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)"><b>If you are reading this in a light
+    theme, switch to dark and look at that panel again.</b> The pasted colours do not know the theme
+    exists: the navy drops to almost unreadable against the dark surface and the highlight burns a
+    hole in the page. Foreign formatting does not merely look wrong — it stops working outright on
+    half the artist palettes, and the site it stops working on is the artist's own.</p>
+  </div>
+
+  <div class="panel">
+    <h3>The toolbar is not the constraint</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">This is the part that gets built
+    wrong. Shipping a three-button toolbar and calling it bounded leaves every other route wide
+    open: <b>paste</b> carries its own markup and never touches the toolbar, and so do the keyboard
+    shortcuts the library registers by default. The constraint has to live where the formats are
+    defined, not where they are displayed.</p>
+    <div class="gate">
+      <span class="gate__n">1</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The format registry</div>
+        <span class="note">The editor is built from the permitted list, so header, list, blockquote,
+        image, colour, size and align have nothing to land on <b>however they arrive</b> — button,
+        shortcut or paste. It is also what keeps Enter to a plain paragraph: no other block format
+        exists.</span>
+      </div>
+    </div>
+    <div class="gate">
+      <span class="gate__n">2</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The paste sanitiser</div>
+        <span class="note">Paste gets its own gate, because it bypasses everything else. It walks
+        the pasted tree and <b>rebuilds</b> each run from the permitted attributes only, rather than
+        trying to strip the bad ones — a whitelist you construct from cannot be incomplete the way a
+        blacklist can. Embeds carry no copy and are dropped; link hrefs are checked against a scheme
+        allowlist on the way through.</span>
+      </div>
+    </div>
+    <div class="gate">
+      <span class="gate__n">3</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The server gate</div>
+        <span class="note">The client-side restriction protects the <b>design</b>. It is not a
+        control — a request can be made without it. The whitelist that runs on write is the control,
+        and it permits the same four things and nothing else: <code>b</code>, <code>i</code>,
+        <code>a</code>, <code>br</code>.</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Worked example:
+    <code>_shared/shell/field-editors.js</code>, field type <code>copyrich</code>. Its
+    <code>COPY_FORMATS</code> constant is stated once and consumed three ways — the format registry,
+    the toolbar, and the paste matcher — so the three can never disagree about what is permitted.</p>
+    <pre class="code" style="margin-top:var(--adze-space-3)">const <b>COPY_FORMATS</b> = ['bold', 'italic', 'link'];
+
+new Quill(host, {
+  <b>formats</b>: COPY_FORMATS,                        the registry — not a smaller toolbar
+  modules: { toolbar: [['bold', 'italic', 'link']] },
+});
+q.clipboard.<b>addMatcher</b>(Node.ELEMENT_NODE, ...)   paste, rebuilt from COPY_FORMATS only</pre>
+  </div>
+
+  <div class="panel">
+    <h3>The output is an inline fragment, not a block</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A copy slot is the <b>inner</b> content
+    of an element the designer already wrote. Most editors think in blocks and hand back
+    <code>&lt;p&gt;…&lt;/p&gt;</code>. Nested inside a slot that is itself a <code>&lt;p&gt;</code>,
+    the parser closes the outer tag — and the class that carried the design goes with it.</p>
+    <pre class="code">&lt;p class="lede" data-copy-rich="lede"&gt;
+  &lt;p&gt;Painter working between London and Margate.&lt;/p&gt;   <s>editor emitted a block</s>
+&lt;/p&gt;</pre>
+    <div class="two" style="margin-top:var(--adze-space-6)">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>inline fragment — class survives</div>
+        <div class="page"><p class="page__lede"><b>Painter working</b> between London and <i>Margate</i>. Recent work is at <a class="adze-link adze-link--inline" href="#">the Turner</a>.</p></div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>block wrapper — class stopped applying</div>
+        <div class="page"><p><b>Painter working</b> between London and <i>Margate</i>. Recent work is at <a class="adze-link adze-link--inline" href="#">the Turner</a>.</p></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Then the second failure lands on top of
+    the first: the server whitelist has no <code>p</code>, so the tags are stripped to nothing and
+    two paragraphs run silently into one line. <code>&lt;br&gt;</code> is the only break permitted,
+    so that is what a line break has to become. An editor that wraps its content in a block must
+    have that wrapper unwrapped on the way out.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Widening the set is a decision about every page at once</h3>
+    <p class="note">A request for one more format always arrives as a local convenience — one
+    artist, one page, one heading. It is not local. The permitted set is a property of the whole
+    system, and adding to it means every page's CSS now has to style that format, on every artist
+    theme, forever. There is no per-field version of this decision.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">The honest answer to "I need a heading
+    here" is almost always that the <b>page</b> needs a heading slot — a field the design owns and
+    styles — not that the copy editor needs a heading button.</p>
   </div>
 </div>
 

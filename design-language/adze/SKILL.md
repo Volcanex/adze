@@ -18,6 +18,31 @@ the operating checklist.
 3. If you need a value that isn't a token, stop. Either the scale is wrong (a
    design decision — raise it) or the layout is wrong (usually this).
 
+## Before shipping any UI: nothing touches
+
+**Look at it, and check that no two things are touching.** A button hard
+against the card above it, cards with no gutter, a field against its own
+heading — this is the single most common defect in this system, it is always
+visible in one screenshot, and it is never caught by reading the CSS.
+
+Two rules that prevent it:
+
+- **One spacing owner per stack.** Whatever a thing FOLLOWS supplies the gap —
+  never the thing itself. A container using `gap` plus children carrying
+  `margin-bottom` double up; a container with neither leaves them touching. Pick
+  one owner and make the other stand down explicitly.
+- **The gap is a token, always.** `--adze-space-6` between blocks,
+  `--adze-space-4` inside one. If a gap is invented at the call site it will not
+  agree with the identical gap twenty lines up, which is how a screen stops
+  looking like one system.
+
+The trap: a component that spaces correctly in one context and not another,
+because the first context's parent happened to own the gap. `.as-actions` in
+the artist admin carried only `--adze-space-1`, which was right under `.as-form`
+(which owns the gap beneath itself) and wrong under a card stack that owned
+nothing — so Save sat 4px under the last card. Same class, same file, two
+outcomes. **When you reuse a row in a new place, re-check its gap there.**
+
 ## The division of typefaces
 
 If you'd read it aloud in a sentence → **Inter** (`--adze-font-ui`).

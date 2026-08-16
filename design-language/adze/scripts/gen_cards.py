@@ -44,7 +44,7 @@ TOKENS = """
     --adze-space-8: 32px; --adze-space-10: 40px; --adze-space-12: 48px; --adze-space-16: 64px;
     --adze-control-sm: 28px; --adze-control-md: 36px; --adze-control-lg: 44px;
     --adze-radius-sm: 4px; --adze-radius-md: 8px; --adze-radius-lg: 12px; --adze-radius-pill: 999px;
-    --adze-width-form: 560px; --adze-width-content: 720px;
+    --adze-width-form: 560px; --adze-width-content: 720px; --adze-col-min: 200px;
     --adze-shadow-sm: 0 1px 2px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
     --adze-shadow-md: 0 2px 4px rgba(0,0,0,.04), 0 8px 20px rgba(0,0,0,.08);
     --adze-shadow-lg: 0 4px 8px rgba(0,0,0,.04), 0 16px 40px rgba(0,0,0,.10);
@@ -483,7 +483,7 @@ card('guidelines/color-artist-override.html', 'Colour', 'Artist override',
     <h3>Same markup, five palettes</h3>
     <div class="grid" style="margin-top:var(--adze-space-4)">
 """ + demo('adze (default)', '') +
-    demo('mariaslaughter', '--adze-artist-bg:#281800;--adze-artist-surface:#1a1000;--adze-artist-text:#c9a573;--adze-artist-accent:#c9a573;--adze-artist-accent-text:#281800;--adze-artist-border:#4a3318;') +
+    demo('mariaslaughter', '--adze-artist-bg:#0a0a0a;--adze-artist-surface:#161616;--adze-artist-text:#f0e6d6;--adze-artist-accent:#c9a573;--adze-artist-accent-text:#0a0a0a;--adze-artist-border:#3a3a3a;') +
     demo('rose', '--adze-artist-bg:#ffffff;--adze-artist-surface:#f8f8f8;--adze-artist-text:#000000;--adze-artist-accent:#000000;--adze-artist-accent-text:#ffffff;--adze-artist-border:#e8e8e8;') +
     demo('jackdt', '--adze-artist-bg:#f4f3ee;--adze-artist-surface:#fbfaf6;--adze-artist-text:#0b0d1a;--adze-artist-accent:#1a35ff;--adze-artist-accent-text:#ffffff;--adze-artist-border:#c7c5bd;') +
     demo('alfiebruce', '--adze-artist-bg:#000000;--adze-artist-surface:#111111;--adze-artist-text:#ffffff;--adze-artist-accent:#ffffff;--adze-artist-accent-text:#000000;--adze-artist-border:#262626;') + """
@@ -765,4 +765,858 @@ function run() {
 setTimeout(run, 400);
 setInterval(run, 3200);
 </script>
+""")
+
+
+# ── Layout doctrine ────────────────────────────────────────────────────────
+LAYOUT = """
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.stage { resize: horizontal; overflow: auto; min-width: 240px; max-width: 100%; padding: var(--adze-space-4); background: var(--adze-bg-sunken); border: 1px dashed var(--adze-border-strong); border-radius: var(--adze-radius-md); }
+.autofit { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--adze-col-min), 1fr)); gap: var(--adze-space-4); }
+.autofit .adze-field { margin-bottom: 0; }
+.formw { max-width: var(--adze-width-form); }
+.works { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--adze-space-4); }
+.work { border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); background: var(--adze-surface); box-shadow: var(--adze-shadow-sm); overflow: hidden; }
+.work__img { aspect-ratio: 4 / 5; background: linear-gradient(150deg, color-mix(in srgb, var(--adze-accent) var(--m), var(--adze-surface)), var(--adze-bg-sunken)); }
+.work__meta { padding: var(--adze-space-3); display: flex; flex-direction: column; gap: var(--adze-space-1); }
+.work__t { font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); }
+.ledger { border-top: 1px solid var(--adze-border); }
+.ledger > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--adze-space-4); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); font-size: var(--adze-text-sm); }
+.own { background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-4); }
+.own .adze-field { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); padding: var(--adze-space-3); }
+.own--fixed .adze-field { margin-bottom: 0; }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
+"""
+
+ROLE_ROWS = [
+    ('identity', 'Title, slug',
+     'First, on its own line. It names the thing; nothing shares its row.'),
+    ('media', 'Image, upload',
+     'Immediately after identity. An artist should see the picture before they see a text box.'),
+    ('short', 'Year, medium, dimensions, price',
+     'Packed into one auto-fit group at minmax(var(--adze-col-min), 1fr), so related metadata shares a row.'),
+    ('long', 'Description, statement',
+     'Full width of the form column — which is 560px, not the viewport.'),
+    ('tags', 'Categories, collections',
+     'Full width, below the long fields. Chips wrap; they do not need a column.'),
+]
+
+SHORT_FIELDS = [('Year', '2026'), ('Medium', 'Oil on linen'),
+                ('Dimensions', '120 × 90 cm'), ('Price', '£2,400')]
+
+
+def short_group():
+    return '\n'.join(
+        '<div class="adze-field"><div class="adze-field__head">'
+        '<label class="adze-label">%s</label></div>'
+        '<input class="adze-input" value="%s" readonly></div>' % (label, val)
+        for label, val in SHORT_FIELDS)
+
+
+WORK_ITEMS = [('22%', 'Study in Ochre', '2026 · oil'),
+              ('9%', 'Untitled #4', '2026 · print'),
+              ('34%', 'Low Tide', '2025 · oil'),
+              ('15%', 'Margate, June', '2025 · photo'),
+              ('27%', 'Cast I', '2024 · plaster'),
+              ('6%', 'Sketch for Ochre', '2024 · pencil')]
+
+LONG_TEXT = ("Painter working between London and Margate. Recent work is "
+             "concerned with tidal light and the way a flat horizon refuses to "
+             "hold still for long enough to be painted.")
+
+
+def form_specimen(long_line):
+    return """
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Title<span class="adze-field__req">*</span></label></div>
+  <input class="adze-input" value="Study in Ochre" readonly>
+</div>
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Statement</label></div>
+  <textarea class="adze-input adze-input--textarea" readonly>""" + long_line + """</textarea>
+</div>"""
+
+
+card('guidelines/layout-columns.html', 'Layout', 'Layout & columns',
+     'Auto-fit, not breakpoints — and the form stays 560px', 'Layout & columns',
+     BTN + TAG + FORMS + SPEC + LAYOUT, """
+<div class="stack">
+  <div class="panel">
+    <h3>A wider viewport means more columns, never longer lines</h3>
+    <p class="note">This is the one people get wrong when they set out to "make it use the
+    space". The <b>list</b> may widen on a large screen. The <b>form</b> does not — it stays at
+    <code>--adze-width-form</code>, 560px, at every viewport. A 900px-wide text input is worse to
+    use than a 560px one: the caret is a long way from the label, the value floats alone in a field
+    of nothing, and a paragraph of prose runs past the ~75 characters an eye can track back from.</p>
+    <div class="verdict verdict--yes" style="margin-top:var(--adze-space-6)"><i class="ph ph-check"></i>max-width: var(--adze-width-form)</div>
+    <div class="formw">""" + form_specimen(LONG_TEXT) + """</div>
+    <div class="verdict verdict--no" style="margin-top:var(--adze-space-6)"><i class="ph ph-x"></i>stretched to fill the container</div>
+    <div>""" + form_specimen(LONG_TEXT) + """</div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Same fields, same tokens, more pixels
+    spent. The second one is not more capable — it is the same form with a longer journey across
+    it. Space earned by a wide screen is spent on <b>columns</b>, never on line length. On a narrow
+    screen the two are identical, which is the whole point: the divergence only appears once there
+    is room to misuse.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Auto-fit grids, not breakpoints</h3>
+    <p class="note"><code>repeat(auto-fit, minmax(200px, 1fr))</code> reflows by the width actually
+    available, has no breakpoints to maintain, and degrades correctly at every viewport — including
+    the ones nobody tested. A media query is only warranted for something auto-fit genuinely cannot
+    express: the touch-target height bump at 640px in <code>tokens/spacing.css</code> is the whole
+    list. Every media query added after that is a future inconsistency, because the next person will
+    add theirs at a different number.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)"><b>Drag the bottom-right corner</b> of
+    the panel below. Four short fields go 4 → 2 → 1 without a single query.
+    <i class="ph ph-arrows-horizontal" style="vertical-align:-.15em"></i></p>
+    <div class="stage" style="margin-top:var(--adze-space-4)">
+      <div class="autofit">""" + short_group() + """</div>
+    </div>
+    <pre class="code" style="margin-top:var(--adze-space-4)"><b>display</b>: grid;
+<b>grid-template-columns</b>: repeat(auto-fit, minmax(var(--adze-col-min), 1fr));
+<b>gap</b>: var(--adze-space-4);</pre>
+  </div>
+
+  <div class="panel">
+    <h3>Layout is derived from field role, not declared per project</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A field's <b>role</b> decides where it
+    lands. Nothing in a schema says "put this in column two" — the schema says what the field
+    <i>is</i>, and the layout follows. That is what lets a brand-new project get a good layout from
+    a schema that says nothing about layout at all.</p>
+""" + '\n'.join(
+    '<div class="spec"><div class="spec__tok">%s</div>'
+    '<div class="spec__demo"><div style="font-size:var(--adze-text-sm)">%s</div>'
+    '<span class="note">%s</span></div></div>' % (role, egs, rule)
+    for role, egs, rule in ROLE_ROWS) + """
+    <div class="verdict verdict--yes" style="margin-top:var(--adze-space-6)"><i class="ph ph-check"></i>the whole form, derived</div>
+    <div class="formw">
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Title<span class="adze-field__req">*</span></label></div>
+        <input class="adze-input" value="Study in Ochre" readonly>
+      </div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Image</label></div>
+        <div class="work" style="max-width:180px"><div class="work__img" style="--m:22%"></div></div>
+      </div>
+      <div class="autofit" style="margin-bottom:var(--adze-space-4)">""" + short_group() + """</div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Statement</label></div>
+        <textarea class="adze-input adze-input--textarea" readonly>""" + LONG_TEXT + """</textarea>
+      </div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Tags</label></div>
+        <div class="row">
+          <span class="adze-tag adze-tag--neutral">Painting</span>
+          <span class="adze-tag adze-tag--neutral">2026</span>
+          <span class="adze-tag adze-tag--accent">Featured</span>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-6)">The escape hatches are deliberately
+    tiny — two keys, not a layout DSL. If you reach for a third, the role is wrong.</p>
+    <pre class="code" style="margin-top:var(--adze-space-3)">field       { "role": "short" }                    packed into the auto-fit group
+field       { "role": "short", <b>"width": "full"</b> }   the one per-field override
+collection  { <b>"list": "grid"</b> }                     or "rows" — the one per-collection override</pre>
+  </div>
+
+  <div class="panel">
+    <h3>A list of visual things is a grid of pictures</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">If the items have images, show the
+    images. An artist scanning their own gallery recognises a painting in a fraction of the time it
+    takes them to read its title — and half their titles are "Untitled".</p>
+    <div class="grid">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>list: "grid"</div>
+        <div class="works">
+""" + '\n'.join(
+    '<div class="work"><div class="work__img" style="--m:%s"></div>'
+    '<div class="work__meta"><span class="work__t">%s</span>'
+    '<span class="mono">%s</span></div></div>' % (m, t, meta)
+    for m, t, meta in WORK_ITEMS) + """
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>a ledger of titles</div>
+        <div class="ledger">
+""" + '\n'.join(
+    '<div><span>%s</span><span class="adze-numeric mono">%s</span></div>' % (t, meta)
+    for m, t, meta in WORK_ITEMS) + """
+        </div>
+        <p class="note" style="margin-top:var(--adze-space-3)">Everything the artist made, reduced
+        to the one attribute a database found easiest to print.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-6)"><b>The corollary is not optional.</b>
+    A grid of pictures requires an image tier sized for cards. Serving the 2000px display image into
+    a 200px slot is how a gallery of <span class="adze-numeric">32</span> works becomes a
+    <span class="adze-numeric">25 MB</span> page load — on a phone, on the artist's own data. Cut a
+    card tier at roughly <span class="adze-numeric">400px</span> and point the grid at it. If there
+    is no card tier yet, that is the work; it is not a detail to follow later.</p>
+  </div>
+
+  <div class="panel">
+    <h3>One spacing owner per stack</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A container using <code>gap</code>
+    whose children also carry <code>margin-bottom</code> gets both. Nothing errors — the form simply
+    runs looser in one place than another, and the two drift further apart every time someone tunes
+    one of them. This is a live bug class in this codebase: <code>.as-feedback</code> uses a flex
+    <code>gap</code>, so its <code>.af-field</code> children have their bottom margin zeroed;
+    without that the same form ran 32px there against 20px in the content admin.</p>
+    <div class="grid">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>gap 16 + margin-bottom 16 = <span class="adze-numeric">32px</span></div>
+        <div class="own">""" + short_group() + """</div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>gap owns it, margin zeroed = <span class="adze-numeric">16px</span></div>
+        <div class="own own--fixed">""" + short_group() + """</div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Pick one owner and say so where the
+    container is defined. The trailing margin under the last child is the same bug wearing a hat —
+    it is why a stack so often sits lower in its box than it sits in its own padding.</p>
+  </div>
+</div>
+""")
+
+
+# ── Motion choreography ────────────────────────────────────────────────────
+CHOREO = """
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.chor { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--adze-space-6); }
+.pane { min-height: 210px; background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-3); cursor: pointer; }
+
+.se__row { display: flex; align-items: center; gap: var(--adze-space-3); overflow: hidden; max-height: 60px; padding: var(--adze-space-2); margin-bottom: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); transition: opacity var(--adze-dur) var(--adze-ease-out), transform var(--adze-dur) var(--adze-ease-out), max-height var(--adze-dur) var(--adze-ease-out), margin var(--adze-dur) var(--adze-ease-out), padding var(--adze-dur) var(--adze-ease-out); }
+.se.is-open .se__row { opacity: 0; transform: translateY(-4px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; transition: opacity var(--adze-dur-fast) var(--adze-ease-in), transform var(--adze-dur-fast) var(--adze-ease-in), max-height var(--adze-dur-fast) var(--adze-ease-in), margin var(--adze-dur-fast) var(--adze-ease-in), padding var(--adze-dur-fast) var(--adze-ease-in); }
+.se.is-open .se__row.is-target { opacity: 1; transform: none; max-height: 180px; padding: var(--adze-space-3); border-width: 1px; align-items: flex-start; transition: max-height var(--adze-dur) var(--adze-ease-out), padding var(--adze-dur) var(--adze-ease-out); }
+.se__thumb { flex: 0 0 auto; width: 36px; height: 36px; border-radius: var(--adze-radius-sm); background: linear-gradient(150deg, color-mix(in srgb, var(--adze-accent) 26%, var(--adze-surface)), var(--adze-bg-sunken)); transition: width var(--adze-dur) var(--adze-ease-out), height var(--adze-dur) var(--adze-ease-out); }
+.se.is-open .is-target .se__thumb { width: 84px; height: 105px; }
+.se__t { font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); }
+.se__body { max-height: 0; opacity: 0; overflow: hidden; transition: opacity var(--adze-dur-fast) var(--adze-ease-in), max-height var(--adze-dur-fast) var(--adze-ease-in); }
+.se.is-open .is-target .se__body { max-height: 90px; opacity: 1; transition: opacity var(--adze-dur) var(--adze-ease-out) var(--adze-dur-fast), max-height var(--adze-dur) var(--adze-ease-out); }
+
+.xf { position: relative; }
+.xf__layer { position: absolute; inset: var(--adze-space-3); transition: opacity var(--adze-dur) var(--adze-ease-in-out); }
+.xf__layer--detail { opacity: 0; }
+.xf.is-open .xf__layer--list { opacity: 0; }
+.xf.is-open .xf__layer--detail { opacity: 1; }
+
+.ee { position: relative; height: 104px; display: grid; place-items: center; background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); }
+.ee__toast { display: inline-flex; align-items: center; gap: var(--adze-space-2); padding: var(--adze-space-2) var(--adze-space-4); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-pill); box-shadow: var(--adze-shadow-md); font-size: var(--adze-text-xs); opacity: 0; transform: translateY(8px); transition: opacity var(--adze-dur-fast) var(--adze-ease-in), transform var(--adze-dur-fast) var(--adze-ease-in); }
+.ee__toast.is-in { opacity: 1; transform: none; transition: opacity var(--adze-dur) var(--adze-ease-out), transform var(--adze-dur) var(--adze-ease-out); }
+.ee--wrong .ee__toast, .ee--wrong .ee__toast.is-in { transition: opacity var(--adze-dur-slow) var(--adze-ease-in-out), transform var(--adze-dur-slow) var(--adze-ease-in-out); }
+
+.stag { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--adze-space-2); }
+.stag__row { display: flex; align-items: center; gap: var(--adze-space-2); padding: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-size: var(--adze-text-xs); }
+.stag__thumb { flex: 0 0 auto; width: 18px; height: 18px; border-radius: var(--adze-radius-sm); background: var(--adze-accent-soft); }
+.stag.is-run .stag__row { animation: adze-rise-in var(--adze-dur) var(--adze-ease-out) both; }
+.stag--capped.is-run .stag__row { animation-delay: calc(min(var(--i), 8) * var(--adze-dur-fast) / 4); }
+.stag--free.is-run .stag__row { animation-delay: calc(var(--i) * var(--adze-dur-fast) / 4); }
+
+.re { background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-4); }
+.re__panel { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); box-shadow: var(--adze-shadow-sm); padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.re__panel.is-entering { animation: adze-rise-in var(--adze-dur-slow) var(--adze-ease-out) both; }
+.re__chip { opacity: 0; }
+.re__chip.is-in { animation: adze-rise-in var(--adze-dur) var(--adze-ease-out) both; }
+
+@keyframes chor-fill { from { width: 6%; } to { width: 94%; } }
+.pbar { height: 6px; border-radius: var(--adze-radius-pill); background: var(--adze-bg-sunken); overflow: hidden; }
+.pbar > i { display: block; height: 100%; background: var(--adze-accent); border-radius: var(--adze-radius-pill); animation: chor-fill 2.4s var(--adze-ease-in-out) infinite alternate; }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
+"""
+
+SE_ROWS = [('Study in Ochre', '2026 · oil'), ('Untitled #4', '2026 · print'),
+           ('Low Tide', '2025 · oil')]
+
+STAG_ROWS = '\n'.join(
+    '<div class="stag__row" style="--i:%d"><span class="stag__thumb"></span>'
+    '<span>Work %02d</span></div>' % (i, i + 1)
+    for i in range(32))
+
+
+card('guidelines/motion-choreography.html', 'Motion', 'Motion choreography',
+     'What moves, and why — arrival, exit, stagger, entrance', 'Motion choreography',
+     BTN + TAG + CHOREO, """
+<div class="stack">
+  <div class="panel">
+    <h3>What moves, and why</h3>
+    <p class="note"><b>Timing &amp; easing</b> covers how long a movement takes and what curve it
+    rides. This covers the harder question: what should move at all, and what the movement is
+    telling the person watching it. Motion in this system has exactly one job — to explain
+    <b>where a thing came from and where it went</b>. Motion that decorates is motion that has to be
+    sat through, every time, forever.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">The test: remove the animation and ask
+    whether anything became harder to follow. If nothing did, the animation was never doing work.</p>
+  </div>
+
+  <div class="panel">
+    <h3>List to detail is one element moving, not two elements fading</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A crossfade says one screen ended and
+    another began. A shared element says <i>that row is this page</i> — the thumbnail the artist
+    clicked is the thumbnail they are now looking at, so they never have to work out where they
+    are. Reuse the element and let it transition; don't build a second copy and dissolve between
+    them. <b>Click either panel.</b></p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>crossfade — where did it go?</div>
+        <div class="pane xf" id="xf">
+          <div class="xf__layer xf__layer--list">
+""" + '\n'.join(
+    '<div class="se__row"><span class="se__thumb"></span>'
+    '<span class="se__t">%s<br><span class="mono">%s</span></span></div>' % (t, m)
+    for t, m in SE_ROWS) + """
+          </div>
+          <div class="xf__layer xf__layer--detail">
+            <div class="se__row" style="max-height:none;align-items:flex-start;padding:var(--adze-space-3)">
+              <span class="se__thumb" style="width:84px;height:105px"></span>
+              <span class="se__t">Study in Ochre<br><span class="mono">2026 · oil</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>shared element — the row becomes the page</div>
+        <div class="pane se" id="se">
+          <div class="se__row is-target">
+            <span class="se__thumb"></span>
+            <span class="se__t">Study in Ochre<br><span class="mono">2026 · oil</span>
+              <span class="se__body" style="display:block"><span class="note" style="display:block;margin-top:var(--adze-space-2)">Oil on linen, 120 × 90 cm. The detail view grew out of the row; nothing was replaced.</span></span>
+            </span>
+          </div>
+""" + '\n'.join(
+    '<div class="se__row"><span class="se__thumb"></span>'
+    '<span class="se__t">%s<br><span class="mono">%s</span></span></div>' % (t, m)
+    for t, m in SE_ROWS[1:]) + """
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">The siblings leave with
+    <code>--adze-ease-in</code> at <code>--adze-dur-fast</code> while the target arrives with
+    <code>--adze-ease-out</code> at <code>--adze-dur</code>. The thing you are going to is the
+    thing that gets the time.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Entering and leaving are not the same motion</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">Something arriving is announcing
+    itself: <code>--adze-ease-out</code>, fast start, soft landing, <code>--adze-dur</code>.
+    Something leaving is getting out of the way: <code>--adze-ease-in</code> and a
+    <b>shorter</b> duration — <code>--adze-dur-fast</code>. Nobody has ever wanted to wait for a
+    dismissal. Write the leave timing as the element's resting state and let the
+    <code>.is-in</code> class override it; then each direction is stated once and cannot drift.</p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>enters ease-out 220ms · leaves ease-in 140ms</div>
+        <div class="ee"><span class="ee__toast"><i class="ph ph-check-circle" style="color:var(--adze-success)"></i>Saved</span></div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>ease-in-out 320ms, both directions</div>
+        <div class="ee ee--wrong"><span class="ee__toast"><i class="ph ph-check-circle" style="color:var(--adze-success)"></i>Saved</span></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">The second one is not slower by much.
+    It just refuses to leave, and a person who saves twenty times an hour feels every one of them.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Stagger must be capped</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A per-row delay is lovely at six rows
+    and absurd at thirty-two. Cap the index at <b>8</b> — after that every remaining row shares the
+    last delay, so the wave still reads but the list finishes arriving. The step here is
+    <code>--adze-dur-fast / 4</code>, which puts the capped total inside
+    <code>--adze-dur-slow</code>. Uncapped, the last row of thirty-two lands past
+    <code>--adze-dur-slower</code>, at which point the system's own rule says it stopped being a
+    transition — and it is a very bad progress bar, because nothing is loading.</p>
+    <div class="row" style="margin-bottom:var(--adze-space-4)">
+      <button class="adze-btn adze-btn--primary adze-btn--sm" id="b-cap">Capped at 8</button>
+      <button class="adze-btn adze-btn--secondary adze-btn--sm" id="b-free">Uncapped</button>
+      <span class="note">last row arrives at <span class="adze-numeric" id="lastdelay">280ms</span></span>
+    </div>
+    <div class="stag stag--capped" id="stag">
+""" + STAG_ROWS + """
+    </div>
+    <pre class="code" style="margin-top:var(--adze-space-4)"><b>animation</b>: adze-rise-in var(--adze-dur) var(--adze-ease-out) both;
+<b>animation-delay</b>: calc(min(var(--i), 8) * var(--adze-dur-fast) / 4);</pre>
+  </div>
+
+  <div class="panel">
+    <h3>An entrance fires on enter, not on every render</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A panel's entrance animation belongs
+    to the panel <i>appearing</i>. Tie it to a re-render instead and it replays on every state
+    change — which, in an admin, means it replays every time the artist saves. It does not read as
+    an animation at that point; it reads as <b>the screen flashing</b> whenever you touch anything.
+    This was a real bug here. Press each Save a few times.</p>
+    <div class="chor">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>entrance bound to the render</div>
+        <div class="re">
+          <div class="re__panel" id="bad-panel">
+            <span style="font-size:var(--adze-text-md);font-weight:var(--adze-weight-semibold)">Work details</span>
+            <span class="mono">Study in Ochre · 2026</span>
+            <div class="row">
+              <button class="adze-btn adze-btn--primary adze-btn--sm" id="bad-save">Save</button>
+              <span class="adze-tag adze-tag--success re__chip" id="bad-chip"><span class="adze-tag__dot"></span>Saved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>entrance bound to mount</div>
+        <div class="re">
+          <div class="re__panel" id="good-panel">
+            <span style="font-size:var(--adze-text-md);font-weight:var(--adze-weight-semibold)">Work details</span>
+            <span class="mono">Study in Ochre · 2026</span>
+            <div class="row">
+              <button class="adze-btn adze-btn--primary adze-btn--sm" id="good-save">Save</button>
+              <span class="adze-tag adze-tag--success re__chip" id="good-chip"><span class="adze-tag__dot"></span>Saved</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Only the thing that changed should move.
+    The panel did not arrive again; the save did.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Past --adze-dur-slower it is a progress state, not a transition</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">480ms is the ceiling. Anything longer
+    is not a transition that needs tuning — it is a wait, and a wait needs a component that says so:
+    a <code>Skeleton</code> when you know the shape of what is coming, a <code>ProgressBar</code>
+    when you know how far along you are, a <code>Spinner</code> when you know neither. Stretching an
+    animation to cover a slow request tells the person nothing except that the interface is fond of
+    itself.</p>
+    <div class="pbar"><i></i></div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Under
+    <code>prefers-reduced-motion</code> the choreography still holds — the order things happen in,
+    and which element is which, survive intact. Only the travel collapses. The autoplay loops on
+    this card stay parked in that mode; the buttons still work.</p>
+  </div>
+</div>
+
+<script>
+var RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+var se = document.getElementById('se'), xf = document.getElementById('xf');
+function detail(on) {
+  se.classList.toggle('is-open', on);
+  xf.classList.toggle('is-open', on);
+}
+se.addEventListener('click', function () { detail(!se.classList.contains('is-open')); });
+xf.addEventListener('click', function () { detail(!xf.classList.contains('is-open')); });
+
+var toasts = document.querySelectorAll('.ee__toast');
+function toast(on) {
+  toasts.forEach(function (t) { t.classList.toggle('is-in', on); });
+}
+
+var stag = document.getElementById('stag');
+var bCap = document.getElementById('b-cap'), bFree = document.getElementById('b-free');
+var lastDelay = document.getElementById('lastdelay');
+var capped = true;
+function replay() {
+  stag.classList.remove('is-run');
+  void stag.offsetWidth;
+  stag.classList.add('is-run');
+}
+function mode(cap) {
+  capped = cap;
+  stag.className = 'stag ' + (cap ? 'stag--capped' : 'stag--free');
+  bCap.className = 'adze-btn adze-btn--sm ' + (cap ? 'adze-btn--primary' : 'adze-btn--secondary');
+  bFree.className = 'adze-btn adze-btn--sm ' + (cap ? 'adze-btn--secondary' : 'adze-btn--primary');
+  lastDelay.textContent = cap ? '280ms' : '1,085ms';
+  replay();
+}
+bCap.addEventListener('click', function () { mode(true); });
+bFree.addEventListener('click', function () { mode(false); });
+
+function flash(id) {
+  var c = document.getElementById(id);
+  c.classList.remove('is-in');
+  void c.offsetWidth;
+  c.classList.add('is-in');
+}
+document.getElementById('bad-save').addEventListener('click', function () {
+  var p = document.getElementById('bad-panel');
+  p.classList.remove('is-entering');
+  void p.offsetWidth;
+  p.classList.add('is-entering');
+  flash('bad-chip');
+});
+document.getElementById('good-save').addEventListener('click', function () { flash('good-chip'); });
+
+function cycle() {
+  detail(true);
+  toast(true);
+  replay();
+  setTimeout(function () { detail(false); toast(false); }, 1900);
+}
+if (!RM) {
+  setTimeout(cycle, 500);
+  setInterval(cycle, 4200);
+}
+</script>
+""")
+
+
+# ── Bounded editors ────────────────────────────────────────────────────────
+# The `.paste` values below are deliberately NOT tokens — foreign inline styles
+# are the thing being demonstrated, and they arrive as content, not stylesheet.
+# The card's own CSS is tokens throughout.
+EDITOR = """
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.page { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); padding: var(--adze-space-6); }
+.page__h { font-size: var(--adze-text-xl); font-weight: var(--adze-weight-semibold); letter-spacing: var(--adze-tracking-tight); margin-bottom: var(--adze-space-4); }
+.page__lede { margin: 0 0 var(--adze-space-4); font-size: var(--adze-text-lg); line-height: var(--adze-leading-snug); letter-spacing: var(--adze-tracking-tight); color: var(--adze-text); }
+.page__body { margin: 0; font-size: var(--adze-text-sm); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); }
+.slot { outline: 1px dashed var(--adze-accent-line); outline-offset: var(--adze-space-1); }
+.tb { display: flex; flex-wrap: wrap; align-items: center; gap: var(--adze-space-1); padding: var(--adze-space-2); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md) var(--adze-radius-md) 0 0; }
+.tb__sep { width: 1px; align-self: stretch; background: var(--adze-border); margin: 0 var(--adze-space-1); }
+.tb + .page { border-top: 0; border-radius: 0 0 var(--adze-radius-md) var(--adze-radius-md); }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
+.code s { color: var(--adze-danger); text-decoration: none; }
+.gate { display: flex; align-items: flex-start; gap: var(--adze-space-3); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); }
+.gate:last-child { border-bottom: 0; }
+.gate__n { flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px; border-radius: var(--adze-radius-pill); background: var(--adze-accent-soft); color: var(--adze-accent); font-family: var(--adze-font-mono); font-size: 10px; }
+.gate__t { min-width: 0; }
+.gate__t code { font-size: var(--adze-text-xs); }
+"""
+
+TOOLBAR_WIDE = [('text-h-one', 'Heading 1'), ('text-h-two', 'Heading 2'),
+                ('text-aa', 'Font size'), ('palette', 'Colour'),
+                ('paint-bucket', 'Highlight'), ('text-align-left', 'Align'),
+                ('list-bullets', 'Bullets'), ('list-numbers', 'Numbers'),
+                ('quotes', 'Blockquote'), ('code', 'Code'),
+                ('image', 'Image'), ('table', 'Table')]
+
+PASTED = ('<span style="font-family:Calibri,sans-serif;font-size:19pt;'
+          'color:#1F497D">Painter working</span> between London and '
+          '<span style="background:#FFFF00">Margate</span>.')
+
+BOUNDED = ('<b>Painter working</b> between London and <i>Margate</i>. '
+           'Recent work is at <a class="adze-link adze-link--inline" href="#">the Turner</a>.')
+
+BODY_COPY = ('Recent work is concerned with tidal light and the way a flat '
+             'horizon refuses to hold still for long enough to be painted.')
+
+
+card('guidelines/editor-bounds.html', 'Components', 'Bounded editors',
+     'An editor may only offer what the page already styles', 'Bounded editors',
+     BTN + TAG + FORMS + EDITOR, """
+<div class="stack">
+  <div class="panel">
+    <h3>An editor may only offer formatting the page already styles</h3>
+    <p class="note">A rich-text editor embedded in a designed page is not a document editor that
+    happens to be small. It is a hole cut in someone's layout, and everything it permits will
+    eventually appear there. In this system the permitted set is <b>bold, italic, link</b> — because
+    those are the three the page CSS styles — and nothing else.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">An unbounded toolbar is how a design gets
+    destroyed by the person it was built for. Not maliciously: the artist wants their exhibition
+    title to stand out, finds a heading button, and uses it. The button was the promise that it
+    would work.</p>
+  </div>
+
+  <div class="panel">
+    <h3>What it prevents</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-6)">The same slot in the same designed
+    page — a lede the type scale already sized, tracked and coloured. On the left, a paste from Word
+    carrying its own font, size and colour, plus a heading and a list the page never anticipated.
+    On the right, the same words through a bounded editor.</p>
+    <div class="two">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>unbounded — the design is gone</div>
+        <div class="tb">
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-b"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-italic"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-link"></i></span>
+          <span class="tb__sep"></span>
+""" + '\n'.join(
+    '<span class="adze-btn adze-btn--ghost adze-btn--sm" title="%s"><i class="ph ph-%s"></i></span>'
+    % (label, icon) for icon, label in TOOLBAR_WIDE) + """
+        </div>
+        <div class="page">
+          <div class="page__h">About</div>
+          <p class="page__lede slot">""" + PASTED + """</p>
+          <h1 style="font-family:'Times New Roman',serif;font-size:2em;color:#C00000;margin:0 0 8px">Recent work</h1>
+          <ul style="margin:0;padding-left:22px;font-family:Calibri,sans-serif;font-size:11pt">
+            <li>tidal light</li>
+            <li>a flat horizon</li>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>bounded — bold, italic, link</div>
+        <div class="tb">
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-b"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-text-italic"></i></span>
+          <span class="adze-btn adze-btn--ghost adze-btn--sm"><i class="ph ph-link"></i></span>
+        </div>
+        <div class="page">
+          <div class="page__h">About</div>
+          <p class="page__lede slot">""" + BOUNDED + """</p>
+          <p class="page__body">""" + BODY_COPY + """</p>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-6)">Nothing on the left is a bug. Every one
+    of those marks is a feature working exactly as offered.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)"><b>If you are reading this in a light
+    theme, switch to dark and look at that panel again.</b> The pasted colours do not know the theme
+    exists: the navy drops to almost unreadable against the dark surface and the highlight burns a
+    hole in the page. Foreign formatting does not merely look wrong — it stops working outright on
+    half the artist palettes, and the site it stops working on is the artist's own.</p>
+  </div>
+
+  <div class="panel">
+    <h3>The toolbar is not the constraint</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">This is the part that gets built
+    wrong. Shipping a three-button toolbar and calling it bounded leaves every other route wide
+    open: <b>paste</b> carries its own markup and never touches the toolbar, and so do the keyboard
+    shortcuts the library registers by default. The constraint has to live where the formats are
+    defined, not where they are displayed.</p>
+    <div class="gate">
+      <span class="gate__n">1</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The format registry</div>
+        <span class="note">The editor is built from the permitted list, so header, list, blockquote,
+        image, colour, size and align have nothing to land on <b>however they arrive</b> — button,
+        shortcut or paste. It is also what keeps Enter to a plain paragraph: no other block format
+        exists.</span>
+      </div>
+    </div>
+    <div class="gate">
+      <span class="gate__n">2</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The paste sanitiser</div>
+        <span class="note">Paste gets its own gate, because it bypasses everything else. It walks
+        the pasted tree and <b>rebuilds</b> each run from the permitted attributes only, rather than
+        trying to strip the bad ones — a whitelist you construct from cannot be incomplete the way a
+        blacklist can. Embeds carry no copy and are dropped; link hrefs are checked against a scheme
+        allowlist on the way through.</span>
+      </div>
+    </div>
+    <div class="gate">
+      <span class="gate__n">3</span>
+      <div class="gate__t">
+        <div style="font-size:var(--adze-text-sm);font-weight:var(--adze-weight-medium)">The server gate</div>
+        <span class="note">The client-side restriction protects the <b>design</b>. It is not a
+        control — a request can be made without it. The whitelist that runs on write is the control,
+        and it permits the same four things and nothing else: <code>b</code>, <code>i</code>,
+        <code>a</code>, <code>br</code>.</span>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Worked example:
+    <code>_shared/shell/field-editors.js</code>, field type <code>copyrich</code>. Its
+    <code>COPY_FORMATS</code> constant is stated once and consumed three ways — the format registry,
+    the toolbar, and the paste matcher — so the three can never disagree about what is permitted.</p>
+    <pre class="code" style="margin-top:var(--adze-space-3)">const <b>COPY_FORMATS</b> = ['bold', 'italic', 'link'];
+
+new Quill(host, {
+  <b>formats</b>: COPY_FORMATS,                        the registry — not a smaller toolbar
+  modules: { toolbar: [['bold', 'italic', 'link']] },
+});
+q.clipboard.<b>addMatcher</b>(Node.ELEMENT_NODE, ...)   paste, rebuilt from COPY_FORMATS only</pre>
+  </div>
+
+  <div class="panel">
+    <h3>The output is an inline fragment, not a block</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A copy slot is the <b>inner</b> content
+    of an element the designer already wrote. Most editors think in blocks and hand back
+    <code>&lt;p&gt;…&lt;/p&gt;</code>. Nested inside a slot that is itself a <code>&lt;p&gt;</code>,
+    the parser closes the outer tag — and the class that carried the design goes with it.</p>
+    <pre class="code">&lt;p class="lede" data-copy-rich="lede"&gt;
+  &lt;p&gt;Painter working between London and Margate.&lt;/p&gt;   <s>editor emitted a block</s>
+&lt;/p&gt;</pre>
+    <div class="two" style="margin-top:var(--adze-space-6)">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>inline fragment — class survives</div>
+        <div class="page"><p class="page__lede">""" + BOUNDED + """</p></div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>block wrapper — class stopped applying</div>
+        <div class="page"><p>""" + BOUNDED + """</p></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Then the second failure lands on top of
+    the first: the server whitelist has no <code>p</code>, so the tags are stripped to nothing and
+    two paragraphs run silently into one line. <code>&lt;br&gt;</code> is the only break permitted,
+    so that is what a line break has to become. An editor that wraps its content in a block must
+    have that wrapper unwrapped on the way out.</p>
+  </div>
+
+  <div class="panel">
+    <h3>Widening the set is a decision about every page at once</h3>
+    <p class="note">A request for one more format always arrives as a local convenience — one
+    artist, one page, one heading. It is not local. The permitted set is a property of the whole
+    system, and adding to it means every page's CSS now has to style that format, on every artist
+    theme, forever. There is no per-field version of this decision.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)">The honest answer to "I need a heading
+    here" is almost always that the <b>page</b> needs a heading slot — a field the design owns and
+    styles — not that the copy editor needs a heading button.</p>
+  </div>
+</div>
+""")
+
+
+# ── Account & session ──────────────────────────────────────────────────────
+ACCOUNT = """
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+
+/* The account row, as it renders at the foot of the artist landing page. */
+.acct { display: flex; flex-direction: column; gap: var(--adze-space-4); padding-top: var(--adze-space-6); border-top: 1px solid var(--adze-border); }
+.acct__item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--adze-space-3); }
+.acct__form { display: flex; flex-direction: column; gap: var(--adze-space-3); align-self: stretch; }
+.acct__hint { margin: 0; font-size: var(--adze-text-xs); color: var(--adze-text-faint); }
+.acct__acts { display: flex; justify-content: flex-end; align-self: stretch; }
+.acct__quiet { font-size: var(--adze-text-sm); color: var(--adze-text-faint); text-decoration: none; }
+
+/* Password field: input plus a reveal toggle inside its own box. */
+.pw { position: relative; display: block; }
+.pw .adze-input { display: block; padding-right: var(--adze-space-10); }
+.pw__eye { position: absolute; right: var(--adze-space-1); top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: var(--adze-control-sm); height: var(--adze-control-sm); background: none; border: 0; padding: 0; color: var(--adze-text-faint); cursor: pointer; }
+
+/* The re-auth overlay, shown over a page that keeps its content. */
+.stagebox { position: relative; height: 280px; border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); overflow: hidden; background: var(--adze-bg); }
+.stagebox__page { padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.stagebox__row { height: 10px; border-radius: var(--adze-radius-pill); background: var(--adze-bg-sunken); }
+.stagebox__words { padding: var(--adze-space-3); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-size: var(--adze-text-xs); color: var(--adze-text); }
+.stagebox__over { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--adze-space-4); background: color-mix(in srgb, var(--adze-bg) 82%, transparent); backdrop-filter: blur(2px); }
+.stagebox__box { width: 100%; max-width: 240px; padding: var(--adze-space-5); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-lg); box-shadow: var(--adze-shadow-lg); text-align: center; display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.stagebox__t { font-size: var(--adze-text-md); font-weight: var(--adze-weight-semibold); }
+.stagebox__b { font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.stagebox--wiped .stagebox__page { opacity: 0; }
+.stagebox--wiped::after { content: 'root.innerHTML = ""'; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); color: var(--adze-danger); }
+"""
+
+EYE = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" '
+       'stroke-linecap="round" stroke-linejoin="round" width="18" height="18">'
+       '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/>'
+       '<circle cx="12" cy="12" r="3.1"/></svg>')
+
+WORDS = 'Recent work is concerned with tidal light and the way a flat…'
+
+
+def pwfield(placeholder):
+    return ('<label class="pw"><input class="adze-input" type="password" '
+            'placeholder="%s" value="•••••••••">'
+            '<span class="pw__eye">%s</span></label>' % (placeholder, EYE))
+
+
+card('components/account/account.card.html', 'Components', 'Account & session',
+     'Password change, account row, re-auth overlay', 'Account & session',
+     BTN + TAG + FORMS + ACCOUNT, """
+<div class="grid">
+
+  <div class="panel stack">
+    <h3>Change password</h3>
+    <p class="note">One form, two mountings. At the foot of the artist landing page it is
+    collapsed behind its own toggle — this is a once-a-year task and three empty boxes on a page
+    whose job is to get someone into their editor is three boxes of noise. Inside a modal already
+    titled <i>Change password</i> it opens flat, because a link saying "change your password" under
+    that heading is the same sentence twice.</p>
+    <div class="acct">
+      <div class="acct__item">
+        <a class="adze-link adze-link--standalone" href="#">Never mind</a>
+        <div class="acct__form">
+          """ + pwfield('Current password') + """
+          """ + pwfield('New password') + """
+          """ + pwfield('Repeat the new password') + """
+          <p class="acct__hint">At least 6 characters. This signs you out on your other devices.</p>
+          <div class="acct__acts"><button class="adze-btn adze-btn--secondary">Change password</button></div>
+        </div>
+      </div>
+      <div class="acct__item"><a class="acct__quiet" href="#">Open the Adze control panel &rarr;</a></div>
+    </div>
+    <p class="note">The hint is not politeness. The endpoint rewrites the artist's API key and
+    revokes every other session, so saying so costs one line and saves the support message.</p>
+  </div>
+
+  <div class="panel stack">
+    <h3>Reveal, always</h3>
+    <p class="note">Every password field in this system carries its toggle. A masked box gives you
+    no way to tell a typo from a wrong password, or to notice a password manager quietly
+    overwriting what you typed — and the artist who most needs to see the characters is the one
+    already locked out.</p>
+    <div class="stack" style="gap:var(--adze-space-3)">
+      """ + pwfield('Password') + """
+      <label class="pw"><input class="adze-input" type="text" value="tidal-light-2026">
+        <span class="pw__eye" style="color:var(--adze-accent)">""" + EYE + """</span></label>
+    </div>
+    <p class="note">Revealed is a state worth seeing at a glance, so it takes the accent. The icon
+    is inline SVG on <code>currentColor</code>: the artist admin has no external origins, and an
+    icon font would be the only thing on the page reaching off-host.</p>
+    <p class="note"><b>The wrapper carries the field's margin, never the input.</b> An
+    <code>&lt;input&gt;</code> is inline-block, so it sits on its wrapper's text baseline and leaves
+    ~12px of descender space beneath — and an adornment centred on the <i>wrapper</i> then lands
+    half a margin low, resting on the floor of the field. <code>display: block</code> on the input
+    kills the line box. Nudging the offset instead treats the symptom.</p>
+  </div>
+
+  <div class="panel stack">
+    <h3>A session ending must not take the work with it</h3>
+    <p class="note">Signing back in is a thing that happens <i>to</i> someone mid-sentence. It is
+    never a reason to rebuild the page.</p>
+    <div class="two">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>login screen</div>
+        <div class="stagebox stagebox--wiped">
+          <div class="stagebox__page">
+            <div class="stagebox__row" style="width:40%"></div>
+            <div class="stagebox__words">""" + WORDS + """</div>
+            <div class="stagebox__row" style="width:70%"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>overlay</div>
+        <div class="stagebox">
+          <div class="stagebox__page">
+            <div class="stagebox__row" style="width:40%"></div>
+            <div class="stagebox__words">""" + WORDS + """</div>
+            <div class="stagebox__row" style="width:70%"></div>
+          </div>
+          <div class="stagebox__over">
+            <div class="stagebox__box">
+              <div class="stagebox__t">Signed out</div>
+              <div class="stagebox__b">Sign in again to carry on — nothing you have typed has been lost.</div>
+              """ + pwfield('Password') + """
+              <button class="adze-btn adze-btn--primary">Sign back in</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">The left-hand pattern is what a login screen does, and it is a data-loss path
+    with a straight face: an autosaving editor's own status line reads <i>"your words are still
+    here, and this keeps trying"</i> while the element holding those words is being removed from
+    the document.</p>
+    <p class="note"><b>Fixed, not absolute.</b> The session can end with the artist scrolled far
+    down a long form; a box positioned inside the page opens at the top of the document, behind
+    them. The overlay has to be where they are looking. It dims rather than hides what's underneath
+    — seeing your own work still sitting there is the reassurance the message is making in words.</p>
+    <p class="note">Don't retry the failed write from the overlay, and don't stack one per failed
+    request. Several requests failing together is the normal case, and four password prompts is
+    worse than the bug.</p>
+  </div>
+
+</div>
 """)

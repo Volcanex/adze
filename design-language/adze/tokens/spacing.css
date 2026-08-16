@@ -44,6 +44,15 @@
     --adze-width-content: 720px;  /* content admin main column */
     --adze-width-wide:   1140px;  /* dashboard / multi-column */
 
+    /* The auto-fit column floor. `repeat(auto-fit, minmax(var(--adze-col-min),
+     * 1fr))` is how this system reflows a group of short form fields — by
+     * available width, with no breakpoint to maintain. It is a token because
+     * the number is doctrine, not taste: it is the width below which a label
+     * and its input stop reading as one field. Left as a literal it drifted to
+     * 180 or 240 at each new call site, which is exactly how a grid stops
+     * agreeing with the one above it. See guidelines/layout-columns.html. */
+    --adze-col-min: 200px;
+
     /* ── Elevation ────────────────────────────────────────────────────────
      * Two-layer shadows (a tight contact shadow plus a soft ambient one).
      * A single-layer shadow is the main thing that makes a UI read as dated. */

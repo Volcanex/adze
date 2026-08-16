@@ -1,9 +1,9 @@
-<!-- @dsCard group="Components" name="Forms" subtitle="Field, Input, Select, Checkbox, Switch" -->
+<!-- @dsCard group="Layout" name="Layout & columns" subtitle="Auto-fit, not breakpoints — and the form stays 560px" -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Adze — Forms</title>
+<title>Adze — Layout & columns</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -188,69 +188,206 @@ h1,h2,h3,h4 { margin: 0; font-weight: var(--adze-weight-semibold); line-height: 
 .adze-link--standalone:hover { text-decoration: underline; }
 .adze-link--quiet { color: var(--adze-text-muted); }
 .adze-link--quiet:hover { color: var(--adze-text); text-decoration: underline; }
+
+.spec { display: flex; align-items: baseline; gap: var(--adze-space-4); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); }
+.spec:last-child { border-bottom: 0; }
+.spec__tok { flex: 0 0 148px; font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .04em; color: var(--adze-text-faint); }
+.spec__demo { flex: 1; min-width: 0; }
+.bar { background: var(--adze-accent); border-radius: 2px; height: 14px; }
+.box { background: var(--adze-accent-soft); border: 1px solid var(--adze-accent-line); }
+
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.stage { resize: horizontal; overflow: auto; min-width: 240px; max-width: 100%; padding: var(--adze-space-4); background: var(--adze-bg-sunken); border: 1px dashed var(--adze-border-strong); border-radius: var(--adze-radius-md); }
+.autofit { display: grid; grid-template-columns: repeat(auto-fit, minmax(var(--adze-col-min), 1fr)); gap: var(--adze-space-4); }
+.autofit .adze-field { margin-bottom: 0; }
+.formw { max-width: var(--adze-width-form); }
+.works { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--adze-space-4); }
+.work { border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); background: var(--adze-surface); box-shadow: var(--adze-shadow-sm); overflow: hidden; }
+.work__img { aspect-ratio: 4 / 5; background: linear-gradient(150deg, color-mix(in srgb, var(--adze-accent) var(--m), var(--adze-surface)), var(--adze-bg-sunken)); }
+.work__meta { padding: var(--adze-space-3); display: flex; flex-direction: column; gap: var(--adze-space-1); }
+.work__t { font-size: var(--adze-text-sm); font-weight: var(--adze-weight-medium); }
+.ledger { border-top: 1px solid var(--adze-border); }
+.ledger > div { display: flex; align-items: baseline; justify-content: space-between; gap: var(--adze-space-4); padding: var(--adze-space-3) 0; border-bottom: 1px solid var(--adze-border); font-size: var(--adze-text-sm); }
+.own { background: var(--adze-bg-sunken); border-radius: var(--adze-radius-md); padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-4); }
+.own .adze-field { background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); padding: var(--adze-space-3); }
+.own--fixed .adze-field { margin-bottom: 0; }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+.code b { color: var(--adze-text); font-weight: var(--adze-weight-medium); }
 </style>
 </head>
 <body><div class="wrap">
 
-<div class="grid">
+<div class="stack">
   <div class="panel">
-    <h3>Field + Input</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f1">Title<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f1" value="Study in Ochre">
-    </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f2">Website</label></div>
-      <div class="adze-input-group"><span class="adze-input-group__prefix">https://</span><input class="adze-input adze-input--bare" id="f2" placeholder="yoursite.com"></div>
-      <p class="adze-field__help">Where your work lives online.</p>
-    </div>
-    <div class="adze-field adze-field--error">
-      <div class="adze-field__head"><label class="adze-label" for="f3">Slug<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f3" value="">
-      <p class="adze-field__error"><i class="ph ph-warning-circle"></i>Add a slug so this work can be found.</p>
-    </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f4">Bio</label><span class="adze-field__hint adze-numeric">128/280</span></div>
-      <textarea class="adze-input adze-input--textarea" id="f4">Painter working between London and Margate.</textarea>
-    </div>
+    <h3>A wider viewport means more columns, never longer lines</h3>
+    <p class="note">This is the one people get wrong when they set out to "make it use the
+    space". The <b>list</b> may widen on a large screen. The <b>form</b> does not — it stays at
+    <code>--adze-width-form</code>, 560px, at every viewport. A 900px-wide text input is worse to
+    use than a 560px one: the caret is a long way from the label, the value floats alone in a field
+    of nothing, and a paragraph of prose runs past the ~75 characters an eye can track back from.</p>
+    <div class="verdict verdict--yes" style="margin-top:var(--adze-space-6)"><i class="ph ph-check"></i>max-width: var(--adze-width-form)</div>
+    <div class="formw">
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Title<span class="adze-field__req">*</span></label></div>
+  <input class="adze-input" value="Study in Ochre" readonly>
+</div>
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Statement</label></div>
+  <textarea class="adze-input adze-input--textarea" readonly>Painter working between London and Margate. Recent work is concerned with tidal light and the way a flat horizon refuses to hold still for long enough to be painted.</textarea>
+</div></div>
+    <div class="verdict verdict--no" style="margin-top:var(--adze-space-6)"><i class="ph ph-x"></i>stretched to fill the container</div>
+    <div>
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Title<span class="adze-field__req">*</span></label></div>
+  <input class="adze-input" value="Study in Ochre" readonly>
+</div>
+<div class="adze-field">
+  <div class="adze-field__head"><label class="adze-label">Statement</label></div>
+  <textarea class="adze-input adze-input--textarea" readonly>Painter working between London and Margate. Recent work is concerned with tidal light and the way a flat horizon refuses to hold still for long enough to be painted.</textarea>
+</div></div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Same fields, same tokens, more pixels
+    spent. The second one is not more capable — it is the same form with a longer journey across
+    it. Space earned by a wide screen is spent on <b>columns</b>, never on line length. On a narrow
+    screen the two are identical, which is the whole point: the divergence only appears once there
+    is room to misuse.</p>
   </div>
 
   <div class="panel">
-    <h3>Select + toggles</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f5">Category</label></div>
-      <div class="adze-select-wrap">
-        <select class="adze-input adze-select" id="f5"><option>Painting</option><option>Sculpture</option><option>Print</option></select>
-        <i class="ph ph-caret-down adze-select__caret"></i>
+    <h3>Auto-fit grids, not breakpoints</h3>
+    <p class="note"><code>repeat(auto-fit, minmax(200px, 1fr))</code> reflows by the width actually
+    available, has no breakpoints to maintain, and degrades correctly at every viewport — including
+    the ones nobody tested. A media query is only warranted for something auto-fit genuinely cannot
+    express: the touch-target height bump at 640px in <code>tokens/spacing.css</code> is the whole
+    list. Every media query added after that is a future inconsistency, because the next person will
+    add theirs at a different number.</p>
+    <p class="note" style="margin-top:var(--adze-space-3)"><b>Drag the bottom-right corner</b> of
+    the panel below. Four short fields go 4 → 2 → 1 without a single query.
+    <i class="ph ph-arrows-horizontal" style="vertical-align:-.15em"></i></p>
+    <div class="stage" style="margin-top:var(--adze-space-4)">
+      <div class="autofit"><div class="adze-field"><div class="adze-field__head"><label class="adze-label">Year</label></div><input class="adze-input" value="2026" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Medium</label></div><input class="adze-input" value="Oil on linen" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Dimensions</label></div><input class="adze-input" value="120 × 90 cm" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Price</label></div><input class="adze-input" value="£2,400" readonly></div></div>
+    </div>
+    <pre class="code" style="margin-top:var(--adze-space-4)"><b>display</b>: grid;
+<b>grid-template-columns</b>: repeat(auto-fit, minmax(var(--adze-col-min), 1fr));
+<b>gap</b>: var(--adze-space-4);</pre>
+  </div>
+
+  <div class="panel">
+    <h3>Layout is derived from field role, not declared per project</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A field's <b>role</b> decides where it
+    lands. Nothing in a schema says "put this in column two" — the schema says what the field
+    <i>is</i>, and the layout follows. That is what lets a brand-new project get a good layout from
+    a schema that says nothing about layout at all.</p>
+<div class="spec"><div class="spec__tok">identity</div><div class="spec__demo"><div style="font-size:var(--adze-text-sm)">Title, slug</div><span class="note">First, on its own line. It names the thing; nothing shares its row.</span></div></div>
+<div class="spec"><div class="spec__tok">media</div><div class="spec__demo"><div style="font-size:var(--adze-text-sm)">Image, upload</div><span class="note">Immediately after identity. An artist should see the picture before they see a text box.</span></div></div>
+<div class="spec"><div class="spec__tok">short</div><div class="spec__demo"><div style="font-size:var(--adze-text-sm)">Year, medium, dimensions, price</div><span class="note">Packed into one auto-fit group at minmax(var(--adze-col-min), 1fr), so related metadata shares a row.</span></div></div>
+<div class="spec"><div class="spec__tok">long</div><div class="spec__demo"><div style="font-size:var(--adze-text-sm)">Description, statement</div><span class="note">Full width of the form column — which is 560px, not the viewport.</span></div></div>
+<div class="spec"><div class="spec__tok">tags</div><div class="spec__demo"><div style="font-size:var(--adze-text-sm)">Categories, collections</div><span class="note">Full width, below the long fields. Chips wrap; they do not need a column.</span></div></div>
+    <div class="verdict verdict--yes" style="margin-top:var(--adze-space-6)"><i class="ph ph-check"></i>the whole form, derived</div>
+    <div class="formw">
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Title<span class="adze-field__req">*</span></label></div>
+        <input class="adze-input" value="Study in Ochre" readonly>
+      </div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Image</label></div>
+        <div class="work" style="max-width:180px"><div class="work__img" style="--m:22%"></div></div>
+      </div>
+      <div class="autofit" style="margin-bottom:var(--adze-space-4)"><div class="adze-field"><div class="adze-field__head"><label class="adze-label">Year</label></div><input class="adze-input" value="2026" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Medium</label></div><input class="adze-input" value="Oil on linen" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Dimensions</label></div><input class="adze-input" value="120 × 90 cm" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Price</label></div><input class="adze-input" value="£2,400" readonly></div></div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Statement</label></div>
+        <textarea class="adze-input adze-input--textarea" readonly>Painter working between London and Margate. Recent work is concerned with tidal light and the way a flat horizon refuses to hold still for long enough to be painted.</textarea>
+      </div>
+      <div class="adze-field">
+        <div class="adze-field__head"><label class="adze-label">Tags</label></div>
+        <div class="row">
+          <span class="adze-tag adze-tag--neutral">Painting</span>
+          <span class="adze-tag adze-tag--neutral">2026</span>
+          <span class="adze-tag adze-tag--accent">Featured</span>
+        </div>
       </div>
     </div>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input" checked>
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Feature on homepage</span>
-      <span class="adze-check__desc">Shows in the top row of your gallery.</span></span>
-    </label>
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input">
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Show in search results</span></span>
-    </label>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-switch">
-      <span class="adze-switch__text"><span class="adze-switch__label">Site is live</span>
-      <span class="adze-switch__desc">Visitors can reach lydialott.co.uk</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" checked>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <label class="adze-switch is-pending">
-      <span class="adze-switch__text"><span class="adze-switch__label">Accept enquiries</span>
-      <span class="adze-switch__desc">Saving…</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" disabled>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <p class="note" style="margin-top:var(--adze-space-4)"><b>Checkbox</b> = takes effect on Save.
-    <b>Switch</b> = takes effect immediately, and must show a pending state while the write is in flight.</p>
+    <p class="note" style="margin-top:var(--adze-space-6)">The escape hatches are deliberately
+    tiny — two keys, not a layout DSL. If you reach for a third, the role is wrong.</p>
+    <pre class="code" style="margin-top:var(--adze-space-3)">field       { "role": "short" }                    packed into the auto-fit group
+field       { "role": "short", <b>"width": "full"</b> }   the one per-field override
+collection  { <b>"list": "grid"</b> }                     or "rows" — the one per-collection override</pre>
+  </div>
+
+  <div class="panel">
+    <h3>A list of visual things is a grid of pictures</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">If the items have images, show the
+    images. An artist scanning their own gallery recognises a painting in a fraction of the time it
+    takes them to read its title — and half their titles are "Untitled".</p>
+    <div class="grid">
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>list: "grid"</div>
+        <div class="works">
+<div class="work"><div class="work__img" style="--m:22%"></div><div class="work__meta"><span class="work__t">Study in Ochre</span><span class="mono">2026 · oil</span></div></div>
+<div class="work"><div class="work__img" style="--m:9%"></div><div class="work__meta"><span class="work__t">Untitled #4</span><span class="mono">2026 · print</span></div></div>
+<div class="work"><div class="work__img" style="--m:34%"></div><div class="work__meta"><span class="work__t">Low Tide</span><span class="mono">2025 · oil</span></div></div>
+<div class="work"><div class="work__img" style="--m:15%"></div><div class="work__meta"><span class="work__t">Margate, June</span><span class="mono">2025 · photo</span></div></div>
+<div class="work"><div class="work__img" style="--m:27%"></div><div class="work__meta"><span class="work__t">Cast I</span><span class="mono">2024 · plaster</span></div></div>
+<div class="work"><div class="work__img" style="--m:6%"></div><div class="work__meta"><span class="work__t">Sketch for Ochre</span><span class="mono">2024 · pencil</span></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>a ledger of titles</div>
+        <div class="ledger">
+<div><span>Study in Ochre</span><span class="adze-numeric mono">2026 · oil</span></div>
+<div><span>Untitled #4</span><span class="adze-numeric mono">2026 · print</span></div>
+<div><span>Low Tide</span><span class="adze-numeric mono">2025 · oil</span></div>
+<div><span>Margate, June</span><span class="adze-numeric mono">2025 · photo</span></div>
+<div><span>Cast I</span><span class="adze-numeric mono">2024 · plaster</span></div>
+<div><span>Sketch for Ochre</span><span class="adze-numeric mono">2024 · pencil</span></div>
+        </div>
+        <p class="note" style="margin-top:var(--adze-space-3)">Everything the artist made, reduced
+        to the one attribute a database found easiest to print.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-6)"><b>The corollary is not optional.</b>
+    A grid of pictures requires an image tier sized for cards. Serving the 2000px display image into
+    a 200px slot is how a gallery of <span class="adze-numeric">32</span> works becomes a
+    <span class="adze-numeric">25 MB</span> page load — on a phone, on the artist's own data. Cut a
+    card tier at roughly <span class="adze-numeric">400px</span> and point the grid at it. If there
+    is no card tier yet, that is the work; it is not a detail to follow later.</p>
+  </div>
+
+  <div class="panel">
+    <h3>One spacing owner per stack</h3>
+    <p class="note" style="margin-bottom:var(--adze-space-4)">A container using <code>gap</code>
+    whose children also carry <code>margin-bottom</code> gets both. Nothing errors — the form simply
+    runs looser in one place than another, and the two drift further apart every time someone tunes
+    one of them. This is a live bug class in this codebase: <code>.as-feedback</code> uses a flex
+    <code>gap</code>, so its <code>.af-field</code> children have their bottom margin zeroed;
+    without that the same form ran 32px there against 20px in the content admin.</p>
+    <div class="grid">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>gap 16 + margin-bottom 16 = <span class="adze-numeric">32px</span></div>
+        <div class="own"><div class="adze-field"><div class="adze-field__head"><label class="adze-label">Year</label></div><input class="adze-input" value="2026" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Medium</label></div><input class="adze-input" value="Oil on linen" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Dimensions</label></div><input class="adze-input" value="120 × 90 cm" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Price</label></div><input class="adze-input" value="£2,400" readonly></div></div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>gap owns it, margin zeroed = <span class="adze-numeric">16px</span></div>
+        <div class="own own--fixed"><div class="adze-field"><div class="adze-field__head"><label class="adze-label">Year</label></div><input class="adze-input" value="2026" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Medium</label></div><input class="adze-input" value="Oil on linen" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Dimensions</label></div><input class="adze-input" value="120 × 90 cm" readonly></div>
+<div class="adze-field"><div class="adze-field__head"><label class="adze-label">Price</label></div><input class="adze-input" value="£2,400" readonly></div></div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:var(--adze-space-4)">Pick one owner and say so where the
+    container is defined. The trailing margin under the last child is the same bug wearing a hat —
+    it is why a stack so often sits lower in its box than it sits in its own padding.</p>
   </div>
 </div>
 

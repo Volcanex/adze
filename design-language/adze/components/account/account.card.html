@@ -1,9 +1,9 @@
-<!-- @dsCard group="Components" name="Forms" subtitle="Field, Input, Select, Checkbox, Switch" -->
+<!-- @dsCard group="Components" name="Account & session" subtitle="Password change, account row, re-auth overlay" -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Adze — Forms</title>
+<title>Adze — Account & session</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -188,70 +188,136 @@ h1,h2,h3,h4 { margin: 0; font-weight: var(--adze-weight-semibold); line-height: 
 .adze-link--standalone:hover { text-decoration: underline; }
 .adze-link--quiet { color: var(--adze-text-muted); }
 .adze-link--quiet:hover { color: var(--adze-text); text-decoration: underline; }
+
+.verdict { display: inline-flex; align-items: center; gap: var(--adze-space-1); font-family: var(--adze-font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: var(--adze-space-2); }
+.verdict--yes { color: var(--adze-success); }
+.verdict--no { color: var(--adze-danger); }
+.verdict i { font-size: 1.25em; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--adze-space-6); }
+.code { margin: 0; padding: var(--adze-space-3); background: var(--adze-bg-sunken); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); line-height: var(--adze-leading-relaxed); color: var(--adze-text-muted); overflow-x: auto; }
+
+/* The account row, as it renders at the foot of the artist landing page. */
+.acct { display: flex; flex-direction: column; gap: var(--adze-space-4); padding-top: var(--adze-space-6); border-top: 1px solid var(--adze-border); }
+.acct__item { display: flex; flex-direction: column; align-items: flex-start; gap: var(--adze-space-3); }
+.acct__form { display: flex; flex-direction: column; gap: var(--adze-space-3); align-self: stretch; }
+.acct__hint { margin: 0; font-size: var(--adze-text-xs); color: var(--adze-text-faint); }
+.acct__acts { display: flex; justify-content: flex-end; align-self: stretch; }
+.acct__quiet { font-size: var(--adze-text-sm); color: var(--adze-text-faint); text-decoration: none; }
+
+/* Password field: input plus a reveal toggle inside its own box. */
+.pw { position: relative; display: block; }
+.pw .adze-input { display: block; padding-right: var(--adze-space-10); }
+.pw__eye { position: absolute; right: var(--adze-space-1); top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: var(--adze-control-sm); height: var(--adze-control-sm); background: none; border: 0; padding: 0; color: var(--adze-text-faint); cursor: pointer; }
+
+/* The re-auth overlay, shown over a page that keeps its content. */
+.stagebox { position: relative; height: 280px; border: 1px solid var(--adze-border); border-radius: var(--adze-radius-md); overflow: hidden; background: var(--adze-bg); }
+.stagebox__page { padding: var(--adze-space-4); display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.stagebox__row { height: 10px; border-radius: var(--adze-radius-pill); background: var(--adze-bg-sunken); }
+.stagebox__words { padding: var(--adze-space-3); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-sm); font-size: var(--adze-text-xs); color: var(--adze-text); }
+.stagebox__over { position: absolute; inset: 0; display: grid; place-items: center; padding: var(--adze-space-4); background: color-mix(in srgb, var(--adze-bg) 82%, transparent); backdrop-filter: blur(2px); }
+.stagebox__box { width: 100%; max-width: 240px; padding: var(--adze-space-5); background: var(--adze-surface); border: 1px solid var(--adze-border); border-radius: var(--adze-radius-lg); box-shadow: var(--adze-shadow-lg); text-align: center; display: flex; flex-direction: column; gap: var(--adze-space-3); }
+.stagebox__t { font-size: var(--adze-text-md); font-weight: var(--adze-weight-semibold); }
+.stagebox__b { font-size: var(--adze-text-xs); color: var(--adze-text-muted); }
+.stagebox--wiped .stagebox__page { opacity: 0; }
+.stagebox--wiped::after { content: 'root.innerHTML = ""'; position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--adze-font-mono); font-size: var(--adze-text-xs); color: var(--adze-danger); }
 </style>
 </head>
 <body><div class="wrap">
 
 <div class="grid">
-  <div class="panel">
-    <h3>Field + Input</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f1">Title<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f1" value="Study in Ochre">
+
+  <div class="panel stack">
+    <h3>Change password</h3>
+    <p class="note">One form, two mountings. At the foot of the artist landing page it is
+    collapsed behind its own toggle — this is a once-a-year task and three empty boxes on a page
+    whose job is to get someone into their editor is three boxes of noise. Inside a modal already
+    titled <i>Change password</i> it opens flat, because a link saying "change your password" under
+    that heading is the same sentence twice.</p>
+    <div class="acct">
+      <div class="acct__item">
+        <a class="adze-link adze-link--standalone" href="#">Never mind</a>
+        <div class="acct__form">
+          <label class="pw"><input class="adze-input" type="password" placeholder="Current password" value="•••••••••"><span class="pw__eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+          <label class="pw"><input class="adze-input" type="password" placeholder="New password" value="•••••••••"><span class="pw__eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+          <label class="pw"><input class="adze-input" type="password" placeholder="Repeat the new password" value="•••••••••"><span class="pw__eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+          <p class="acct__hint">At least 6 characters. This signs you out on your other devices.</p>
+          <div class="acct__acts"><button class="adze-btn adze-btn--secondary">Change password</button></div>
+        </div>
+      </div>
+      <div class="acct__item"><a class="acct__quiet" href="#">Open the Adze control panel &rarr;</a></div>
     </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f2">Website</label></div>
-      <div class="adze-input-group"><span class="adze-input-group__prefix">https://</span><input class="adze-input adze-input--bare" id="f2" placeholder="yoursite.com"></div>
-      <p class="adze-field__help">Where your work lives online.</p>
-    </div>
-    <div class="adze-field adze-field--error">
-      <div class="adze-field__head"><label class="adze-label" for="f3">Slug<span class="adze-field__req">*</span></label></div>
-      <input class="adze-input" id="f3" value="">
-      <p class="adze-field__error"><i class="ph ph-warning-circle"></i>Add a slug so this work can be found.</p>
-    </div>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f4">Bio</label><span class="adze-field__hint adze-numeric">128/280</span></div>
-      <textarea class="adze-input adze-input--textarea" id="f4">Painter working between London and Margate.</textarea>
-    </div>
+    <p class="note">The hint is not politeness. The endpoint rewrites the artist's API key and
+    revokes every other session, so saying so costs one line and saves the support message.</p>
   </div>
 
-  <div class="panel">
-    <h3>Select + toggles</h3>
-    <div class="adze-field">
-      <div class="adze-field__head"><label class="adze-label" for="f5">Category</label></div>
-      <div class="adze-select-wrap">
-        <select class="adze-input adze-select" id="f5"><option>Painting</option><option>Sculpture</option><option>Print</option></select>
-        <i class="ph ph-caret-down adze-select__caret"></i>
+  <div class="panel stack">
+    <h3>Reveal, always</h3>
+    <p class="note">Every password field in this system carries its toggle. A masked box gives you
+    no way to tell a typo from a wrong password, or to notice a password manager quietly
+    overwriting what you typed — and the artist who most needs to see the characters is the one
+    already locked out.</p>
+    <div class="stack" style="gap:var(--adze-space-3)">
+      <label class="pw"><input class="adze-input" type="password" placeholder="Password" value="•••••••••"><span class="pw__eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+      <label class="pw"><input class="adze-input" type="text" value="tidal-light-2026">
+        <span class="pw__eye" style="color:var(--adze-accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+    </div>
+    <p class="note">Revealed is a state worth seeing at a glance, so it takes the accent. The icon
+    is inline SVG on <code>currentColor</code>: the artist admin has no external origins, and an
+    icon font would be the only thing on the page reaching off-host.</p>
+    <p class="note"><b>The wrapper carries the field's margin, never the input.</b> An
+    <code>&lt;input&gt;</code> is inline-block, so it sits on its wrapper's text baseline and leaves
+    ~12px of descender space beneath — and an adornment centred on the <i>wrapper</i> then lands
+    half a margin low, resting on the floor of the field. <code>display: block</code> on the input
+    kills the line box. Nudging the offset instead treats the symptom.</p>
+  </div>
+
+  <div class="panel stack">
+    <h3>A session ending must not take the work with it</h3>
+    <p class="note">Signing back in is a thing that happens <i>to</i> someone mid-sentence. It is
+    never a reason to rebuild the page.</p>
+    <div class="two">
+      <div>
+        <div class="verdict verdict--no"><i class="ph ph-x"></i>login screen</div>
+        <div class="stagebox stagebox--wiped">
+          <div class="stagebox__page">
+            <div class="stagebox__row" style="width:40%"></div>
+            <div class="stagebox__words">Recent work is concerned with tidal light and the way a flat…</div>
+            <div class="stagebox__row" style="width:70%"></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="verdict verdict--yes"><i class="ph ph-check"></i>overlay</div>
+        <div class="stagebox">
+          <div class="stagebox__page">
+            <div class="stagebox__row" style="width:40%"></div>
+            <div class="stagebox__words">Recent work is concerned with tidal light and the way a flat…</div>
+            <div class="stagebox__row" style="width:70%"></div>
+          </div>
+          <div class="stagebox__over">
+            <div class="stagebox__box">
+              <div class="stagebox__t">Signed out</div>
+              <div class="stagebox__b">Sign in again to carry on — nothing you have typed has been lost.</div>
+              <label class="pw"><input class="adze-input" type="password" placeholder="Password" value="•••••••••"><span class="pw__eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.1"/></svg></span></label>
+              <button class="adze-btn adze-btn--primary">Sign back in</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input" checked>
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Feature on homepage</span>
-      <span class="adze-check__desc">Shows in the top row of your gallery.</span></span>
-    </label>
-    <label class="adze-check">
-      <input type="checkbox" class="adze-check__input">
-      <span class="adze-check__box"><i class="ph ph-check"></i></span>
-      <span class="adze-check__text"><span class="adze-check__label">Show in search results</span></span>
-    </label>
-    <hr style="border:0;border-top:1px solid var(--adze-border);margin:var(--adze-space-6) 0">
-    <label class="adze-switch">
-      <span class="adze-switch__text"><span class="adze-switch__label">Site is live</span>
-      <span class="adze-switch__desc">Visitors can reach lydialott.co.uk</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" checked>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <label class="adze-switch is-pending">
-      <span class="adze-switch__text"><span class="adze-switch__label">Accept enquiries</span>
-      <span class="adze-switch__desc">Saving…</span></span>
-      <input type="checkbox" role="switch" class="adze-switch__input" disabled>
-      <span class="adze-switch__track"><span class="adze-switch__thumb"></span></span>
-    </label>
-    <p class="note" style="margin-top:var(--adze-space-4)"><b>Checkbox</b> = takes effect on Save.
-    <b>Switch</b> = takes effect immediately, and must show a pending state while the write is in flight.</p>
+    <p class="note">The left-hand pattern is what a login screen does, and it is a data-loss path
+    with a straight face: an autosaving editor's own status line reads <i>"your words are still
+    here, and this keeps trying"</i> while the element holding those words is being removed from
+    the document.</p>
+    <p class="note"><b>Fixed, not absolute.</b> The session can end with the artist scrolled far
+    down a long form; a box positioned inside the page opens at the top of the document, behind
+    them. The overlay has to be where they are looking. It dims rather than hides what's underneath
+    — seeing your own work still sitting there is the reassurance the message is making in words.</p>
+    <p class="note">Don't retry the failed write from the overlay, and don't stack one per failed
+    request. Several requests failing together is the normal case, and four password prompts is
+    worse than the bug.</p>
   </div>
+
 </div>
 
 </div></body>
