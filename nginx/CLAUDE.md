@@ -34,3 +34,26 @@ Docker-based certbot flow) — don't use it for artist domains.
 container so the app can read per-artist config metadata. Editing these
 files takes effect on the host via `nginx -s reload`; inside the
 container, any code reading them picks up changes on the next request.
+
+## Pages must send `Cache-Control: no-cache`
+
+A vhost that sets `expires`/`Cache-Control` on `/assets/` but nothing on the
+HTML leaves pages with **no** `Cache-Control` at all. Browsers then cache them
+heuristically off `Last-Modified`, and a publish can take hours to show up — a
+nav item deleted on the server stayed visible in the browser for a day
+(jackdt.com, 2026-07-31).
+
+The header has to go **inside `location /`**, not in a `~ \.html$` block: a
+request for `/home/` is served through `try_files`' directory-index path, which
+does not re-run location matching, so a regex location never sees it.
+
+```nginx
+location / {
+    add_header Cache-Control "no-cache" always;
+    try_files $uri $uri/ @api;
+}
+```
+
+`no-cache` means "revalidate", not "don't store" — the 304s stay cheap.
+**Only `jackdt.com` has this so far**; the other six vhosts in
+`sites-available/` still have the gap.

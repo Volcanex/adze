@@ -96,6 +96,9 @@
         .form-group input { width: 100%; padding: 10px 12px; }
         .error-msg { background: rgba(220,53,69,0.15); color: #ff6b6b; padding: 10px; border-radius: var(--radius); margin-bottom: 16px; display: none; font-size: 13px; }
         .error-msg.show { display: block; }
+        .login-note { color: var(--text2); font-size: 12.5px; line-height: 1.5; margin-bottom: 16px; display: none; }
+        .login-note.show { display: block; }
+        #loginSite { width: 100%; padding: 10px 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
 
         /* ── Dashboard Shell ── */
         .dashboard { display: none; height: 100vh; height: 100dvh; opacity: 0; transition: opacity 0.15s ease; }
@@ -1001,19 +1004,28 @@
         <div class="login-box">
             <div style="text-align:center;margin-bottom:16px;"><img src="/api/adze/logo.png" alt="Adze" class="adze-logo" style="height:56px;width:auto;"></div>
             <h1 style="text-align:center;font-family:var(--heading-font);font-weight:700;letter-spacing:-0.02em;color:var(--text);"><span style="color:var(--accent);font-weight:400">[</span>Adze<span style="color:var(--accent);font-weight:400">]</span> Studio <span style="font-weight:400;font-size:16px;color:var(--text2);">(Beta)</span></h1>
-            <p class="login-subtitle" style="text-align:center;">Sign in to manage your site</p>
+            <p class="login-subtitle" style="text-align:center;" id="loginSubtitle">Sign in to manage your site</p>
             <div class="error-msg" id="loginError"></div>
+            <div class="login-note" id="loginNote"></div>
             <form id="loginForm">
-                <div class="form-group">
-                    <label>Artist Slug</label>
-                    <input type="text" id="artistSlug" placeholder="your site name" required>
+                <div class="form-group" id="identStep">
+                    <label>Your name or email</label>
+                    <input type="text" id="loginIdent" placeholder="e.g. rose, or you@example.com" autocomplete="username" required>
                 </div>
-                <div class="form-group">
-                    <label>Admin Token</label>
-                    <input type="password" id="adminToken" placeholder="Your token" required>
+                <div class="form-group" id="siteStep" style="display:none;">
+                    <label>Which site?</label>
+                    <select id="loginSite"></select>
                 </div>
-                <button type="submit" style="width:100%;padding:11px 16px;font-size:14px;">Sign In</button>
+                <div class="form-group" id="passwordStep" style="display:none;">
+                    <label>Password</label>
+                    <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password">
+                </div>
+                <button type="submit" id="loginSubmit" style="width:100%;padding:11px 16px;font-size:14px;">Continue</button>
             </form>
+            <div style="text-align:center;margin-top:14px;">
+                <a href="#" id="loginForgot" style="font-size:12px;color:var(--text2);display:none;">Forgotten your password?</a>
+                <a href="#" id="loginBack" style="font-size:12px;color:var(--text2);display:none;">Not you? Start again</a>
+            </div>
             <div style="text-align:center;margin-top:20px;">
                 <button class="theme-toggle" onclick="toggleTheme()" style="font-size:11px;margin:0 auto;width:auto;padding:6px 11px;" id="loginThemeToggle"><span>Dark Mode</span></button>
             </div>
@@ -1901,25 +1913,111 @@ function handlePageClick() {
 }
 
 // ── Auth ──
+// Two steps, matching the landing page's model: say who you are, and we either
+// send you to your own site's admin (if that domain reaches Adze) or take your
+// password here. Nobody has to know what a "slug" or an "admin token" is.
+let _loginIdent = '';
+
 document.getElementById('loginForm').addEventListener('submit', e => {
     e.preventDefault();
-    login(document.getElementById('artistSlug').value, document.getElementById('adminToken').value);
+    const onPassword = document.getElementById('passwordStep').style.display !== 'none';
+    if (onPassword) { submitPassword(); } else { submitIdentifier(); }
 });
 
-async function login(slug, token) {
+document.getElementById('loginBack').addEventListener('click', e => {
+    e.preventDefault();
+    resetLoginForm();
+});
+
+document.getElementById('loginForgot').addEventListener('click', async e => {
+    e.preventDefault();
+    try {
+        const r = await fetch('/api/adze/account/forgot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: _loginIdent })
+        });
+        const j = await r.json().catch(() => ({}));
+        showLoginNote(j.message || 'If that account has a confirmed email address, a reset link is on its way.');
+    } catch(err) { showLoginError('Could not send a reset link: ' + err.message); }
+});
+
+function resetLoginForm() {
+    _loginIdent = '';
+    document.getElementById('identStep').style.display = '';
+    document.getElementById('passwordStep').style.display = 'none';
+    document.getElementById('siteStep').style.display = 'none';
+    document.getElementById('loginForgot').style.display = 'none';
+    document.getElementById('loginBack').style.display = 'none';
+    document.getElementById('loginSubmit').textContent = 'Continue';
+    document.getElementById('loginSubtitle').textContent = 'Sign in to manage your site';
+    document.getElementById('loginPassword').value = '';
+    hideLoginError(); hideLoginNote();
+}
+
+function showPasswordStep(name, sites) {
+    document.getElementById('identStep').style.display = 'none';
+    document.getElementById('passwordStep').style.display = '';
+    document.getElementById('loginForgot').style.display = 'inline';
+    document.getElementById('loginBack').style.display = 'block';
+    document.getElementById('loginSubmit').textContent = 'Sign in';
+    document.getElementById('loginSubtitle').textContent = name ? `Welcome back, ${name}.` : 'Enter your password';
+    if (sites && sites.length > 1) {
+        const sel = document.getElementById('loginSite');
+        sel.innerHTML = sites.map(s => `<option value="${s}">${s}</option>`).join('');
+        document.getElementById('siteStep').style.display = '';
+    }
+    document.getElementById('loginPassword').focus();
+}
+
+async function submitIdentifier() {
+    const ident = document.getElementById('loginIdent').value.trim();
+    if (!ident) return;
+    hideLoginError(); hideLoginNote();
+    try {
+        const r = await fetch('/api/adze/account/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: ident })
+        });
+        if (r.status === 404) {
+            showLoginError("We couldn't find an account with that name. Try your email, or the name of your site.");
+            return;
+        }
+        const j = await r.json();
+        _loginIdent = ident;
+        // Their own domain serves the landing page, which is the better home:
+        // status, visitors and the way into the editor, all in one place.
+        if (j.redirect) { window.location.href = j.redirect; return; }
+        showPasswordStep(j.name, j.sites);
+    } catch(e) { showLoginError('Sign-in failed: ' + e.message); }
+}
+
+async function submitPassword() {
+    const password = document.getElementById('loginPassword').value;
+    if (!password) return;
+    const siteStep = document.getElementById('siteStep');
+    const slug = siteStep.style.display !== 'none'
+        ? document.getElementById('loginSite').value : '';
+    hideLoginError(); hideLoginNote();
     try {
         const r = await fetch('/api/adze/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ slug, token })
+            body: JSON.stringify({ identifier: _loginIdent, password, slug })
         });
-        if (r.ok) {
-            const info = await r.json();
-            currentArtist = info.slug; currentToken = token;
-            isAdminMode = !!info.is_admin;
-            _initDashboard(info);
-        } else { showLoginError('Invalid credentials'); }
-    } catch(e) { showLoginError('Login failed: ' + e.message); }
+        const info = await r.json().catch(() => ({}));
+        if (!r.ok) { showLoginError(info.error || 'Invalid credentials'); return; }
+        // More than one site and no pick yet — ask, don't guess.
+        if (info.choose) {
+            showPasswordStep('', info.sites);
+            showLoginNote('You look after more than one site. Pick the one you want.');
+            return;
+        }
+        currentArtist = info.slug; currentToken = '';
+        isAdminMode = !!info.is_admin;
+        _initDashboard(info);
+    } catch(e) { showLoginError('Sign-in failed: ' + e.message); }
 }
 
 function _initDashboard(info) {
@@ -2114,6 +2212,9 @@ async function logout() {
 }
 
 function showLoginError(msg) { const el = document.getElementById('loginError'); el.textContent = msg; el.classList.add('show'); }
+function hideLoginError() { document.getElementById('loginError').classList.remove('show'); }
+function showLoginNote(msg) { const el = document.getElementById('loginNote'); el.textContent = msg; el.classList.add('show'); }
+function hideLoginNote() { document.getElementById('loginNote').classList.remove('show'); }
 
 // Auto-login from session cookie — show body once we know which screen to show
 (async () => {

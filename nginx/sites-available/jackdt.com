@@ -9,6 +9,7 @@ server {
         add_header Cache-Control "public, max-age=86400";
     }
 
+
     location /api/ {
         proxy_pass http://127.0.0.1:5001;
         proxy_set_header Host $host;
@@ -18,10 +19,26 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
-        client_max_body_size 50M;
+        # Video uploads go through /admin, so this is the real ceiling on the
+        # `file` field — Flask's own MAX_CONTENT_LENGTH is 2GB and never binds
+        # first. Over the limit nginx returns its own 413 HTML page, which the
+        # admin's fetch can only report as a bare failure, so the field's
+        # `max_mb` (200, in config.json) is set just under this and refuses the
+        # file client-side instead. Change the two together. Assets are stored
+        # twice — canonical plus the output/ mirror — so 200MB costs 400MB.
+        client_max_body_size 220M;
     }
 
     location / {
+        # Pages must revalidate. Without this there is NO Cache-Control on the
+        # HTML, so browsers cache it heuristically off Last-Modified and keep
+        # serving a stale page for hours after a publish — a nav item removed
+        # on the server stayed visible in the browser for a day. It has to sit
+        # here rather than in a `\.html$` location: a request for /home/ is
+        # served through try_files' directory-index path, which never re-runs
+        # location matching, so a regex block never sees it. /assets/ has its
+        # own location above and keeps its 24h.
+        add_header Cache-Control "no-cache" always;
         try_files $uri $uri/ @api;
     }
 

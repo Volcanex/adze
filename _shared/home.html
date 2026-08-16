@@ -8,20 +8,20 @@
     <link rel="apple-touch-icon" href="/api/adze/favicon.png">
 
     <!-- SEO -->
-    <meta name="description" content="Permanent, flexible site management and hosting — hand-built, lightweight static sites on independent hardware. By Gabriel Penman, for Last Place & friends.">
+    <meta name="description" content="Permanent, flexible site management and hosting. Lightweight static sites, free to host. By Gabriel Penman, for Last Place & friends.">
     <link rel="canonical" href="https://adze.studio/">
     <meta name="theme-color" content="#1a1a1e">
 
     <!-- Open Graph / social -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Adze">
-    <meta property="og:title" content="Adze — site management & hosting">
-    <meta property="og:description" content="Permanent, flexible site management and hosting. Hand-built, lightweight static sites on independent hardware. By Gabriel Penman.">
+    <meta property="og:title" content="Adze: site management &amp; hosting">
+    <meta property="og:description" content="Permanent, flexible site management and hosting. Lightweight static sites, free to host. By Gabriel Penman.">
     <meta property="og:url" content="https://adze.studio/">
     <meta property="og:image" content="https://adze.studio/api/adze/logo.png">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Adze — site management & hosting">
-    <meta name="twitter:description" content="Permanent, flexible site management and hosting. Hand-built, lightweight static sites on independent hardware.">
+    <meta name="twitter:title" content="Adze: site management &amp; hosting">
+    <meta name="twitter:description" content="Permanent, flexible site management and hosting. Lightweight static sites, free to host.">
     <meta name="twitter:image" content="https://adze.studio/api/adze/logo.png">
 
     <!-- Structured data (schema.org) -->
@@ -35,7 +35,7 @@
           "name": "Adze",
           "url": "https://adze.studio/",
           "logo": "https://adze.studio/api/adze/logo.png",
-          "description": "Permanent, flexible site management and hosting — hand-built, lightweight static sites on independent hardware.",
+          "description": "Permanent, flexible site management and hosting. Lightweight static sites, free to host.",
           "founder": { "@type": "Person", "name": "Gabriel Penman", "url": "https://gabrielpenman.com" }
         },
         {
@@ -226,15 +226,22 @@
         /* Inline link — accent blue with the same underline the secondary
            button shows on hover. */
         /* Gabriel Penman — custom tooltip so it can also open on click/tap,
-           not just hover (native title= is hover-only). */
-        .hero-desc .gp-name { cursor: help; position: relative; }
+           not just hover (native title= is hover-only).
+
+           It hangs off the paragraph, not off the name span. Anchored to the
+           span it sat wherever the name happened to fall on the line, so its
+           250px ran past the right edge of a narrow column and widened the
+           whole document — opacity:0 hides a box but does not un-lay-it-out.
+           Bounded by the paragraph, it can never do that again. */
+        .hero-desc { position: relative; }
+        .hero-desc .gp-name { cursor: help; }
         .hero-desc .gp-name::after {
             content: attr(data-tip);
             position: absolute;
             left: 0;
             bottom: calc(100% + 16px);
             width: max-content;
-            max-width: 250px;
+            max-width: min(250px, 100%);
             background: var(--surface);
             color: var(--text);
             border: 1px solid var(--border);
@@ -445,10 +452,10 @@
             <p class="hero-desc">
                 Exclusively for the clientele of <a href="https://lastplace.co.uk">Last Place</a>,
                 friends and collaborators.
-                By <span class="gp-name" tabindex="0" role="link" data-tip="Gabriel Penman is a Software Engineer based in London — you can find out more about me at gabrielpenman.com">Gabriel Penman</span>.
+                By <span class="gp-name" tabindex="0" role="link" data-tip="Gabriel Penman is a software engineer based in London. More about me at gabrielpenman.com">Gabriel Penman</span>.
             </p>
             <div class="hero-actions">
-                <a href="/dashboard" class="btn-primary">Access your site &rarr;</a>
+                <a href="/dashboard" class="btn-primary">Sign in &rarr;</a>
                 <a href="/admin" class="btn-secondary">Developer / Designer login</a>
             </div>
         </div>
@@ -462,19 +469,19 @@
 <section class="about" id="about">
     <div class="about-inner">
         <p class="about-lead">
-            Adze runs on <em>my own hardware in Frankfurt</em> — no rented cloud,
-            no middleman. Every site is hand-built, deliberately lightweight, and fast.
+            Adze runs on <em>my own personal cloud</em>, on software I wrote and
+            look after. Every site is deliberately lightweight, and stays that way.
         </p>
 
         <div class="points">
             <div class="point">
-                <i class="ph ph-hard-drives"></i>
+                <i class="ph ph-cloud"></i>
                 <div>
-                    <h3>My own hardware, in Frankfurt</h3>
+                    <h3>My own personal cloud</h3>
                     <p>
-                        Everything is hosted on a machine I own and run myself.
-                        It's custom from the ground up — no per-seat fees, no platform
-                        renting you back your own work.
+                        Everything sits on server space I rent and run myself, on
+                        software I wrote. No per-seat fees, and no platform renting
+                        you back your own work.
                     </p>
                 </div>
             </div>
@@ -482,10 +489,10 @@
             <div class="point">
                 <i class="ph ph-feather"></i>
                 <div>
-                    <h3>Lightweight &amp; efficient by design</h3>
+                    <h3>Lightweight by design</h3>
                     <p>
-                        Sites are hand-tuned to be small and quick — they compile down
-                        to plain static pages, load fast, and stay out of your way.
+                        Sites compile down to plain static pages. They stay small,
+                        load quickly, and keep out of your way.
                     </p>
                 </div>
             </div>
@@ -495,8 +502,8 @@
                 <div>
                     <h3>Hosting is free</h3>
                     <p>
-                        Everyone should be able to keep a little patch of land on the web —
-                        a website that's yours — without paying rent on it forever.
+                        Everyone should be able to keep a little patch of land on the
+                        web, a website that's yours, without paying rent on it forever.
                         So hosting on Adze costs nothing.
                     </p>
                 </div>
@@ -505,11 +512,11 @@
             <div class="point">
                 <i class="ph ph-globe-hemisphere-west"></i>
                 <div>
-                    <h3>Bring your own domain — or buy at cost</h3>
+                    <h3>Bring your own domain</h3>
                     <p>
                         Domains are the one thing the web genuinely makes you pay for.
-                        Point an existing domain at Adze, or buy one through Adze at cost —
-                        no markup.
+                        Buy one wherever you like and point it at Adze. Adze doesn't
+                        sell domains itself.
                     </p>
                 </div>
             </div>
@@ -517,11 +524,10 @@
             <div class="point">
                 <i class="ph ph-hand-heart"></i>
                 <div>
-                    <h3>Everything at cost, as a thanks</h3>
+                    <h3>Everything else at cost</h3>
                     <p>
-                        Whatever you do pay for is charged at cost as a thank-you —
-                        unless your site has custom features that need genuine,
-                        ongoing upkeep.
+                        Whatever you do pay for is charged at cost, unless your site
+                        has custom features that need ongoing upkeep.
                     </p>
                 </div>
             </div>

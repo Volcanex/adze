@@ -5,7 +5,8 @@ Multi-tenant artist site hosting. Each artist gets a directory under `artists/<s
 ## Runtime
 - Docker container `adze-flask` on `127.0.0.1:5001` (host nginx fronts it).
 - `flask_server.py`, `compile.py`, `_shared/`, `artists/`, `static/`, `output/`, `nginx/sites-available/` are bind-mounted into the container — host edits take effect after restart.
-- Recompile a single artist: `python3 compile.py --artist <slug>` (run on host).
+- Recompile a single artist: `python3 compile.py --artist <slug>` — **never as root.** Run it as `gabriel`, or inside the container (`sudo docker exec -w /app adze-flask python3 compile.py --artist <slug>`).
+- **`output/` has no default ACL, unlike `artists/`.** Compiling as root creates root-owned directories under `output/artists/<slug>/`, and the container (uid 1000 = `adze` = host `gabriel`) then silently fails to write into them — you get `Permission denied: output/artists/<slug>/assets/...` warnings from anything that mirrors assets, and the files exist in `artists/` but never reach `output/`, so they 404 at the served URL while looking present on disk. `artists/` is immune because of the ACL documented in [artists/CLAUDE.md](artists/CLAUDE.md); `output/` is not. Fix with `sudo chown -R gabriel:gabriel output/artists/<slug>`. Bit us on 2026-07-31 during the card-tier backfill.
 - **On this Hetzner host, `gabriel` is not in the `docker` group**, so docker commands need sudo: `sudo docker restart adze-flask`. The container's PID-1 surfaces on the host `ps` as a root-owned `python3 flask_server.py` — that's normal, not a separate bare-host process. Don't `kill` it from the host; use `sudo docker restart adze-flask`.
 - `restart.sh` in the repo is stale; do **not** use it (no `venv/` exists here either).
 - **`flask_server.py` and `compile.py` are bind-mounted as single FILES**, not directories. Most editors (and every agent file tool) write a new file and rename over the old one, which changes the inode — and a single-file bind mount follows the *inode*, so the container silently keeps running the old code. `sudo docker restart` does **not** fix this. You need `sudo docker compose up -d --force-recreate`. Symptom: your edit is provably in the host file and provably absent from `docker exec adze-flask cat /app/compile.py`. Directory mounts (`_shared/`, `artists/`) are unaffected — only these two files.
@@ -112,10 +113,12 @@ hand-edit between the markers.
 | `_shared/widgets/loom/CLAUDE.md` | Loom — visual synth (flagship T2 widget) |
 | `artists/CLAUDE.md` | Artists — coordination with Auto-Code |
 | `artists/jackdt/CLAUDE.md` | Jack Dennison-Thompson (jackdt) — jackdt.com |
+| `artists/lydialott/CLAUDE.md` | Lydia Lott (lydialott) — lydialott.co.uk |
+| `artists/mariaslaughter/CLAUDE.md` | Maria Slaughter (mariaslaughter) — mariaslaughter.online |
 | `artists/rose/CLAUDE.md` | Rose Jones — rosefpjones.com |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-07-30 09:36 UTC — 13 doc(s) found._
+_Auto-compiled 2026-08-06 11:16 UTC — 15 doc(s) found._
 <!-- DOCS:END -->
