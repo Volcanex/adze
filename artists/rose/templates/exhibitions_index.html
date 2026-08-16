@@ -178,7 +178,7 @@ body {
     </nav>
 
 {% set ns = namespace(hero=None) %}
-{% for e in items %}{% if not ns.hero and e.images %}{% set ns.hero = e %}{% endif %}{% endfor %}
+{% for e in items %}{% if not ns.hero and e.images and e.images[0].src %}{% set ns.hero = e %}{% endif %}{% endfor %}
 {% if ns.hero %}
     <figure class="image-placeholder exh-figure" style="aspect-ratio:{{ ns.hero.images[0].aspect|default('3/2') }}">
         <img class="exh-image" src="../assets/{{ ns.hero.images[0].src }}" alt="{{ ns.hero.title }}, {{ (ns.hero.type or '')|lower }}, {{ ns.hero.year or '' }}" decoding="async">

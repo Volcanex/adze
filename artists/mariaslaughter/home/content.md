@@ -222,8 +222,11 @@ img {
 }
 
 .border-left {
+    /* Sits BESIDE the sidebar, not under it — 200px sidebar + 2x20px padding.
+       At left:0 it lands behind the sidebar (z-index 50 vs 100) and vanishes.
+       gallery.html and music.html use the same 240px for the same reason. */
     position: fixed;
-    left: 0;
+    left: 240px;
     top: 0;
     height: 100%;
     z-index: 50;
@@ -433,13 +436,13 @@ b {
     <div class="main-content-1996">
         <div class="section hero">
             <h1 class="gothic-title">MARIA SLAUGHTER</h1>
-            <div class="tagline"><b>with un-angels hovering like flies round the ordure...</b></div>
+            <div class="tagline" data-field="tagline"><b>with un-angels hovering like flies round the ordure...</b></div>
             <img src="../assets/gifs/jump.webp" width="100">
         </div>
 
         <div class="section">
             <div class="section-heading">UPCOMING SHOWS</div>
-            <font size="2">
+            <font size="2" data-field="upcoming_shows">
             Trade - 19.06.2026 - The Lubber Fiend, Newcastle Upon Tyne
             
             </font>
@@ -468,7 +471,7 @@ b {
 
         <div class="section">
             <div class="section-heading">LATEST WORKS</div>
-            <font size="2">
+            <font size="2" data-field="latest_works">
             - Sacral Foramina - 04.04.2026 - Little Buildings<br>
             - Extravenous Therapy 26.11.2025 - Star and Shadow Cinema
             
@@ -477,7 +480,7 @@ b {
 
         <div class="section">
             <img src="../assets/gifs/email.webp" width="180" border="0">
-            <div class="contact-email"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></div>
+            <div class="contact-email" data-field="contact_line"><b style="font-size: 11px;">FALLENANGELSELVATICA@GMAIL.COM / IG: WHITETHORNAPPLE / BANDCAMP: SACRALFORAMINA</b></div>
         </div>
 
         <div class="section">

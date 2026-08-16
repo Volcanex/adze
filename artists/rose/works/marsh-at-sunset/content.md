@@ -195,11 +195,9 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:2560/1968">
         <img class="work-image" src="../../assets/work-marsh-at-sunset-good.jpg" alt="Marsh at sunset" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

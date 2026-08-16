@@ -195,11 +195,9 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:2560/1794">
         <img class="work-image" src="../../assets/work-a-shooting-star-from-atop-a-slide-good.jpg" alt="A shooting star from atop a slide and gold waiting below" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

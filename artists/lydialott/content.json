@@ -7,7 +7,13 @@
       "medium": "Acrylic on paper",
       "year": 2026,
       "date": "2026-06-10",
-      "image": "images/weather-ii.jpeg",
+      "image": {
+        "src": "works/weather-ii/IMG_0852.display.jpeg",
+        "full": "works/weather-ii/IMG_0852.jpeg",
+        "card": "works/weather-ii/IMG_0852.card.jpeg",
+        "ar": 1.347,
+        "aspect": 1.347
+      },
       "tags": [
         "paintings",
         "selected"
@@ -25,7 +31,8 @@
         "src": "works/weather-iii/close_up_like_father_like_daughter.display.png",
         "full": "works/weather-iii/close_up_like_father_like_daughter.png",
         "ar": 0.9857,
-        "aspect": 0.9857
+        "aspect": 0.9857,
+        "card": "works/weather-iii/close_up_like_father_like_daughter.card.png"
       },
       "tags": [
         "paintings",
@@ -35,15 +42,14 @@
     },
     {
       "id": "study-01",
-      "title": "birds",
+      "title": "We're not all that different really, me and you",
       "dimensions": "297 x 420mm",
       "medium": "Graphite on paper",
       "year": 2024,
       "date": "2024-07-04",
       "image": "images/2025_Bulk_Drawings_1.png",
       "tags": [
-        "drawings",
-        "selected"
+        "drawings"
       ],
       "description": ""
     },
@@ -61,28 +67,30 @@
     },
     {
       "id": "woven-i",
-      "title": "Woven I",
+      "title": "Shelter at the End of the Road",
       "dimensions": "800 x 600mm",
-      "medium": "Linen, wool",
-      "year": 2024,
+      "medium": "wool on Monk's Cloth",
+      "year": 2026,
       "date": "2024-05-30",
       "image": "images/woven-i.jpeg",
       "tags": [
-        "textiles"
+        "textiles",
+        "selected"
       ],
       "description": ""
     },
     {
       "id": "woven-ii",
-      "title": "Woven II",
-      "dimensions": "800 x 600mm",
-      "medium": "Linen, wool",
+      "title": "Hyde Park at Night",
+      "dimensions": "31 x 32 \"",
+      "medium": "Wool on Monk's Cloth",
       "year": 2024,
       "date": "2024-04-12",
       "image": "images/2025_Bulk_Textiles_2.png",
       "tags": [
         "textiles"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "form-i",
@@ -99,16 +107,17 @@
     },
     {
       "id": "form-ii",
-      "title": "Form II",
-      "dimensions": "400 x 240 x 240mm",
+      "title": "Configuring Connection (s)",
+      "dimensions": "",
       "medium": "Stoneware",
       "year": 2023,
-      "date": "2023-10-21",
+      "date": "2025-11-21",
       "image": "images/Trinity_Boy_Wharf_End_of_Year_2025-7893_1.png",
       "tags": [
         "sculpture",
         "selected"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "field-notes",
@@ -224,9 +233,9 @@
       "date": "2023-10-28",
       "image": "images/Screenshot_2026-03-25_at_13.22.52_1.png",
       "tags": [
-        "soft-bodies",
-        "selected"
-      ]
+        "airbrushing"
+      ],
+      "description": ""
     },
     {
       "id": "soft-body-ii",
@@ -237,7 +246,8 @@
       "date": "2023-10-05",
       "image": "images/Screenshot_2026-03-25_at_13.23.19_1.png",
       "tags": [
-        "sculpture"
+        "sculpture",
+        "selected"
       ],
       "description": ""
     },
@@ -263,9 +273,9 @@
       "date": "2023-09-01",
       "image": "images/Screenshot_2026-03-25_at_13.24.17_1.png",
       "tags": [
-        "sculpture",
-        "selected"
-      ]
+        "drawings"
+      ],
+      "description": ""
     },
     {
       "id": "air-i",
@@ -289,8 +299,10 @@
       "date": "2023-07-25",
       "image": "images/2025_Bulk_Airbrushing_2.png",
       "tags": [
-        "airbrushing"
-      ]
+        "airbrushing",
+        "paintings"
+      ],
+      "description": ""
     },
     {
       "id": "air-iii",
@@ -314,8 +326,7 @@
       "date": "2023-06-16",
       "image": "images/F894FCC4-7529-4CBF-B2F2-58CE8189EDE0_1_105_c_1.png",
       "tags": [
-        "paintings",
-        "selected"
+        "paintings"
       ],
       "description": ""
     },
@@ -435,14 +446,63 @@
       "description": ""
     },
     {
-      "id": "hyde-park-at-night",
-      "title": "Hyde Park at Night",
+      "id": "draft-5a115e10",
+      "image": {
+        "src": "works/draft-5a115e10/They_never_want_to_fall_as_one.display.png",
+        "full": "works/draft-5a115e10/They_never_want_to_fall_as_one.png",
+        "card": "works/draft-5a115e10/They_never_want_to_fall_as_one.card.png",
+        "ar": 1.5232,
+        "aspect": 1.5232
+      },
+      "title": "They Only Ever Fall as One",
+      "dimensions": "23.4 x 16.5 \"",
+      "medium": "Oil on Board",
+      "year": 2026,
+      "date": "2026-08-10",
+      "tags": [
+        "paintings",
+        "selected"
+      ],
+      "description": ""
+    },
+    {
+      "id": "draft-ccacadd8",
+      "image": {
+        "src": "works/draft-ccacadd8/mountains_of_molehills_close_up.display.png",
+        "full": "works/draft-ccacadd8/mountains_of_molehills_close_up.png",
+        "card": "works/draft-ccacadd8/mountains_of_molehills_close_up.card.png",
+        "ar": 1.3359,
+        "aspect": 1.3359
+      },
+      "title": "Mountains of Molehills",
       "dimensions": "",
       "medium": "",
       "year": null,
-      "date": "2026-07-02",
-      "image": "images/hyde-park-at-night.png",
-      "tags": [],
+      "date": "",
+      "tags": [
+        "selected",
+        "paintings"
+      ],
+      "description": ""
+    },
+    {
+      "id": "draft-66c1a63b",
+      "image": {
+        "src": "works/draft-66c1a63b/I_met_you_and_you_were_me_and_you_werent_what_I_thought_you_would_be_.display.png",
+        "full": "works/draft-66c1a63b/I_met_you_and_you_were_me_and_you_werent_what_I_thought_you_would_be_.png",
+        "card": "works/draft-66c1a63b/I_met_you_and_you_were_me_and_you_werent_what_I_thought_you_would_be_.card.png",
+        "ar": 1.7812,
+        "aspect": 1.7812
+      },
+      "title": "I met you, and you were me, and you weren't what I thought you would be",
+      "dimensions": "33 x 14 x 05 \"",
+      "medium": "Wool on Monk's Cloth",
+      "year": 2025,
+      "date": "2026-08-10",
+      "tags": [
+        "textiles",
+        "selected"
+      ],
       "description": ""
     }
   ]

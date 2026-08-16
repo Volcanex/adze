@@ -106,6 +106,8 @@ body {
 .exhibitions-block .exh-list { max-width: 560px; }
 .exhibitions-block .exh-year { color: var(--about); }
 .exhibitions-block .exh-sep { opacity: .4; padding: 0 1px; }
+.exhibitions-block .exh-list a { color: inherit; text-decoration: none; }
+.exhibitions-block .exh-list a:hover { opacity: 0.55; }
 
 .education-block {
     margin-top: auto;
@@ -116,6 +118,7 @@ body {
 .education-block h3 {
     font-size: 15px; font-weight: 400; margin-bottom: 8px;
 }
+.education-block h3 ~ h3 { margin-top: 18px; }
 .education-block p { margin-bottom: 6px; }
 
 .footer {
@@ -180,8 +183,12 @@ body {
         <img class="about-image" src="../assets/about-good.jpg" alt="" decoding="async">
     </figure>
 
-    <div class="bio">
-        Rose Jones (b. 2002) is a multidisciplinary artist. Her work spans painting, illustration, and writing. what I make is deeply ridiculous but equally important.
+    <div class="bio" data-copy="bio">
+        Rose Jones (b. 2002) is a London-based artist. She graduated with a first class bachelor’s degree from the Slade School of Art in 2025. Her most recent exhibition was ‘Camino Adentro’ in Mexico City, in March 2026. In July 2025, she exhibited at the ‘When Life Gives You Lemons’ exhibition in Chichester, UK. In 2024 she exhibited in Tokyo, Japan (‘Kobokan Stories’), alongside running workshops for young children as part of a volunteer program in Tokyo.
+    </div>
+
+    <div class="bio statement" data-copy="statement">
+        what I make is deeply ridiculous but equally important.
     </div>
 
     <div class="exhibitions-block">
@@ -189,9 +196,13 @@ body {
     </div>
 
     <div class="education-block">
+        <h3>Residencies</h3>
+        <p data-copy="residency-casa-lu">Casa Lu Sur, Mexico City, MEX, Feb–April 2026</p>
+        <h3>Prizes</h3>
+        <p data-copy="prize-firstsite">The Firstsite Collectors’ Group Bursary, 2025</p>
         <h3>Education</h3>
-        <p>Foundation Diploma, Colchester Institute, graduated 2021</p>
-        <p>BFA, Slade School of Fine Art, graduating 2025</p>
+        <p data-copy="education-foundation">Foundation Diploma, Colchester Institute, 2021</p>
+        <p data-copy="education-bfa">BFA, Slade School of Fine Art, 1st, 2025</p>
     </div>
 
     <footer class="footer">

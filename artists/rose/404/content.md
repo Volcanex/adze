@@ -72,7 +72,7 @@ body {
 <html>
 <div class="stage">
     <span class="number">404</span>
-    <p class="message">This page doesn't exist.</p>
+    <p class="message" data-copy="not-found-message">This page doesn't exist.</p>
     <a class="home-link" href="/">Rose Jones</a>
 </div>
 </html>

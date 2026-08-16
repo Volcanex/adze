@@ -11,7 +11,8 @@
         {
           "src": "work-wise-man-good.jpg",
           "full": "work-wise-man-full.jpg",
-          "aspect": "2156/2560"
+          "aspect": "2156/2560",
+          "card": "work-wise-man-full.card.jpg"
         }
       ]
     },
@@ -26,7 +27,8 @@
         {
           "src": "work-worship-good.jpg",
           "full": "work-worship-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "work-worship-full.card.jpg"
         }
       ]
     },
@@ -41,7 +43,8 @@
         {
           "src": "work-pin-mill-good.jpg",
           "full": "work-pin-mill-full.jpg",
-          "aspect": "1789/2560"
+          "aspect": "1789/2560",
+          "card": "work-pin-mill-full.card.jpg"
         }
       ]
     },
@@ -56,7 +59,8 @@
         {
           "src": "work-keeper-of-the-egg-good.jpg",
           "full": "work-keeper-of-the-egg-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "work-keeper-of-the-egg-full.card.jpg"
         }
       ]
     },
@@ -71,7 +75,8 @@
         {
           "src": "work-while-we-sit-together-good.jpg",
           "full": "work-while-we-sit-together-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "work-while-we-sit-together-full.card.jpg"
         }
       ]
     },
@@ -86,7 +91,8 @@
         {
           "src": "work-you-belong-at-the-head-of-the-table-good.jpg",
           "full": "work-you-belong-at-the-head-of-the-table-full.jpg",
-          "aspect": "2199/2560"
+          "aspect": "2199/2560",
+          "card": "work-you-belong-at-the-head-of-the-table-full.card.jpg"
         }
       ]
     },
@@ -101,7 +107,8 @@
         {
           "src": "work-her-cup-good.jpg",
           "full": "work-her-cup-full.jpg",
-          "aspect": "1549/2059"
+          "aspect": "1549/2059",
+          "card": "work-her-cup-full.card.jpg"
         }
       ]
     },
@@ -116,7 +123,8 @@
         {
           "src": "work-my-memory-of-your-birth-good.jpg",
           "full": "work-my-memory-of-your-birth-full.jpg",
-          "aspect": "1832/2560"
+          "aspect": "1832/2560",
+          "card": "work-my-memory-of-your-birth-full.card.jpg"
         }
       ]
     },
@@ -131,12 +139,14 @@
         {
           "src": "work-divine-like-a-bird-01-good.jpg",
           "full": "work-divine-like-a-bird-01-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "work-divine-like-a-bird-01-full.card.jpg"
         },
         {
           "src": "work-divine-like-a-bird-02-good.jpg",
           "full": "work-divine-like-a-bird-02-full.jpg",
-          "aspect": "1912/2560"
+          "aspect": "1912/2560",
+          "card": "work-divine-like-a-bird-02-full.card.jpg"
         }
       ]
     },
@@ -151,7 +161,8 @@
         {
           "src": "work-cormorant-good.jpg",
           "full": "work-cormorant-full.jpg",
-          "aspect": "1486/1825"
+          "aspect": "1486/1825",
+          "card": "work-cormorant-full.card.jpg"
         }
       ]
     },
@@ -166,7 +177,8 @@
         {
           "src": "work-skip-kids-good.jpg",
           "full": "work-skip-kids-full.jpg",
-          "aspect": "1834/2560"
+          "aspect": "1834/2560",
+          "card": "work-skip-kids-full.card.jpg"
         }
       ]
     },
@@ -181,7 +193,8 @@
         {
           "src": "work-untitled-good.jpg",
           "full": "work-untitled-full.jpg",
-          "aspect": "1861/2560"
+          "aspect": "1861/2560",
+          "card": "work-untitled-full.card.jpg"
         }
       ]
     },
@@ -196,7 +209,8 @@
         {
           "src": "work-murmuration-good.jpg",
           "full": "work-murmuration-full.jpg",
-          "aspect": "2008/2560"
+          "aspect": "2008/2560",
+          "card": "work-murmuration-full.card.jpg"
         }
       ]
     },
@@ -211,7 +225,8 @@
         {
           "src": "work-night-fishing-good.jpg",
           "full": "work-night-fishing-full.jpg",
-          "aspect": "706/859"
+          "aspect": "706/859",
+          "card": "work-night-fishing-full.card.jpg"
         }
       ]
     },
@@ -226,12 +241,14 @@
         {
           "src": "work-night-fishing-2-good.jpg",
           "full": "work-night-fishing-2-full.jpg",
-          "aspect": "2187/1719"
+          "aspect": "2187/1719",
+          "card": "work-night-fishing-2-full.card.jpg"
         },
         {
           "src": "work-night-fishing-2-2-good.jpg",
           "full": "work-night-fishing-2-2-full.jpg",
-          "aspect": "2187/1719"
+          "aspect": "2187/1719",
+          "card": "work-night-fishing-2-2-full.card.jpg"
         }
       ]
     },
@@ -246,12 +263,14 @@
         {
           "src": "work-my-mothers-hum-good.jpg",
           "full": "work-my-mothers-hum-full.jpg",
-          "aspect": "1880/2560"
+          "aspect": "1880/2560",
+          "card": "work-my-mothers-hum-full.card.jpg"
         },
         {
           "src": "work-my-mothers-hum-2-good.jpg",
           "full": "work-my-mothers-hum-2-full.jpg",
-          "aspect": "1832/2560"
+          "aspect": "1832/2560",
+          "card": "work-my-mothers-hum-2-full.card.jpg"
         }
       ]
     },
@@ -266,7 +285,8 @@
         {
           "src": "work-estuary-good.jpg",
           "full": "work-estuary-full.jpg",
-          "aspect": "1958/2364"
+          "aspect": "1958/2364",
+          "card": "work-estuary-full.card.jpg"
         }
       ]
     },
@@ -281,7 +301,8 @@
         {
           "src": "work-math-equation-2-good.jpg",
           "full": "work-math-equation-2-full.jpg",
-          "aspect": "2560/2550"
+          "aspect": "2560/2550",
+          "card": "work-math-equation-2-full.card.jpg"
         }
       ]
     },
@@ -296,7 +317,8 @@
         {
           "src": "work-what-did-it-mean-to-fly-good.jpg",
           "full": "work-what-did-it-mean-to-fly-full.jpg",
-          "aspect": "1811/2560"
+          "aspect": "1811/2560",
+          "card": "work-what-did-it-mean-to-fly-full.card.jpg"
         }
       ]
     },
@@ -311,7 +333,8 @@
         {
           "src": "work-drive-thru-good.jpg",
           "full": "work-drive-thru-full.jpg",
-          "aspect": "1932/2560"
+          "aspect": "1932/2560",
+          "card": "work-drive-thru-full.card.jpg"
         }
       ]
     },
@@ -326,7 +349,8 @@
         {
           "src": "work-a-shooting-star-from-atop-a-slide-good.jpg",
           "full": "work-a-shooting-star-from-atop-a-slide-full.jpg",
-          "aspect": "2560/1794"
+          "aspect": "2560/1794",
+          "card": "work-a-shooting-star-from-atop-a-slide-full.card.jpg"
         }
       ]
     },
@@ -341,7 +365,8 @@
         {
           "src": "work-marsh-at-sunset-good.jpg",
           "full": "work-marsh-at-sunset-full.jpg",
-          "aspect": "2560/1968"
+          "aspect": "2560/1968",
+          "card": "work-marsh-at-sunset-full.card.jpg"
         }
       ]
     },
@@ -356,7 +381,8 @@
         {
           "src": "work-moonlit-sea-good.jpg",
           "full": "work-moonlit-sea-full.jpg",
-          "aspect": "1920/1480"
+          "aspect": "1920/1480",
+          "card": "work-moonlit-sea-full.card.jpg"
         }
       ]
     },
@@ -371,7 +397,8 @@
         {
           "src": "work-wondering-women-good.jpg",
           "full": "work-wondering-women-full.jpg",
-          "aspect": "1951/2560"
+          "aspect": "1951/2560",
+          "card": "work-wondering-women-full.card.jpg"
         }
       ]
     },
@@ -386,7 +413,8 @@
         {
           "src": "work-bed-good.jpg",
           "full": "work-bed-full.jpg",
-          "aspect": "1672/2330"
+          "aspect": "1672/2330",
+          "card": "work-bed-full.card.jpg"
         }
       ]
     },
@@ -401,7 +429,8 @@
         {
           "src": "work-my-inner-child-good.jpg",
           "full": "work-my-inner-child-full.jpg",
-          "aspect": "1893/2560"
+          "aspect": "1893/2560",
+          "card": "work-my-inner-child-full.card.jpg"
         }
       ]
     },
@@ -416,7 +445,8 @@
         {
           "src": "work-paddle-for-dear-life-good.jpg",
           "full": "work-paddle-for-dear-life-full.jpg",
-          "aspect": "2049/2560"
+          "aspect": "2049/2560",
+          "card": "work-paddle-for-dear-life-full.card.jpg"
         }
       ]
     },
@@ -431,7 +461,8 @@
         {
           "src": "work-tara-good.jpg",
           "full": "work-tara-full.jpg",
-          "aspect": "2115/2560"
+          "aspect": "2115/2560",
+          "card": "work-tara-full.card.jpg"
         }
       ]
     },
@@ -455,7 +486,8 @@
         {
           "src": "work-out-the-front-door-good.jpg",
           "full": "work-out-the-front-door-full.jpg",
-          "aspect": "2560/1707"
+          "aspect": "2560/1707",
+          "card": "work-out-the-front-door-full.card.jpg"
         }
       ]
     },
@@ -470,7 +502,8 @@
         {
           "src": "work-swimmers-good.jpg",
           "full": "work-swimmers-full.jpg",
-          "aspect": "1707/2560"
+          "aspect": "1707/2560",
+          "card": "work-swimmers-full.card.jpg"
         }
       ]
     },
@@ -481,6 +514,12 @@
       "medium": "Oil on MDF",
       "dimensions": "",
       "description": "",
+      "images": []
+    },
+    {
+      "id": "draft-03217ad0",
+      "_draft": true,
+      "_draft_at": 1785680189,
       "images": []
     }
   ],
@@ -496,12 +535,14 @@
         {
           "src": "exh-good-grief-good.jpg",
           "full": "exh-good-grief-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "exh-good-grief-full.card.jpg"
         },
         {
           "src": "exh-good-grief-detail-good.jpg",
           "full": "exh-good-grief-detail-full.jpg",
-          "aspect": "1920/2560"
+          "aspect": "1920/2560",
+          "card": "exh-good-grief-detail-full.card.jpg"
         }
       ]
     },
@@ -525,7 +566,8 @@
         {
           "src": "exh-slade-interim-good.jpg",
           "full": "exh-slade-interim-full.jpg",
-          "aspect": "2560/1707"
+          "aspect": "2560/1707",
+          "card": "exh-slade-interim-full.card.jpg"
         }
       ]
     },
@@ -562,6 +604,33 @@
       "year": 2024,
       "type": "Group show",
       "location": "London, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "when-life-gives-you-lemons",
+      "title": "When Life Gives You Lemons",
+      "year": 2025,
+      "type": "Group show",
+      "location": "YAP, Chichester, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "art-on-a-postcard",
+      "title": "Art on a Postcard",
+      "year": 2025,
+      "type": "Winter Auction",
+      "location": "London, UK",
+      "description": "",
+      "images": []
+    },
+    {
+      "id": "camino-adentro",
+      "title": "Camino Adentro",
+      "year": 2026,
+      "type": "",
+      "location": "Casa Lu Sur, Mexico City, Mexico",
       "description": "",
       "images": []
     }

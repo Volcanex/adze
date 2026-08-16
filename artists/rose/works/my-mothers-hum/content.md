@@ -195,7 +195,6 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:1880/2560">
         <img class="work-image" src="../../assets/work-my-mothers-hum-good.jpg" alt="My Mothers Hum" decoding="async">
     </figure>
@@ -203,7 +202,6 @@ body {
     <figure class="work-figure" style="aspect-ratio:1832/2560">
         <img class="work-image" src="../../assets/work-my-mothers-hum-2-good.jpg" alt="My Mothers Hum" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

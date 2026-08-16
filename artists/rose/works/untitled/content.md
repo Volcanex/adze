@@ -195,11 +195,9 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:1861/2560">
         <img class="work-image" src="../../assets/work-untitled-good.jpg" alt="Untitled" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

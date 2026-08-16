@@ -1,9 +1,12 @@
-<!-- Landing: selected-works grid with staged reveal
-     (name → images +3s → captions +3s → nav links +3s).
-     All behaviour lives in the shared module ../assets/works-grid.{css,js};
-     works/ loads the same module in browser mode. -->
+<style>
+:root {
+  --tile-w: 480px !important;
+  --tile-h: 420px !important;
+}
+</style>
+
 <html>
-<link rel="stylesheet" href="../assets/works-grid.css">
+<link rel="stylesheet" href="../assets/works-grid.css?v=2026-08-10">
 <div id="ll-root" data-mode="landing" data-tag="selected"></div>
-<script src="../assets/works-grid.js"></script>
+<script src="../assets/works-grid.js?v=2026-08-10"></script>
 </html>

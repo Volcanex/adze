@@ -190,6 +190,21 @@ body {
 
 
 
+        <div class="item"><a href="/exhibitions/camino-adentro/"><span class="year">2026</span><span class="title">Camino Adentro, Casa Lu Sur, Mexico City, Mexico</span></a></div>
+
+
+
+
+        <div class="item"><a href="/exhibitions/when-life-gives-you-lemons/"><span class="year">2025</span><span class="title">When Life Gives You Lemons, group show, YAP, Chichester, UK</span></a></div>
+
+
+
+
+        <div class="item"><a href="/exhibitions/art-on-a-postcard/"><span class="year">2025</span><span class="title">Art on a Postcard, winter auction, London, UK</span></a></div>
+
+
+
+
         <div class="item"><a href="/exhibitions/threading-the-eye/"><span class="year">2024</span><span class="title">Threading the Eye, group show, Crypt Gallery, London, UK</span></a></div>
 
 

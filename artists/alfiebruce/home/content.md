@@ -216,8 +216,8 @@ footer { padding: 30px 34px; font-size: 11px; letter-spacing: 0.18em; text-trans
 </section>
 
 <section class="contact" id="contact">
-    <h2>Get in touch</h2>
-    <p>Available for festivals, gigs, events &amp; portrait commissions</p>
+    <h2 data-copy="contact-heading">Get in touch</h2>
+    <p data-copy="contact-blurb">Available for festivals, gigs, events &amp; portrait commissions</p>
     <div class="links">
         <a href="mailto:alfiebruce333@gmail.com">Email</a>
         <a href="sms:+447906144118">+44 7906 144 118</a>

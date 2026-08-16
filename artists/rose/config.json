@@ -27,8 +27,8 @@
     "slack_pinned_ts": "1779930848.335239",
     "slack_announced": true,
     "figma_url": "https://www.figma.com/design/ZRm8pcQMQoStQBoogrFhl7/Rose-Portfolio?node-id=0-1&p=f&t=3Eztwiag6Cgq7tVP-0",
-    "last_login": 1780762947,
-    "last_login_ip": "148.252.147.214",
+    "last_login": 1785679438,
+    "last_login_ip": "86.30.97.65",
     "features": [
         "content_admin"
     ],
@@ -36,17 +36,32 @@
         "works": {
             "label": "Works",
             "item": {
-                "title": {"type": "text", "required": true, "slug_source": true},
-                "year": {"type": "number"},
-                "medium": {"type": "text"},
-                "dimensions": {"type": "text"},
-                "description": {"type": "textarea"},
-                "images": {"type": "image", "multiple": true}
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "year": {
+                    "type": "number"
+                },
+                "medium": {
+                    "type": "text"
+                },
+                "dimensions": {
+                    "type": "text"
+                },
+                "description": {
+                    "type": "textarea"
+                },
+                "images": {
+                    "type": "image",
+                    "multiple": true
+                }
             },
             "page": {
                 "mode": "per_item",
                 "parent": "works",
-                "title": "Works — Rose Jones",
+                "title": "Works \u2014 Rose Jones",
                 "template": "templates/work.html",
                 "index_template": "templates/works_index.html"
             }
@@ -54,17 +69,32 @@
         "exhibitions": {
             "label": "Exhibitions",
             "item": {
-                "title": {"type": "text", "required": true, "slug_source": true},
-                "year": {"type": "number"},
-                "type": {"type": "text"},
-                "location": {"type": "text"},
-                "description": {"type": "textarea"},
-                "images": {"type": "image", "multiple": true}
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "year": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "text"
+                },
+                "location": {
+                    "type": "text"
+                },
+                "description": {
+                    "type": "textarea"
+                },
+                "images": {
+                    "type": "image",
+                    "multiple": true
+                }
             },
             "page": {
                 "mode": "per_item",
                 "parent": "exhibitions",
-                "title": "Exhibitions — Rose Jones",
+                "title": "Exhibitions \u2014 Rose Jones",
                 "template": "templates/exhibition.html",
                 "index_template": "templates/exhibitions_index.html"
             }

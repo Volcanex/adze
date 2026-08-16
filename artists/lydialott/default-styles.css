@@ -57,7 +57,7 @@ a { color: var(--link); }
     --border-radius: 8px;
 
     /* ── Nav ── */
-    --nav-size: 14px;
+    --nav-size: 10px;
     --nav-weight: 400;
     --site-name-size: 18px;
     --site-name-weight: 600;

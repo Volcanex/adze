@@ -195,7 +195,6 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:2187/1719">
         <img class="work-image" src="../../assets/work-night-fishing-2-good.jpg" alt="Night fishing 2" decoding="async">
     </figure>
@@ -203,7 +202,6 @@ body {
     <figure class="work-figure" style="aspect-ratio:2187/1719">
         <img class="work-image" src="../../assets/work-night-fishing-2-2-good.jpg" alt="Night fishing 2" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

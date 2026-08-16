@@ -139,6 +139,6 @@ a:hover { color: var(--accent); }
 
 <main class="main-content">
     <h1>About</h1>
-    <p>Bio coming soon.</p>
+    <p data-copy="bio">Bio coming soon.</p>
 </main>
 </html>

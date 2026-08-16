@@ -195,11 +195,9 @@ body {
     <a class="back-link" href="/works/">← Works</a>
 
 
-
     <figure class="work-figure" style="aspect-ratio:1920/2560">
         <img class="work-image" src="../../assets/work-keeper-of-the-egg-good.jpg" alt="Keeper of the Egg" decoding="async">
     </figure>
-
 
 
     <div class="title-row">

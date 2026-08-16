@@ -111,12 +111,12 @@
         }
     },
     "admin_theme": {
-        "bg": "#281800",
-        "surface": "#1a1000",
-        "text": "#c9a573",
+        "bg": "#0a0a0a",
+        "surface": "#161616",
+        "text": "#f0e6d6",
         "accent": "#c9a573",
-        "accentText": "#281800",
-        "border": "#4a3318"
+        "accentText": "#0a0a0a",
+        "border": "#3a3a3a"
     },
     "description": "Dark Arts & Photography - Digital Necropolis",
     "contact_email": "fallenangelselvatica@gmail.com",

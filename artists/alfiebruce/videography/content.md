@@ -40,7 +40,7 @@ a{color:inherit;text-decoration:none;}
 
 <header class="head">
     <h1>Videography</h1>
-    <p>4 films &middot; 2025</p>
+    <p data-copy="videography-subtitle">4 films &middot; 2025</p>
 </header>
 
 <section class="grid">

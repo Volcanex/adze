@@ -152,7 +152,7 @@ body {
         <a class="m-contact is-current" href="/contact/">Contact</a>
     </nav>
 
-    <div class="intro">For enquiries</div>
+    <div class="intro" data-copy="contact-intro">For enquiries</div>
 
     <div class="details">
         <p>Email — <a href="mailto:rosefpjones@gmail.com">rosefpjones@gmail.com</a></p>

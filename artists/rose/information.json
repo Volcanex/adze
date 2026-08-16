@@ -1,14 +1,20 @@
 {
-  "_note": "Source-of-truth ledger for Rose Jones' site, reconciled from the 2025_04_Rose zip (Works List.pdf + Rose Jones Artist CV.pdf + Assets/). adze has no native per-work metadata; this file is authored by hand and used to generate each page's content.md. compile.py does NOT read it. 'status: live' = a real image file exists in the zip; 'status: missing' = the work is real (listed in Works List) but no photo exists anywhere in the file — render with placeholder + '(Work file missing)'.",
+  "_note": "Source-of-truth ledger for Rose Jones' site, reconciled from the 2025_04_Rose zip (Works List.pdf + Rose Jones Artist CV.pdf + Assets/). adze has no native per-work metadata; this file is authored by hand and used to generate each page's content.md. compile.py does NOT read it — the live site comes off content.json (works/exhibitions) and the hand-authored pages, so treat this as the provenance record (where each image came from, what is real but unphotographed), not as a feed. Keep the exhibitions list here in step with content.json when a show is added. 'status: live' = a real image file exists in the zip; 'status: missing' = the work is real (listed in Works List) but no photo exists anywhere in the file — its page renders text-only, with no figure (see CLAUDE.md).",
   "_image_source_root": "2025_04_Rose/Assets/ inside 2025_04_Rose-20260607T121856Z-3-001.zip",
   "artist": {
     "name": "Rose Jones",
     "born": 2002,
-    "bio": "Rose Jones is a multidisciplinary artist. Her work spans painting, illustration, and writing.",
+    "bio": "Rose Jones (b. 2002) is a London-based artist. She graduated with a first class bachelor's degree from the Slade School of Art in 2025. Her most recent exhibition was 'Camino Adentro' in Mexico City, in March 2026. In July 2025, she exhibited at the 'When Life Gives You Lemons' exhibition in Chichester, UK. In 2024 she exhibited in Tokyo, Japan ('Kobokan Stories'), alongside running workshops for young children as part of a volunteer program in Tokyo.",
     "statement": "what I make is deeply ridiculous but equally important.",
     "education": [
-      "Foundation Diploma, Colchester Institute, graduated 2021",
-      "BFA, Slade School of Fine Art, graduating 2025"
+      "Foundation Diploma, Colchester Institute, 2021",
+      "BFA, Slade School of Fine Art, 1st, 2025"
+    ],
+    "residencies": [
+      "Casa Lu Sur, Mexico City, MEX, Feb-April 2026"
+    ],
+    "prizes": [
+      "The Firstsite Collectors' Group Bursary 2025"
     ],
     "about_image": {
       "source": "Assets/About page_image.png",
@@ -470,6 +476,36 @@
       "image": null,
       "source": null,
       "_flag": "Current slug 'axxx-blood'; correct title is 'Aίμα/Blood' (Greek). Keep slug, fix display title."
+    },
+    {
+      "slug": "when-life-gives-you-lemons",
+      "title": "When Life Gives You Lemons",
+      "year": 2025,
+      "type": "Group show",
+      "location": "YAP, Chichester, UK",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "art-on-a-postcard",
+      "title": "Art on a Postcard",
+      "year": 2025,
+      "type": null,
+      "location": "Winter Auction, London, UK",
+      "status": "missing",
+      "image": null,
+      "source": null
+    },
+    {
+      "slug": "camino-adentro",
+      "title": "Camino Adentro",
+      "year": 2026,
+      "type": null,
+      "location": "Casa Lu Sur, Mexico City, Mexico",
+      "status": "missing",
+      "image": null,
+      "source": null
     }
   ],
   "unresolved_assets": {

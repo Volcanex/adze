@@ -25,7 +25,7 @@ html, body {
   display: flex;
   align-items: baseline;
   padding: clamp(18px, 1.4vw, 27px) 5.3vw;
-  font-size: clamp(18px, 1.5625vw, 30px);   /* match Home/Works title size */
+  font-size: clamp(10px, 1.5625vw, 30px);   /* match Home/Works title size */
   line-height: 1.43;
 }
 .ab-nav a { text-decoration: none; color: #000; white-space: nowrap; }
@@ -112,13 +112,13 @@ html, body {
 
   <main class="ab-main">
     <div class="ab-text">
-      <p>Lydia Lott's practice explores the relationship between public and private selves, drawing on R.D. Laing's concept of the divided self. Through painting, textiles, and image-making, they investigate the spaces where interior life becomes visible and the boundaries between what is concealed and what is revealed begin to dissolve.</p>
+      <p data-copy="statement-divided-self">Lydia Lott's practice explores the relationship between public and private selves, drawing on R.D. Laing's concept of the divided self. Through painting, textiles, and image-making, they investigate the spaces where interior life becomes visible and the boundaries between what is concealed and what is revealed begin to dissolve.</p>
 
-      <p>Lott explores intimate subjects and domestic spaces: beds, bedrooms, naked bodies, family archives, and moments of emotional exposure. These motifs function as sites where vulnerability can emerge beyond performance. Rather than treating privacy as something to be protected, they are interested in what happens when private experience enters the public realm and becomes available to collective recognition.</p>
+      <p data-copy="statement-intimate-subjects">Lott explores intimate subjects and domestic spaces: beds, bedrooms, naked bodies, family archives, and moments of emotional exposure. These motifs function as sites where vulnerability can emerge beyond performance. Rather than treating privacy as something to be protected, they are interested in what happens when private experience enters the public realm and becomes available to collective recognition.</p>
 
-      <p>Underlying much of their work is a distinction between being seen and being displayed. They explores forms of nakedness, confession, and self-disclosure that resist spectacle, instead proposing visibility as a mode of connection. Figures are often presented in states of openness and exposure, not as objects to be consumed, but as subjects with complex inner lives.</p>
+      <p data-copy="statement-seen-not-displayed">Underlying much of their work is a distinction between being seen and being displayed. They explores forms of nakedness, confession, and self-disclosure that resist spectacle, instead proposing visibility as a mode of connection. Figures are often presented in states of openness and exposure, not as objects to be consumed, but as subjects with complex inner lives.</p>
 
-      <p>Material process plays an important role in this investigation. Whether through the visible ground of a painting or the tactile surface of tufted textiles, Lott allows traces of making to remain present. These gestures of incompleteness and exposure mirror the psychological concerns of the work itself. Ultimately, their practice asks what it might mean to inhabit public space without relinquishing intimacy, and to be encountered fully rather than merely looked at.</p>
+      <p data-copy="statement-material-process">Material process plays an important role in this investigation. Whether through the visible ground of a painting or the tactile surface of tufted textiles, Lott allows traces of making to remain present. These gestures of incompleteness and exposure mirror the psychological concerns of the work itself. Ultimately, their practice asks what it might mean to inhabit public space without relinquishing intimacy, and to be encountered fully rather than merely looked at.</p>
 
       <p class="ab-contact">
         <span class="ab-line">Contact</span>
