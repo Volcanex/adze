@@ -339,6 +339,16 @@
             max-width: 960px;
             margin: 0 auto;
         }
+        /* The staircase starts at the left and leaves the top-right of this
+           section empty, so the portrait goes there — it balances the block and
+           puts a face against the first-person copy. */
+        .about-top {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 300px;
+            gap: 48px;
+            align-items: start;
+            margin-bottom: 56px;
+        }
         .about-lead {
             font-family: var(--heading-font);
             font-size: clamp(19px, 2.2vw, 27px);
@@ -347,9 +357,24 @@
             letter-spacing: -0.02em;
             color: var(--text);
             max-width: 560px;
-            margin-bottom: 56px;
         }
         .about-lead em { font-style: normal; color: var(--accent); }
+
+        .about-portrait { margin: 0; }
+        .about-portrait img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+        }
+        .about-portrait figcaption {
+            margin-top: 10px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: var(--text2);
+        }
 
         /* Staircase: every point is the same width but steps further right than
            the one above it. Point 1's left edge aligns with the hero's left,
@@ -414,7 +439,9 @@
             .hero-section { padding: 40px 24px 80px; }
             .hero { grid-template-columns: 1fr; gap: 36px; }
             .about { padding: 64px 20px 88px; }
+            .about-top { grid-template-columns: 1fr; gap: 28px; margin-bottom: 40px; }
             .about-lead { max-width: none; }
+            .about-portrait { max-width: 280px; }
             .point { width: 100%; }
             .point:nth-child(2), .point:nth-child(3),
             .point:nth-child(4), .point:nth-child(5) { margin-left: 0; }
@@ -450,9 +477,9 @@
         </div>
         <div class="hero-right">
             <p class="hero-desc">
-                Exclusively for the clientele of <a href="https://lastplace.co.uk">Last Place</a>,
-                friends and collaborators.
-                By <span class="gp-name" tabindex="0" role="link" data-tip="Gabriel Penman is a software engineer based in London. More about me at gabrielpenman.com">Gabriel Penman</span>.
+                For the clients of <a href="https://lastplace.co.uk">Last Place</a>,
+                and for friends and collaborators.
+                Built and run by <span class="gp-name" tabindex="0" role="link" data-tip="I'm a software engineer in London, and there's more about me at gabrielpenman.com">Gabriel Penman</span>.
             </p>
             <div class="hero-actions">
                 <a href="/dashboard" class="btn-primary">Sign in &rarr;</a>
@@ -468,20 +495,26 @@
 
 <section class="about" id="about">
     <div class="about-inner">
-        <p class="about-lead">
-            Adze runs on <em>my own personal cloud</em>, on software I wrote and
-            look after. Every site is deliberately lightweight, and stays that way.
-        </p>
+        <div class="about-top">
+            <p class="about-lead">
+                Adze runs on <em>a server I rent myself</em>, on software I wrote and
+                still look after. The sites it builds are small, and I keep them that way.
+            </p>
+            <figure class="about-portrait">
+                <img src="/static/portrait.jpg" alt="Gabriel Penman" width="800" height="533" loading="lazy">
+                <figcaption>Gabriel Penman, who wrote Adze and keeps it running.</figcaption>
+            </figure>
+        </div>
 
         <div class="points">
             <div class="point">
-                <i class="ph ph-cloud"></i>
+                <i class="ph ph-hard-drives"></i>
                 <div>
-                    <h3>My own personal cloud</h3>
+                    <h3>Nobody in the middle</h3>
                     <p>
-                        Everything sits on server space I rent and run myself, on
-                        software I wrote. No per-seat fees, and no platform renting
-                        you back your own work.
+                        There's no platform sitting between you and your site, so
+                        there are no per-seat fees and no company renting you back
+                        your own work.
                     </p>
                 </div>
             </div>
@@ -489,10 +522,10 @@
             <div class="point">
                 <i class="ph ph-feather"></i>
                 <div>
-                    <h3>Lightweight by design</h3>
+                    <h3>The sites stay small</h3>
                     <p>
-                        Sites compile down to plain static pages. They stay small,
-                        load quickly, and keep out of your way.
+                        Sites compile down to plain static pages, so they load fast
+                        and there is very little in them that can break.
                     </p>
                 </div>
             </div>
@@ -503,8 +536,8 @@
                     <h3>Hosting is free</h3>
                     <p>
                         Everyone should be able to keep a little patch of land on the
-                        web, a website that's yours, without paying rent on it forever.
-                        So hosting on Adze costs nothing.
+                        web without paying rent on it forever. So hosting on Adze
+                        costs nothing.
                     </p>
                 </div>
             </div>
@@ -512,11 +545,11 @@
             <div class="point">
                 <i class="ph ph-globe-hemisphere-west"></i>
                 <div>
-                    <h3>Bring your own domain</h3>
+                    <h3>Domains you own yourself</h3>
                     <p>
-                        Domains are the one thing the web genuinely makes you pay for.
-                        Buy one wherever you like and point it at Adze. Adze doesn't
-                        sell domains itself.
+                        A domain is the one thing the web really does make you pay
+                        for. Buy one wherever you like and point it here, and the
+                        registration stays in your name because I don't sell domains.
                     </p>
                 </div>
             </div>
@@ -526,8 +559,9 @@
                 <div>
                     <h3>Everything else at cost</h3>
                     <p>
-                        Whatever you do pay for is charged at cost, unless your site
-                        has custom features that need ongoing upkeep.
+                        Anything you do pay for, I charge at cost, and the only
+                        exception is a site with custom features, because someone has
+                        to keep those working.
                     </p>
                 </div>
             </div>
