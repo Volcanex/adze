@@ -1881,6 +1881,10 @@ select.af-input option { background: var(--adze-surface); color: var(--adze-text
   gap: var(--adze-space-3);
   margin-bottom: var(--adze-space-4);
 }
+.as-site__acts {
+  display: flex; gap: var(--adze-space-2);
+  margin-left: auto;
+}
 .as-site__url {
   font-family: var(--adze-font-mono);
   font-size: var(--adze-text-sm);
@@ -1898,6 +1902,73 @@ select.af-input option { background: var(--adze-surface); color: var(--adze-text
 }
 .as-site__page:hover { border-color: var(--adze-accent); color: var(--adze-accent); }
 .as-site__page.is-home { color: var(--adze-text); }
+.as-site__page.is-quiet { color: var(--adze-text-faint); border-style: dashed; }
+
+/* The label plus the honest total. Every section below it is collapsed by
+ * default, so without the count a 49-page site shows six chips and reads as
+ * one that has lost forty-three pages. */
+.as-site__pageshd {
+  display: flex; align-items: baseline; gap: var(--adze-space-3);
+  margin-bottom: var(--adze-space-3);
+}
+
+/* ── Page sections (Works, Exhibitions) ─────────────────────────────────────
+ *
+ * Rules, not cards: these sit INSIDE .as-card already, and a card inside a
+ * card is two borders saying one thing. */
+.as-site__secs { margin-top: var(--adze-space-5); }
+.as-site__sec { border-top: 1px solid var(--adze-border); }
+.as-site__sec:last-child { border-bottom: 1px solid var(--adze-border); }
+.as-site__sechd {
+  display: flex; align-items: center; gap: var(--adze-space-3);
+  padding: var(--adze-space-3) 0;
+}
+.as-site__secname {
+  font-weight: var(--adze-weight-medium);
+  color: var(--adze-text);
+  text-decoration: none;
+  transition: var(--adze-transition-color);
+}
+a.as-site__secname:hover { color: var(--adze-accent); }
+/* A folder with no index page of its own: still a heading, but nothing to
+ * open, so it must not look clickable. */
+.as-site__secname--plain { color: var(--adze-text-muted); font-weight: var(--adze-weight-normal); }
+.as-site__toggle {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: var(--adze-space-2);
+  padding: 2px var(--adze-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--adze-radius-pill);
+  background: transparent;
+  color: var(--adze-text-muted);
+  font: inherit; font-size: var(--adze-text-xs);
+  cursor: pointer;
+  transition: var(--adze-transition-color);
+}
+.as-site__toggle:hover { border-color: var(--adze-border-strong); color: var(--adze-text); }
+.as-site__chev { display: inline-block; transition: transform var(--adze-dur-fast) var(--adze-ease-out); }
+.as-site__sec.is-open .as-site__chev { transform: rotate(180deg); }
+
+/* Columns, not chips. These are titles of wildly unequal length — "A shooting
+ * star from atop a slide" beside "Bed" — and as pills they ragged into a block
+ * nobody could scan. Left-aligned links in even columns read down. */
+.as-site__sub {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0 var(--adze-space-5);
+  padding-bottom: var(--adze-space-4);
+}
+.as-site__sub[hidden] { display: none; }
+.as-site__sublink {
+  display: block;
+  padding: 3px 0;
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-sm);
+  text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: var(--adze-transition-color);
+}
+.as-site__sublink:hover { color: var(--adze-accent); }
 
 /* White ground and dark modules, in every theme. A QR inverted to match a dark
  * admin is a QR a good number of phone cameras decline to read, and this exists

@@ -250,7 +250,7 @@
     if (hourly.some(v => v > 0)) {
       const h12 = peak % 12 === 0 ? 12 : peak % 12;
       box.appendChild(el('div', 'as-hours__cap',
-        `busiest around ${h12}${peak < 12 ? 'am' : 'pm'}`));
+        `Busiest around ${h12}${peak < 12 ? 'am' : 'pm'}`));
     }
     return box;
   }
@@ -289,7 +289,7 @@
     const line = el('div', 'as-visits');
     line.append(el('span', 'adze-label', 'Visits'),
                 el('span', 'as-visits__value adze-numeric', fmtCount(a.month)),
-                el('span', 'as-visits__label', 'last 30 days'));
+                el('span', 'as-visits__label', 'Last 30 days'));
 
     if (a.prev_month) {
       const dir = a.trend === 'up' ? 'up' : a.trend === 'down' ? 'down' : 'flat';
@@ -339,15 +339,15 @@
     const hd = el('div', 'as-card__hd');
     hd.append(el('span', 'adze-label', 'Visits'),
               el('span', 'as-card__meta', days < 7
-                ? `since ${new Date(since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
-                : 'last 30 days'));
+                ? `Since ${new Date(since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
+                : 'Last 30 days'));
     card.appendChild(hd);
 
     const fig = el('div', 'as-figure');
     fig.appendChild(el('span', 'as-hero__value', fmtCount(a.month)));
     fig.appendChild(el('span', 'as-hero__label adze-label',
-      days < 7 ? `visits in ${days} day${days === 1 ? '' : 's'} of counting`
-               : 'visits in the last 30 days'));
+      days < 7 ? `Visits in ${days} day${days === 1 ? '' : 's'} of counting`
+               : 'Visits in the last 30 days'));
 
     if (days >= 7 && a.prev_month != null) {
       const dir = a.trend === 'up' ? 'up' : a.trend === 'down' ? 'down' : 'flat';
@@ -534,12 +534,118 @@
     } catch (e) { return null; }
   }
 
+  /* One flat row of chips is what this was, and for an artist whose Works
+   * folder runs to thirty-two pages that row WAS the page: the four links they
+   * actually navigate by, drowned in a wall of every artwork they have ever
+   * uploaded.
+   *
+   * The folder is already the section. Group on the first path segment, so the
+   * top row stays the handful of real pages and each index page (Works,
+   * Exhibitions) carries its own children behind a count. */
+  function pageLabel(p) {
+    // The front page's own <title> is usually the whole site name, which in a
+    // row of page links is the longest chip and the least informative one.
+    return p.home ? 'Home' : p.title;
+  }
+
+  /* 404 is a page the site genuinely needs and the artist never links to. It
+   * stays — it is real, and a missing chip reads as a missing page — but it
+   * goes last and quiet instead of sitting between About and Contact. */
+  function isUtility(p) { return p.path === '404' || /^(40\d|50\d)\b/.test(p.title); }
+
+  function humanise(seg) {
+    const t = seg.replace(/[-_]+/g, ' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  function groupPages(pages) {
+    const byTitle = (a, b) => pageLabel(a).localeCompare(
+      pageLabel(b), undefined, { numeric: true, sensitivity: 'base' });
+
+    const kids = new Map();
+    const top = [];
+    pages.forEach(p => {
+      const seg = p.path.split('/');
+      if (seg.length === 1) { top.push(p); return; }
+      if (!kids.has(seg[0])) kids.set(seg[0], []);
+      kids.get(seg[0]).push(p);
+    });
+    kids.forEach(list => list.sort(byTitle));
+
+    const sections = [];
+    const plain = [];
+    top.forEach(p => {
+      const items = kids.get(p.path);
+      if (items) { sections.push({ index: p, title: pageLabel(p), items }); kids.delete(p.path); }
+      else plain.push(p);
+    });
+    /* A folder with pages under it but no index page of its own still gets a
+     * section: those pages are live and linkable, and dropping them because
+     * their parent isn't published would lose them from this list entirely. */
+    kids.forEach((items, key) => sections.push({ index: null, title: humanise(key), items }));
+
+    plain.sort((a, b) => (b.home ? 1 : 0) - (a.home ? 1 : 0)
+                      || (isUtility(a) ? 1 : 0) - (isUtility(b) ? 1 : 0)
+                      || byTitle(a, b));
+    return { plain, sections };
+  }
+
+  function pageChip(p) {
+    const a = el('a', 'as-site__page', pageLabel(p));
+    a.href = p.url; a.target = '_blank'; a.rel = 'noopener';
+    if (p.home) a.classList.add('is-home');
+    if (isUtility(p)) a.classList.add('is-quiet');
+    return a;
+  }
+
+  function renderSection(sec, open) {
+    const box = el('div', 'as-site__sec');
+    const hd = el('div', 'as-site__sechd');
+
+    /* Two targets, each labelled with what it does: the name opens the index
+     * page, the count opens the list. A single row doing both would have to
+     * guess which the tap meant, and on a phone it would guess wrong half the
+     * time. */
+    let name;
+    if (sec.index) {
+      name = el('a', 'as-site__secname', sec.title);
+      name.href = sec.index.url; name.target = '_blank'; name.rel = 'noopener';
+    } else {
+      name = el('span', 'as-site__secname as-site__secname--plain', sec.title);
+    }
+
+    const list = el('div', 'as-site__sub');
+    sec.items.forEach(p => {
+      const a = el('a', 'as-site__sublink', pageLabel(p));
+      a.href = p.url; a.target = '_blank'; a.rel = 'noopener';
+      a.title = pageLabel(p);
+      list.appendChild(a);
+    });
+
+    const toggle = el('button', 'as-site__toggle');
+    toggle.type = 'button';
+    toggle.append(
+      el('span', null, `${sec.items.length} page${sec.items.length === 1 ? '' : 's'}`),
+      el('span', 'as-site__chev', '\u25be'));
+    const set = on => {
+      list.hidden = !on;
+      box.classList.toggle('is-open', on);
+      toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
+    };
+    toggle.onclick = () => set(list.hidden);
+    set(open);
+
+    hd.append(name, toggle);
+    box.append(hd, list);
+    return box;
+  }
+
   function renderSite(host, s) {
     host.innerHTML = '';
-    const card = el('div', 'as-card');
+    const card = el('div', 'as-card as-site');
     const hd = el('div', 'as-card__hd');
     hd.appendChild(el('span', 'adze-label', 'Your site'));
-    if (s.published) hd.appendChild(el('span', 'as-card__meta', 'published ' + ago(s.published)));
+    if (s.published) hd.appendChild(el('span', 'as-card__meta', 'Published ' + ago(s.published)));
     card.appendChild(hd);
 
     if (!s.pages.length) {
@@ -554,15 +660,20 @@
     link.href = s.url; link.target = '_blank'; link.rel = 'noopener';
     addr.appendChild(link);
 
+    /* The two buttons are one group, so on a phone they wrap onto the next
+     * line together instead of leaving "QR code" stranded on a line of its
+     * own under a half-empty row. */
+    const acts = el('div', 'as-site__acts');
+
     const copy = el('button', 'as-btn as-btn-sm as-btn-quiet', 'Copy link');
     copy.onclick = async () => {
       try {
         await navigator.clipboard.writeText(s.url);
         copy.textContent = 'Copied';
         setTimeout(() => { copy.textContent = 'Copy link'; }, 1500);
-      } catch (e) { toast('Couldn’t copy — long-press the address instead.', 'err'); }
+      } catch (e) { toast('Couldn\u2019t copy — long-press the address instead.', 'err'); }
     };
-    addr.appendChild(copy);
+    acts.appendChild(copy);
 
     const qrBtn = el('button', 'as-btn as-btn-sm as-btn-quiet', 'QR code');
     const qrHost = el('div');
@@ -576,26 +687,43 @@
           qrHost.appendChild(el('p', 'as-site__qrcap',
             'Point a phone camera at this to open your site. Fine to print on a card.'));
         } else {
-          qrHost.appendChild(el('p', 'as-site__qrcap', 'Couldn’t draw a QR code here.'));
+          qrHost.appendChild(el('p', 'as-site__qrcap', 'Couldn\u2019t draw a QR code here.'));
         }
         qrBuilt = true;
       }
       qrHost.hidden = !qrHost.hidden;
       qrBtn.classList.toggle('is-on', !qrHost.hidden);
     };
-    addr.appendChild(qrBtn);
+    acts.appendChild(qrBtn);
+    addr.appendChild(acts);
     card.append(addr, qrHost);
 
-    const pages = el('div', 'as-site__pages');
-    s.pages.forEach(p => {
-      // The front page's own <title> is usually the whole site name, which in
-      // a row of page links is the longest chip and the least informative one.
-      const a = el('a', 'as-site__page', p.home ? 'Home' : p.title);
-      a.href = p.url; a.target = '_blank'; a.rel = 'noopener';
-      if (p.home) a.classList.add('is-home');
-      pages.appendChild(a);
-    });
-    card.appendChild(pages);
+    const { plain, sections } = groupPages(s.pages);
+
+    /* The total is stated because the sections below are collapsed: without it
+     * a site of forty-nine pages shows six links and reads as one that has
+     * lost forty-three. */
+    const pagesHd = el('div', 'as-site__pageshd');
+    pagesHd.append(el('span', 'adze-label', 'Pages'),
+                   el('span', 'as-card__meta',
+                      `${s.pages.length} in total`));
+    card.appendChild(pagesHd);
+
+    if (plain.length) {
+      const row = el('div', 'as-site__pages');
+      plain.forEach(p => row.appendChild(pageChip(p)));
+      card.appendChild(row);
+    }
+
+    /* Open when the whole site fits in a glance, closed when it doesn't. A
+     * five-page site shouldn't need a click to see itself, and a forty-page
+     * one shouldn't open as a wall. */
+    if (sections.length) {
+      const total = sections.reduce((n, sec) => n + sec.items.length, 0);
+      const wrap = el('div', 'as-site__secs');
+      sections.forEach(sec => wrap.appendChild(renderSection(sec, total <= 8)));
+      card.appendChild(wrap);
+    }
 
     host.appendChild(card);
   }

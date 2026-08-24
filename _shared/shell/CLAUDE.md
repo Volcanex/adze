@@ -84,6 +84,54 @@ resets itself with nothing to remember.
 The landing's sections are async slots that legitimately render nothing (status
 usually does), and an empty flex child still claims a gap on each side.
 
+## "Your site" groups pages by folder; it never lists them flat
+
+Rose's site is 48 pages — one home, four top-level, and 43 works and exhibitions
+under `works/` and `exhibitions/`. As one flat row of `.as-site__page` chips
+that block *was* the landing page: the four links an artist navigates by,
+drowned in every artwork they had ever uploaded, with the site name repeated on
+the end of each of them.
+
+The folder is already the section, so `groupPages()` in `admin-landing.js` splits
+on the first path segment. Top-level pages with no children stay chips (home
+first, `404` last and quiet); each index page that has children becomes a
+`.as-site__sec` rule with its child list behind a `N pages` toggle. Two targets
+in that header, each labelled: the **name** opens the index page, the **count**
+opens the list — one row doing both has to guess which a tap meant, and on a
+phone it guesses wrong half the time. Sections open by default only when the
+children total ≤ 8, so a five-page site doesn't need a click to see itself and a
+forty-page one doesn't open as a wall. The header states the real total (`48 in
+total`) precisely *because* the sections are collapsed — without it the card
+reads as a site that has lost forty-three pages.
+
+Children are a `repeat(auto-fill, minmax(180px, 1fr))` grid of plain links, not
+chips: these are titles of wildly unequal length ("A shooting star from atop a
+slide…" beside "Bed") and as pills they rag into an unscannable block.
+
+A folder with children but no index page of its own still gets a section, headed
+by the humanised folder name and not clickable
+(`.as-site__secname--plain`) — those pages are live and linkable, and dropping
+them because their parent isn't published would lose them from the list.
+
+## Page titles are cleaned in `landing.py`, from the titles themselves
+
+Page titles are written for the browser tab — `About — Rose Jones` — so a list of
+them repeats the site's name down every row and buries the one word that differs.
+`_site_payload` strips that tail before the payload leaves the server.
+
+**Do not clean it against `config.json`'s `name`.** The two routinely differ: the
+artist is `Rose`, the tab says `Rose Jones`; the artist is `Wild Saunas Ireland`,
+the tab says `About — chris`. `_repeated_tail()` discovers the tail from the page
+titles instead — the longest `<sep> …` ending shared by **two or more** of them,
+a single hit being a title that merely contains a dash. `name` and the slug are
+then tried as explicit tails (case-insensitively, which is what catches `— chris`)
+for sites too small for a pattern to show. A title is left alone when nothing
+matches, and `_clean_title` only ever uppercases a *lowercase* first letter, so
+`sparrow` becomes `Sparrow` while `GOOD GRIEF` is left exactly as typed.
+
+The home page keeps its full title in the payload (it IS the site name — trimming
+it leaves an empty chip); `pageLabel()` renders it as `Home`.
+
 ## Tokens are served live, not copied
 
 `design-language/adze/tokens/*.css` is served under `{prefix}/asset/tokens/<name>`
@@ -287,6 +335,12 @@ something that was visibly broken; don't simplify them back.
   is deliberately an afterthought here while it stays unrefactored. The `else`
   branch is unchanged — an artist with no content admin still gets it as the
   primary button, and then there is no second link to rank it against.
+- **Standalone captions start with a capital** (2026-08-24): `Published 19 days
+  ago`, `Last 30 days`, `Busiest around 12am`, `Since 3 Aug`. A caption that owns
+  its own line is a sentence, not a fragment — the lowercase house style belongs
+  to the `.adze-label` eyebrows, and CSS already uppercases those. Fragments that
+  *follow* something on the same line (`↑ 18% vs the previous 30 days`) stay
+  lowercase; they are still part of that line's sentence.
 - **The analytics are ONE card, not four blocks.** The count, its label, the
   delta, the sparkline, the tiles and the hourly strip are one thought. The
   count sits on a baseline row *inside* the card's body (`.as-figure`) rather

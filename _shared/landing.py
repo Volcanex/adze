@@ -108,6 +108,53 @@ def _status_payload(slug):
     return {'editor': editor, 'site': site, 'checked': now, 'note': note}
 
 
+_TITLE_SEPS = (' — ', ' – ', ' | ', ' - ', ' · ')
+
+
+def _repeated_tail(titles):
+    """The "— Rose Jones" that every page title carries, discovered from the
+    titles themselves rather than taken from config.
+
+    config's `name` is not reliable for this: it is the artist ("Rose") while
+    the tab is the site ("Rose Jones"), and the tab is what ends up in this
+    list. Two pages sharing a tail is a house style; one page is a title that
+    happens to contain a dash, so a single hit is ignored.
+    """
+    counts = {}
+    for t in titles:
+        for sep in _TITLE_SEPS:
+            i = t.rfind(sep)
+            if i > 0:
+                counts[t[i:]] = counts.get(t[i:], 0) + 1
+    if not counts:
+        return None
+    tail, n = max(counts.items(), key=lambda kv: (kv[1], len(kv[0])))
+    return tail if n >= 2 else None
+
+
+def _clean_title(title, tails, rel):
+    """Page titles are written for the browser tab, so a list of them repeats
+    the site's own name down every row and buries the one word that differs.
+    Strip that tail, and give a folder-derived title a capital so "sparrow"
+    doesn't sit next to "Bed". Titles the artist typed in caps ("GOOD GRIEF")
+    are left exactly as typed.
+    """
+    t = (title or '').strip()
+    low = t.lower()
+    for tail in tails:
+        # Case-insensitive because half these tails are the slug as typed
+        # ("About — chris"), and `>` not `>=` because the home page's title IS
+        # the site name — trimming that leaves an empty chip.
+        if tail and low.endswith(tail.lower()) and len(t) > len(tail):
+            t = t[:-len(tail)].strip()
+            break
+    if not t:
+        t = rel.split('/')[-1].replace('-', ' ').replace('_', ' ')
+    if t[:1].islower():
+        t = t[0].upper() + t[1:]
+    return t
+
+
 def _site_payload(slug, cfg):
     """The artist's site as it actually stands, read from compiled output
     rather than from the source tree: a page an artist can't reach isn't a
@@ -127,10 +174,10 @@ def _site_payload(slug, cfg):
             rel = idx.parent.relative_to(out_root).as_posix()
             if rel == '.':
                 continue          # the root redirect stub, not a page
-            title = rel
+            title = None
             try:
                 page_cfg = json.loads((ARTISTS / slug / rel / 'config.json').read_text())
-                title = page_cfg.get('title') or rel
+                title = page_cfg.get('title')
             except (OSError, json.JSONDecodeError):
                 pass
             pages.append({
@@ -144,6 +191,16 @@ def _site_payload(slug, cfg):
                 published = mtime if published is None else max(published, mtime)
             except OSError:
                 pass
+
+    # The discovered tail first, then the two names we know for certain — the
+    # artist's display name and the slug, both of which turn up as a tail on
+    # sites too small for _repeated_tail to see a pattern in.
+    tails = [_repeated_tail([p['title'] for p in pages if p['title']])]
+    for name in (cfg.get('name'), slug):
+        if name:
+            tails += [sep + name for sep in _TITLE_SEPS]
+    for p in pages:
+        p['title'] = _clean_title(p['title'], tails, p['path'])
 
     pages.sort(key=lambda p: (not p['home'], p['path']))
     return {'domain': domain, 'url': base, 'pages': pages, 'published': published}

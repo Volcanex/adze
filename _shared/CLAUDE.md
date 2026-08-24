@@ -117,6 +117,13 @@ the same thing:
    export or a snapshot *is*; a copy in `landing.py` would be a second thing
    to get wrong.
 
+   **`_site_payload` is the one payload landing.py owns**, because it reads
+   *compiled output* — a page an artist can't reach isn't a page. It also
+   cleans the page titles (`_repeated_tail` / `_clean_title`): tab titles carry
+   the site name on the end, and `config.json`'s `name` is not the string to
+   strip — the artist is `Rose`, the tab says `Rose Jones`. See
+   [shell/CLAUDE.md](shell/CLAUDE.md) for how the landing groups the result.
+
    **`include_assets` is the browse/edit split.** The Manual Edit tab hides
    `assets/` and `widgets/` (`FILES_TREE_HIDDEN_DIRS`) because a dedicated tab
    owns them; the landing's browser shows them (`FILES_BROWSE_HIDDEN_DIRS`)
