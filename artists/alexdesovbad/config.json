@@ -10,21 +10,5 @@
     "slack_channel_id": "C0B9EPT4S1M",
     "slack_pinned_ts": "1781180421.929319",
     "figma_url": "",
-    "lead": {
-        "active": true,
-        "contact": "",
-        "stage": null,
-        "fish_size": "xs",
-        "instagram": "aavosed",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": true,
-        "original_lead_id": null,
-        "created_at": 1781180422,
-        "updated_at": 1781180422
-    },
     "intake_token": "lSK8sKMJ3mH1ikjweAysQqGurB0zaaYD"
 }

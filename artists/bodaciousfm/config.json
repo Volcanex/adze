@@ -13,21 +13,5 @@
     "intake_token": "GMa-1p2bcFy9IJYsKSivlQOSEIzdcIdQ",
     "figma_url": "",
     "is_stub": true,
-    "lead": {
-        "active": false,
-        "contact": "",
-        "stage": "s01",
-        "fish_size": null,
-        "instagram": "",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": false,
-        "original_lead_id": null,
-        "created_at": 1780497180,
-        "updated_at": 1780497180
-    },
     "handover_token": "peAsuwY9_o7NvfEhJyNFNEucEvpqg8Nv"
 }

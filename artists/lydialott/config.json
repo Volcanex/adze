@@ -7,28 +7,6 @@
     "contact_email": "",
     "last_login": 1783252135,
     "last_login_ip": "151.226.16.222",
-    "lead": {
-        "active": true,
-        "contact": "Self",
-        "stage": "handover",
-        "fish_size": "xs",
-        "job_fee": 0.0,
-        "sourced_by": null,
-        "fish_override": false,
-        "discovery_fee": 0.0,
-        "discovery_fee_credited": false,
-        "billed_period": null,
-        "instagram": "lydialottart",
-        "work": "",
-        "discount": "Exchange",
-        "notes": "",
-        "clive_hours": 4.0,
-        "gabe_hours": 0.0,
-        "contacted": true,
-        "original_lead_id": "0ee184a1-a4c4-4c77-a03c-36482daf3f57",
-        "created_at": 1778224727,
-        "updated_at": 1782510631
-    },
     "intake_token": "i1xgpwuEIACP5jmLd2NFdQDamFr6KrOA",
     "slack_channel_id": "C0B65MNNLCX",
     "slack_pinned_ts": "1779930842.287419",
@@ -46,17 +24,41 @@
         "works": {
             "label": "Works",
             "item": {
-                "title": {"type": "text", "required": true, "slug_source": true},
-                "dimensions": {"type": "text"},
-                "medium": {"type": "text"},
-                "year": {"type": "number"},
-                "date": {"type": "date"},
-                "image": {"type": "image"},
-                "tags": {"type": "tags", "options": [
-                    "selected", "paintings", "textiles", "sculpture",
-                    "drawings", "exhibitions", "workshops"
-                ]},
-                "description": {"type": "textarea"}
+                "title": {
+                    "type": "text",
+                    "required": true,
+                    "slug_source": true
+                },
+                "dimensions": {
+                    "type": "text"
+                },
+                "medium": {
+                    "type": "text"
+                },
+                "year": {
+                    "type": "number"
+                },
+                "date": {
+                    "type": "date"
+                },
+                "image": {
+                    "type": "image"
+                },
+                "tags": {
+                    "type": "tags",
+                    "options": [
+                        "selected",
+                        "paintings",
+                        "textiles",
+                        "sculpture",
+                        "drawings",
+                        "exhibitions",
+                        "workshops"
+                    ]
+                },
+                "description": {
+                    "type": "textarea"
+                }
             },
             "page": {
                 "mode": "none"

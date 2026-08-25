@@ -1783,7 +1783,8 @@ def admin_pipeline():
         if _artist_workspace(cfg) not in visible_ws:
             continue
         slug = item.name
-        lead = cfg.get('lead') or {}
+        import leads_store
+        lead = leads_store.read_lead(slug) or {}
         # Hours: try lead's original_lead_id first (legacy hours rows reference
         # lead:<uuid>), then artist:<slug>.
         hrs = 0.0
@@ -1909,13 +1910,13 @@ def admin_artist_lead_update(slug):
     cfg_path = Path('artists') / slug / 'config.json'
     if not cfg_path.exists():
         return jsonify({'error': 'artist not found'}), 404
-    cfg = json.loads(cfg_path.read_text())
+    json.loads(cfg_path.read_text())  # validate the artist exists / is intact
+    import leads_store
     if request.method == 'DELETE':
-        cfg.pop('lead', None)
-        cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+        leads_store.delete_lead(slug)
         return jsonify({'ok': True})
     data = request.get_json() or {}
-    existing = cfg.get('lead') or {}
+    existing = leads_store.read_lead(slug) or {}
     job_fee = float(data.get('job_fee', existing.get('job_fee', 0)) or 0)
     fish_override = bool(data.get('fish_override', existing.get('fish_override', False)))
     sourced_by = data.get('sourced_by', existing.get('sourced_by'))
@@ -1949,8 +1950,7 @@ def admin_artist_lead_update(slug):
         'created_at': existing.get('created_at') or int(_time.time()),
         'updated_at': int(_time.time()),
     }
-    cfg['lead'] = block
-    cfg_path.write_text(json.dumps(cfg, indent=4) + '\n')
+    leads_store.write_lead(slug, block)
     return jsonify({'lead': block})
 
 
@@ -1989,7 +1989,8 @@ def _iter_leads():
             cfg = json.loads(cfg_path.read_text())
         except Exception:
             continue
-        lead = cfg.get('lead')
+        import leads_store
+        lead = leads_store.read_lead(item.name)
         if lead:
             yield item.name, (cfg.get('name') or item.name), lead
 
@@ -2204,7 +2205,8 @@ def admin_draft_email(slug):
     tpl = (_read_email_templates(ws) or {}).get(stage) or {}
     subject, body = tpl.get('subject', ''), tpl.get('body', '')
 
-    lead = cfg.get('lead') or {}
+    import leads_store
+    lead = leads_store.read_lead(slug) or {}
     fee = lead.get('job_fee') or 0
     size = lead.get('fish_size') or _fish_for_fee(fee)
     fish_label = next((b['label'] for b in FISH_BANDS if b['size'] == size), size)

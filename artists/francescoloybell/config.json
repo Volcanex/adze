@@ -10,22 +10,6 @@
     "slack_channel_id": "C0B9PSEE059",
     "slack_pinned_ts": "1781180304.161159",
     "figma_url": "",
-    "lead": {
-        "active": true,
-        "contact": "Self",
-        "stage": "s01",
-        "fish_size": "xs",
-        "instagram": "francesco__loybell",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": true,
-        "original_lead_id": null,
-        "created_at": 1781180304,
-        "updated_at": 1781180506
-    },
     "intake_token": "se0vKqakrkrLSeXqQETqeOgIhEBIXZqQ",
     "handover_token": "tIItrBPMqdJR9sQonzlCE5Gtsznj0rfP"
 }

@@ -6,22 +6,6 @@
     "admin_token": "RoseJones2026!",
     "description": "",
     "contact_email": "",
-    "lead": {
-        "active": true,
-        "contact": "Self",
-        "stage": "hosting",
-        "fish_size": "s",
-        "instagram": "",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": true,
-        "original_lead_id": "63068ce0-2081-4667-aba2-192bd0a40ce3",
-        "created_at": 1778224727,
-        "updated_at": 1782309445
-    },
     "intake_token": "XaBGJCVR6k_hkGkNp9MNFQRU05SSlflt",
     "slack_channel_id": "C0B7FED349E",
     "slack_pinned_ts": "1779930848.335239",
@@ -61,7 +45,7 @@
             "page": {
                 "mode": "per_item",
                 "parent": "works",
-                "title": "Works \u2014 Rose Jones",
+                "title": "Works — Rose Jones",
                 "template": "templates/work.html",
                 "index_template": "templates/works_index.html"
             }
@@ -94,7 +78,7 @@
             "page": {
                 "mode": "per_item",
                 "parent": "exhibitions",
-                "title": "Exhibitions \u2014 Rose Jones",
+                "title": "Exhibitions — Rose Jones",
                 "template": "templates/exhibition.html",
                 "index_template": "templates/exhibitions_index.html"
             }

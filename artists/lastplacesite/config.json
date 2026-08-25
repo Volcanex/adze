@@ -15,21 +15,5 @@
     "slack_announced": true,
     "intake_token": "flqkYRQL1_PLD79LyFcXYhYdSZa55Gcs",
     "figma_url": "",
-    "lead": {
-        "active": false,
-        "contact": "",
-        "stage": "hosting",
-        "fish_size": null,
-        "instagram": "",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": false,
-        "original_lead_id": null,
-        "created_at": 1780484254,
-        "updated_at": 1780484254
-    },
     "handover_token": "wWNv5K1b0eLI891EZAHcDSVBop23k4Cc"
 }

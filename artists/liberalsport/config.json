@@ -10,22 +10,6 @@
     "slack_channel_id": "C0BADP2HSP2",
     "slack_pinned_ts": "1781085869.833869",
     "figma_url": "",
-    "lead": {
-        "active": true,
-        "contact": "Will Munroe",
-        "stage": "discovery",
-        "fish_size": "l",
-        "instagram": "liberalsport_uk",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": true,
-        "original_lead_id": null,
-        "created_at": 1781085870,
-        "updated_at": 1781085870
-    },
     "intake_token": "rPb9N9hQX5m1eQ6h7HO28M9zmaq57rap",
     "handover_token": "XdmaRMhTBoIVnUlK1F92TTveYpAMjCCZ"
 }

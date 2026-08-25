@@ -13,22 +13,6 @@
     "slack_pinned_ts": "1779930834.410019",
     "slack_announced": true,
     "figma_url": "",
-    "lead": {
-        "active": false,
-        "contact": "",
-        "stage": "hosting",
-        "fish_size": null,
-        "instagram": "",
-        "work": "",
-        "discount": "",
-        "notes": "",
-        "clive_hours": 0.0,
-        "gabe_hours": 0.0,
-        "contacted": false,
-        "original_lead_id": null,
-        "created_at": 1779960834,
-        "updated_at": 1779960834
-    },
     "favicon": "favicon.svg",
     "intake_token": "hdqLh3rhMn89dkqAfW4SKlo_ptAOqG3z"
 }
