@@ -1,0 +1,81 @@
+# Auto-Code agent composition — DeepSeek Harness plugin tree.
+#
+# Handed to the SDK runtime as DSH_CORDIS_CONFIG. This is a full replacement
+# for the runtime's bundled default, not an overlay: every plugin the agent
+# gets is listed here, so anything absent is genuinely absent at runtime.
+#
+# The point of this file is what it LEAVES OUT. The bundled default mounts
+# `dsh-bash-local`, which registers a model-facing `bash` tool. Artists edit
+# their own sites through this agent, so it gets file tools and no shell —
+# not a shell behind an allow-list. There is no command to escape from, which
+# is a much shorter thing to reason about than the allow-list opencode ran
+# behind.
+#
+# Verified 2026-08-24 against deepseek-harness-sdk 0.1.1rc1: a two-page edit
+# completes using only read/edit/glob and never calls a shell tool, because
+# no shell tool is registered for it to call.
+#
+# Every plugin named here is baked into the SDK runtime binary
+# (dsh-jsonrpc-agent-pkg-linux-x64); this file cannot pull in new code.
+
+- id: sdk-jsonrpc-server
+  name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
+
+- id: agent-core
+  name: '@deepseek-ai/dsh-agent-spine-demo'
+  config:
+    workspaceContext:
+      maxBytes: 65536
+
+# Resolves DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL from the environment. Adze
+# points those at OpenRouter (see dsh_agent.py) so the existing OpenRouter
+# key is the only credential involved and no new dependency is introduced.
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek'
+
+- id: sessions
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js process.env.DSH_SESSION_ROOT ?? './.sessions'
+
+- id: session-checkpoints
+  name: '@deepseek-ai/dsh-session-checkpoint-policy'
+
+# Process-spawning *service*, not a model-facing tool. It is here only
+# because `dsh-tool-fs-search` shells out to the bundled ripgrep and refuses
+# to activate without it — omit this and the whole plugin tree fails to boot
+# with "dsh-tool-fs-search: pending (waiting for service: subprocess)".
+#
+# Note what is still absent: `dsh-bash-local`, which is the plugin that
+# registers the model-facing `bash` tool. The model cannot reach this service
+# directly; only fs-search can.
+- id: subprocess
+  name: '@deepseek-ai/dsh-subprocess-local'
+
+# DSH_CWD is set per-artist to that artist's directory, so the filesystem
+# provider cannot see another artist's files.
+- id: fs-local
+  name: '@deepseek-ai/dsh-fs-local'
+  config:
+    cwd: !!js process.env.DSH_CWD ?? process.cwd()
+
+# fs-local on its own exposes no model-facing tools; these three are the
+# entire tool surface the model gets.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+# `sampleOverCapGlobResults` is required and has no default — omit it and the
+# whole tree fails to boot with a cordis ValidationError, not a warning.
+# false = an over-cap glob keeps the modification-time-ordered head, which
+# suits an artist site (the pages someone just touched) better than sampling
+# across top-level entries.
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+    maxResults: 200
+
+- id: tool-str-replace-editor
+  name: '@deepseek-ai/dsh-tool-str-replace-editor'
+  config:
+    maxOutputChars: 16000

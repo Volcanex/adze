@@ -1,7 +1,7 @@
 // Widget: Edit Photos — Nina's custom tool
 // Lists every photo on the home page with editable location / year / caption,
 // plus an "Add photo" uploader that appends a new entry.
-// Saves by rewriting the <script id="photo-data"> JSON block in home/content.md.
+// Saves by rewriting the <script id="photo-data"> JSON block in home/content.html.
 
 (function(ctx) {
     const container = ctx.container;
@@ -144,7 +144,7 @@
 
             const m = pageContent.match(/<script\b[^>]*id=["']photo-data["'][^>]*>\s*([\s\S]*?)\s*<\/script>/i);
             if (!m) {
-                listEl.innerHTML = `<p style="color:var(--danger, #c0392b);font-size:13px;padding:20px;">Can't find the photo data block on the home page. Make sure home/content.md has a <code>&lt;script type="application/json" id="photo-data"&gt;</code> block.</p>`;
+                listEl.innerHTML = `<p style="color:var(--danger, #c0392b);font-size:13px;padding:20px;">Can't find the photo data block on the home page. Make sure home/content.html has a <code>&lt;script type="application/json" id="photo-data"&gt;</code> block.</p>`;
                 return;
             }
             try {

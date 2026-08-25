@@ -40,7 +40,7 @@ def workspace(slug, config, content, templates=None, extra_pages=None):
         for rel, body in (extra_pages or {}).items():
             d = base / rel
             d.mkdir(parents=True, exist_ok=True)
-            (d / 'content.md').write_text(body)
+            (d / 'content.html').write_text(body)
             (d / 'config.json').write_text('{}')
         os.chdir(root)
         yield base
@@ -71,7 +71,7 @@ def test_render_single():
     with workspace('t', cfg, content, tpl) as base:
         gen = content_admin.make_render('t', cfg)()
         assert gen == ['links']
-        out = (base / 'links' / 'content.md').read_text()
+        out = (base / 'links' / 'content.html').read_text()
         assert '<a href="https://x">Insta</a>' in out
 
 
@@ -89,8 +89,8 @@ def test_render_per_item():
     with workspace('t', cfg, content, tpl) as base:
         gen = content_admin.make_render('t', cfg)()
         assert set(gen) == {'works', 'works/a', 'works/b'}
-        assert (base / 'works' / 'a' / 'content.md').read_text() == '<html>A</html>'
-        assert '2 works' in (base / 'works' / 'content.md').read_text()
+        assert (base / 'works' / 'a' / 'content.html').read_text() == '<html>A</html>'
+        assert '2 works' in (base / 'works' / 'content.html').read_text()
 
 
 # ── render: none mode publishes to assets/data ───────────────────────────────────
@@ -118,7 +118,7 @@ def test_prune_spares_hand_authored_root_siblings():
                    tpl, extra_pages={'home': '<html>HOME</html>'}) as base:
         g1 = content_admin.make_render('t', cfg)()
         (base / GENERATED_MANIFEST).write_text(json.dumps({'pages': g1}))
-        assert (base / 'home' / 'content.md').exists()
+        assert (base / 'home' / 'content.html').exists()
         assert (base / 'gig').exists() and (base / 'fest').exists()
         # remove 'fest' from the data, rebuild
         (base / 'content.json').write_text(json.dumps({'cat': [{'id': 'gig', 'title': 'Gig'}]}))
@@ -126,7 +126,7 @@ def test_prune_spares_hand_authored_root_siblings():
         assert set(g2) == {'gig'}
         assert (base / 'gig').exists()          # kept
         assert not (base / 'fest').exists()     # pruned (was in manifest, now gone)
-        assert (base / 'home' / 'content.md').exists()  # NEVER generated -> NEVER pruned
+        assert (base / 'home' / 'content.html').exists()  # NEVER generated -> NEVER pruned
 
 
 if __name__ == '__main__':

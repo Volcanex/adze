@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Adze Studio — Artist site compiler.
-Compiles artist pages from content.md + config.json into static HTML.
+Compiles artist pages from content.html + config.json into static HTML.
 Supports per-artist compilation for fast, isolated rebuilds.
 """
 
@@ -40,7 +40,7 @@ class AdzeCompiler:
         ]
 
     def get_page_dirs(self, artist_dir):
-        """Get all page directories for an artist (dirs with content.md + config.json).
+        """Get all page directories for an artist (dirs with content.html + config.json).
         Recurses into subdirectories so works/<slug>/ and exhibitions/<slug>/ detail
         pages compile alongside their parent listing pages."""
         skip = {'assets', 'widgets', '__pycache__', '.snapshots', 'backups'}
@@ -50,7 +50,7 @@ class AdzeCompiler:
             for child in sorted(d.iterdir()):
                 if not child.is_dir() or child.name in skip:
                     continue
-                if (child / 'content.md').exists() and (child / 'config.json').exists():
+                if (child / 'content.html').exists() and (child / 'config.json').exists():
                     pages.append(child)
                 walk(child)
 
@@ -58,8 +58,8 @@ class AdzeCompiler:
         return pages
 
     def parse_content(self, page_dir):
-        """Parse content.md into HTML, CSS, and meta tags."""
-        content_file = page_dir / 'content.md'
+        """Parse content.html into HTML, CSS, and meta tags."""
+        content_file = page_dir / 'content.html'
         raw = content_file.read_text(encoding='utf-8')
 
         # Extract CSS
@@ -156,7 +156,7 @@ class AdzeCompiler:
     def _apply_copy_overrides(self, html_content, artist_slug, page_rel):
         """Swap in the artist's copy.json overrides for this page's slots.
 
-        The text in content.md is the default and stays put; copy.json only
+        The text in content.html is the default and stays put; copy.json only
         overrides it, so an artist with no overrides compiles byte-identically
         to before. See _shared/copy_slots.py for the convention.
         """

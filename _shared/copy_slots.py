@@ -1,12 +1,12 @@
 """copy_slots — the bounded copy-override layer for hand-authored artist pages.
 
-An artist page is `artists/<slug>/<page>/content.md`: hand-written HTML + CSS +
+An artist page is `artists/<slug>/<page>/content.html`: hand-written HTML + CSS +
 JS where the editable prose is a handful of text nodes. Marking an element
 `data-copy="<slot-id>"` (its inner text, plain) or `data-copy-rich="<slot-id>"`
 (its inner HTML, restricted to bold/italic/link) makes that content editable
 from the artist admin without exposing the layout.
 
-The markup in content.md stays the DEFAULT — the source of truth for "what it
+The markup in content.html stays the DEFAULT — the source of truth for "what it
 says if nothing overrides it". Overrides live in `artists/<slug>/copy.json`,
 shape `{"<page>": {"<slot-id>": "<value>"}}`, and are applied by compile.py at
 publish time. An absent or empty copy.json therefore renders the site exactly

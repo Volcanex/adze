@@ -40,7 +40,7 @@ its first save and is filtered out of everything published until then. Abandoned
 drafts are swept on list.
 
 Prose on the artist's *hand-authored* pages is editable through a separate,
-bounded layer: elements marked `data-copy` / `data-copy-rich` in content.md are
+bounded layer: elements marked `data-copy` / `data-copy-rich` in content.html are
 overridable from `copy.json`, applied by compile.py. See _shared/copy_slots.py.
 
 `page` may also carry a `config` dict, merged verbatim into the generated page's
@@ -264,7 +264,7 @@ def _clean_item(body, item_schema):
     return out
 
 
-# ── render engine (JSON -> content.md via the artist's Jinja templates) ───────
+# ── render engine (JSON -> content.html via the artist's Jinja templates) ───────
 def _jinja_env(slug):
     if jinja2 is None:
         raise RuntimeError('jinja2 not available')
@@ -277,7 +277,7 @@ def _jinja_env(slug):
 def _write_page(slug, rel, body_html, title, description=None, extra=None):
     d = _artist_dir(slug) / rel
     d.mkdir(parents=True, exist_ok=True)
-    (d / 'content.md').write_text(body_html, encoding='utf-8')
+    (d / 'content.html').write_text(body_html, encoding='utf-8')
     page_config = {'title': title, 'slug': f'artists/{slug}/{rel}'}
     if description:
         page_config['description'] = description
@@ -301,7 +301,7 @@ def _prune_stale(slug, old_pages, current_pages):
         if not rel:
             continue
         d = _artist_dir(slug) / rel
-        if d.is_dir() and (d / 'content.md').exists():
+        if d.is_dir() and (d / 'content.html').exists():
             shutil.rmtree(d, ignore_errors=True)
 
 
@@ -445,7 +445,7 @@ _PAGE_SKIP = {'assets', 'widgets', 'templates', '_templates', '__pycache__',
 
 
 def _page_dirs(slug):
-    """Every page dir under the artist (a dir with content.md + config.json),
+    """Every page dir under the artist (a dir with content.html + config.json),
     matching what compile.py compiles."""
     base = _artist_dir(slug)
     found = []
@@ -454,7 +454,7 @@ def _page_dirs(slug):
         for child in sorted(d.iterdir()):
             if not child.is_dir() or child.name in _PAGE_SKIP or child.name.startswith('.'):
                 continue
-            if (child / 'content.md').exists() and (child / 'config.json').exists():
+            if (child / 'content.html').exists() and (child / 'config.json').exists():
                 found.append(child)
             walk(child)
 
@@ -468,7 +468,7 @@ def _page_label(key):
 
 
 def _scan_copy_slots(slug):
-    """[(page_key, [slot, ...]), ...] read out of the artists' own content.md.
+    """[(page_key, [slot, ...]), ...] read out of the artists' own content.html.
     The source is the schema — copy.json only ever overrides it."""
     if external_artist is not None and external_artist.is_remote(slug):
         # External artists live in a remote Seed repo; their local dir is a
@@ -479,7 +479,7 @@ def _scan_copy_slots(slug):
     out = []
     for d in _page_dirs(slug):
         try:
-            src = (d / 'content.md').read_text(encoding='utf-8')
+            src = (d / 'content.html').read_text(encoding='utf-8')
         except OSError:
             continue
         slots = copy_slots.find_slots(src)
@@ -883,7 +883,7 @@ def create_blueprint(artist_slug):
             current = dict(store.get(page) or {})
             for sid, value in values.items():
                 if value is None:
-                    current.pop(sid, None)  # null reverts to the content.md default
+                    current.pop(sid, None)  # null reverts to the content.html default
                 elif sid in rich.get(page, ()):
                     # The domain decides target/rel: a link to the artist's own
                     # site must not open in a new tab.

@@ -22,6 +22,39 @@ nothing to do with the fetch — the JSON loaded fine. Read the error after the
 colon, not the sentence in front of it. Nothing appears in the server logs
 because nothing failed on the server.
 
+## Two orientations, and why the layout maths differ
+
+The grid has two modes, toggled in the header (`ROWS`/`VERT_COLS` in
+`assets/works-grid.js`):
+
+- **Horizontal** — desktop default. `ROWS = 2` fixed rows scrolling sideways;
+  tile size is derived from *viewport height ÷ ROWS* so two rows exactly fill
+  the screen. Clicking a work opens `.ll-iso2` beside the tile, taking the two
+  columns to its right.
+- **Vertical** — mobile always, plus the desktop toggle. Columns scrolling
+  down; tile size is derived from *available width ÷ column count*
+  (`vertCols()`: 3 wide, 2 under 1000px, 2 on mobile), capped at
+  `VERT_TW_MAX` so a wide monitor centres the grid instead of stretching it.
+  Clicking a work expands the **row**: `.ll-band` opens full-width beneath it
+  and the rows below slide down by `bandH`.
+
+**The two sizing rules are not interchangeable.** Vertical briefly used the
+horizontal rule (height ÷ ROWS), which left the grid's width unrelated to the
+viewport's: a ~250–400px dead gutter on wide screens, and below ~1200px a grid
+*wider* than its own `overflow-x: hidden` container, silently clipping the last
+column off the page with no way to scroll to it. If you touch `fitTiles()`,
+keep the branches separate.
+
+`.ll-band` replaced an earlier fixed bottom sheet (`position: fixed; bottom: 0`)
+that covered up to 50vh of the grid and detached the text from the work it
+described. Don't reintroduce it — the reason the side panel can't simply be
+reused in vertical is that a rightmost-column tile pushes it off the grid, and
+expanding the row is what solves that at any column.
+
+`bandH` feeds `sizeGrid()` and `snapAll()`; the band is re-measured on
+`bandImg` load because until the full-size image decodes it is only as tall as
+its text. That re-measure must not re-scroll (`positionBand(..., false)`).
+
 ## ⚠ `image` has two shapes — never assume string
 
 Per work, `image` is **either**:

@@ -37,10 +37,11 @@ same contract as `as-` and `af-` below: the strings are literals in the JS and
 the styles live in `admin-shell.css`, so renaming in one place silently
 unstyles.
 
-**The `content.md` renderer must track `compile.py`'s `parse_content`.** That
-file is not markdown despite the extension — the compiler pulls a `<style>`
-block, an `<html>` block and any `<meta>` tags before them, and ignores the
-rest. The viewer splits it the same way and says what each part becomes. If the
+**The `content.html` renderer must track `compile.py`'s `parse_content`.** The
+file is HTML, but only in part — the compiler pulls a `<style>` block, an
+`<html>` block and any `<meta>` tags before them, and ignores the rest. (It was
+`content.md` until 2026-08-25; the extension was a lie the viewer had to
+apologise for in its own copy, so it was renamed to match what the file is.) The viewer splits it the same way and says what each part becomes. If the
 compiler ever learns a fourth region, this is the second place to teach.
 
 Two smaller rules, both load-bearing:
@@ -53,6 +54,12 @@ Two smaller rules, both load-bearing:
   spans that run across line breaks, so splitting its output on `\n` to build
   numbered rows tears them in half. Turning wrap on hides the gutter rather
   than letting it lie about which line you are on.
+
+The Files list carries a small **(i)** beside its search (`as-files__help` →
+`showFilesHelp()` in `admin-landing.js`) that explains the folder-per-page shape,
+`content.html`, `config.json` and `assets/` in an artist's terms. It renders into
+the view pane, so picking any file simply replaces it — no dismiss state to keep.
+Its file names must stay in step with `compile.py`.
 
 Highlighting is optional: no `window.hljs` means plain text, never a blank pane.
 The landing page also serves `vendor/qrcode.js` for the site QR — dark modules
@@ -69,7 +76,7 @@ surface 404s while the other doesn't.
 
 ## The landing page is a five-section app
 
-`admin-landing.js` routes on the hash (`#/files/home/content.md`), so a view and
+`admin-landing.js` routes on the hash (`#/files/home/content.html`), so a view and
 the file inside it survive a reload and answer the back button. The pill row is
 `.as-nav`/`.as-tab` — the content admin's own navigation, not a second
 vocabulary — and on a phone it scrolls sideways rather than wrapping onto three

@@ -22,12 +22,23 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   block in each), and since the two share `admin-shell.css`, a file added to
   one and not the other renders the same stylesheet two ways with nothing
   failing. Don't reintroduce local copies of these constants.
-- `autocode_proxy.py` — Flask reverse-proxy for the Auto-Code chat tab.
-  Spawns `opencode serve` inside each per-artist sandbox container and
-  forwards REST + `/global/event` SSE under `/api/adze/autocode/*`. The
-  proxy unwraps opencode's `{directory, project, payload}` SSE envelope
-  so the browser receives clean events. Replaced the old TUI-in-xterm
-  bridge (`auto_code_bridge.py`, retired).
+- `autocode_proxy.py` — HTTP + SSE surface for the Auto-Code chat tab,
+  under `/api/adze/autocode/*`. Owns auth, the per-artist system prompt,
+  worktree tabs, and compile-on-publish; delegates the agent itself to
+  `dsh_agent`. **No longer a reverse-proxy** — it used to spawn
+  `opencode serve` in a per-artist container and forward to it (and before
+  that, a TUI-in-xterm bridge, `auto_code_bridge.py`).
+- `dsh_agent.py` — the agent backend (since 2026-08-24): DeepSeek Harness
+  via its Python SDK, running as a subprocess of the Flask process. Holds
+  one session per artist, and translates harness notifications into
+  **opencode's event schema** so `dashboard.html` needs no changes — its
+  `dispatch()` is still the consumer, so changing an event shape here
+  breaks the browser. Model is `deepseek/deepseek-v4-flash` over the
+  existing OpenRouter key.
+- `dsh_cordis.yml` — the agent's plugin composition, handed to the runtime
+  as `DSH_CORDIS_CONFIG`. Notable for what it omits: no `dsh-bash-local`,
+  so **the model has no shell** — file tools are its entire surface. It is
+  a full replacement for the runtime's bundled default, not an overlay.
 - `asset_store.py` — shared asset-storage primitives behind **both** the
   admin dashboard (`/api/adze/upload-file`) and the intake portal
   (`/api/adze/intake/<slug>/<token>/upload`): `safe_rel()` (per-segment
@@ -47,20 +58,26 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   (`filesFromInput`/`filesFromDataTransfer` → `upload`), and one-time CSS
   (`injectCSS`). Each page keeps its own tile/label markup; only the new
   folder code is shared.
-- `sandbox.py` — shared container-lifecycle helpers (name, network,
-  volume mounts, `ensure_terminal_container`). Used by `autocode_proxy`
-  and `artist_repos`. Container naming (`adze-terminal-<slug>`) is
-  historical — it predates Terminal Access's retirement (see below) and
-  is now Auto-Code's sandbox only.
-- `docs/` — the **Auto-Code / opencode context**. Load-bearing.
+- `sandbox.py` — per-artist container-lifecycle helpers. **Dead code as of
+  2026-08-24**: its last two importers (`autocode_proxy`, `artist_repos`)
+  both stopped using containers when Auto-Code moved in-process. Left on
+  disk rather than deleted in the same change; delete it once nothing has
+  missed it. Do not confuse with `artists/sandbox/`, which is a test
+  artist, or the `/api/sandbox/*` URL namespace, which is unrelated.
+- `docs/` — the **Auto-Code context**. Load-bearing.
 
 ## `docs/` is load-bearing — do not delete
 
 `autocode_proxy.py` (`_build_system_prompt`) builds a per-artist context
 from `_shared/docs/*.md` (in filename order), then appends artist
-config/page information before launching `opencode serve` inside the
-artist's sandbox container. This is how Auto-Code learns Adze
-conventions.
+config/page information. It is prepended to the **first** message of a
+session only — the harness keeps conversation state after that, so
+re-sending it every turn would just re-buy the same tokens. This is how
+Auto-Code learns Adze conventions.
+
+Note the docs are written for an agent that had a shell. The current one
+does not (see `dsh_cordis.yml`), so any instruction to run a command is
+one the model cannot follow.
 
 - **To update Auto-Code's behaviour:** edit or add a numbered file
   (`NN-name.md`) in `_shared/docs/`. See `_shared/docs/DOCS_GUIDE.md`.
@@ -235,6 +252,51 @@ in client comms); "draft" means substitution only, sending is manual.
   `_shared/` only.
 - Changes here take effect after `docker restart adze-flask` (source is
   bind-mounted, no rebuild needed).
+- `compile.py` and `flask_server.py` are bind-mounted **as single files**, so
+  they are pinned to an inode. `sed -i` (and any editor that writes a temp file
+  and renames it over the target) makes a new inode and the container keeps
+  running the *old* file with no warning. Restart before trusting an edit to
+  either, and verify with `docker exec adze-flask grep … /app/compile.py`.
+  Everything under the directory mounts (`_shared/**`, `artists/**`) propagates
+  normally.
+- `compile.py` reporting `Done: 0 pages` is an alarm, not a no-op — it prunes
+  output it believes is orphaned, so a page lookup that matches nothing will
+  delete the built site.
+- **`_file_kind` (`admin_api.py`) returns `page` for `content.html`**, not
+  `text`. The dashboard's whole page-edit flow gates on that kind (the split
+  CSS/HTML editors, the save dispatch, the file-tree default selection), and
+  `admin-landing.js` lists it in `TEXT_KINDS`. `markdown` now means a file that
+  really is markdown. Changing the classifier without changing those consumers
+  silently drops artists into the raw text editor for their own pages.
+
+## Manual Edit code editors (`dashboard.html`, 2026-08-25)
+
+`cssEditor`, `htmlEditor`, `rawFileEditor` and `jsEditor` are still plain
+`<textarea>`s — same ids, same `.value` — wrapped at DOMContentLoaded by
+`enhanceCodeEditor()` in a highlight underlay (`.code-hl`), a line-number
+gutter and a status bar. Nothing about the load/save paths changed; they act on
+the same nodes as before.
+
+Three things will break it if you touch them without care:
+
+- **The gutter is its own `<pre>`.** hljs emits spans that run across line
+  breaks, so building numbered rows by splitting its output on `\n` tears them
+  in half. Same rule as `shell/file-viewer.js`.
+- **`el.value = …` does not fire `input`**, and the dashboard populates these
+  editors that way on every open. `enhanceCodeEditor` forwards the `value`
+  property through a wrapper that repaints; drop that and the colour layer
+  keeps showing the previously opened file.
+- **Typography must stay identical between the textarea and `.code-hl`** — font,
+  size, line-height, padding, `tab-size`, `white-space` — or the caret drifts
+  off the text. `#rawFileEditor` had inline typography for exactly this reason;
+  it now lives in `.code-wrap.is-md`. `.js-editor-block textarea` is more
+  specific than `.code-wrap textarea` and declared later, so the widget editor
+  carries an explicit override.
+
+Highlighting is best-effort: no `window.hljs`, no known language, or a file over
+`CODE_MAX_HL` (120 KB) drops to `.is-plain` — plain text with the gutter intact,
+never a blank pane. The highlighter is the vendored copy, served same-origin by
+`/api/adze/vendor/highlight.js` so the editors work with no CDN reachable.
 
 ## `copy_slots.py` — the sitewide copy override layer (2026-07-31)
 
@@ -243,7 +305,7 @@ text are editable (`data-copy` / `data-copy-rich` — see
 [../artists/CLAUDE.md](../artists/CLAUDE.md)). This module scans a page for
 slots, and substitutes overrides from `artists/<slug>/copy.json` at compile time.
 
-**The text in `content.md` stays the default and the source of truth.**
+**The text in `content.html` stays the default and the source of truth.**
 `copy.json` is an override layer only, so an artist with no overrides compiles
 byte-identically — verified: after marking rose, 42 of her 45 pages were
 byte-identical and the three that changed differed only by the inert attribute.

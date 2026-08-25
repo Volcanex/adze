@@ -1,7 +1,8 @@
 # Artists — coordination with Auto-Code
 
-The dashboard's **Auto-Code** tab runs `opencode serve` inside a per-artist
-sandbox container (`adze-terminal-<slug>`, name is historical) and edits
+The dashboard's **Auto-Code** tab runs a DeepSeek Harness agent in-process
+inside `adze-flask` (since 2026-08-24; previously `opencode serve` in a
+per-artist `adze-terminal-<slug>` container) and edits
 files in `artists/<slug>/` directly via the host bind-mount. **You and
 Auto-Code are working on the same files. Last write wins.** Generator
 scripts that bulk-`Write` page files have already wiped live dashboard
@@ -16,15 +17,15 @@ still describing a tmux session, `/terminal` Socket.IO namespace, or
 
 Before you `Write` (or regenerate via a script that `Write`s) anything under `artists/<slug>/`:
 
-1. `docker ps --filter label=adze.artist_slug=<slug> --format '{{.Names}}'` — check whether that artist's sandbox container is running (a strong signal Auto-Code has been active recently; it evicts after 30 min idle).
+1. `docker exec adze-flask sh -c 'ls -la /app/.autocode-worktrees/.sessions/<slug>/ 2>/dev/null'` — a recently-modified session log means Auto-Code has been active. **The old `docker ps --filter label=adze.artist_slug=<slug>` check is dead** — there is no per-artist container any more, so it returns nothing for every artist and tells you nothing. Sessions evict after 15 min idle (`ADZE_DSH_IDLE_EVICT`), but eviction only reclaims the runtime subprocess; the transcript stays.
 2. If it's running, assume someone may have unsaved context or pending edits. **Read the live files you plan to touch** and either integrate the current state into your generator before regenerating, or use targeted `Edit` calls for just the lines you need to change.
 3. If unsure, ask the user. Do not regenerate over fresh dashboard/Auto-Code work.
 
 ## Default approach: `Edit`, not `Write`
 
-For changes to an existing artist, prefer scoped `Edit` calls on the live `content.md`. Reach for a generator script only when scaffolding a new artist or doing a true rewrite the user has explicitly approved.
+For changes to an existing artist, prefer scoped `Edit` calls on the live `content.html`. Reach for a generator script only when scaffolding a new artist or doing a true rewrite the user has explicitly approved.
 
-If you do keep a per-artist generator script (e.g. `/tmp/gen_<slug>.py`), treat it as **scaffolding only** — once the user has been editing in the browser or via Auto-Code, the live `content.md` is the source of truth. Regenerating means re-importing the live state into the script first.
+If you do keep a per-artist generator script (e.g. `/tmp/gen_<slug>.py`), treat it as **scaffolding only** — once the user has been editing in the browser or via Auto-Code, the live `content.html` is the source of truth. Regenerating means re-importing the live state into the script first.
 
 ## What Auto-Code changes
 
@@ -44,7 +45,7 @@ Slot ids are lowercase-kebab, derived from meaning (`bio`,
 and never from position: an id like `block-3` breaks the moment anyone
 reorders the page.
 
-**The text in `content.md` stays the default and the source of truth.**
+**The text in `content.html` stays the default and the source of truth.**
 `artists/<slug>/copy.json` is an override layer only, so an artist with no
 overrides compiles byte-identically to before the slot existed. Verified:
 after marking rose, 42 of her 45 compiled pages were byte-identical and the
@@ -53,18 +54,18 @@ three that changed differed only by the inert attribute itself.
 **Mark the SOURCE, never the generated output.** The distinction is not
 "hand-authored pages only" — it is *which file you put the attribute in*:
 
-- A hand-authored page → mark its `content.md`. That file is the source.
+- A hand-authored page → mark its `content.html`. That file is the source.
 - A **generated** page (one listed in `.generated.json`) → mark its
   **Jinja template** under `artists/<slug>/templates/`. The template is
-  the source; `content.md` is output.
-- Never mark a generated page's `content.md` directly. That file is
+  the source; `content.html` is output.
+- Never mark a generated page's `content.html` directly. That file is
   rewritten from the template on every publish, so the attribute lasts
   until the next one.
 
 Marking the template works because of the order inside a rebuild:
-`render()` regenerates `content.md` **from the template** (so the
+`render()` regenerates `content.html` **from the template** (so the
 attribute is re-emitted every time), `_scan_copy_slots` then discovers the
-slot from `content.md`, and `compile.py` applies the `copy.json` override
+slot from `content.html`, and `compile.py` applies the `copy.json` override
 on the way into `output/`. Verified end to end on jackdt's `/music/` lede
 on 2026-08-05: the override reached the live page, survived two further
 publishes, and reverted cleanly to the template's default when cleared.

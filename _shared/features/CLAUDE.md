@@ -57,7 +57,7 @@ To give an artist a custom admin:
    `design-language/adze/CLAUDE.md` for the full contract.
 4. Write the per-artist Jinja templates named in `page.template` /
    `index_template`, under `artists/<slug>/templates/`. These hold the design;
-   the engine fills them with data. Template output **is** the page `content.md`
+   the engine fills them with data. Template output **is** the page `content.html`
    (a `<style>…</style>` + `<html>…</html>` blob). Autoescape is on; use
    `{{ x|safe }}` for pre-sanitised richtext. Relative asset URLs must match page
    depth (`../assets/…` at `<parent>/`, `../../assets/…` at `<parent>/<id>/`).
@@ -135,7 +135,7 @@ machinery — no new engine code — as a **singleton** content type:
 1. Declare a content type (e.g. `"copy"`) whose `item` fields are the editable
    text blocks (`text` for one-liners, `textarea` for multi-line). `page.mode:
    "single"`, `page.parent` = the page's dir (e.g. `"home"`).
-2. Convert that page's hand-authored `content.md` into the type's
+2. Convert that page's hand-authored `content.html` into the type's
    `page.template`. Keep **all** the markup and `<style>` verbatim; replace only
    the copy with `{{ copy.<field> }}`, where `{% set copy = items[0] if items
    else {} %}` treats the single item as the record.

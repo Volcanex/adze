@@ -1,0 +1,14 @@
+{
+    "name": "OB Stays",
+    "slug": "tom",
+    "domain": "obstays.adze.studio",
+    "favicon": "favicon.svg",
+    "description": "Premium villas and property management. Full-service short-term rental management for owners who would rather earn than manage.",
+    "contact_email": "",
+    "seo": {
+        "type": "Organization",
+        "name": "OB Stays",
+        "description": "Premium villas and property management.",
+        "image": "og-share.jpg"
+    }
+}

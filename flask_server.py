@@ -859,8 +859,8 @@ window.addEventListener('pagehide',send);
                 with open(post_dir / 'config.json', 'w') as f:
                     json.dump(config, f, indent=4)
 
-                # Create content.md
-                with open(post_dir / 'content.md', 'w') as f:
+                # Create content.html
+                with open(post_dir / 'content.html', 'w') as f:
                     f.write(data['content'])
 
                 # Trigger compile if requested
@@ -920,9 +920,9 @@ window.addEventListener('pagehide',send);
                     with open(config_file, 'w') as f:
                         json.dump(config, f, indent=4)
 
-                # Update content.md if provided
+                # Update content.html if provided
                 if 'content' in data:
-                    with open(post_dir / 'content.md', 'w') as f:
+                    with open(post_dir / 'content.html', 'w') as f:
                         f.write(data['content'])
 
                 # Trigger compile if requested

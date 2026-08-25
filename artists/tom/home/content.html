@@ -1,0 +1,1047 @@
+<meta name="theme-color" content="#0B1F3A">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="OB Stays — premium villas and property management">
+<meta property="og:locale" content="en_GB">
+
+<style>
+@font-face {
+    font-family: 'Cormorant Garamond';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('../assets/CormorantGaramond-Variable.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('../assets/Inter-Variable.woff2') format('woff2');
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+/* Anchor targets must clear the sticky nav, or they land underneath it. */
+[id] { scroll-margin-top: 96px; }
+
+/* ...but #plans and #contact are section elements carrying a full
+   --section-pad of top padding, so stopping 96px above the *section*
+   parks you on empty background with the heading far below. Offset by the
+   padding instead, landing the eyebrow ~24px under the nav. The clamp
+   makes this self-adjusting: it stays correct as --section-pad shrinks on
+   narrow screens. */
+#plans, #contact { scroll-margin-top: calc(101px - var(--section-pad)); }
+
+body {
+    font-family: var(--text-font);
+    font-size: var(--body-size);
+    line-height: var(--body-line-height);
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+img { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+
+/* ─────────────────────────── primitives ─────────────────────────── */
+
+.wrap {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 0 var(--gutter);
+}
+
+.section { padding: var(--section-pad) 0; }
+.section--sand { background: var(--surface-sand); }
+.section--white { background: var(--bg-alt); }
+.section--deep { background: var(--bg-deep); color: var(--text-on-deep); }
+
+.eyebrow {
+    font-size: var(--eyebrow-size);
+    font-weight: 600;
+    letter-spacing: var(--eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    margin-bottom: 1.1rem;
+}
+.section--deep .eyebrow { color: var(--gold); }
+
+h1, h2, h3, .display {
+    font-family: var(--display-font);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -0.005em;
+}
+
+h2 { font-size: var(--h2-size); }
+
+h3 {
+    font-family: var(--text-font);
+    font-size: var(--h3-size);
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0;
+}
+
+p { color: var(--text-muted); }
+.section--deep p { color: var(--text-on-deep-muted); }
+
+.head { text-align: center; max-width: var(--content-narrow); margin: 0 auto 3.5rem; }
+.head__sub { margin-top: 1.1rem; font-size: 1.02rem; }
+
+.btn {
+    display: inline-block;
+    font-family: var(--text-font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.95rem 2rem;
+    border-radius: var(--radius);
+    background: var(--gold);
+    color: var(--navy);
+    border: 1px solid var(--gold);
+    cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.btn:hover { background: var(--gold-deep); border-color: var(--gold-deep); transform: translateY(-1px); }
+
+.btn--ghost { background: transparent; color: var(--navy); border-color: var(--border); }
+.btn--ghost:hover { background: var(--navy); border-color: var(--navy); color: var(--ivory); }
+
+.btn--onDeep { background: var(--gold); color: var(--navy); }
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.75rem;
+}
+
+.grid { display: grid; gap: 1.25rem; }
+.grid--4 { grid-template-columns: repeat(4, 1fr); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+
+.ico {
+    color: var(--gold-deep);
+    margin-bottom: 1.5rem;
+    line-height: 0;          /* svg is inline by default; kills the baseline gap */
+}
+.ico svg {
+    width: 30px; height: 30px; display: block;
+    stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* ─────────────────────────── nav ─────────────────────────── */
+
+.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(247, 244, 237, 0.92);
+    backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--border);
+}
+.nav__in {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1.5rem; height: 76px;
+}
+.nav__logo img { height: 46px; width: auto; }
+.nav__links { display: flex; gap: 2rem; }
+.nav__links a {
+    font-size: 0.88rem; font-weight: 500; color: var(--navy-soft);
+    transition: color 0.15s ease;
+}
+.nav__links a:hover { color: var(--gold-deep); }
+.nav .btn { padding: 0.7rem 1.4rem; font-size: 0.84rem; }
+
+/* ─────────────────────────── hero ─────────────────────────── */
+
+.hero {
+    position: relative;
+    min-height: min(78vh, 680px);
+    display: flex; align-items: center;
+    background: var(--navy);
+    overflow: hidden;
+}
+.hero__bg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+}
+.hero__scrim {
+    position: absolute; inset: 0;
+    background:
+        linear-gradient(90deg, rgba(11,31,58,0.90) 0%, rgba(11,31,58,0.72) 45%, rgba(11,31,58,0.30) 100%),
+        linear-gradient(180deg, rgba(11,31,58,0.45) 0%, rgba(11,31,58,0.20) 40%, rgba(11,31,58,0.60) 100%);
+}
+/* 880 not 760: "Trust Us With Your Property." needs 824px at the 72px
+   display size, and at 760 it wrapped with "Property." orphaned on its
+   own line. The lede keeps its own narrower measure. */
+.hero__in { position: relative; padding: 5.5rem 0; max-width: 880px; }
+.hero .eyebrow { color: var(--sand); }
+.hero h1 {
+    font-size: var(--h1-size);
+    color: var(--ivory);
+    margin-bottom: 1.1rem;
+}
+.hero__sub {
+    font-family: var(--display-font);
+    font-size: clamp(1.35rem, 2.6vw, 1.95rem);
+    font-weight: 400; font-style: italic;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+}
+.hero__lede {
+    color: rgba(247, 244, 237, 0.86);
+    font-size: 1.05rem; max-width: 33rem; margin-bottom: 2.25rem;
+}
+
+/* ─────────────────────────── compare table ─────────────────────────── */
+
+.compare {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface);
+    max-width: 980px; margin: 0 auto;
+}
+.compare__h {
+    font-size: var(--eyebrow-size); font-weight: 700;
+    letter-spacing: var(--eyebrow-tracking); text-transform: uppercase;
+    padding: 1rem 1.5rem;
+    display: flex; align-items: center; gap: 0.6rem;
+}
+.compare__h--diy { background: var(--surface-sand); color: var(--navy-soft); }
+.compare__h--us  { background: var(--navy); color: var(--ivory); }
+.compare__cell {
+    padding: 1.15rem 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.93rem; color: var(--text-muted);
+}
+.compare__cell--us { background: rgba(11, 31, 58, 0.035); color: var(--navy-soft); }
+.compare__note {
+    max-width: var(--content-narrow); margin: 2.5rem auto 0;
+    text-align: center; font-size: 0.98rem;
+}
+
+/* ─────────────────────────── proof ─────────────────────────── */
+
+.proof {
+    max-width: 620px; margin: 0 auto; text-align: center;
+    background: var(--navy); color: var(--ivory);
+    border-radius: var(--radius-lg);
+    padding: 3.5rem 2.5rem;
+}
+.proof__big {
+    font-family: var(--display-font);
+    font-size: clamp(3rem, 8vw, 4.75rem);
+    line-height: 1; color: var(--gold); margin-bottom: 1.2rem;
+}
+.proof p { color: rgba(247, 244, 237, 0.86); font-size: 1.02rem; }
+.proof__src {
+    margin-top: 1.4rem; font-size: 0.7rem;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: rgba(247, 244, 237, 0.5);
+}
+
+/* ─────────────────────────── steps ─────────────────────────── */
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; position: relative; }
+/* No disc behind the numeral. Large Cormorant figures in gold, matching
+   the 141% proof stat, with a hairline rule to hold the column. */
+.step__n {
+    font-family: var(--display-font);
+    font-size: 3.1rem;
+    font-variant-numeric: lining-nums;
+    line-height: 1;
+    color: var(--gold);
+    padding-bottom: 0.9rem;
+    margin-bottom: 1.1rem;
+    border-bottom: 1px solid var(--border);
+}
+.step h3 { margin-bottom: 0.7rem; }
+.step p { font-size: 0.93rem; }
+
+/* ─────────────────────────── pricing ─────────────────────────── */
+
+.plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; max-width: 900px; margin: 0 auto; }
+.plan { display: flex; flex-direction: column; padding: 2.5rem 2rem; }
+.plan--feature { background: var(--navy); border-color: var(--navy); color: var(--ivory); }
+.plan__name {
+    font-size: var(--eyebrow-size); font-weight: 700;
+    letter-spacing: var(--eyebrow-tracking); text-transform: uppercase;
+    color: var(--navy-soft); margin-bottom: 1.2rem;
+}
+.plan--feature .plan__name { color: var(--sand); }
+.plan__pct {
+    font-family: var(--display-font); font-size: 3.4rem; line-height: 1;
+    color: var(--gold-deep);
+}
+.plan--feature .plan__pct { color: var(--gold); }
+.plan__unit { font-size: 0.82rem; color: var(--text-muted); margin-top: 0.5rem; }
+.plan--feature .plan__unit { color: var(--text-on-deep-muted); }
+.plan__rule { height: 1px; background: var(--border); margin: 1.75rem 0; }
+.plan--feature .plan__rule { background: var(--border-deep); }
+.plan__list { list-style: none; display: grid; gap: 0.85rem; margin-bottom: 2rem; }
+.plan__list li {
+    display: flex; gap: 0.7rem; align-items: flex-start;
+    font-size: 0.92rem; color: var(--text-muted);
+}
+.plan--feature .plan__list li { color: rgba(247, 244, 237, 0.88); }
+.plan__list svg { width: 15px; height: 15px; flex: none; margin-top: 0.28rem; color: var(--gold-deep); }
+.plan--feature .plan__list svg { color: var(--gold); }
+.plan .btn { margin-top: auto; align-self: flex-start; }
+
+/* ─────────────────────────── showcase ─────────────────────────── */
+
+.showcase { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+.showcase__img { position: relative; min-height: 420px; }
+.showcase__img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.showcase__body { background: var(--navy); color: var(--ivory); padding: clamp(2.5rem, 5vw, 4.5rem); display: flex; flex-direction: column; justify-content: center; }
+.showcase__body h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 1.2rem; }
+.showcase__stats { display: flex; gap: 3rem; margin: 2rem 0; }
+.showcase__stat b { font-family: var(--display-font); font-size: 2.2rem; font-weight: 400; color: var(--gold); display: block; line-height: 1; }
+.showcase__stat span { font-size: 0.78rem; letter-spacing: 0.06em; color: var(--text-on-deep-muted); }
+.showcase .btn { align-self: flex-start; }
+
+/* ─────────────────────────── stat bar ─────────────────────────── */
+
+.statbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.statbar__i { padding: 2.5rem 1.25rem; text-align: center; border-right: 1px solid var(--border); }
+.statbar__i:last-child { border-right: none; }
+.statbar__i b { font-family: var(--display-font); font-size: 2.6rem; font-weight: 400; color: var(--gold-deep); display: block; line-height: 1; margin-bottom: 0.6rem; }
+.statbar__i strong { display: block; font-size: 0.88rem; font-weight: 600; color: var(--navy); margin-bottom: 0.25rem; }
+.statbar__i span { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ─────────────────────────── testimonials ─────────────────────────── */
+
+.quote__stars { color: var(--gold); letter-spacing: 0.15em; font-size: 0.85rem; margin-bottom: 1.1rem; }
+.quote__text { font-family: var(--display-font); font-size: 1.22rem; line-height: 1.5; color: var(--navy); margin-bottom: 1.5rem; }
+.quote__who { font-size: 0.88rem; font-weight: 600; color: var(--navy); }
+.quote__meta { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ─────────────────────────── form ─────────────────────────── */
+
+.formcard {
+    background: var(--surface); border-radius: var(--radius-lg);
+    padding: clamp(2rem, 4vw, 3rem); max-width: 520px; margin: 0 auto;
+}
+.field { margin-bottom: 1.25rem; }
+.field label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--navy); margin-bottom: 0.5rem; }
+.field input {
+    width: 100%; font-family: var(--text-font); font-size: 0.95rem;
+    padding: 0.85rem 1rem; color: var(--navy);
+    background: var(--surface-sand);
+    border: 1px solid transparent; border-radius: var(--radius);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+.field input::placeholder { color: #9AA6B4; }
+.field input:focus { outline: none; border-color: var(--gold); background: #fff; }
+.formcard .btn { width: 100%; text-align: center; }
+.form__note { font-size: 0.76rem; color: var(--text-muted); text-align: center; margin-top: 1rem; }
+
+/* ─────────────────────────── faq ─────────────────────────── */
+
+.faq { max-width: 780px; margin: 0 auto; display: grid; gap: 0.75rem; }
+.faq details {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+}
+.faq summary {
+    list-style: none; cursor: pointer;
+    padding: 1.15rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    font-size: 0.95rem; font-weight: 600; color: var(--navy);
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after {
+    content: '+';
+    font-family: var(--text-font); font-size: 1.2rem; font-weight: 400;
+    color: var(--gold-deep);
+    width: 26px; height: 26px; flex: none;
+    display: grid; place-items: center;
+    background: rgba(200, 164, 92, 0.14); border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+.faq details[open] summary::after { content: '\2212'; transform: rotate(180deg); }
+.faq__a { padding: 0 1.5rem 1.4rem; font-size: 0.93rem; color: var(--text-muted); }
+
+/* ─────────────────────────── final cta + footer ─────────────────────────── */
+
+.finalcta { text-align: center; max-width: var(--content-narrow); margin: 0 auto; }
+.finalcta h2 { margin-bottom: 1.2rem; }
+.finalcta p { margin-bottom: 2.25rem; font-size: 1.02rem; }
+
+.footer { background: var(--navy); color: var(--text-on-deep); padding: 4rem 0 2rem; }
+.footer__top { display: grid; grid-template-columns: 1.6fr 1fr 1.2fr; gap: 3rem; }
+.footer__logo img { height: 62px; width: auto; margin-bottom: 1.25rem; }
+.footer p, .footer a { color: var(--text-on-deep-muted); font-size: 0.88rem; }
+.footer a:hover { color: var(--gold); }
+.footer h4 {
+    font-family: var(--text-font); font-size: var(--eyebrow-size);
+    font-weight: 700; letter-spacing: var(--eyebrow-tracking);
+    text-transform: uppercase; color: var(--ivory); margin-bottom: 1.1rem;
+}
+.footer ul { list-style: none; display: grid; gap: 0.6rem; }
+.footer__contact li { display: flex; gap: 0.6rem; align-items: flex-start; }
+.footer__contact svg { width: 15px; height: 15px; flex: none; margin-top: 0.2rem; color: var(--gold); }
+.footer__bottom {
+    margin-top: 3rem; padding-top: 1.5rem;
+    border-top: 1px solid var(--border-deep);
+    display: flex; justify-content: space-between; gap: 1rem;
+    font-size: 0.8rem;
+}
+
+/* ─────────────────────────── motion ───────────────────────────
+   Everything here is opt-in via the `js` class, which the inline script
+   sets before first paint. No JS, or reduced motion, and the page renders
+   in its final state with nothing hidden. */
+
+/* One-shot reveal, applied to whole blocks rather than individual cards,
+   and with no stagger — a row arrives as one piece. The script removes
+   .rv/.rv--in once the transition ends, so these rules never linger to
+   fight :hover transforms. */
+.js .rv { opacity: 0; transform: translateY(16px); }
+.js .rv--in {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.75s cubic-bezier(0.22, 0.61, 0.36, 1),
+                transform 0.75s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Full-bleed bands fade without moving: translating one exposes a strip of
+   the page background above it mid-transition. */
+.js .rv-fade { opacity: 0; transform: none; }
+/* opacity is restated here on purpose: `.js .rv-fade` ties with
+   `.js .rv--in` on specificity and wins on source order, so without it the
+   band stays at opacity 0 forever. */
+.js .rv-fade.rv--in {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.75s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.card { transition: box-shadow 0.32s ease, border-color 0.32s ease; }
+.card:hover {
+    box-shadow: 0 14px 34px rgba(11, 31, 58, 0.08);
+    border-color: var(--sand);
+}
+.plan--feature:hover { box-shadow: 0 14px 34px rgba(11, 31, 58, 0.30); border-color: var(--navy-soft); }
+
+.nav { transition: background 0.3s ease, box-shadow 0.3s ease; }
+.nav--scrolled {
+    background: rgba(247, 244, 237, 0.97);
+    box-shadow: 0 1px 22px rgba(11, 31, 58, 0.07);
+}
+
+/* the counter must not reflow its neighbours as digits are added */
+.proof__big { font-variant-numeric: tabular-nums; }
+
+.faq details[open] .faq__a { animation: faqIn 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes faqIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    /* a single slow settle on load, not a looping ken-burns */
+    .hero__bg { animation: heroSettle 2.8s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+    @keyframes heroSettle { from { transform: scale(1.07); } to { transform: scale(1); } }
+}
+
+/* ─────────────────────────── responsive ─────────────────────────── */
+
+@media (max-width: 960px) {
+    .grid--4 { grid-template-columns: repeat(2, 1fr); }
+    .showcase { grid-template-columns: 1fr; }
+    .showcase__img { min-height: 300px; }
+    .statbar { grid-template-columns: repeat(2, 1fr); }
+    .statbar__i:nth-child(2) { border-right: none; }
+    .statbar__i:nth-child(1), .statbar__i:nth-child(2) { border-bottom: 1px solid var(--border); }
+    .footer__top { grid-template-columns: 1fr 1fr; }
+    .nav__links { display: none; }
+}
+
+@media (max-width: 700px) {
+    .grid--4, .grid--3, .grid--2, .steps, .plans { grid-template-columns: 1fr; }
+    /* Stacked, the two column headers stop meaning anything and a single
+       long list makes you guess which line answers which. So the container
+       loses its frame and every DIY/OB pair becomes its own card, each half
+       carrying a ✗ or ✓. Cell children run 3,4,5,6... so odd = "doing it
+       yourself", even = "with OB Stays". */
+    .compare {
+        grid-template-columns: 1fr;
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+        background: transparent;
+    }
+    .compare__h { display: none; }
+    .compare__cell {
+        display: flex; gap: 0.7rem; align-items: flex-start;
+        border: 1px solid var(--border);
+        background: var(--surface);
+    }
+    .compare__cell::before {
+        content: '\2715'; flex: none; font-weight: 700; font-size: 0.85rem;
+        line-height: 1.7; color: #9AA6B4;
+    }
+    .compare__cell:nth-child(odd) {
+        border-bottom: none;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        margin-top: 0.85rem;
+        padding-bottom: 0.55rem;
+    }
+    .compare__cell:nth-child(even) {
+        border-top: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        padding-top: 0.55rem;
+    }
+    .compare__cell:nth-child(3) { margin-top: 0; }
+    /* Restated: the mobile .compare__cell background above ties on
+       specificity with .compare__cell--us and wins on source order. The
+       tint is layered over white rather than used as the background, or it
+       composites against the sand section behind and turns warm. */
+    .compare__cell--us {
+        background-color: var(--surface);
+        background-image: linear-gradient(rgba(11, 31, 58, 0.035),
+                                          rgba(11, 31, 58, 0.035));
+    }
+    .compare__cell--us::before { content: '\2713'; color: var(--gold-deep); }
+    .showcase__stats { gap: 2rem; }
+    .footer__top { grid-template-columns: 1fr; }
+    .footer__bottom { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; animation: none !important; }
+    .js .rv { opacity: 1 !important; transform: none !important; }
+}
+</style>
+
+<html>
+<script>
+/* OB Stays — motion.
+   Tame by design: one fade-and-rise per element, one counter, no parallax.
+   Degrades to a fully visible page if JS is off or motion is reduced. */
+(function () {
+  var doc = document.documentElement;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  /* Elements that fade in. Single source of truth: the pre-paint hiding
+     rule is built from this same list, so the two cannot drift apart. */
+  var REVEAL = [
+    '.hero__in',
+    '.head',
+    '.grid',          /* a row of cards moves as one, not card by card */
+    '.steps',
+    '.plans',
+    '.compare', '.compare__note',
+    '.proof',
+    '.statbar',
+    '.faq',
+    '.finalcta',
+    '.footer__top'
+  ];
+  /* Full-bleed bands: fade only, no rise. */
+  var REVEAL_FADE = ['.showcase'];
+  var ALL = REVEAL.concat(REVEAL_FADE);
+
+  /* Hide before first paint so nothing flashes in and then out. This block
+     sits at the top of <body>, ahead of every target it hides. */
+  doc.classList.add('js');
+  var hide = document.createElement('style');
+  hide.textContent =
+    REVEAL.map(function (sel) { return '.js ' + sel; }).join(',')
+      + '{opacity:0;transform:translateY(16px)}'
+    + REVEAL_FADE.map(function (sel) { return '.js ' + sel; }).join(',')
+      + '{opacity:0}';
+  document.head.appendChild(hide);
+
+  function ready(fn) {
+    if (document.readyState !== 'loading') fn();
+    else document.addEventListener('DOMContentLoaded', fn);
+  }
+
+  ready(function () {
+    var pending = [].slice.call(document.querySelectorAll(ALL.join(',')));
+    var fadeOnly = [].slice.call(document.querySelectorAll(REVEAL_FADE.join(',')));
+
+    pending.forEach(function (el) {
+      el.classList.add(fadeOnly.indexOf(el) === -1 ? 'rv' : 'rv-fade');
+    });
+    hide.remove();               /* .rv now owns the hidden state */
+
+    function show(el) {
+      el.classList.add('rv--in');
+      /* Clean up afterwards, so the reveal's `transform: none` stops
+         overriding :hover transforms on buttons and cards. */
+      el.addEventListener('transitionend', function done(ev) {
+        if (ev.propertyName !== 'opacity') return;
+        el.removeEventListener('transitionend', done);
+        el.classList.remove('rv', 'rv-fade', 'rv--in');
+      });
+    }
+
+    /* A position sweep rather than an IntersectionObserver. IO never
+       reports an element that was jumped clean over between two frames,
+       and this page's own nav links jump — which stranded elements
+       invisible. Anything at or above the fold gets shown, whether we
+       watched it cross or not. */
+    var counter = initCounter(document.querySelector('.proof__big'));
+    function sweep() {
+      var vh = window.innerHeight;
+      if (pending.length) {
+        pending = pending.filter(function (el) {
+          if (el.getBoundingClientRect().top < vh * 0.92) { show(el); return false; }
+          return true;
+        });
+      }
+      if (counter) {
+        var r = counter.el.getBoundingClientRect();
+        if (r.top < vh * 0.75 && r.bottom > 0) { counter.run(); counter = null; }
+      }
+    }
+
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        sweep();
+        var nav = document.querySelector('.nav');
+        if (nav) nav.classList.toggle('nav--scrolled', window.scrollY > 40);
+        ticking = false;
+      });
+    }
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll, { passive: true });
+    sweep();
+  });
+
+  /* ---- the one counter: the 141% proof stat ---- */
+  function initCounter(el) {
+    if (!el) return null;
+    var final = el.textContent;
+    var m = final.match(/^(\D*)([\d][\d,.]*)(.*)$/);
+    if (!m) return null;
+    var pre = m[1], suffix = m[3];
+    var target = parseFloat(m[2].replace(/,/g, ''));
+    var dp = (m[2].split('.')[1] || '').length;
+    return {
+      el: el,
+      run: function () {
+        var t0 = null, dur = 1600;
+        requestAnimationFrame(function step(now) {
+          if (t0 === null) t0 = now;
+          var p = Math.min((now - t0) / dur, 1);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = pre
+            + (target * eased).toFixed(dp).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+            + suffix;
+          if (p < 1) requestAnimationFrame(step);
+          else el.textContent = final;
+        });
+      }
+    };
+  }
+})();
+</script>
+<nav class="nav">
+  <div class="wrap nav__in">
+    <a class="nav__logo" href="#top" aria-label="OB Stays home">
+      <img src="../assets/logo-wordmark.svg" alt="OB Stays — premium villas and property management">
+    </a>
+    <div class="nav__links">
+      <a href="#top">Home</a>
+      <a href="#plans">Plans</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a class="btn" href="#contact">Get Free Estimate</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <img class="hero__bg" src="../assets/hero-pool-dusk.jpg" alt="Villa terrace and pool at dusk">
+  <div class="hero__scrim"></div>
+  <div class="wrap">
+    <div class="hero__in">
+      <p class="eyebrow">For property owners who are done managing it themselves</p>
+      <h1>Trust Us With Your Property.<br>We&rsquo;ll Handle the Rest.</h1>
+      <p class="hero__sub">More revenue, a fuller calendar, and none of the work</p>
+      <p class="hero__lede">We price it right, fill every night, and handle every guest so your property earns more and you do nothing.</p>
+      <a class="btn" href="#contact">Get My Free Revenue Estimate</a>
+    </div>
+  </div>
+</header>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Why OB Stays</p>
+      <h2>Four Reasons Owners Trust Us With Their Property</h2>
+    </div>
+    <div class="grid grid--4">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.4-3 8.2-7 9-4-.8-7-4.6-7-9V6l7-3z"/></svg></div>
+        <h3>Proven Trust</h3>
+        <p>We&rsquo;ve managed hundreds of properties and the record is open. Ask for occupancy rates, revenue or guest reviews and we&rsquo;ll send them over.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9.5 14.4l1.8 1.8 3.4-3.5"/></svg></div>
+        <h3>Legal Compliance</h3>
+        <p>Fully compliant with Law No.&nbsp;7464. We handle the permits, the registrations and every legal requirement, so you&rsquo;re never the one exposed.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg></div>
+        <h3>Smart Technology</h3>
+        <p>Dynamic pricing, automated guest messaging and a live dashboard, all of it running around the clock.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></div>
+        <h3>Fast Onboarding</h3>
+        <p>From first call to first booking in as little as 7 days. We move quickly, so your property starts earning this season rather than next.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--sand">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">The real cost of DIY</p>
+      <h2>&ldquo;I Can Just Do It Myself.&rdquo; Here&rsquo;s What That Actually Involves</h2>
+      <p class="head__sub">Managing a short-term rental well means being five people at once. Most owners try it for a season, then realise which parts were quietly eating their time or their revenue.</p>
+    </div>
+    <div class="compare">
+      <div class="compare__h compare__h--diy">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Doing it yourself
+      </div>
+      <div class="compare__h compare__h--us">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        With OB Stays
+      </div>
+
+      <div class="compare__cell">Answering guest messages at all hours, or losing bookings to hosts who respond faster</div>
+      <div class="compare__cell compare__cell--us">24/7 multilingual guest communication, average response time under 5 minutes</div>
+
+      <div class="compare__cell">Guessing at nightly rates, or manually checking competitor prices</div>
+      <div class="compare__cell compare__cell--us">AI-driven dynamic pricing updated daily based on demand and local events</div>
+
+      <div class="compare__cell">Coordinating cleaners by text and hoping the property is ready on time</div>
+      <div class="compare__cell compare__cell--us">Managed cleaning and turnover with photo-verified checklists</div>
+
+      <div class="compare__cell">Handling lockouts, damage, and emergencies yourself, any hour</div>
+      <div class="compare__cell compare__cell--us">Field support and issue resolution, 24/7</div>
+
+      <div class="compare__cell">Tracking payouts, fees, and reservations across spreadsheets</div>
+      <div class="compare__cell compare__cell--us">Real-time financial dashboard, so you never chase a number</div>
+    </div>
+    <p class="compare__note">None of this is impossible to do alone. It&rsquo;s just a full-time job you didn&rsquo;t sign up for when you bought the property. We do it as our full-time job, for dozens of properties at once, which is exactly why it costs you less than you&rsquo;d expect.</p>
+  </div>
+</section>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">The numbers don&rsquo;t lie</p>
+      <h2>Short-Term Rental Earns More. Here&rsquo;s the Proof.</h2>
+    </div>
+    <div class="proof">
+      <div class="proof__big">141% More</div>
+      <p>Top performing Tirana apartments earn $1,472+ per month, compared to the $611 per month market average.</p>
+      <div class="proof__src">AirROI 2026 data</div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--sand">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">What sets us apart</p>
+      <h2>Why Property Owners Choose Us</h2>
+      <p class="head__sub">We know the technology side and the hospitality side. A property only performs when both are right.</p>
+    </div>
+    <div class="grid grid--3">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="6" width="20" height="13" rx="2"/><path d="M2 10h20M6 15h4"/></svg></div>
+        <h3>Your Money, Never Delayed</h3>
+        <p>No middlemen, no waiting on payouts. Revenue goes straight to your account on schedule, every month. You keep full financial control throughout.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <h3>Nothing Hidden, Ever</h3>
+        <p>Every fee, every cleaning charge, every commission is visible in your dashboard in real time. Most owners who&rsquo;ve worked with an agency before have been burned by &ldquo;extra costs&rdquo;. We built our reporting so that can&rsquo;t happen here.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></div>
+        <h3>Priced Right, Every Night</h3>
+        <p>Static pricing leaves money on the table more often than not. Our system adjusts your rate daily against demand, seasonality and competitor pricing, so you&rsquo;re not the host still charging last month&rsquo;s price on a sold-out weekend.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Simple 3-step process</p>
+      <h2>From First Call to First Booking</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step__n">1</div>
+        <h3>Free Property Analysis</h3>
+        <p>We visit your property, assess its potential, and give you a realistic revenue projection. Free, and with no obligation.</p>
+      </div>
+      <div class="step">
+        <div class="step__n">2</div>
+        <h3>Contract &amp; Setup</h3>
+        <p>We sign a clear, flexible agreement. Then we handle professional photography, listing creation, pricing setup, and legal registration.</p>
+      </div>
+      <div class="step">
+        <div class="step__n">3</div>
+        <h3>Rental Starts, You Earn</h3>
+        <p>Bookings go live, guests arrive, and revenue flows directly to your account every month. You sit back. We do everything else.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--sand" id="plans">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Our plans</p>
+      <h2>Simple, Transparent Pricing</h2>
+      <p class="head__sub">No hidden fees. No lock-in contracts. You only pay when your property actually earns.</p>
+    </div>
+    <div class="plans">
+      <div class="card plan">
+        <div class="plan__name">Listing Management</div>
+        <div class="plan__pct">15%</div>
+        <div class="plan__unit">commission on rental income</div>
+        <div class="plan__rule"></div>
+        <ul class="plan__list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Professional listing creation &amp; optimisation</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Dynamic pricing management</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Direct payments to your account</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Monthly financial reporting</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Flexible contracts, cancel anytime</li>
+        </ul>
+        <a class="btn btn--ghost" href="#contact">Learn More</a>
+      </div>
+      <div class="card plan plan--feature">
+        <div class="plan__name">Full Management</div>
+        <div class="plan__pct">25%</div>
+        <div class="plan__unit">commission on rental income</div>
+        <div class="plan__rule"></div>
+        <ul class="plan__list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Everything in Listing Management</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>24/7 guest check-in &amp; support</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Full guest communication management</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Professional cleaning &amp; maintenance</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Detailed financial reporting &amp; analytics</li>
+        </ul>
+        <a class="btn" href="#contact">Learn More</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="showcase">
+  <div class="showcase__img">
+    <img src="../assets/villa-stone-night.jpg" alt="Stone villa lit at night beside its pool">
+  </div>
+  <div class="showcase__body">
+    <p class="eyebrow">Real properties, real results</p>
+    <h2>Every Property We Manage Gets the Full-Service Treatment</h2>
+    <p>Professional photography, multi-platform listings, dynamic pricing, 24/7 guest support, and verified cleaning after every stay. This isn&rsquo;t a side hustle for us. It&rsquo;s the only thing we do.</p>
+    <div class="showcase__stats">
+      <div class="showcase__stat"><b>68%</b><span>Avg. occupancy rate</span></div>
+      <div class="showcase__stat"><b>15%</b><span>Commission only</span></div>
+    </div>
+    <a class="btn" href="#contact">Get My Free Analysis</a>
+  </div>
+</section>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">What we do</p>
+      <h2>Services We Provide</h2>
+      <p class="head__sub">Everything a property needs to earn well, handled end to end.</p>
+    </div>
+    <div class="grid grid--4">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10.5 3.2l1.7 4.6 4.6 1.7-4.6 1.7-1.7 4.6-1.7-4.6L4.2 9.5l4.6-1.7z"/><path d="M18 14.6l.8 2.1 2.2.8-2.2.8-.8 2.1-.8-2.1-2.2-.8 2.2-.8z"/></svg></div>
+        <h3>Professional Cleaning</h3>
+        <p>Hotel-standard turnover cleaning after every checkout, with photo-verified checklists.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.4 8.4 0 01-9 8.4 8.4 8.4 0 01-3.8-.9L3 21l2-5.2A8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z"/></svg></div>
+        <h3>Guest Communication</h3>
+        <p>24/7 multilingual support, check-in coordination, and review management across all platforms.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg></div>
+        <h3>Maintenance &amp; Repairs</h3>
+        <p>Routine inspections, fast repairs and a vetted local contractor network, always on call.</p>
+      </div>
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a1 1 0 0 1 1-1h8a2 2 0 0 1 1.4.6l7.4 7.4a2 2 0 0 1 0 2.8z"/><circle cx="7.6" cy="7.6" r="1.2"/></svg></div>
+        <h3>Dynamic Pricing</h3>
+        <p>AI-driven rate adjustments every day, factoring demand, local events, and competitor pricing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="statbar">
+    <div class="statbar__i"><b>15%</b><strong>Commission rate only</strong><span>No hidden fees</span></div>
+    <div class="statbar__i"><b>68%</b><strong>Average occupancy rate</strong><span>Across managed properties</span></div>
+    <div class="statbar__i"><b>3&times;</b><strong>More than long-term rent</strong><span>Average revenue uplift</span></div>
+    <div class="statbar__i"><b>7 Days</b><strong>To first booking</strong><span>From contract to live listing</span></div>
+  </div>
+</div>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">What owners say</p>
+      <h2>Owners Who Switched. Never Looked Back.</h2>
+    </div>
+    <div class="grid grid--3">
+      <div class="card">
+        <div class="quote__stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote__text">&ldquo;I was earning &pound;7,000 a month from a long-term tenant. OB Stays has it earning over &pound;16,000 in peak season. I wish I&rsquo;d done this two years earlier.&rdquo;</p>
+        <div class="quote__who">Ahmet K.</div>
+        <div class="quote__meta">3-bedroom villa, Bodrum</div>
+      </div>
+      <div class="card">
+        <div class="quote__stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote__text">&ldquo;The legal part was what scared me. Permits, registrations, all of it. OB Stays handled everything. I didn&rsquo;t have to call a lawyer or fill out a single form myself.&rdquo;</p>
+        <div class="quote__who">Selin M.</div>
+        <div class="quote__meta">Apartment, Antalya</div>
+      </div>
+      <div class="card">
+        <div class="quote__stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="quote__text">&ldquo;Our property sat empty for 4 months a year under long-term rental. Now it books consistently through the off-season too. The revenue difference is significant.&rdquo;</p>
+        <div class="quote__who">Murat &amp; Ay&#351;e T.</div>
+        <div class="quote__meta">4-bedroom villa, Fethiye</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--deep" id="contact">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Free, no obligation</p>
+      <h2>Get a Free Property Analysis</h2>
+      <p class="head__sub">Tell us a little about your property and we&rsquo;ll send you a realistic revenue projection within 24 hours.</p>
+    </div>
+    <form class="formcard" method="post" action="#" novalidate>
+      <div class="field">
+        <label for="f-name">Full Name</label>
+        <input id="f-name" name="name" type="text" placeholder="Your full name" autocomplete="name" required>
+      </div>
+      <div class="field">
+        <label for="f-phone">Phone Number</label>
+        <input id="f-phone" name="phone" type="tel" placeholder="+90 5__ ___ __ __" autocomplete="tel" required>
+      </div>
+      <div class="field">
+        <label for="f-loc">Villa / Property Location</label>
+        <input id="f-loc" name="location" type="text" placeholder="e.g. Bodrum, Antalya, Fethiye&hellip;" required>
+      </div>
+      <button class="btn" type="submit">Get My Free Revenue Estimate</button>
+      <p class="form__note">We&rsquo;ll never share your details. You&rsquo;ll hear from us within 24 hours.</p>
+    </form>
+  </div>
+</section>
+
+<section class="section section--sand">
+  <div class="wrap">
+    <div class="head">
+      <p class="eyebrow">Common questions</p>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>What is your commission rate?</summary>
+        <div class="faq__a">We charge a fixed 15% commission on gross rental income for our Listing Management plan, and 25% for Full Management, which covers cleaning coordination, maintenance and 24/7 support. There are no registration fees, no setup costs, and no monthly minimums.</div>
+      </details>
+      <details>
+        <summary>How long is the management contract?</summary>
+        <div class="faq__a">There&rsquo;s no minimum contract length. We work on a rolling monthly basis, and you can cancel with 30 days&rsquo; notice at any time. We&rsquo;re confident in the results, so we don&rsquo;t rely on lock-ins to keep clients.</div>
+      </details>
+      <details>
+        <summary>Who is liable if a guest causes damage?</summary>
+        <div class="faq__a">All properties we manage are covered by Airbnb&rsquo;s AirCover protection (up to $3 million USD). We also conduct a full property inventory check before every booking and collect a security deposit from every guest. Any damage is documented, photographed, and pursued through the platform.</div>
+      </details>
+      <details>
+        <summary>How does Law No. 7464 affect my property?</summary>
+        <div class="faq__a">Law No.&nbsp;7464, which came into effect in 2024, requires all short-term rental operators in Turkey to obtain a permit from the Ministry of Culture and Tourism. OB Stays handles the entire permit application process for every property we manage, from the paperwork to the submission to ongoing compliance monitoring, at no additional cost.</div>
+      </details>
+      <details>
+        <summary>How are taxes and legal processes handled?</summary>
+        <div class="faq__a">We work with licensed accountants and legal advisors to ensure your rental income is declared correctly under Turkish law. We&rsquo;ll guide you through VAT obligations, income tax reporting, and platform-specific tax documentation. You won&rsquo;t be left to figure this out alone.</div>
+      </details>
+      <details>
+        <summary>When and how do I receive my payments?</summary>
+        <div class="faq__a">Rental income is transferred directly to your bank account on a fixed monthly schedule, typically within the first 5 business days of the following month. You&rsquo;ll receive a full statement showing all reservations, revenue, and any applicable deductions.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="section section--white">
+  <div class="wrap">
+    <div class="finalcta">
+      <h2>Still On the Fence About Managing It Yourself?</h2>
+      <p>See what your property could actually be earning under professional management. No commitment, no sales pressure, just real numbers based on your listing.</p>
+      <a class="btn" href="#contact">Get My Free Property Estimate</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__top">
+      <div>
+        <div class="footer__logo"><img src="../assets/logo-wordmark-ivory.svg" alt="OB Stays"></div>
+        <p>Professional management for owners who&rsquo;d rather earn than manage.</p>
+      </div>
+      <div>
+        <h4>Sitemap</h4>
+        <ul>
+          <li><a href="#top">Home</a></li>
+          <li><a href="#plans">Management Plans</a></li>
+          <li><a href="#plans">Pricing</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <ul class="footer__contact">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 6 10-6"/></svg><a href="mailto:info@obstays.net">info@obstays.net</a></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .3 1.9.6 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.1a2 2 0 012.1-.5c.9.3 1.8.5 2.8.6a2 2 0 011.7 2z"/></svg><a href="tel:+900000000000">Phone: to confirm</a></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>Address: to confirm</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <span>&copy; 2026 OB Stays. All rights reserved.</span>
+      <span>Privacy Policy &middot; Terms of Service</span>
+    </div>
+  </div>
+</footer>
+</html>

@@ -129,7 +129,7 @@
         const d = await r.json();
         if (!r.ok) { status.textContent = 'Create failed: ' + (d.error || 'unknown'); return; }
 
-        // Now insert link into works/content.md
+        // Now insert link into works/content.html
         status.textContent = 'Linking from Works page...';
         const ok = await addLinkToWorksListing(year, title, slug);
         if (!ok) { status.textContent = 'Page created, but failed to link from Works page — add the link by hand.'; return; }

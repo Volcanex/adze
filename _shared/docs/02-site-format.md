@@ -9,10 +9,10 @@ artists/myartist/
   default-styles.css   ← site-wide CSS variables (colours, fonts, sizes)
   config.json          ← site metadata
   home/
-    content.md         ← page source
+    content.html         ← page source
     config.json        ← page metadata
   about/
-    content.md
+    content.html
     config.json
 ```
 
@@ -34,7 +34,7 @@ Page CSS can reference these variables with `var(--primary)` etc. Pages can over
 
 Artists can edit these visually in the Default Styles tab of the dashboard.
 
-## content.md format
+## content.html format
 
 ```html
 <meta property="og:title" content="Page Title">
@@ -58,7 +58,7 @@ Artists can edit these visually in the Default Styles tab of the dashboard.
 
 The compiler extracts `<style>`, `<html>`, and `<meta>` blocks and wraps them in a full HTML5 document (`<!DOCTYPE html>`, `<head>`, `<body>`).
 
-**NEVER include** in content.md:
+**NEVER include** in content.html:
 - `<!DOCTYPE>`, `<head>`, `<body>`, or `<title>` tags — the compiler adds these
 - `<link rel="stylesheet">` or external CDN links (e.g. Font Awesome, Google Fonts CDN)
 - `<script src="...">` tags loading external libraries
@@ -96,7 +96,7 @@ All CSS must be in the `<style>` block. Fonts are loaded via `@font-face` pointi
 
 ## Asset paths
 
-From `content.md`, assets are referenced with relative paths:
+From `content.html`, assets are referenced with relative paths:
 ```html
 <img src="../assets/images/photo.jpg">
 <link href="../assets/fonts/MyFont.woff2">
@@ -109,7 +109,7 @@ From `content.md`, assets are referenced with relative paths:
    ```json
    { "title": "Page Title", "slug": "artists/{slug}/pagename", "description": "...", "categories": [] }
    ```
-3. Create `content.md`: copy the full `<style>…</style>\n<html>…</html>` from an existing page so fonts, colours, nav, and responsive layout are consistent.
+3. Create `content.html`: copy the full `<style>…</style>\n<html>…</html>` from an existing page so fonts, colours, nav, and responsive layout are consistent.
 4. Update the nav in other pages: `<a href="../pagename/">Page Title</a>`
 5. Click **Save** in the dashboard to compile and publish
 
@@ -117,7 +117,7 @@ From `content.md`, assets are referenced with relative paths:
 
 - Store API keys in `.env` in the artist directory
 - Load in `api.py`: `import os; from dotenv import load_dotenv; load_dotenv(); key = os.getenv('MY_KEY')`
-- NEVER put secret values in `content.md`, HTML, CSS, or any frontend code
+- NEVER put secret values in `content.html`, HTML, CSS, or any frontend code
 - Common keys: `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_ENDPOINT_SECRET`
 
 ## Custom backend (api.py)

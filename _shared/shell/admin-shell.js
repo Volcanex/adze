@@ -359,7 +359,7 @@ window.AdminShell = (function () {
          * Without this the card would set an .mp4 path as an <img> src. */
         if (entry.kind && entry.kind !== 'image') continue;
         /* `card` is the thumbnail tier; the rest are the older shapes still
-         * sitting in existing content.md files — an object, or a bare path. */
+         * sitting in existing content.html files — an object, or a bare path. */
         const rel = entry.card || entry.src || entry.full || entry;
         if (typeof rel === 'string' && rel) return assetUrl(rel);
       }
@@ -1065,7 +1065,7 @@ window.AdminShell = (function () {
     const keyOf = rec => (rec.rich ? 'r:' : 'p:') + rec.id;
     /* Strict on rich-vs-plain: writing a rich value into a plain element would
      * preview markup that publish is going to escape. A published page that
-     * disagrees with today's content.md about which a slot is falls through to
+     * disagrees with today's content.html about which a slot is falls through to
      * the missing flag, which is true — publishing is what fixes it. */
     const nodesFor = rec => ((map && rec.page === bound && map[keyOf(rec)]) || []);
     const onPage = page => recs.filter(r => r.page === page);
@@ -1431,7 +1431,7 @@ window.AdminShell = (function () {
     }
 
     /* A marked element was clicked in the preview. Strict match first; a
-     * published page can disagree with today's content.md about whether a
+     * published page can disagree with today's content.html about whether a
      * slot is rich, and in that case the artist should still land in the
      * right editor rather than have the click do nothing. */
     function onPick(page, id, rich) {

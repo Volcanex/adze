@@ -1,23 +1,24 @@
 """
-Auto-Code over HTTP+SSE — replaces the previous TUI-in-xterm bridge.
+Auto-Code over HTTP+SSE.
 
-Inside each per-artist sandbox container (`adze-terminal-<slug>`,
-shared with Terminal Access), we run a headless `opencode serve`
-HTTP server. The dashboard talks to a custom chat UI; that UI talks
-to Flask under `/api/adze/autocode/*`; Flask reverse-proxies to the
-sandbox over the `adze_default` docker network, gated by a random
-HTTP Basic password held in this process's memory.
+The dashboard's chat UI talks to Flask under `/api/adze/autocode/*`; Flask
+drives a DeepSeek Harness agent per artist through `dsh_agent`, which runs
+the harness runtime as a subprocess of this process.
 
-Lifecycle:
-  - Lazy spawn: first request for an artist calls `_mgr.ensure()`
-    which guarantees the sandbox container exists and the serve
-    process is listening on :4096.
-  - Reuse: subsequent requests share the same serve.
-  - Idle eviction: a daemon thread kills serves whose `last_used` is
-    older than IDLE_EVICT_SECONDS — they respawn on next access.
-  - Orphan cleanup at boot: when Flask restarts, any pre-existing
-    `opencode serve` inside an `adze-terminal-*` container is killed,
-    because the password it was bound to is gone with the old Flask.
+This used to reverse-proxy a headless `opencode serve` inside a per-artist
+`adze-terminal-<slug>` container, reached over the `adze_default` docker
+network behind a per-spawn HTTP Basic password. All of that is gone: no
+container, no minted password, no readiness poll, no boot-time orphan reaper.
+What replaced it is a Python object with a session dict.
+
+**The wire format did not change.** `dashboard.html` speaks opencode's event
+schema, so `dsh_agent._translate` maps harness notifications onto it and the
+browser is unaware the backend moved. If you change an event shape here, the
+dashboard's `dispatch()` is the thing that breaks.
+
+Two capabilities opencode provided that the harness does not, now served
+locally: git worktrees for tabs 2+ (`artist_repos.create_worktree`) and
+reading a file out of a workspace (`/file/content` below).
 
 Auth surface for incoming dashboard requests mirrors the rest of
 admin_api / the old auto_code_bridge: `X-Admin-Token`,
@@ -26,35 +27,25 @@ admin_api / the old auto_code_bridge: `X-Admin-Token`,
 
 from __future__ import annotations
 
+import json
 import logging
-import os
-import secrets
-import threading
-import time
 from pathlib import Path
-from typing import Iterator
 
-import requests
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
-from sandbox import (
-    docker,
-    ensure_terminal_container,
-    list_running_sandboxes,
-    terminal_container_name,
-)
+import dsh_agent
 from artist_repos import (
+    artist_root as _artist_dir,
     commit_worktree,
+    create_worktree,
     delete_branch,
     ensure_repo,
+    list_worktrees,
     merge_branch_into_main,
+    remove_worktree,
+    resolve_worktree,
+    worktree_root,
 )
-
-
-SERVE_PORT = 4096
-SERVE_USER = 'opencode'
-READY_TIMEOUT_S = 25
-IDLE_EVICT_SECONDS = 30 * 60
 
 _log = logging.getLogger('adze.autocode')
 
@@ -110,11 +101,25 @@ to copy into the file unless the user is explicitly asking for it.
 """
 
 
+# Only these config.json keys are safe to hand the client-facing model. This
+# is an allow-list, not a deny-list, so it fails closed: a new config field is
+# hidden by default and only surfaces here once someone deliberately adds it.
+# Everything omitted is either a credential (`admin_token`, `intake_token`,
+# `handover_token`), a login trace (`last_login`, `last_login_ip`), or internal
+# ops data the artist must never see (`lead` — our CRM sizing/pricing notes).
+# Zee's context is shipped to OpenRouter and persisted to the session JSONL, so
+# nothing sensitive may enter it.
+_SAFE_CONFIG_KEYS = (
+    'name', 'slug', 'domain', 'description', 'contact_email',
+    'platform_widgets', 'figma_url',
+)
+
+
 def _build_system_prompt(slug: str) -> str:
     """Same shape Terminal Access uses (terminal_bridge._build_system_prompt):
-    numbered `_shared/docs/*.md` files in order, then this artist's
-    config.json, then a list of editable pages. Auto-Code prepends its
-    own Zee persona block first so Terminal Access (Claude Code) keeps
+    numbered `_shared/docs/*.md` files in order, then a redacted view of this
+    artist's config.json, then a list of editable pages. Auto-Code prepends
+    its own Zee persona block first so Terminal Access (Claude Code) keeps
     its plain identity.
     """
     parts: list[str] = [_AUTOCODE_PERSONA]
@@ -129,11 +134,13 @@ def _build_system_prompt(slug: str) -> str:
     cfg = artist_root / 'config.json'
     if cfg.exists():
         try:
+            full = json.loads(cfg.read_text(encoding='utf-8'))
+            safe = {k: full[k] for k in _SAFE_CONFIG_KEYS if k in full}
             parts.append(
                 '## This artist (config.json)\n\n```json\n'
-                + cfg.read_text(encoding='utf-8') + '\n```'
+                + json.dumps(safe, indent=2, ensure_ascii=False) + '\n```'
             )
-        except OSError:
+        except (OSError, ValueError):
             pass
 
     excluded = {'assets', '.snapshots', '__pycache__', 'backups', 'widgets'}
@@ -141,10 +148,10 @@ def _build_system_prompt(slug: str) -> str:
     if artist_root.exists():
         for d in sorted(artist_root.iterdir()):
             if d.is_dir() and d.name not in excluded and not d.name.startswith('.'):
-                if (d / 'content.md').exists():
+                if (d / 'content.html').exists():
                     pages.append(d.name)
     if pages:
-        page_list = '\n'.join(f'- `{p}/content.md` and `{p}/config.json`' for p in pages)
+        page_list = '\n'.join(f'- `{p}/content.html` and `{p}/config.json`' for p in pages)
         parts.append(
             '## Pages in this site\n\n' + page_list +
             "\n\nAlways read a file before editing. After edits, the dashboard's"
@@ -213,227 +220,9 @@ def _resolve_slug() -> str | None:
     return None
 
 
-# ─── Manager ─────────────────────────────────────────────────────────────
+# ─── Helpers ─────────────────────────────────────────────────────────────
 
-class AutocodeServeManager:
-    """Owns one `opencode serve` process per artist sandbox."""
-
-    def __init__(self):
-        self._lock = threading.Lock()
-        self._entries: dict[str, dict] = {}
-        self._evictor_started = False
-
-    # — public —
-
-    def ensure(self, slug: str) -> dict:
-        with self._lock:
-            entry = self._entries.get(slug)
-            if entry and self._alive(slug, entry['password']):
-                entry['last_used'] = time.time()
-                return entry
-
-            ensure_terminal_container(slug)
-            password = secrets.token_urlsafe(32)
-            self._kill_serve(slug)
-            self._spawn_serve(slug, password)
-            self._wait_ready(slug, password)
-            entry = {'password': password, 'started_at': time.time(), 'last_used': time.time()}
-            self._entries[slug] = entry
-            _log.info(f'[{slug}] opencode serve ready')
-            return entry
-
-    def proxy_request(self, slug: str, method: str, path: str,
-                      *, params=None, json_body=None) -> Response:
-        entry = self.ensure(slug)
-        entry['last_used'] = time.time()
-        try:
-            r = requests.request(
-                method,
-                f'http://{terminal_container_name(slug)}:{SERVE_PORT}{path}',
-                auth=(SERVE_USER, entry['password']),
-                params=params,
-                json=json_body,
-                timeout=(5, 600),
-            )
-        except requests.RequestException as exc:
-            return _err(502, f'upstream unreachable: {exc}', self._tail_log(slug))
-        return Response(
-            r.content,
-            status=r.status_code,
-            content_type=r.headers.get('Content-Type', 'application/json'),
-        )
-
-    def proxy_sse(self, slug: str) -> Iterator[bytes]:
-        """Stream session events to the dashboard.
-
-        `/event` in opencode 1.14.48 only emits `server.connected` — the
-        real stream lives on `/global/event` wrapped as
-        `{directory, project, payload: <event>}`. We subscribe there,
-        unwrap each frame, and emit `data: <payload>\\n\\n` so the
-        client sees the inner event shape directly.
-        """
-        entry = self.ensure(slug)
-        entry['last_used'] = time.time()
-        url = f'http://{terminal_container_name(slug)}:{SERVE_PORT}/global/event'
-        try:
-            r = requests.get(
-                url,
-                auth=(SERVE_USER, entry['password']),
-                stream=True,
-                timeout=(5, None),
-            )
-        except requests.RequestException as exc:
-            yield f': error connecting: {exc}\n\n'.encode()
-            return
-
-        if r.status_code != 200:
-            yield f': upstream returned {r.status_code}\n\n'.encode()
-            return
-
-        import json as _json
-
-        try:
-            for raw in r.iter_lines(decode_unicode=True):
-                if not raw:
-                    continue
-                if not raw.startswith('data: '):
-                    # forward comments/keepalives verbatim
-                    yield (raw + '\n').encode('utf-8')
-                    continue
-                body = raw[6:]
-                try:
-                    wrapper = _json.loads(body)
-                    payload = wrapper.get('payload', wrapper)
-                    out = _json.dumps(payload, separators=(',', ':'))
-                except Exception:
-                    out = body
-                yield ('data: ' + out + '\n\n').encode('utf-8')
-        except requests.RequestException as exc:
-            _log.info(f'[{slug}] SSE stream closed: {exc}')
-
-    def restart(self, slug: str) -> None:
-        with self._lock:
-            self._entries.pop(slug, None)
-            self._kill_serve(slug)
-
-    def cleanup_orphans_at_boot(self) -> None:
-        """Kill stale opencode serves left behind in any sandbox.
-
-        After a Flask restart we no longer know the old serve's
-        Basic-auth password, so we can't reuse it. Easier to nuke
-        and respawn lazily on the next request.
-        """
-        try:
-            sandboxes = list_running_sandboxes()
-        except Exception as exc:
-            _log.warning(f'orphan cleanup: list_running_sandboxes failed: {exc}')
-            return
-        for name in sandboxes:
-            try:
-                docker('exec', '--user', '1000:1000', name,
-                       'pkill', '-f', 'opencode serve', check=False)
-            except Exception as exc:
-                _log.warning(f'orphan cleanup [{name}]: {exc}')
-
-    def start_idle_evictor(self) -> None:
-        if self._evictor_started:
-            return
-        self._evictor_started = True
-        t = threading.Thread(target=self._evictor_loop, name='autocode-evictor', daemon=True)
-        t.start()
-
-    # — internals —
-
-    def _alive(self, slug: str, password: str) -> bool:
-        try:
-            r = requests.get(
-                f'http://{terminal_container_name(slug)}:{SERVE_PORT}/global/health',
-                auth=(SERVE_USER, password),
-                timeout=1.5,
-            )
-            return r.status_code == 200
-        except requests.RequestException:
-            return False
-
-    def _spawn_serve(self, slug: str, password: str) -> None:
-        openrouter_key = os.environ.get('OPENROUTER_API_KEY', '')
-        if not openrouter_key:
-            raise RuntimeError('OPENROUTER_API_KEY missing in flask env')
-        container = terminal_container_name(slug)
-        r = docker(
-            'exec', '-d',
-            '--user', '1000:1000',
-            '--env', 'HOME=/home/adze',
-            '--env', f'OPENROUTER_API_KEY={openrouter_key}',
-            '--env', f'OPENCODE_SERVER_PASSWORD={password}',
-            '--env', f'ADZE_AUTOCODE_PORT={SERVE_PORT}',
-            '--workdir', '/workspace',
-            container,
-            '/usr/local/bin/adze-autocode-serve',
-            check=False,
-        )
-        if r.returncode != 0:
-            raise RuntimeError(f'docker exec failed: {r.stderr.strip() or r.stdout.strip()}')
-
-    def _wait_ready(self, slug: str, password: str) -> None:
-        deadline = time.time() + READY_TIMEOUT_S
-        last_err: Exception | None = None
-        while time.time() < deadline:
-            try:
-                r = requests.get(
-                    f'http://{terminal_container_name(slug)}:{SERVE_PORT}/global/health',
-                    auth=(SERVE_USER, password),
-                    timeout=1.5,
-                )
-                if r.status_code == 200:
-                    return
-                last_err = RuntimeError(f'HTTP {r.status_code}')
-            except requests.RequestException as exc:
-                last_err = exc
-            time.sleep(0.25)
-        tail = self._tail_log(slug)
-        raise RuntimeError(f'opencode serve did not become ready in {READY_TIMEOUT_S}s '
-                           f'(last error: {last_err}); serve.log tail: {tail}')
-
-    def _kill_serve(self, slug: str) -> None:
-        container = terminal_container_name(slug)
-        docker('exec', '--user', '1000:1000', container,
-               'pkill', '-f', 'opencode serve', check=False)
-
-    def _tail_log(self, slug: str, lines: int = 60) -> str:
-        try:
-            r = docker(
-                'exec', '--user', '1000:1000', terminal_container_name(slug),
-                'bash', '-lc',
-                f'tail -n {lines} /home/adze/.config/opencode/serve.log 2>/dev/null || true',
-                check=False,
-            )
-            return (r.stdout or '').strip()
-        except Exception:
-            return ''
-
-    def _evictor_loop(self) -> None:
-        while True:
-            time.sleep(60)
-            now = time.time()
-            with self._lock:
-                stale = [s for s, e in self._entries.items()
-                         if now - e['last_used'] > IDLE_EVICT_SECONDS]
-                for slug in stale:
-                    _log.info(f'[{slug}] idle-evicting opencode serve')
-                    self._entries.pop(slug, None)
-                    try:
-                        self._kill_serve(slug)
-                    except Exception as exc:
-                        _log.warning(f'[{slug}] evict kill failed: {exc}')
-
-
-_mgr = AutocodeServeManager()
-
-
-# ─── Blueprint ───────────────────────────────────────────────────────────
-
-bp = Blueprint('autocode_proxy', __name__, url_prefix='/api/adze/autocode')
+bp = Blueprint('autocode', __name__, url_prefix='/api/adze/autocode')
 
 
 def _err(status: int, message: str, detail: str = '') -> Response:
@@ -454,19 +243,54 @@ def _require_slug():
     return slug, None
 
 
+def _is_external(slug: str) -> bool:
+    cfg = _artist_dir(slug) / 'config.json'
+    try:
+        return bool(cfg.exists() and json.loads(cfg.read_text(encoding='utf-8')).get('remote'))
+    except Exception:
+        return False
+
+
+def _session_root(slug: str) -> Path:
+    """Where the harness keeps its JSONL session log for this artist.
+
+    Deliberately not inside `artists/<slug>/` — compile.py walks that tree
+    and would publish the transcript.
+    """
+    root = worktree_root(slug).parent / '.sessions' / slug
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _workdir_for(slug: str, workspace_id: str | None) -> Path:
+    if not workspace_id:
+        return _artist_dir(slug)
+    for wt in list_worktrees(slug):
+        if wt['id'] == workspace_id:
+            return Path(wt['directory'])
+    raise ValueError(f'unknown workspace {workspace_id}')
+
+
+def _owned(slug: str, sid: str):
+    """Fetch a session, refusing one that belongs to a different artist."""
+    s = dsh_agent._mgr.get(sid)
+    if s is None or s.slug != slug:
+        return None
+    return s
+
+
+# ─── Routes ──────────────────────────────────────────────────────────────
+
 @bp.get('/health')
 def health():
     slug, err = _require_slug()
     if err:
         return err
-    entry = _mgr._entries.get(slug)
-    if not entry:
-        return jsonify({'running': False})
-    return jsonify({
-        'running': True,
-        'uptime_s': round(time.time() - entry['started_at']),
-        'idle_s': round(time.time() - entry['last_used']),
-    })
+    ok, why = dsh_agent.sdk_available()
+    sessions = dsh_agent._mgr.list_for(slug)
+    return jsonify({'running': ok and bool(sessions), 'backend': 'deepseek-harness',
+                    'model': dsh_agent.DEFAULT_MODEL, 'sessions': len(sessions),
+                    'error': '' if ok else why})
 
 
 @bp.post('/session')
@@ -474,11 +298,16 @@ def create_session():
     slug, err = _require_slug()
     if err:
         return err
+    ok, why = dsh_agent.sdk_available()
+    if not ok:
+        return _err(503, 'agent backend unavailable', why)
+    body = request.get_json(silent=True) or {}
     try:
-        _mgr.ensure(slug)
-    except Exception as exc:
-        return _err(502, 'opencode serve failed to start', str(exc))
-    return _mgr.proxy_request(slug, 'POST', '/session', json_body=request.get_json(silent=True) or {})
+        workdir = _workdir_for(slug, (body.get('workspaceID') or '').strip() or None)
+    except ValueError as exc:
+        return _err(400, str(exc))
+    s = dsh_agent._mgr.create(slug, workdir, _session_root(slug))
+    return jsonify({'id': s.id, 'title': '', 'directory': str(workdir)})
 
 
 @bp.get('/session')
@@ -486,7 +315,7 @@ def list_sessions():
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'GET', '/session')
+    return jsonify(dsh_agent._mgr.list_for(slug))
 
 
 @bp.get('/session/<sid>')
@@ -494,7 +323,14 @@ def get_session(sid):
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'GET', f'/session/{sid}')
+    s = _owned(slug, sid)
+    if not s:
+        return _err(404, 'no such session')
+    # Replayed on reconnect so a page refresh does not lose the transcript.
+    messages = [{'role': m['role'],
+                 'parts': [{'type': 'text', 'text': m['text'], 'id': f'hist-{i}'}]}
+                for i, m in enumerate(s.history)]
+    return jsonify({**s.summary(), 'messages': messages})
 
 
 @bp.delete('/session/<sid>')
@@ -502,26 +338,46 @@ def delete_session(sid):
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'DELETE', f'/session/{sid}')
+    if not _owned(slug, sid):
+        return _err(404, 'no such session')
+    dsh_agent._mgr.delete(sid)
+    return ('', 204)
 
 
 @bp.post('/session/<sid>/message')
 def post_message(sid):
+    """Run one turn. Blocks until it settles; deltas stream over /event.
+
+    Matches opencode's contract: the client awaits this call *and* renders
+    from SSE, so the response is the settled message and the stream is the
+    live one.
+    """
     slug, err = _require_slug()
     if err:
         return err
+    s = _owned(slug, sid)
+    if not s:
+        return _err(404, 'no such session')
+
     body = request.get_json(silent=True) or {}
-    # Inject the Adze system prompt unless the caller supplied their own.
-    # opencode accepts `system: string` on the message endpoint and
-    # prepends it to its built-in prompt for that turn.
-    if not body.get('system'):
+    parts = body.get('parts') or []
+    text = ''.join(p.get('text', '') for p in parts if p.get('type') == 'text').strip()
+    if not text:
+        return _err(400, 'empty message')
+
+    model = dsh_agent.MODELS.get((body.get('model') or '').strip(), None) or s.model
+
+    # The persona + docs + page list go in front of the first turn only; the
+    # harness keeps its own conversation state after that, so re-sending it
+    # every turn would just pay for the same tokens repeatedly.
+    if not s.history:
         try:
-            sp = _build_system_prompt(slug)
-            if sp:
-                body['system'] = sp
+            text = _build_system_prompt(slug) + '\n\n---\n\n' + text
         except Exception as exc:
-            _log.warning(f'[{slug}] build system prompt failed: {exc}')
-    return _mgr.proxy_request(slug, 'POST', f'/session/{sid}/message', json_body=body)
+            _log.warning(f'[{slug}] system prompt build failed: {exc}')
+
+    result = s.run(text, model=model)
+    return jsonify(result)
 
 
 @bp.post('/session/<sid>/abort')
@@ -529,7 +385,14 @@ def abort_session(sid):
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'POST', f'/session/{sid}/abort', json_body={})
+    s = _owned(slug, sid)
+    if not s:
+        return _err(404, 'no such session')
+    # The SDK exposes no mid-turn cancel, so aborting means tearing the
+    # runtime down; the next turn respawns it with the session's history
+    # replayed from the JSONL log.
+    s.close()
+    return ('', 204)
 
 
 @bp.post('/session/<sid>/permissions/<pid>')
@@ -537,8 +400,10 @@ def reply_permission(sid, pid):
     slug, err = _require_slug()
     if err:
         return err
-    body = request.get_json(silent=True) or {}
-    return _mgr.proxy_request(slug, 'POST', f'/session/{sid}/permissions/{pid}', json_body=body)
+    # The composition in dsh_cordis.yml registers no tool that asks for
+    # permission (there is no shell), so nothing raises these today. Kept as
+    # a 204 so the dashboard's reply path doesn't 404 if one ever appears.
+    return ('', 204)
 
 
 @bp.get('/event')
@@ -547,7 +412,7 @@ def event_stream():
     if err:
         return err
     return Response(
-        stream_with_context(_mgr.proxy_sse(slug)),
+        stream_with_context(dsh_agent.sse_stream(slug)),
         mimetype='text/event-stream',
         headers={
             'Cache-Control': 'no-cache',
@@ -559,86 +424,57 @@ def event_stream():
 
 @bp.get('/file/content')
 def file_content():
-    slug, err = _require_slug()
-    if err:
-        return err
-    return _mgr.proxy_request(slug, 'GET', '/file/content', params=request.args.to_dict(flat=True))
+    """Read one file from the artist tree (or one of its worktrees).
 
-
-# ─── Tabs / workspaces (git worktrees, managed by opencode) ──────────────
-#
-# Tab 1 is implicit: the default workspace = artist root on `main`. No
-# auto-commit happens there — that branch is co-owned with Terminal Access
-# and the dashboard's file editor.
-#
-# Tabs 2+ map onto opencode workspaces created via /experimental/workspace
-# with the `worktree` adapter. opencode handles the `git worktree add` for
-# us; we just need to ensure the artist directory is a git repo first.
-# After each assistant turn in a worktree tab, the client POSTs
-# /tab/<wid>/commit so we stage + commit changes for clean rollback /
-# merge. On close, /tab/<wid> DELETE removes the workspace and worktree.
-
-
-@bp.post('/tab')
-def create_tab():
-    """Create a new tab = git worktree workspace.
-
-    Returns the opencode Workspace record (id, name, branch, directory).
-    External (remote Seed) artists are rejected for now.
+    opencode served this; now it is local. Paths are resolved and then
+    required to sit inside the artist's own directory, so `../` cannot walk
+    into another artist.
     """
     slug, err = _require_slug()
     if err:
         return err
-    cfg = (Path.cwd() / 'artists' / slug / 'config.json')
+    rel = (request.args.get('path') or '').strip()
+    if not rel:
+        return _err(400, 'path required')
+    base = _artist_dir(slug)
+    wid = (request.args.get('workspaceID') or '').strip()
+    if wid:
+        try:
+            base = _workdir_for(slug, wid)
+        except ValueError as exc:
+            return _err(400, str(exc))
     try:
-        if cfg.exists():
-            import json as _json
-            data = _json.loads(cfg.read_text(encoding='utf-8'))
-            if data.get('remote'):
-                return _err(400, 'tabs are not supported on external artists')
-    except Exception:
-        pass
+        target = (base / rel).resolve()
+        if target != base and base not in target.parents:
+            return _err(403, 'path escapes the artist directory')
+        if not target.is_file():
+            return _err(404, 'not found')
+        return jsonify({'path': rel, 'content': target.read_text(encoding='utf-8', errors='replace')})
+    except OSError as exc:
+        return _err(500, 'read failed', str(exc))
 
-    try:
-        ensure_repo(slug)
-    except Exception as exc:
-        return _err(500, 'artist repo init failed', str(exc))
 
-    # Make sure the serve is running and we have credentials, then ask
-    # opencode to create a worktree. As of opencode 1.14+, worktree
-    # creation moved to POST /experimental/worktree (returning the
-    # worktree record); the resulting Workspace is then discoverable
-    # via GET /experimental/workspace. We resolve to that Workspace
-    # because the dashboard client keys tabs by workspace id.
+# ─── Tabs / workspaces (git worktrees) ───────────────────────────────────
+#
+# Tab 1 is implicit: the default workspace = artist root on `main`. No
+# auto-commit happens there — that branch is co-owned with the dashboard's
+# file editor. Tabs 2+ are git worktrees, created here rather than by
+# opencode's `/experimental/worktree`. After each assistant turn in a
+# worktree tab the client POSTs /tab/<wid>/commit; on close, DELETE removes
+# the worktree and its branch.
+
+
+@bp.post('/tab')
+def create_tab():
+    slug, err = _require_slug()
+    if err:
+        return err
+    if _is_external(slug):
+        return _err(400, 'tabs are not supported on external artists')
     try:
-        _mgr.ensure(slug)
+        return jsonify(create_worktree(slug))
     except Exception as exc:
-        return _err(502, 'opencode serve failed to start', str(exc))
-    created = _mgr.proxy_request(
-        slug, 'POST', '/experimental/worktree', json_body={},
-    )
-    if created.status_code != 200:
-        return created
-    import json as _json
-    try:
-        wt = _json.loads(created.get_data(as_text=True))
-        directory = wt.get('directory')
-    except Exception:
-        directory = None
-    listed = _mgr.proxy_request(slug, 'GET', '/experimental/workspace')
-    if listed.status_code != 200:
-        return listed
-    try:
-        workspaces = _json.loads(listed.get_data(as_text=True))
-    except Exception:
-        workspaces = []
-    match = next((w for w in workspaces if w.get('directory') == directory), None)
-    if not match:
-        # Fall back to the worktree shape so the client at least has
-        # name/branch/directory; subsequent /tab listings will pick it
-        # up once opencode finishes registering the workspace.
-        return jsonify(wt)
-    return jsonify(match)
+        return _err(500, 'worktree creation failed', str(exc))
 
 
 @bp.get('/tab')
@@ -646,7 +482,10 @@ def list_tabs():
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'GET', '/experimental/workspace')
+    try:
+        return jsonify(list_worktrees(slug))
+    except Exception as exc:
+        return _err(500, 'worktree listing failed', str(exc))
 
 
 @bp.delete('/tab/<wid>')
@@ -654,16 +493,18 @@ def close_tab(wid):
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'DELETE', f'/experimental/workspace/{wid}')
+    try:
+        remove_worktree(slug, wid)
+    except Exception as exc:
+        return _err(500, 'worktree removal failed', str(exc))
+    return ('', 204)
 
 
 @bp.post('/tab/<wid>/commit')
 def commit_tab(wid):
     """Auto-commit hook called by the client after each assistant turn.
 
-    Body: `{directory: str, message: str}`. The client carries the
-    worktree directory string from the Workspace record (we'd otherwise
-    have to round-trip through opencode to look it up).
+    Body: `{directory: str, message: str}`.
     """
     slug, err = _require_slug()
     if err:
@@ -671,13 +512,17 @@ def commit_tab(wid):
     body = request.get_json(silent=True) or {}
     directory = (body.get('directory') or '').strip()
     message = (body.get('message') or '').strip() or 'adze: auto-commit'
-    if not directory or not directory.startswith('/home/adze/'):
-        return _err(400, 'invalid worktree directory')
+    if not directory:
+        return _err(400, 'directory required')
     try:
-        result = commit_worktree(slug, directory, message)
+        # Containment check, not a string prefix test — see resolve_worktree.
+        resolved = resolve_worktree(slug, directory)
+    except ValueError as exc:
+        return _err(400, str(exc))
+    try:
+        return jsonify(commit_worktree(slug, str(resolved), message))
     except Exception as exc:
         return _err(500, 'commit failed', str(exc))
-    return jsonify(result)
 
 
 @bp.post('/tab/<wid>/merge')
@@ -702,14 +547,16 @@ def merge_tab(wid):
     return jsonify(result)
 
 
-# Opencode's per-session context endpoint exposes the token-window state
-# the dashboard uses to draw a usage bar. Pure passthrough.
 @bp.get('/session/<sid>/context')
 def session_context(sid):
+    """Token-window state for the dashboard's usage bar."""
     slug, err = _require_slug()
     if err:
         return err
-    return _mgr.proxy_request(slug, 'GET', f'/api/session/{sid}/context')
+    s = _owned(slug, sid)
+    if not s:
+        return _err(404, 'no such session')
+    return jsonify({'model': s.model, 'context': dsh_agent.CONTEXT_WINDOW})
 
 
 @bp.post('/restart')
@@ -717,11 +564,8 @@ def restart():
     slug, err = _require_slug()
     if err:
         return err
-    _mgr.restart(slug)
-    try:
-        _mgr.ensure(slug)
-    except Exception as exc:
-        return _err(502, 'restart failed', str(exc))
+    for summary in dsh_agent._mgr.list_for(slug):
+        dsh_agent._mgr.delete(summary['id'])
     return ('', 204)
 
 
@@ -734,20 +578,14 @@ def compile_artist():
     External (remote Seed) artists are skipped — their compile lives
     on the remote host.
     """
-    import json as _json
     import subprocess as _sub
 
     slug, err = _require_slug()
     if err:
         return err
 
-    # Skip external artists — no local compile.
-    cfg = Path.cwd() / 'artists' / slug / 'config.json'
-    try:
-        if cfg.exists() and _json.loads(cfg.read_text()).get('remote'):
-            return jsonify({'ok': True, 'skipped': 'external'})
-    except Exception:
-        pass
+    if _is_external(slug):
+        return jsonify({'ok': True, 'skipped': 'external'})
 
     compile_script = Path.cwd() / 'compile.py'
     if not compile_script.exists():
@@ -769,8 +607,11 @@ def compile_artist():
 
 def register(app) -> None:
     app.register_blueprint(bp)
-    try:
-        _mgr.cleanup_orphans_at_boot()
-    except Exception as exc:
-        _log.warning(f'orphan cleanup failed at register: {exc}')
-    _mgr.start_idle_evictor()
+    ok, why = dsh_agent.sdk_available()
+    if ok:
+        _log.info('auto-code backend: deepseek-harness (%s)', dsh_agent.DEFAULT_MODEL)
+    else:
+        # Not fatal: the rest of the dashboard must still load. /health and
+        # /session report the reason so it surfaces in the UI rather than as
+        # a mystery 500 on first message.
+        _log.warning('auto-code backend unavailable: %s', why)

@@ -20,7 +20,7 @@ window.AdzeFileViewer = (function () {
   const LANG_BY_EXT = {
     html: 'xml', htm: 'xml', svg: 'xml', xml: 'xml',
     css: 'css', js: 'javascript', json: 'json', py: 'python',
-    md: 'xml',            // our .md is HTML+CSS, not markdown — see below
+    md: 'markdown',
     sh: 'bash', yml: 'yaml', yaml: 'yaml', toml: 'ini', ini: 'ini',
     conf: 'ini', env: 'ini', txt: 'plaintext',
   };
@@ -38,10 +38,10 @@ window.AdzeFileViewer = (function () {
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
-  /* A page's source file. Its *directory* is the page, so `home/content.md` is
+  /* A page's source file. Its *directory* is the page, so `home/content.html` is
    * the home page — that mapping is compile.py's, not ours to invent. */
   function isPageSource(path) {
-    return path === 'content.md' || path.endsWith('/content.md');
+    return path === 'content.html' || path.endsWith('/content.html');
   }
 
   // ── code ───────────────────────────────────────────────────────────────────
@@ -116,10 +116,10 @@ window.AdzeFileViewer = (function () {
     return sec;
   }
 
-  // ── content.md, explained ──────────────────────────────────────────────────
+  // ── content.html, explained ──────────────────────────────────────────────────
 
   /* The one file type an artist genuinely cannot read as-is, and the reason
-   * this viewer exists. Despite the extension it is not markdown: compile.py's
+   * this viewer exists. It is HTML, but only in part: compile.py's
    * parse_content pulls a <style> block, an <html> block and any <meta> tags
    * that appear before them, and ignores everything else in the file. Showing
    * it as one undifferentiated blob is what makes an artist think their site is
@@ -176,9 +176,9 @@ window.AdzeFileViewer = (function () {
 
     const intro = el('div', 'fv-explain');
     intro.appendChild(el('p', null,
-      'This is the source of one page. The name says .md, but it isn’t markdown — '
-      + 'it holds the page’s styling and its content, and Adze turns the two into '
-      + 'the real page every time you publish.'));
+      'This is the source of one page. It holds the page’s styling and its '
+      + 'content in two separate blocks, and Adze turns the two into the real '
+      + 'page every time you publish.'));
     if (ctx.pageUrl) {
       const a = el('a', 'as-link', 'Open this page on your site →');
       a.href = ctx.pageUrl;

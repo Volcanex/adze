@@ -247,9 +247,9 @@ def _scaffold_new_artist(slug):
     template_dir = Path('artists/_template')
     if not artist_dir.exists() or not template_dir.exists():
         return
-    # Check if artist already has at least one page (dir with content.md)
+    # Check if artist already has at least one page (dir with content.html)
     has_pages = any(
-        (d / 'content.md').exists()
+        (d / 'content.html').exists()
         for d in artist_dir.iterdir()
         if d.is_dir() and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')
     )
@@ -783,7 +783,7 @@ def get_default_styles():
         return jsonify({'css': styles_file.read_text(encoding='utf-8'), 'exists': True})
 
     # Fallback: extract :root {} from home page
-    home_content = artist_path / 'home' / 'content.md'
+    home_content = artist_path / 'home' / 'content.html'
     if home_content.exists():
         import re as _re
         raw = home_content.read_text(encoding='utf-8')
@@ -882,6 +882,20 @@ def serve_admin(slug=None):
     return admin_path.read_text(encoding='utf-8'), 200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
+    }
+
+
+@bp.route('/vendor/highlight.js')
+def vendor_highlight_js():
+    """Serve the vendored highlight.js to the dashboard's code editors. Same
+    copy the artist landing already uses, served same-origin under /api/adze/
+    so the editors keep working with no CDN reachable."""
+    js_path = Path(__file__).parent / 'vendor' / 'highlight.min.js'
+    if not js_path.exists():
+        return 'not found', 404
+    return js_path.read_text(encoding='utf-8'), 200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Cache-Control': 'max-age=3600',
     }
 
 
@@ -1043,7 +1057,7 @@ def admin_artists():
             continue
         # Count pages
         pages = [d.name for d in item.iterdir()
-                 if d.is_dir() and (d / 'content.md').exists()
+                 if d.is_dir() and (d / 'content.html').exists()
                  and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')]
         # 30d pageviews
         views_30d = 0
@@ -1778,7 +1792,7 @@ def admin_pipeline():
         hrs += hours_by_scope.get(f"artist:{slug}", 0)
         # Pages, storage, views, last login — same as /admin/artists.
         pages = [d.name for d in item.iterdir()
-                 if d.is_dir() and (d / 'content.md').exists()
+                 if d.is_dir() and (d / 'content.html').exists()
                  and d.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups')]
         views_30d = 0
         views_series = []  # daily counts for last 30 days, oldest → newest
@@ -2594,7 +2608,7 @@ def list_pages():
     for item in artist_path.iterdir():
         if item.is_dir():
             config_file = item / 'config.json'
-            content_file = item / 'content.md'
+            content_file = item / 'content.html'
 
             if config_file.exists() and content_file.exists():
                 try:
@@ -2661,7 +2675,7 @@ def get_page_content():
 
     page_path = get_page_path(artist_slug, page_slug)
     config_file = page_path / 'config.json'
-    content_file = page_path / 'content.md'
+    content_file = page_path / 'content.html'
 
     if not config_file.exists() or not content_file.exists():
         return jsonify({'error': 'Page not found'}), 404
@@ -2748,7 +2762,7 @@ def edit_page():
         return jsonify({'error': 'Page not found'}), 404
 
     try:
-        # Update content.md if provided
+        # Update content.html if provided
         if 'content' in data:
             # Scan for leaked secrets before saving
             leaked = scan_for_leaked_secrets(artist_slug, data['content'])
@@ -2759,7 +2773,7 @@ def edit_page():
                     'leaked_keys': leaked
                 }), 400
 
-            content_file = page_path / 'content.md'
+            content_file = page_path / 'content.html'
             with open(content_file, 'w', encoding='utf-8') as f:
                 f.write(data['content'])
             # Flask runs as root; Auto-Code/Terminal sandboxes run as uid 1000.
@@ -2834,6 +2848,11 @@ def _file_kind(path):
     suffix = path.suffix.lower()
     if path.name == '.env' or suffix == '.env':
         return 'env'
+    # A page's source is `<page>/content.html` — HTML+CSS the compiler splits,
+    # not a document. It gets its own kind so the dashboard opens the page
+    # editor for it and the plain text editor for every other .html.
+    if path.name == 'content.html':
+        return 'page'
     if suffix == '.md':
         return 'markdown'
     if suffix in FILES_IMAGE_EXTENSIONS:
@@ -2963,7 +2982,7 @@ def read_artist_file():
 def write_artist_file():
     """
     Overwrite a text file inside the artist dir, then trigger compile.
-    Body: { "path": "home/content.md", "content": "..." }
+    Body: { "path": "home/content.html", "content": "..." }
     Refuses paths outside the dir, paths in hidden folders, binary files,
     and content that leaks .env secrets into frontend files.
     """
@@ -3079,9 +3098,9 @@ def create_page():
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=4, ensure_ascii=False)
 
-        # Create content.md
+        # Create content.html
         default_content = data.get('content', '<html>\n<h1>New Page</h1>\n<p>Start editing...</p>\n</html>')
-        content_file = page_path / 'content.md'
+        content_file = page_path / 'content.html'
         with open(content_file, 'w', encoding='utf-8') as f:
             f.write(default_content)
 
@@ -3148,7 +3167,7 @@ def create_nested_page():
             json.dumps(default_config, indent=4, ensure_ascii=False), encoding='utf-8')
 
         content = data.get('content', '<html>\n<h1>New Page</h1>\n</html>')
-        (page_path / 'content.md').write_text(content, encoding='utf-8')
+        (page_path / 'content.html').write_text(content, encoding='utf-8')
 
         compile_script = Path.cwd() / 'compile.py'
         if compile_script.exists():
@@ -5226,7 +5245,7 @@ def scan_secrets():
     for page_dir in sorted(artist_path.iterdir()):
         if not page_dir.is_dir() or page_dir.name in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups'):
             continue
-        content_file = page_dir / 'content.md'
+        content_file = page_dir / 'content.html'
         if content_file.exists():
             try:
                 content = content_file.read_text()
@@ -5921,13 +5940,13 @@ def export_site_zip(artist_slug):
         if config_file.exists():
             zf.write(config_file, 'api/config.json')
 
-        # 4. Source content.md files (for re-editing elsewhere)
+        # 4. Source content.html files (for re-editing elsewhere)
         for page_dir in sorted(artist_path.iterdir()):
             if page_dir.is_dir() and page_dir.name not in ('assets', 'widgets', '__pycache__', '.snapshots', 'backups'):
-                content_file = page_dir / 'content.md'
+                content_file = page_dir / 'content.html'
                 config_json = page_dir / 'config.json'
                 if content_file.exists():
-                    zf.write(content_file, f'source/{page_dir.name}/content.md')
+                    zf.write(content_file, f'source/{page_dir.name}/content.html')
                 if config_json.exists():
                     zf.write(config_json, f'source/{page_dir.name}/config.json')
 
@@ -5946,7 +5965,7 @@ hosting provider (Netlify, Vercel, GitHub Pages, any web server).
 The site is fully self-contained with relative paths — no server needed.
 
 ### source/
-The raw content.md and config.json files for each page. These are the
+The raw content.html and config.json files for each page. These are the
 editable source files used by the dashboard. Format:
   <style>CSS here</style>
   <html>HTML here</html>

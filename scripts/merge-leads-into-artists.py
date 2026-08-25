@@ -95,7 +95,9 @@ def scaffold_artist(slug: str, client: str, dry_run: bool) -> None:
     (art_dir / "config.json").write_text(json.dumps(cfg, indent=4) + "\n")
     home = art_dir / "home"
     home.mkdir(exist_ok=True)
-    (home / "content.md").write_text(f"# {client}\n\nPlaceholder home page.\n")
+    (home / "content.html").write_text(
+        f"<html>\n<h1>{client}</h1>\n<p>Placeholder home page.</p>\n</html>\n"
+    )
     page_cfg = {
         "title": client,
         "slug": f"artists/{slug}/home",

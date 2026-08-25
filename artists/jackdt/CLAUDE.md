@@ -21,7 +21,7 @@ therefore fail in the design pane. Images are fine cross-origin (only fonts need
 CORS). If you re-sync it, keep the fonts local to that project.
 
 ### The pages pull their values from it
-The three page `<style>` blocks (`home/content.md`, `about/content.md`,
+The three page `<style>` blocks (`home/content.html`, `about/content.html`,
 `templates/writing.html`) carry a `:root` that names the design project as its
 source and mirrors its tokens: `--blue: #2b3ecd` / `--blue-deep: #1a2792`
 (colors.css), the `'Barlow Fallback'` metric-matched local face and the font
@@ -37,7 +37,7 @@ any more; the ink-fill gradient is `var(--blue-fill)`.
 ### `pages/home.html` in the design project is a MIRROR of the home page
 Pushed 2026-07-30 so the home page can be designed in the Claude Design pane.
 It is a copy — editing it there does **not** touch the site. To land a change:
-copy it back into `home/content.md`, swapping the absolute
+copy it back into `home/content.html`, swapping the absolute
 `https://jackdt.com/assets/…` URLs back to `../assets/…`, restoring the local
 `@font-face` block (site fonts live in `assets/fonts/`, the card's in the
 design project's `fonts/`), and re-wrapping the body in adze's bare `<html>`
@@ -68,15 +68,46 @@ Both pages set their body copy in `<section>`s inside a `.columns` grid, with
 "fix" the justification back to ragged.
 
 The two pages deliberately differ: **/about** runs 2-up side by side; **home**
-stacks its two sections in one left-aligned column (`.col` is `margin: 0`,
-max-width 620px, sharing the hero's `clamp(24px, 8vw, 120px)` left edge) because
-its sections are too uneven to sit side by side without a hole under the shorter
-one. Each home section is its own row — `minmax(0, 620px) 1fr` with
-`align-items: center` — so the reading measure stays 620px and its button sits
-out in the right-hand gutter, vertically centred against that block. The
-paragraphs need the `.text` wrapper for this: without it each `<p>` becomes its
-own grid item and the row collapses. Under 640px the row stacks and the button
-goes back to the left.
+stacks its six sections one per row inside a left-aligned `.col` (`margin: 0`,
+max-width 1600px, sharing the hero's `clamp(24px, 8vw, 120px)` left edge)
+because the sections are too uneven to sit side by side without a hole under
+the shorter one. Each row is `1fr 1fr` with `align-items: center`, so the
+section word is centred in its half against the block it belongs to. The
+reading measure is held **separately** on `.columns .text` (max-width 600px) —
+widening `.col` must not widen the lines. The paragraphs need that `.text`
+wrapper: without it each `<p>` becomes its own grid item and the row collapses.
+Under 640px the row stacks and the word goes back to the left.
+
+**The word rail is on the LEFT above 640px (2026-08-18).** Every row is
+`[word][copy]`, and the halves are unequal — `0.85fr 1.15fr`, so the copy gets
+the wider one. `order` does the swap in a `@media (min-width: 641px)` block
+rather than in the base rule, deliberately: the ≤640px phone layout keeps its
+own stacking (copy, then its word underneath).
+
+0.85 is about the limit on the word side. PHOTOGRAPHY is the longest of the six
+and sets ~375px at its 81px cap; at the 641px floor the left column has to still
+clear it. If a longer section name is ever added, check that column before
+anything else.
+
+Three arrangements have now been live, all on 2026-08-18, and the losers are
+recorded in `home/content.html` so they don't get re-proposed: copy-left with one
+straight rail of words down the right (the original — **the note above
+`.columns` still argues for it, don't read that as live**), a zigzag alternating
+the two, and this one.
+
+**Body copy is 400 weight at `clamp(16px, 1.35vw, 20px)` across a 700px measure
+(2026-08-18)**, from 200 at 16.5px/600px. Wider, smaller, heavier, in that order
+of importance — it overshot first at 24px/300 and came back, because at a real
+text weight that size was too loud beside the words. Two things go with it:
+- **Barlow 300 had to be declared** in the same pass. `barlow-300.ttf` was
+  already in `assets/fonts/` but had no `@font-face`, so `font-weight: 300`
+  silently snapped to the 400 face. 200/300/400/700 normal (and 200 italic) are
+  the declared faces now; anything else still needs adding first.
+- **One size for all six, deliberately.** Sized to match its own word, each
+  section would want a different value — PHOTOGRAPHY's short blurb more,
+  MUSIC's long one less. The cap protects the measure: 20px across 700px is
+  ~70 characters, which is longer than the ~55 this block was first tuned to
+  and is the intended trade.
 
 ### Article plates — the one card, used twice
 Square photo, publication line, title. **In colour, unframed, as shot** — the
@@ -479,7 +510,7 @@ for the section names to be set like the hero instead — Bebas, uppercase, the
 same `--blue-fill` ink. The uniform-width rule went with the boxes: with no
 box there is no edge to line up, so the six are simply centred on one axis in
 the right-hand column (left-aligned under 640px, where they sit in the copy's
-own margin). `.cta` exists only in `home/content.md` — no other page carries it.
+own margin). `.cta` exists only in `home/content.html` — no other page carries it.
 
 Size is `clamp(54px, 6.3vw, 81px)`, 51px flat under 640px — sized up 50% from
 the first pass on request. **The rail is now bigger than `.col .lede`**
@@ -623,7 +654,7 @@ register for a reading surface.
 
 Every page's standing prose is editable from the admin's **Text** section,
 including the four generated ones. The attribute goes in the **Jinja template**,
-never in the generated `content.md` — see the corrected rule in
+never in the generated `content.html` — see the corrected rule in
 [../CLAUDE.md](../CLAUDE.md). Current slots: `home` and `about` (many),
 `music` (`eyebrow`, `lede`), and `eyebrow` on photography/video/multimedia.
 
@@ -650,15 +681,15 @@ fighting it. **If you ever put the blur back at mobile widths, the menu breaks
 again** — and it breaks visually, not in any DOM assertion, so it will pass a
 scripted check.
 
-The nav is duplicated across **six** files now (`home/content.md`,
-`about/content.md` and the four templates). That is this site's existing pattern
+The nav is duplicated across **six** files now (`home/content.html`,
+`about/content.html` and the four templates). That is this site's existing pattern
 — every page carries its own full `<style>` — but six copies is the point at
 which adding a seventh section means six edits. There is no include mechanism in
 `compile.py`; if this grows again, that's the thing to build.
 
 ## Generated pages — do not hand-edit
 **Four** pages are now generated — `writing/`, `photography/`, `video/` and
-`multimedia/content.md` — rebuilt from **`content.json`** (types `posts`,
+`multimedia/content.html` — rebuilt from **`content.json`** (types `posts`,
 `photos`, `videos`, `multimedia`, the source of truth) by the generic
 `content_admin` feature via the matching template in `templates/` (all page mode
 `single`). All four are listed in `.generated.json`, so `/edit-page` and
@@ -668,12 +699,12 @@ change content, edit `content.json` or use the admin.
 `home/` and `about/` are **not** generated and are safe to edit directly —
 which is why the nav change had to be applied to them by hand.
 
-(A `news/content.md` and `templates/news.html` are described in older notes;
+(A `news/content.html` and `templates/news.html` are described in older notes;
 that section was folded back into `/writing` on 2026-07-31 and the template is
 gone. Ignore any remaining reference to it.)
 
 **`compile.py` alone will not create these pages.** It compiles whatever
-`content.md` already exists; the render step that writes them belongs to
+`content.html` already exists; the render step that writes them belongs to
 `content_admin` and normally runs on Publish. To force it from the host after
 editing `content.json` or a template by hand:
 
@@ -738,8 +769,8 @@ browser (Playwright/Chrome) is needed to re-scrape. thecoldmagazine.co.uk and
 Substack respond to ordinary `curl`.
 
 The page *chrome* (fonts, masthead, footer) lives in `templates/writing.html`,
-not in `content.md`. Design changes go there, then re-publish. `compile.py`
-alone is **not** enough — it compiles the already-rendered `content.md`, so a
+not in `content.html`. Design changes go there, then re-publish. `compile.py`
+alone is **not** enough — it compiles the already-rendered `content.html`, so a
 template edit is invisible until `render()` runs. Headless equivalent of the
 admin's Publish (the sys.path prefixes are the fiddly part):
 
@@ -758,7 +789,7 @@ Add/edit/delete posts, then Publish runs the framework rebuild (`render()` →
 `compile.py --artist jackdt`). See `_shared/features/CLAUDE.md`. The "Advanced
 editing →" link hands off to the full Adze control panel.
 
-home / about are ordinary hand-authored `content.md` (not generated).
+home / about are ordinary hand-authored `content.html` (not generated).
 
 ## Music page — removed 2026-07-30, REINSTATED 2026-08-05
 

@@ -3,20 +3,20 @@
 **`content.json` is the source of truth** (types: `works`, `exhibitions`).
 Rose's admin is the generic `content_admin` feature (`/admin` on rosefpjones.com),
 driven by the `content_types` + `admin_theme` blocks in `config.json`. Page
-`content.md` files are **generated** from `content.json` via the Jinja templates
+`content.html` files are **generated** from `content.json` via the Jinja templates
 in `templates/` — not hand-authored.
 
 ## ⚠ Do NOT hand-edit the generated pages
 Overwritten on every publish (they're listed in `.generated.json`, so `/edit-page`
 and Auto-Code refuse direct edits):
-- `works/<slug>/content.md` + `works/content.md` (index)
-- `exhibitions/<slug>/content.md` + `exhibitions/content.md` (index)
+- `works/<slug>/content.html` + `works/content.html` (index)
+- `exhibitions/<slug>/content.html` + `exhibitions/content.html` (index)
 
 To change them, edit **`content.json`** (data) or the **templates** (layout/CSS).
 `home/`, `about/`, `contact/` are ordinary hand-authored pages — edit directly.
 (`about/` is deliberately NOT a content type.)
 
-**Except the about-page CV.** `about/content.md` carries a bare
+**Except the about-page CV.** `about/content.html` carries a bare
 `<!-- EXHIBITIONS_BLOCK -->` marker; compile.py's `_inject_data_placeholders`
 fills it from **`assets/data/exhibitions.json`** — the published feed the content
 admin writes on every rebuild — newest year first, each entry rendered
@@ -59,8 +59,8 @@ There is **no separate `<h1>`** — the current page's menu link carries `is-cur
 and stays as the always-visible page title; the others slide in front (z-index).
 `.page` reserves the zone with `padding-top` (140px mobile / 190px desktop). To
 retitle a page, change which link has `is-current`. This chrome lives in the four
-`templates/` files **and** hand-authored `about/`/`contact/content.md` — keep them
-in sync. `home/content.md` has no menu, left as-is.
+`templates/` files **and** hand-authored `about/`/`contact/content.html` — keep them
+in sync. `home/content.html` has no menu, left as-is.
 
 ## Bespoke extras (removed with the old admin — see repo root discussion)
 The old `rose_admin.py` had a QR-code / business-card generator and an admin-font

@@ -21,7 +21,7 @@ All endpoints are under `/api/adze/`. Authenticated endpoints require `X-Artist-
 | Method | Route | Auth | Description |
 |--------|-------|------|-------------|
 | GET | `/list-pages` | Yes | List artist's pages |
-| GET | `/get-page-content` | Yes | Get page `content.md` + `config.json`. Query: `?page_slug=home` |
+| GET | `/get-page-content` | Yes | Get page `content.html` + `config.json`. Query: `?page_slug=home` |
 | POST | `/edit-page` | Yes | Update page. Body: `{page_slug, content?, config?}`. Returns `{compile_ok, compile_error}` |
 | POST | `/create-page` | Yes | Create new page. Body: `{page_slug, title, content?, config?}` |
 | POST | `/delete-page` | Yes | Delete a page. Body: `{page_slug}` |

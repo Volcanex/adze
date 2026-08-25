@@ -29,6 +29,13 @@
 }
 @font-face {
     font-family: 'Barlow';
+    font-style: normal;
+    font-weight: 300;
+    font-display: fallback;
+    src: url('../assets/fonts/barlow-300.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'Barlow';
     font-style: italic;
     font-weight: 200;
     font-display: fallback;
@@ -510,13 +517,22 @@ a { color: inherit; text-decoration: none; }
 .col .lede { max-width: 620px; }
 .col p {
     font-family: var(--body);
-    font-weight: 200;
-    /* Newspaper measure: ~55 characters a line. This was 18px/1.7 across a
-       620px column, which is ~80 characters — past the point where the eye
-       reliably finds the next line, and it read as a slab. Tightening the
-       leading with it keeps the column dense rather than airy. */
-    font-size: clamp(15px, 1.2vw, 16.5px);
-    line-height: 1.55;
+    /* 400, not 200 (2026-08-18). The old 200 was drawn for display sizes and
+       went grey and spindly the moment this block was set at a reading size —
+       it read as a wash rather than as type. 400 is what the copy is set in
+       now; 300 is declared too (barlow-300.ttf was on disk but had no
+       @font-face until this pass) if a step back down is ever wanted. Only
+       200/300/400/700 normal exist as faces — anything else silently snaps to
+       the nearest one. */
+    font-weight: 400;
+    /* Wider, smaller, heavier — the 2026-08-18 setting, in that order of
+       importance. It went the other way first (24px/300 on a 600px measure)
+       and came back: at 400 that size was too loud beside the words, so the
+       size came down and the measure went out instead. One size for all six,
+       deliberately — matching each block to its own word individually would
+       give six different sizes. */
+    font-size: clamp(16px, 1.35vw, 20px);
+    line-height: 1.5;
     color: #24272f;
     margin-bottom: 20px;
     /* set square: justified with hyphenation so both edges are flush and the
@@ -533,10 +549,13 @@ a { color: inherit; text-decoration: none; }
    horizontally in the column, so the whole right-hand side reads as one rail
    of identical buttons rather than a ragged edge.
 
-   Tried and rejected on 2026-08-05, in order: a zigzag (buttons alternating
-   sides), and a 2x3 grid of titled cells with feed-driven pictures. The grid
-   read as a set of cards rather than as a bio with places to go next, which is
-   what this page is. Don't re-add section titles or images here. */
+   Tried and rejected on 2026-08-05: a 2x3 grid of titled cells with
+   feed-driven pictures. It read as a set of cards rather than as a bio with
+   places to go next, which is what this page is. Don't re-add section titles
+   or images here.
+
+   The zigzag was rejected in that same pass and then asked for again on
+   2026-08-18 — it is now live above 1100px only. See *The zigzag* below. */
 .columns {
     display: grid;
     grid-template-columns: 1fr;
@@ -549,10 +568,12 @@ a { color: inherit; text-decoration: none; }
     gap: clamp(28px, 4vw, 56px);
 }
 .columns .text > :last-child { margin-bottom: 0; }
-/* The measure is capped independently of the column. The grid stays a true
-   50/50, but past ~1200px the copy stops stretching with it and the extra
-   width becomes margin instead of longer lines. */
-.columns .text { max-width: 600px; }
+/* The measure is capped independently of the column, so widening the grid's
+   copy side (below) does not run the lines away on a very wide monitor. 700px
+   at 20px is ~70 characters — longer than the ~55 this block was first tuned
+   to, which is the point: Jack asked for a wider, smaller, heavier setting on
+   2026-08-18. Justified with hyphenation, at 400 rather than 200, it holds. */
+.columns .text { max-width: 700px; }
 
 /* The six are set in the hero's face and the same photographic blue ink, not
    in blue slabs (2026-08-15). They run LARGER than .col .lede — the rail is
@@ -623,6 +644,27 @@ a { color: inherit; text-decoration: none; }
 .columns section:nth-child(4) .cta a { --cut: 90% 48%; }   /* Music */
 .columns section:nth-child(5) .cta a { --cut: 40% 20%; }   /* Video */
 .columns section:nth-child(6) .cta a { --cut: 70% 66%; }   /* Multimedia */
+
+/* ── The word rail is on the LEFT (2026-08-18) ──
+   Every row is [word][copy], not [copy][word], and the two halves are no longer
+   equal: the word side is the narrower one so the copy gets the width Jack
+   asked for. 0.85/1.15 is about as far as that can go — PHOTOGRAPHY is the
+   longest word at ~375px set at its 81px cap, and the left column still has to
+   clear it at 1100px, where it comes out ~460px.
+
+   Wired at 641px and up, not in the base rule, so the ≤640px phone layout keeps
+   its own stacking order (copy, then its word underneath) untouched.
+
+   Two earlier arrangements are recorded so they don't get re-proposed: copy on
+   the left with one straight rail of words down the right (the original, and
+   what the note above .columns is still arguing for), and a zigzag alternating
+   the two (2026-08-18, replaced the same day). This is the third and current
+   one. */
+@media (min-width: 641px) {
+    .columns section { grid-template-columns: 0.85fr 1.15fr; }
+    .columns .cta  { order: 1; }
+    .columns .text { order: 2; }
+}
 
 .foot {
     text-align: center;

@@ -19,7 +19,7 @@ What a dashboard supplies:
   - slug, cookie name, panel_url
   - panel_html — the SPA
   - render (optional) — a callable that rewrites the artist's data-driven
-    content.md pages from the dashboard's source-of-truth data file, and
+    content.html pages from the dashboard's source-of-truth data file, and
     returns the list of generated page paths (rel to the artist dir, posix)
     so /edit-page knows not to let a human edit a generated file.
 

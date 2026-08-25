@@ -1,6 +1,6 @@
 # Adze
 
-Multi-tenant artist site hosting. Each artist gets a directory under `artists/<slug>/` containing `config.json` and per-page subdirectories with a `content.md`. `compile.py` turns those into static HTML under `static/artists/<slug>/`. Flask serves them via domain-based routing keyed off `config.json`'s `domain` field.
+Multi-tenant artist site hosting. Each artist gets a directory under `artists/<slug>/` containing `config.json` and per-page subdirectories with a `content.html`. `compile.py` turns those into static HTML under `static/artists/<slug>/`. Flask serves them via domain-based routing keyed off `config.json`'s `domain` field.
 
 ## Runtime
 - Docker container `adze-flask` on `127.0.0.1:5001` (host nginx fronts it).
@@ -44,7 +44,7 @@ refusal, so it looks exactly like a wrong password. `mailer.py` uses STARTTLS on
 ## Layout
 - `artists/<slug>/config.json` — `name`, `slug`, `domain`, `admin_token`
   - SEO fields (edited in the dashboard **Presence** tab): `seo` (Person/MusicGroup/Organization site identity → JSON-LD), `robots` (custom robots.txt override). `compile.py` generates per-page meta description + Open Graph/Twitter + JSON-LD (`_build_seo_head`) and writes `sitemap.xml` + `robots.txt` at each site root (`_write_artist_seo_files`). adze.studio's own robots/sitemap/favicon are Flask routes in `admin_api.py` mapped at the site root by `nginx/sites-available/adze.studio`.
-- `artists/<slug>/<page>/content.md` — Markdown + inline `<style>`/`<script>` for each page
+- `artists/<slug>/<page>/content.html` — Markdown + inline `<style>`/`<script>` for each page
 - `artists/<slug>/assets/` — fonts, images, JS referenced via `../assets/...`
 - `_shared/` — code shared across artist sites
 - `static/artists/<slug>/` — compiled output (do not edit by hand)
@@ -85,13 +85,15 @@ entirely — it operates at the filesystem layer. Don't add Seed admin
 gates expecting them to apply to external Adze sessions.
 
 ## ⚠ Concurrent edits with Auto-Code
-The dashboard's Auto-Code tab runs an agent that can edit `artists/<slug>/` files live in a per-artist sandbox container. **Both you and Auto-Code write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, run:
+The dashboard's Auto-Code tab runs an agent that can edit `artists/<slug>/` files live. **Both you and Auto-Code write to the same files; last write wins.** Before any bulk write to `artists/<slug>/`, check for an active session:
 
 ```
-docker ps --filter label=adze.artist_slug=<slug> --format '{{.Names}}'
+docker exec adze-flask sh -c 'ls /app/.autocode-worktrees/.sessions/<slug>/ 2>/dev/null'
 ```
 
-If that artist's sandbox container is running, read the live files first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
+Recent session files mean Auto-Code has been active; read the live files first and integrate, or use targeted `Edit` calls instead of `Write`/regenerator scripts. See [artists/CLAUDE.md](artists/CLAUDE.md) for the full protocol.
+
+**The `docker ps --filter label=adze.artist_slug=<slug>` check in older docs no longer works.** Auto-Code moved off per-artist `adze-terminal-*` containers on 2026-08-24 — the agent now runs in-process inside `adze-flask` (see `_shared/dsh_agent.py`), so there is no per-artist container to look for and its absence proves nothing.
 
 (Terminal Access, a separate tmux/Claude-Code-CLI feature, was retired 2026-07 — ignore any stale references to it elsewhere.)
 
@@ -116,9 +118,11 @@ hand-edit between the markers.
 | `artists/lydialott/CLAUDE.md` | Lydia Lott (lydialott) — lydialott.co.uk |
 | `artists/mariaslaughter/CLAUDE.md` | Maria Slaughter (mariaslaughter) — mariaslaughter.online |
 | `artists/rose/CLAUDE.md` | Rose Jones — rosefpjones.com |
+| `artists/tom/CLAUDE.md` | OB Stays (tom) — obstays.adze.studio (obstays.net at launch) |
+| `artists/tom/tools/CLAUDE.md` | tools/ — brand asset generators |
 | `design-language/CLAUDE.md` | Design Language — canonical reference |
 | `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-08-06 11:16 UTC — 15 doc(s) found._
+_Auto-compiled 2026-08-22 22:23 UTC — 17 doc(s) found._
 <!-- DOCS:END -->

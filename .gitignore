@@ -52,3 +52,7 @@ output/
 
 # Agent worktrees — full repo copies, never committed
 .claude/worktrees/
+
+# Auto-Code git worktrees and harness session logs (see _shared/dsh_agent.py).
+# Kept outside artists/ so compile.py never publishes a half-finished branch.
+.autocode-worktrees/

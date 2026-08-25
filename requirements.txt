@@ -8,4 +8,10 @@ requests
 Pillow
 litellm>=1.50.0
 aider-chat>=0.85.0
+# Auto-Code's agent backend. Pinned exactly, not floored: dsh is a release
+# candidate whose plugin API is documented as compatibility-breaking between
+# builds, and a `>=` here would let a bad rc land on five live artist sites
+# on the next image build. Installing it needs pip's --pre.
+# Pulls deepseek-harness-runtime (~209MB, prebuilt linux-x64 binary).
+deepseek-harness-sdk==0.1.1rc1
 qrcode>=8.0

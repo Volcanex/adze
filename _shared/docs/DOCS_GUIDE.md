@@ -8,7 +8,7 @@ This directory is the **single source of truth** for Adze Studio documentation.
 |------|----------|---------|
 | `00-behaviour.md` | AI only | Vibe Coder tone, rules, sandboxing |
 | `01-architecture.md` | AI + devs | How Adze works end-to-end |
-| `02-site-format.md` | AI + artists | content.md format, pages, config, api.py |
+| `02-site-format.md` | AI + artists | content.html format, pages, config, api.py |
 | `03-api.md` | AI + devs | Full API endpoint reference |
 | `04-widgets.md` | AI + devs | Widget development guide |
 

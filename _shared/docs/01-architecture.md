@@ -9,7 +9,7 @@ artists/{slug}/                ← your working directory
   default-styles.css           ← site-wide CSS variables, auto-injected into every page
   api.py                       ← optional: custom Flask blueprint (advanced)
   {page-slug}/
-    content.md                 ← page source: <style>...</style><html>...</html>
+    content.html                 ← page source: <style>...</style><html>...</html>
     config.json                ← page metadata (title, slug, description)
   assets/
     images/                    ← uploaded images
@@ -25,7 +25,7 @@ artists/{slug}/                ← your working directory
 When the user clicks **Save** in the dashboard:
 
 ```
-content.md  →  compile.py  →  static HTML in output/  →  served by nginx
+content.html  →  compile.py  →  static HTML in output/  →  served by nginx
 ```
 
 You don't run the compiler yourself. Tell the user to click Save after

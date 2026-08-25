@@ -8,7 +8,7 @@ Gothic/revivalist site. Deliberately period-styled markup — `<font>` tags,
 
 All four pages (`home`, `gallery`, `links`, `music`) are listed in
 `.generated.json`. They are rebuilt from `content.json` through
-`templates/*.html` on every Publish, so **any edit to their `content.md`
+`templates/*.html` on every Publish, so **any edit to their `content.html`
 is destroyed on the next publish.** Edit the template or the content type,
 never the page.
 

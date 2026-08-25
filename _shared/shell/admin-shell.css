@@ -2013,7 +2013,63 @@ a.as-site__secname:hover { color: var(--adze-accent); }
   gap: var(--adze-space-6);
   align-items: start;
 }
-.as-files__search { margin-bottom: var(--adze-space-3); }
+.as-files__searchrow {
+  display: flex; align-items: center; gap: var(--adze-space-2);
+  margin-bottom: var(--adze-space-3);
+}
+.as-files__searchrow .as-files__search { margin-bottom: 0; flex: 1 1 auto; min-width: 0; }
+/* The (i) beside the file search. Round, quiet, and the same height as the
+   input beside it so the row reads as one control. */
+.as-files__help {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--adze-border);
+  border-radius: var(--adze-radius-pill);
+  background: transparent;
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-2xs);
+  font-style: italic;
+  font-family: Georgia, 'Times New Roman', serif;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.as-files__help:hover {
+  background: var(--adze-accent-soft);
+  border-color: var(--adze-accent-line);
+  color: var(--adze-accent);
+}
+
+/* Files-section explainer, opened from the (i). */
+.as-help { max-width: var(--adze-width-prose); }
+.as-help__title {
+  margin: 0 0 var(--adze-space-3);
+  font-size: var(--adze-text-lg);
+  color: var(--adze-text);
+}
+.as-help p {
+  margin: 0 0 var(--adze-space-4);
+  color: var(--adze-text-muted);
+  font-size: var(--adze-text-sm);
+  line-height: 1.6;
+}
+.as-help__item {
+  display: flex; flex-direction: column; gap: var(--adze-space-1);
+  padding: var(--adze-space-3) 0;
+  border-top: 1px solid var(--adze-border);
+}
+.as-help__item + .as-help__item { border-top: 1px solid var(--adze-border); }
+.as-help__name {
+  font-size: var(--adze-text-xs);
+  color: var(--adze-accent);
+}
+.as-help__desc {
+  font-size: var(--adze-text-sm);
+  color: var(--adze-text-muted);
+  line-height: 1.6;
+}
+.as-help__item + p { margin-top: var(--adze-space-5); padding-top: var(--adze-space-4); border-top: 1px solid var(--adze-border); }
+.as-help__note { color: var(--adze-text-faint); font-size: var(--adze-text-xs); }
 .as-files__list {
   position: sticky; top: var(--adze-space-4);
   max-height: calc(100vh - var(--adze-space-12));

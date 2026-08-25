@@ -734,7 +734,7 @@
 
   // The kinds _file_kind marks as readable text; everything else the viewer
   // renders from its bytes or offers as a download.
-  const TEXT_KINDS = ['text', 'markdown', 'env'];
+  const TEXT_KINDS = ['text', 'page', 'markdown', 'env'];
 
   /* One flat list grouped by folder, not a collapsible tree. An artist site is
    * a handful of page folders and an assets folder — a tree here would be three
@@ -772,8 +772,21 @@
     const search = el('input', 'af-input as-files__search');
     search.type = 'search';
     search.placeholder = 'Find a file';
+
+    /* The Files list is the first place an artist meets their own site as
+     * *files*, and "content.html" means nothing without a sentence of context.
+     * The (i) explains the shape once, on demand, rather than spending a
+     * permanent paragraph of the pane on it. */
+    const helpBtn = el('button', 'as-files__help');
+    helpBtn.type = 'button';
+    helpBtn.title = 'How these files work';
+    helpBtn.setAttribute('aria-label', 'How these files work');
+    helpBtn.textContent = 'i';
+
+    const searchRow = el('div', 'as-files__searchrow');
+    searchRow.append(search, helpBtn);
     const rowsHost = el('div');
-    listPane.append(search, rowsHost);
+    listPane.append(searchRow, rowsHost);
     viewPane.appendChild(emptyState('Pick a file',
       'Everything your site is built from is here. Nothing you open can be changed from this page.'));
 
@@ -813,6 +826,52 @@
     }
 
     search.addEventListener('input', () => draw(search.value));
+
+    /* Written for someone who has never opened a folder of source before:
+     * name the three things they will actually see in the list, say what
+     * publishing does to them, and be explicit that this page cannot break
+     * anything. Keep the file names in step with compile.py. */
+    function showFilesHelp() {
+      current = null;
+      rowByPath.forEach(row => row.classList.remove('is-active'));
+      wrap.classList.add('is-detail');
+      viewPane.innerHTML = '';
+
+      const box = el('div', 'as-help');
+      box.appendChild(el('h3', 'as-help__title', 'How your site files work'));
+      box.appendChild(el('p', null,
+        'Your site is a set of folders. Each page of the site is one folder, and '
+        + 'the folder\u2019s name is the address people visit \u2014 the "about" '
+        + 'folder is the About page.'));
+
+      [['content.html',
+        'The page itself. It holds two blocks: a styles block that sets how the '
+        + 'page looks, and a content block with the words and pictures on it. '
+        + 'Open one and this page shows you the two halves separately.'],
+       ['config.json',
+        'The page\u2019s settings \u2014 its title, and the description that '
+        + 'shows up in Google and when the page is shared.'],
+       ['assets',
+        'Your images, fonts and downloads. Everything the pages point at lives '
+        + 'in here.']].forEach(([name, desc]) => {
+        const item = el('div', 'as-help__item');
+        item.appendChild(el('code', 'as-help__name', name));
+        item.appendChild(el('span', 'as-help__desc', desc));
+        box.appendChild(item);
+      });
+
+      box.appendChild(el('p', null,
+        'When you publish, Adze reads every page folder and builds the real '
+        + 'website from it. Nothing here is the live site \u2014 these are the '
+        + 'instructions the live site is made from.'));
+      box.appendChild(el('p', 'as-help__note',
+        'This page is read-only: you can look at anything without any risk of '
+        + 'breaking your site. Changes are made in the control panel.'));
+
+      viewPane.appendChild(box);
+    }
+
+    helpBtn.addEventListener('click', showFilesHelp);
 
     async function select(path) {
       current = path || null;
@@ -1102,7 +1161,7 @@
     ['account', 'Account'],
   ];
 
-  // The hash carries the file path too (#/files/home/content.md) so a view — and
+  // The hash carries the file path too (#/files/home/content.html) so a view — and
   // a file inside it — survives a reload and answers the back button.
   function route() {
     const parts = (location.hash || '').replace(/^#\/?/, '').split('/').filter(Boolean);

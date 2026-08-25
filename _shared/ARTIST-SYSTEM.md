@@ -6,7 +6,7 @@ new artist sites, set up custom domains, and build widgets. Written for future d
 ## Overview
 
 Artist sites live under `pages/artists/{slug}/`. Each artist gets:
-- A set of pages (each a folder with `config.json` + `content.md`)
+- A set of pages (each a folder with `config.json` + `content.html`)
 - Shared assets in `assets/`
 - Optional custom widgets in `widgets/`
 - An admin dashboard at `/api/sandbox/dashboard`
@@ -33,10 +33,10 @@ pages/artists/
 │   │   └── my-widget.js
 │   ├── home/                       # Pages — each is a folder
 │   │   ├── config.json
-│   │   └── content.md
+│   │   └── content.html
 │   ├── gallery/
 │   │   ├── config.json
-│   │   └── content.md
+│   │   └── content.html
 │   └── ...more pages
 ```
 
@@ -79,7 +79,7 @@ mkdir -p pages/artists/{slug}/home
 }
 ```
 
-`pages/artists/{slug}/home/content.md`:
+`pages/artists/{slug}/home/content.html`:
 ```
 <style>
 /* CSS goes here */
@@ -92,7 +92,7 @@ body { background: #1a1a2e; color: white; font-family: sans-serif; }
 </html>
 ```
 
-The content.md format is: `<style>...</style>` followed by `<html>...</html>`. The compiler
+The content.html format is: `<style>...</style>` followed by `<html>...</html>`. The compiler
 splits these and wraps them in a full HTML document.
 
 ### 4. Compile and restart
@@ -106,7 +106,7 @@ The site is now live at `https://yourdomain.com/artists/{slug}/`
 
 ## Asset Paths
 
-All asset references in content.md should use relative paths:
+All asset references in content.html should use relative paths:
 ```
 ../assets/images/photo.jpg
 ../assets/fonts/MyFont.ttf
@@ -170,7 +170,7 @@ Each artist can have custom dashboard widgets. These are `.js` files in `widgets
     // ctx.savePage(slug, content, config) — save a page
     // ctx.getCss() / ctx.setCss(val) — read/write CSS editor
     // ctx.getHtml() / ctx.setHtml(val) — read/write HTML editor
-    // ctx.parseContent(raw) — split raw content.md into {css, html}
+    // ctx.parseContent(raw) — split raw content.html into {css, html}
     // ctx.loadAssets() — refresh the asset list
 
     ctx.container.innerHTML = `
@@ -292,7 +292,7 @@ maintains the same depth.
 `compile.py` handles artist sites in `compile_all()`:
 1. `copy_artist_assets()` — copies `pages/artists/{slug}/assets/` → `output/artists/{slug}/assets/`
 2. `generate_artist_root_indexes()` — creates redirect `index.html` at each artist root → `home/`
-3. Normal page compilation handles each page's `content.md` → `output/artists/{slug}/{page}/index.html`
+3. Normal page compilation handles each page's `content.html` → `output/artists/{slug}/{page}/index.html`
 
 ## Systemd Service
 
