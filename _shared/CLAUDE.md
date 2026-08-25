@@ -33,12 +33,24 @@ Platform code shared across all artist sites. Organised into a few subsystems:
   one session per artist, and translates harness notifications into
   **opencode's event schema** so `dashboard.html` needs no changes — its
   `dispatch()` is still the consumer, so changing an event shape here
-  breaks the browser. Model is `deepseek/deepseek-v4-flash` over the
-  existing OpenRouter key.
+  breaks the browser. Model is `deepseek/deepseek-v4-pro` over the
+  existing OpenRouter key (was `-flash` until 2026-08-25; flash's code
+  was fine, its aim was not — it wandered outside the artist it was
+  working for on ~30 of 54 tool calls where pro used 16 and stayed put).
 - `dsh_cordis.yml` — the agent's plugin composition, handed to the runtime
-  as `DSH_CORDIS_CONFIG`. Notable for what it omits: no `dsh-bash-local`,
-  so **the model has no shell** — file tools are its entire surface. It is
-  a full replacement for the runtime's bundled default, not an overlay.
+  as `DSH_CORDIS_CONFIG`. It is a full replacement for the runtime's bundled
+  default, not an overlay. Two things it does deliberately:
+  - **No `dsh-bash-local`**, so the model has no shell — file tools are its
+    entire surface. This one holds: the model has been observed trying to
+    call `bash` and getting `unknown tool`.
+  - **`fs-sandbox` + `sandbox-policy` instead of `fs-local`** (since
+    2026-08-25), which fences every write/edit to the session's own artist
+    directory. Before this, `fs-local`'s `cwd` was documented here as an
+    isolation boundary and was not one — absolute paths were never clamped,
+    and a session was observed reading another artist's `admin_token` and
+    rewriting their live site. **The fence covers writes only; reads are
+    still unfenced across the whole container.** See the long comment in the
+    file — do not re-mount `fs-local`.
 - `asset_store.py` — shared asset-storage primitives behind **both** the
   admin dashboard (`/api/adze/upload-file`) and the intake portal
   (`/api/adze/intake/<slug>/<token>/upload`): `safe_rel()` (per-segment

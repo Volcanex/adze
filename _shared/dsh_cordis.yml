@@ -52,15 +52,57 @@
 - id: subprocess
   name: '@deepseek-ai/dsh-subprocess-local'
 
-# DSH_CWD is set per-artist to that artist's directory, so the filesystem
-# provider cannot see another artist's files.
-- id: fs-local
-  name: '@deepseek-ai/dsh-fs-local'
+# ── Filesystem containment ───────────────────────────────────────────────
+#
+# `fs-local` used to be mounted here with `cwd: DSH_CWD` and a comment claiming
+# that "the filesystem provider cannot see another artist's files". That was
+# FALSE, and it was false in the worst way: it read as a guarantee, the agent
+# believed it, and nothing enforced it. Upstream says so in its own docs —
+# fs-local resolves relative paths from `cwd`, which is "a resolution default,
+# NOT a containment boundary ... enforce containment with a stricter backend or
+# a `tools/execute` permission plugin".
+#
+# Absolute paths were never clamped. Verified 2026-08-25 by driving a test
+# artist's session: in one turn the model listed `/` and `/app`, read another
+# artist's `config.json` (admin_token, last_login_ip) and their `_vibe_sessions`
+# chat history, and then CREATED AND EDITED FILES in that artist's live site.
+#
+# `fs-sandbox` is upstream's "stricter backend". It registers as `ctx.fs`
+# INSTEAD OF fs-local (it subclasses it, so all the read/write/edit mechanics
+# are the same code) and adds a policy fence on the two mutations. It requires
+# `sandbox-policy` for `ctx.sandboxPolicy`, which is why that is mounted first.
+#
+# `workspace-write` resolves the boundary per call from the SESSION's cwd
+# (`sandboxPolicy.resolve()` prefers `session.header.cwd` over the configured
+# fallback), and dsh_agent starts every session with cwd = that artist's
+# directory. So the fence is automatically per-artist, and worktree tabs are
+# fenced to their own worktree, with no extra wiring.
+#
+# ⚠ THIS FENCES WRITES, NOT READS. Upstream is explicit: "Reads pass through
+# untouched: every mode permits reading." There is no read fence anywhere in
+# the runtime — `readableRoots` does not exist — and `grep`/`glob` shell out to
+# ripgrep through the subprocess service, bypassing `ctx.fs` entirely. A
+# determined session can still READ any artist's files, so an artist's
+# `admin_token` is still reachable by a model that goes looking. Closing that
+# needs either a `tools/execute` permission plugin that gates every call, or
+# OS-level confinement of the runtime process (bwrap/Landlock/mount namespace —
+# none of which this container currently has: no bwrap, no CAP_SYS_ADMIN, and
+# `unshare` returns EPERM). Treat artist config secrets as reachable until then.
+- id: sandbox-policy
+  name: '@deepseek-ai/dsh-sandbox-policy'
+  config:
+    mode: workspace-write
+    workspaceRoot: !!js process.env.DSH_CWD ?? process.cwd()
+
+# Inherits fs-local's Config schema (`cwd`, `diffBasisMaxBytes`) because
+# SandboxedFileSystem extends LocalFileSystem without redeclaring it.
+- id: fs-sandbox
+  name: '@deepseek-ai/dsh-fs-sandbox'
   config:
     cwd: !!js process.env.DSH_CWD ?? process.cwd()
 
-# fs-local on its own exposes no model-facing tools; these three are the
-# entire tool surface the model gets.
+# The fs backend on its own exposes no model-facing tools; these three are
+# the entire tool surface the model gets.
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
 

@@ -124,5 +124,5 @@ hand-edit between the markers.
 | `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-08-22 22:23 UTC — 17 doc(s) found._
+_Auto-compiled 2026-08-25 18:54 UTC — 17 doc(s) found._
 <!-- DOCS:END -->

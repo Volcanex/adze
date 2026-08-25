@@ -60,7 +60,19 @@ MODELS = {
     'flash': 'deepseek/deepseek-v4-flash',
     'pro': 'deepseek/deepseek-v4-pro',
 }
-DEFAULT_MODEL = MODELS['flash']
+# `pro` since 2026-08-25. Flash is not too dumb to write the code — its JS was
+# fine — it is too loose to stay in its own directory. Same prompt, same artist,
+# measured side by side: flash made 54 tool calls, ~30 of them on paths outside
+# the artist it was working for, and rebuilt a different artist's site; pro made
+# 16, all inside, and said plainly that the assets folder was empty instead of
+# inventing "50+ images" to fill a gallery with. ~5x the price of flash, which
+# is ~$0.003 for a typical page edit — far below the cost of one support email
+# about a site that edited itself wrong.
+#
+# This is a tendency, not a boundary: pro would have been just as free to wander
+# if it had decided to. The fence in dsh_cordis.yml is what makes it safe; this
+# just makes it rarer.
+DEFAULT_MODEL = MODELS['pro']
 
 # USD per 1M tokens, used only to paint the dashboard's cost readout. These
 # are DeepSeek's off-peak rates as of 2026-08-16; peak (01:00-04:00 and
