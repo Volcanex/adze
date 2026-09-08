@@ -205,6 +205,19 @@ class _TurnState:
         self.usage: dict = {}
         self.parts: list[dict] = []
 
+    def text_part_id(self, text: str, fallback: str) -> str:
+        """Id for a settled text that was already streamed as a block.
+
+        The harness reports the final text three times — as deltas, in its
+        assistant/message event, and in run()'s return value. The dashboard
+        keys bubbles by part id, so the settled copies must reuse the
+        streamed block's id or the same reply renders three times.
+        """
+        for pid, streamed in self.text.items():
+            if pid.startswith('text-') and streamed == text:
+                return pid
+        return fallback
+
     def block_part_id(self, turn: Any, step: Any, index: Any, kind: str) -> str:
         key = (turn, step, index)
         if key not in self.blocks:
@@ -312,7 +325,7 @@ def _translate(payload: dict, st: _TurnState) -> list[dict]:
         message = data.get('message') or {}
         for block in message.get('content') or []:
             if isinstance(block, dict) and block.get('type') == 'text' and block.get('text'):
-                pid = f'final-{message.get("id", st.message_id)}'
+                pid = st.text_part_id(block['text'], f'final-{message.get("id", st.message_id)}')
                 st.text[pid] = block['text']
                 events.append({'type': 'message.part.updated',
                                'properties': {'part': {'id': pid, 'sessionID': sid,
@@ -421,7 +434,8 @@ class _Session:
             if not self.title:
                 self.title = (text[:60] + '…') if len(text) > 60 else text
 
-            parts = [{'id': f'final-{st.message_id}', 'type': 'text', 'text': final}] if final else []
+            parts = [{'id': st.text_part_id(final, f'final-{st.message_id}'),
+                      'type': 'text', 'text': final}] if final else []
             info = {'id': st.message_id, 'sessionID': self.id, 'role': 'assistant',
                     'cost': _estimate_cost(st.model, st.usage),
                     'tokens': _usage_to_tokens(st.usage)}

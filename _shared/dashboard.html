@@ -1278,18 +1278,16 @@
                         <div class="editor-pane" id="autocodeEditorPane">
                             <div class="ac-chat" id="acChat">
                                 <div class="ac-header">
-                                    <!-- Mode selector hidden for now — we default to standardplus
-                                         (anthropic/claude-haiku-4.5:thinking) only. Leave the markup here
-                                         so the other tiers can be re-enabled later.
+                                    <!-- Mode selector hidden for now — we default to standard
+                                         (deepseek-v4-pro) only. Leave the markup here so fast can be
+                                         re-enabled later.
                                     <span class="ac-label">Mode</span>
                                     <div class="ac-segment" role="group" aria-label="Auto-Code mode">
-                                        <button type="button" id="acModeStandard" class="ac-seg-btn" onclick="AutoCode.setMode('standard')" title="Nippy and competent. Claude Haiku 4.5, no thinking.">Standard</button>
-                                        <button type="button" id="acModeStandardPlus" class="ac-seg-btn active" onclick="AutoCode.setMode('standardplus')" title="Sweet spot — Haiku with extended thinking. Slower than Standard but smarter, and more cost-efficient than Smart.">Standard+</button>
-                                        <button type="button" id="acModeSmart" class="ac-seg-btn" onclick="AutoCode.setMode('smart')" title="Fixes problems fast. Claude Sonnet 4.5, no thinking.">Smart</button>
-                                        <button type="button" id="acModeSmartPlus" class="ac-seg-btn" onclick="AutoCode.setMode('smartplus')" title="For problems the others can't handle. Sonnet 4.5 with extended thinking — slowest, smartest. + models think: slower but smarter and more cost-efficient than the next tier up.">Smart+</button>
+                                        <button type="button" id="acModeFast" class="ac-seg-btn" onclick="AutoCode.setMode('fast')" title="Cheaper and quicker. DeepSeek V4 Flash.">Fast</button>
+                                        <button type="button" id="acModeStandard" class="ac-seg-btn active" onclick="AutoCode.setMode('standard')" title="Stays inside your site and says when something is missing. DeepSeek V4 Pro.">Standard</button>
                                     </div>
                                     -->
-                                    <span class="ac-model" id="acModelLabel">anthropic/claude-haiku-4.5:thinking</span>
+                                    <span class="ac-model" id="acModelLabel">deepseek/deepseek-v4-pro</span>
                                     <span class="ac-spacer"></span>
                                     <span class="ac-cost" title="Spend on this Auto-Code session (sum of completed assistant turns)">
                                         <i class="ph ph-currency-dollar"></i>
@@ -7827,27 +7825,24 @@ function renderAbout() {
 // Render about on first tab switch
 // (handled in switchTab)
 
-// ── Auto-Code (opencode-serve chat client) ───────────────────────────────
-// Talks to /api/adze/autocode/* (Flask proxy → opencode serve in the
-// per-artist sandbox container). Mode is per-message — switching Normal
-// ↔ Fast just changes the model field on the next POST, no reconnect.
+// ── Auto-Code (chat client) ──────────────────────────────────────────────
+// Talks to /api/adze/autocode/* (Flask → in-process DeepSeek harness, see
+// _shared/dsh_agent.py). The wire format is still opencode's event schema.
+// Mode is per-message — switching just changes the model field on the next
+// POST, no reconnect.
 const AutoCode = (() => {
+    // Values are the keys of dsh_agent.MODELS; the proxy resolves them.
     const MODELS = {
-        standard:     { providerID: 'openrouter', modelID: 'anthropic/claude-haiku-4.5' },
-        standardplus: { providerID: 'openrouter', modelID: 'anthropic/claude-haiku-4.5:thinking' },
-        smart:        { providerID: 'openrouter', modelID: 'anthropic/claude-sonnet-4.5' },
-        smartplus:    { providerID: 'openrouter', modelID: 'anthropic/claude-sonnet-4.5:thinking' },
+        fast:     'flash',
+        standard: 'pro',
     };
     const MODE_BTN = {
+        fast: 'acModeFast',
         standard: 'acModeStandard',
-        standardplus: 'acModeStandardPlus',
-        smart: 'acModeSmart',
-        smartplus: 'acModeSmartPlus',
     };
     const MODE_STORAGE_KEY = 'autocode-mode';
-    // Claude 4.5 family share a 200k context window; hard-code rather
-    // than thread it through every message.
-    const CONTEXT_LIMIT = 200000;
+    // Mirrors dsh_agent.CONTEXT_WINDOW.
+    const CONTEXT_LIMIT = 1000000;
     const TOOL_ICONS = {
         read: 'ph-file-text', write: 'ph-pencil-simple', edit: 'ph-pencil-simple',
         list: 'ph-folder', ls: 'ph-folder', glob: 'ph-folder',
@@ -7871,7 +7866,7 @@ const AutoCode = (() => {
     const tabs = new Map();              // tab.id → tab object
     let activeTabId = null;
     let nextLocalTabId = 0;
-    let mode = 'standardplus';
+    let mode = 'standard';
     let es = null;
     let esBackoff = 500;
     let lastPreviewRefresh = 0;
@@ -8829,7 +8824,7 @@ const AutoCode = (() => {
             if (b) b.classList.toggle('active', k === mode);
         }
         const label = $('acModelLabel');
-        if (label) label.textContent = MODELS[mode].modelID;
+        if (label) label.textContent = 'deepseek/deepseek-v4-' + MODELS[mode];
         try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch {}
     }
 
@@ -8861,9 +8856,10 @@ const AutoCode = (() => {
 
     function activate() {
         wireComposer();
-        // Mode selector is hidden for now — pin to the default (standardplus =
-        // anthropic/claude-haiku-4.5:thinking) and ignore any previously saved
-        // mode. Re-enable the block below when the selector returns.
+        // Mode selector is hidden for now — pin to the default (standard =
+        // deepseek-v4-pro; flash wanders outside the artist's directory, see
+        // dsh_agent.py) and ignore any previously saved mode. Re-enable the
+        // block below when the selector returns.
         // try {
         //     const saved = localStorage.getItem(MODE_STORAGE_KEY);
         //     if (saved && MODELS[saved] && saved !== mode) setMode(saved);
