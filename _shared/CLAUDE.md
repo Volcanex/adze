@@ -262,6 +262,17 @@ in client comms); "draft" means substitution only, sending is manual.
 
 - `shared/` (no underscore) at the repo root is a legacy stub — use
   `_shared/` only.
+- `asset_meta._locked()` must flush **before** it unlocks. `json.dump()` only
+  fills Python's buffer, so unlocking first lets the next waiter read the
+  pre-write file, merge into that stale copy and save it back — every write in
+  between is lost. This silently ate most of the metadata from bulk uploads
+  (24 concurrent uploads, 24 files on disk, 9 rows) until 2026-09-23. Any new
+  read-modify-write under `_locked` inherits the same requirement.
+- Artist-facing endpoints authorise through `auth.require_artist_auth`, which
+  understands the per-artist token, an account session and the `adze_session`
+  cookie. Comparing `config['admin_token']` by hand instead accepts only the
+  first of those, so anyone logged in with email and password gets a bare 403 —
+  that was the label endpoints' bug, fixed 2026-09-23.
 - Changes here take effect after `docker restart adze-flask` (source is
   bind-mounted, no rebuild needed).
 - `compile.py` and `flask_server.py` are bind-mounted **as single files**, so
