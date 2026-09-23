@@ -6,6 +6,7 @@ These endpoints handle common functionality like file uploads, page editing, etc
 import os
 import re
 import json
+import html as _html
 import shutil
 import socket
 import subprocess
@@ -4441,6 +4442,25 @@ def delete_assets():
 
 # ── Inbox (contact form submissions) ──────────────────────────────────────
 
+def _contact_reply(as_html, ok, message):
+    """Answer a contact submission in the shape the caller can read: JSON for
+    fetch(), a small page for a plain form POST that navigated here."""
+    if not as_html:
+        return jsonify({'success': True} if ok else {'error': message})
+    back = request.referrer or '/'
+    title = 'Message sent' if ok else 'Message not sent'
+    return Response(
+        '<!doctype html><meta charset="utf-8">'
+        f'<title>{title}</title>'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        '<style>body{font:16px/1.6 system-ui,sans-serif;margin:0;'
+        'min-height:100vh;display:grid;place-items:center;padding:24px}'
+        'div{max-width:32rem;text-align:center}a{color:inherit}</style>'
+        f'<div><h1>{title}</h1><p>{_html.escape(message)}</p>'
+        f'<p><a href="{_html.escape(back)}">Back to the site</a></p></div>',
+        mimetype='text/html')
+
+
 @bp.route('/contact', methods=['POST'])
 def public_contact():
     """
@@ -4449,7 +4469,13 @@ def public_contact():
     """
     _rate_limit('contact', 20, 60)  # 20 submissions per minute per IP
     import time, uuid
-    data = request.get_json(silent=True) or {}
+    # A plain <form method="POST"> sends form-encoded data, not JSON, and
+    # get_json() returns None for it — so every non-JS contact form on an
+    # artist site 400'd, and the visitor was shown the raw error as a page.
+    data = request.get_json(silent=True)
+    wants_html = data is None
+    if data is None:
+        data = request.form.to_dict() or {}
     slug    = data.get('artist_slug', '').strip()
     name    = data.get('name', '').strip()
     email   = data.get('email', '').strip()
@@ -4457,11 +4483,12 @@ def public_contact():
     message = data.get('message', '').strip()
 
     if not slug or not message or not email:
-        return jsonify({'error': 'artist_slug, email and message are required'}), 400
+        return _contact_reply(wants_html, False,
+                              'artist_slug, email and message are required'), 400
 
     artist_path = get_artist_path(slug)
     if not artist_path.exists():
-        return jsonify({'error': 'Artist not found'}), 404
+        return _contact_reply(wants_html, False, 'Artist not found'), 404
 
     submission = {
         'id':      str(uuid.uuid4()),
@@ -4482,7 +4509,7 @@ def public_contact():
             submissions = []
     submissions.insert(0, submission)
     sub_file.write_text(json.dumps(submissions, indent=2))
-    return jsonify({'success': True}), 201
+    return _contact_reply(wants_html, True, 'Thanks — your message has been sent.'), 201
 
 
 @bp.route('/list-submissions', methods=['GET'])
