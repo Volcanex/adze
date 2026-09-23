@@ -43,6 +43,7 @@ slashes (POSIX style), regardless of host OS.
 """
 import json
 import fcntl
+import os
 import time
 import secrets
 from contextlib import contextmanager
@@ -65,6 +66,16 @@ def _locked(path, mode='r+'):
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
         yield f
     finally:
+        # Flush before unlocking. json.dump() only fills Python's buffer, so
+        # releasing the lock first lets the next waiter read the file as it was
+        # *before* this write lands — it then merges into that stale copy and
+        # saves it back, dropping everything written in between. Bulk uploads
+        # lost most of their metadata this way.
+        try:
+            f.flush()
+            os.fsync(f.fileno())
+        except (OSError, ValueError):
+            pass
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
         f.close()
 

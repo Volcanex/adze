@@ -3302,10 +3302,17 @@ def upload_file():
         # Record metadata (optional `tags` form field, comma-separated).
         raw_tags = request.form.get('tags', '')
         tags = [t.strip() for t in raw_tags.split(',') if t.strip()][:32] if raw_tags else []
-        asset_meta.update_for(artist_slug, rel_path,
-                              tags=tags or None,
-                              uploaded_by='admin',
-                              uploaded_at=int(_time.time()))
+        # The file is already on disk at this point. A bookkeeping failure
+        # must not be reported as a failed upload — a bulk drop once returned
+        # 59 × 500 for 52 files that had uploaded fine.
+        try:
+            asset_meta.update_for(artist_slug, rel_path,
+                                  tags=tags or None,
+                                  uploaded_by='admin',
+                                  uploaded_at=int(_time.time()))
+        except Exception as err:
+            logging.exception('asset metadata write failed for %s/%s: %s',
+                              artist_slug, rel_path, err)
 
         return jsonify({
             'success': True,
