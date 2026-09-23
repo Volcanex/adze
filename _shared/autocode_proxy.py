@@ -365,7 +365,13 @@ def post_message(sid):
     if not text:
         return _err(400, 'empty message')
 
-    model = dsh_agent.MODELS.get((body.get('model') or '').strip(), None) or s.model
+    # Clients have sent `model` as an object rather than a string; a bare
+    # .strip() on that raised AttributeError and returned a 500 for what is
+    # really a recoverable input shape.
+    requested = body.get('model')
+    if isinstance(requested, dict):
+        requested = requested.get('id') or requested.get('name') or ''
+    model = dsh_agent.MODELS.get(str(requested or '').strip(), None) or s.model
 
     # The persona + docs + page list go in front of the first turn only; the
     # harness keeps its own conversation state after that, so re-sending it
