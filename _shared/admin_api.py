@@ -4181,19 +4181,22 @@ def intake_update_meta(slug, token):
 
 
 def _check_label_access(slug):
-    """Either super-admin or the artist's own per-artist token.
-    Returns True or aborts 403."""
-    from auth import is_admin_token, get_artist_config
+    """Either super-admin or the artist themselves. Returns True or aborts.
+
+    The artist branch defers to require_artist_auth, which is what every other
+    dashboard endpoint uses: it accepts the per-artist token, an account
+    session, and the adze_session cookie. Comparing admin_token by hand here
+    meant an artist logged in with email and password got a bare 403 on every
+    label they tried to create, delete or apply."""
+    from auth import is_admin_token, require_artist_auth
     token = request.headers.get('X-Admin-Token', '')
     if is_admin_token(token):
         return True
     # Cookie-only admin sessions (workspace subdomains) carry no header token.
     if is_admin_token(request.cookies.get('adze_admin_session', '')):
         return True
-    cfg = get_artist_config(slug) if slug else None
-    if cfg and cfg.get('admin_token') == token:
-        return True
-    abort(403)
+    require_artist_auth(slug)
+    return True
 
 
 @bp.route('/admin/artists/<slug>/labels', methods=['GET', 'POST'])
