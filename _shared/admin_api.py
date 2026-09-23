@@ -16,6 +16,7 @@ import logging
 import mimetypes
 from pathlib import Path
 from flask import Blueprint, jsonify, request, abort, send_file, Response, stream_with_context, make_response
+from flask import got_request_exception
 from werkzeug.utils import secure_filename
 from brands import brand_json, brand_asset_path, brand_link_base
 import sys
@@ -96,6 +97,29 @@ def _admin_fish(name):
     if not p.exists():
         abort(404)
     return send_file(str(p), mimetype='image/png', max_age=3600)
+
+
+def _log_request_exception(sender, exception, **extra):
+    """Record the traceback behind every 500, app-wide.
+
+    api.log stores status codes only, so a 500 left nothing to diagnose after
+    the fact — and blueprints other than this one (autocode, landing) are not
+    logged at all, so their crashes were invisible outside `docker logs`, which
+    does not survive the container being recreated. This is the Flask signal, so
+    it only observes: the response the user gets is unchanged.
+    """
+    try:
+        artist = request.headers.get('X-Artist-Slug', '') or '-'
+        _api_log.error('[%s] %s %s → 500 %s: %s', artist, request.method,
+                       request.path, type(exception).__name__, exception,
+                       exc_info=exception)
+    except Exception:
+        pass
+
+
+@bp.record_once
+def _wire_exception_logging(state):
+    got_request_exception.connect(_log_request_exception, state.app)
 
 
 @bp.after_request
