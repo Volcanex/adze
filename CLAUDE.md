@@ -114,6 +114,7 @@ hand-edit between the markers.
 | `_shared/widgets/CLAUDE.md` | Widgets — Dashboard panels in the artist admin |
 | `_shared/widgets/loom/CLAUDE.md` | Loom — visual synth (flagship T2 widget) |
 | `artists/CLAUDE.md` | Artists — coordination with Auto-Code |
+| `artists/beth/CLAUDE.md` | Beth Darroch (beth) — beth.adze.studio |
 | `artists/jackdt/CLAUDE.md` | Jack Dennison-Thompson (jackdt) — jackdt.com |
 | `artists/lydialott/CLAUDE.md` | Lydia Lott (lydialott) — lydialott.co.uk |
 | `artists/mariaslaughter/CLAUDE.md` | Maria Slaughter (mariaslaughter) — mariaslaughter.online |
@@ -124,5 +125,5 @@ hand-edit between the markers.
 | `design-language/adze/CLAUDE.md` | Adze Design Language |
 | `nginx/CLAUDE.md` | Nginx — Per-domain configs and TLS |
 
-_Auto-compiled 2026-08-25 18:54 UTC — 17 doc(s) found._
+_Auto-compiled 2026-09-08 21:09 UTC — 18 doc(s) found._
 <!-- DOCS:END -->

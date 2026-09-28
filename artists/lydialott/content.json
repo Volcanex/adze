@@ -43,8 +43,8 @@
     {
       "id": "study-01",
       "title": "We're not all that different really, me and you",
-      "dimensions": "297 x 420mm",
-      "medium": "Graphite on paper",
+      "dimensions": "4 x 8 \"",
+      "medium": "Ink and Pastel on Paper",
       "year": 2024,
       "date": "2024-07-04",
       "image": "images/2025_Bulk_Drawings_1.png",
@@ -55,15 +55,16 @@
     },
     {
       "id": "study-02",
-      "title": "Study 02",
-      "dimensions": "297 x 420mm",
-      "medium": "Graphite on paper",
-      "year": 2024,
+      "title": "Woman in Hat",
+      "dimensions": "11.7 x 16.5",
+      "medium": "Charcoal on Paper",
+      "year": 2025,
       "date": "2024-06-18",
       "image": "images/2025_Bulk_Drawings_2.png",
       "tags": [
         "drawings"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "woven-i",
@@ -121,10 +122,10 @@
     },
     {
       "id": "field-notes",
-      "title": "Field Notes",
-      "dimensions": "210 x 297mm",
-      "medium": "Mixed media on paper",
-      "year": 2023,
+      "title": "It would Make Birds of Men",
+      "dimensions": "11.7 x 16.5\"",
+      "medium": "Ink, Watercolour, Collage on Paper",
+      "year": 2024,
       "date": "2023-09-05",
       "image": "images/2025_Bulk_Drawings_3.png",
       "tags": [
@@ -134,10 +135,10 @@
     },
     {
       "id": "weather-iv",
-      "title": "Untitled (Weather IV)",
-      "dimensions": "1000 x 650mm",
+      "title": "Let it Happen",
+      "dimensions": "6 x 8.3\"",
       "medium": "Acrylic on paper",
-      "year": 2024,
+      "year": 2026,
       "date": "2024-03-28",
       "image": "images/weather-iv-2.png",
       "tags": [
@@ -167,22 +168,23 @@
     },
     {
       "id": "study-03",
-      "title": "Study 03",
-      "dimensions": "297 x 420mm",
+      "title": "Life Drawing 01",
+      "dimensions": "16.5 x 23.4",
       "medium": "Graphite on paper",
       "year": 2024,
       "date": "2024-02-15",
       "image": "images/2025_Bulk_Drawings_4.png",
       "tags": [
         "drawings"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "study-04",
-      "title": "Study 04",
-      "dimensions": "420 x 594mm",
-      "medium": "Ink on paper",
-      "year": 2024,
+      "title": "Skating at Somerset House",
+      "dimensions": "8.3 x 11.7",
+      "medium": "felt tip on paper",
+      "year": 2026,
       "date": "2024-01-30",
       "image": "images/2025_Bulk_Drawings_5.png",
       "tags": [
@@ -192,10 +194,10 @@
     },
     {
       "id": "study-05",
-      "title": "Study 05",
-      "dimensions": "297 x 420mm",
-      "medium": "Charcoal on paper",
-      "year": 2023,
+      "title": "Mum's going Crazy on Twitter, calling them thieving bastards, thieving little bastards",
+      "dimensions": "8.3 x 11.7",
+      "medium": "felt tip on paper",
+      "year": 2026,
       "date": "2023-12-19",
       "image": "images/2025_Bulk_Drawings_6.png",
       "tags": [
@@ -209,7 +211,7 @@
       "dimensions": "18 x 20\"",
       "medium": "wool on Monk's cloth",
       "year": 2025,
-      "date": "2023-12-01",
+      "date": "2025-11-01",
       "image": "images/woven-iii.png",
       "tags": [
         "textiles",
@@ -219,11 +221,11 @@
     },
     {
       "id": "woven-iv",
-      "title": "Woven IV",
-      "dimensions": "1100 x 850mm",
-      "medium": "Linen, cotton, wool",
-      "year": 2023,
-      "date": "2023-11-14",
+      "title": "It's Rubbing me Threadbare",
+      "dimensions": "14.5 x 19.8",
+      "medium": "Wool on Monk's Cloth",
+      "year": 2025,
+      "date": "2025-11-14",
       "image": "images/woven-iv.png",
       "tags": [
         "textiles"
@@ -232,14 +234,14 @@
     },
     {
       "id": "soft-body-i",
-      "title": "Soft Body I",
-      "dimensions": "600 x 450mm",
-      "medium": "Stuffed fabric, thread",
-      "year": 2023,
+      "title": "From Some Barely Lit Cove",
+      "dimensions": "12 x 17\"",
+      "medium": "Oil, Airbrush, Pastel on Canvas",
+      "year": 2025,
       "date": "2023-10-28",
       "image": "images/Screenshot_2026-03-25_at_13.22.52_1.png",
       "tags": [
-        "airbrushing"
+        "paintings"
       ],
       "description": ""
     },
@@ -259,9 +261,9 @@
     },
     {
       "id": "form-iii",
-      "title": "Form III",
-      "dimensions": "450 x 300 x 300mm",
-      "medium": "Plaster, pigment",
+      "title": "Sapere Aude",
+      "dimensions": "",
+      "medium": "Airbrush, Oil on Canvas",
       "year": 2023,
       "date": "2023-09-20",
       "image": "images/Screenshot_2026-03-25_at_13.23.44_1.png",
@@ -272,10 +274,10 @@
     },
     {
       "id": "form-iv",
-      "title": "Form IV",
-      "dimensions": "600 x 400 x 400mm",
+      "title": "The Angels are Pulling the Strings",
+      "dimensions": "11.7 x 16.5",
       "medium": "Ceramic",
-      "year": 2023,
+      "year": 2024,
       "date": "2023-09-01",
       "image": "images/Screenshot_2026-03-25_at_13.24.17_1.png",
       "tags": [
@@ -285,50 +287,23 @@
     },
     {
       "id": "air-i",
-      "title": "Atmosphere I",
-      "dimensions": "840 x 1188mm",
-      "medium": "Airbrush on board",
-      "year": 2023,
+      "title": "Self Portrait I",
+      "dimensions": "11.7 x 16.3",
+      "medium": "Airbrush on paper",
+      "year": 2026,
       "date": "2023-08-12",
       "image": "images/2025_Bulk_Airbrushing_1.png",
       "tags": [
-        "airbrushing",
-        "paintings"
-      ]
-    },
-    {
-      "id": "air-ii",
-      "title": "Atmosphere II",
-      "dimensions": "840 x 1188mm",
-      "medium": "Airbrush on board",
-      "year": 2023,
-      "date": "2023-07-25",
-      "image": "images/2025_Bulk_Airbrushing_2.png",
-      "tags": [
-        "airbrushing",
         "paintings"
       ],
       "description": ""
     },
     {
-      "id": "air-iii",
-      "title": "Atmosphere III",
-      "dimensions": "594 x 841mm",
-      "medium": "Airbrush, acrylic",
-      "year": 2023,
-      "date": "2023-07-03",
-      "image": "images/2025_Bulk_Airbrushing_3.png",
-      "tags": [
-        "airbrushing",
-        "landscapes"
-      ]
-    },
-    {
       "id": "land-i",
-      "title": "Field, Morning",
-      "dimensions": "1000 x 700mm",
+      "title": "Richmond Park",
+      "dimensions": "7 x 11\"",
       "medium": "Oil on canvas",
-      "year": 2023,
+      "year": 2025,
       "date": "2023-06-16",
       "image": "images/F894FCC4-7529-4CBF-B2F2-58CE8189EDE0_1_105_c_1.png",
       "tags": [
@@ -338,7 +313,7 @@
     },
     {
       "id": "land-ii",
-      "title": "Field, Dusk",
+      "title": "Ayrshire Hills",
       "dimensions": "1000 x 700mm",
       "medium": "Oil on canvas",
       "year": 2023,
@@ -353,7 +328,8 @@
       "tags": [
         "landscapes",
         "paintings"
-      ]
+      ],
+      "description": ""
     },
     {
       "id": "etch-i",
@@ -369,53 +345,55 @@
     },
     {
       "id": "etch-ii",
-      "title": "Plate II",
+      "title": "Wide mouthed, quick-pour, breakable’",
       "dimensions": "210 x 297mm",
-      "medium": "Etching, aquatint",
+      "medium": "Etched Macbook",
       "year": 2023,
       "date": "2023-04-19",
       "image": "images/2025_Bulk_Etchings_2.png",
       "tags": [
-        "etchings",
-        "drawings"
-      ]
+        "sculpture"
+      ],
+      "description": "This piece is about the irony of watching a genocide take place through vehicles owned by the very companies fuelling it. The manicured, flat language typical of Apple becomes all the more dystopian in light of their refusal to acknowledge the genocide in Palestine, their dismissal of an employee for supporting Palestine and their opening of a ‘development centre’ in Israel. Silence from those in power is not neutral. Aside from Apple, the genocide is fuelled by Google and Amazon (who are partners to project nimbus, which provides cloud technology to israel), Whatsapp and meta provide data to the IDF, Microsoft provides AI technology to the IDF to facilitate grave war crimes. Even posting this on instagram right now from my Iphone is an example of how we are only able to find voices through technologies owned by companies deeply complicit in genocide. The veneer of tech hides a hideous underbelly.\n\nIf this piece sells, profits will go to those directly to supporting those in Palestine\n\nThe poem is made from an Apple instruction manual and reads:\n\nChapter 3: Problem, meet solution\nCaution\nMay look the same but they are slightly different\nClick continue to start the\nThe\nthe The the\nthe\nMigration\nTools are required for this procedure\nIf If debris gets into\nthe\nIf it falls\nRinging\nIf the\nMuffled\nBurning\nPain Wide mouthed, quick-pour, breakable\nIn your ears O\nIf you experience\nOverheating, fire or injury\n\nOr\nSwelling, venting or leaking\nor Lost data\nTo avoid any potentially harmful events\n\nGently remove\nRemove the\nthe affected area\nclear of foreign objects\nAfter you’ve completed removal\nClean and clear your workspace."
     },
     {
       "id": "exh-i",
-      "title": "Installation View — \"Divided Self\"",
+      "title": "Divided Self",
       "dimensions": "Dimensions variable",
       "medium": "Mixed media",
       "year": 2023,
       "date": "2023-04-01",
       "image": "images/Screenshot_2026-03-25_at_13.57.11_1.png",
       "tags": [
-        "exhibitions"
+        "drawings"
       ],
       "description": ""
     },
     {
       "id": "exh-ii",
-      "title": "Installation View — \"Held\"",
+      "title": "Seeping",
       "dimensions": "Dimensions variable",
       "medium": "Mixed media",
       "year": 2023,
       "date": "2023-03-10",
       "image": "images/Screenshot_2026-03-25_at_14.01.04_1.png",
       "tags": [
-        "exhibitions"
-      ]
+        "drawings"
+      ],
+      "description": ""
     },
     {
       "id": "wkshp-i",
-      "title": "Tufting Workshop",
-      "dimensions": "Documentation",
-      "medium": "Photograph",
+      "title": "Shelter (draft)",
+      "dimensions": "",
+      "medium": "Pen on Paper",
       "year": 2023,
       "date": "2023-02-20",
       "image": "images/Screenshot_2026-03-25_at_13.58.31_1.png",
       "tags": [
-        "workshops"
-      ]
+        "drawings"
+      ],
+      "description": ""
     },
     {
       "id": "like-father-like-daughter-vol-1",
@@ -533,7 +511,7 @@
         "ar": 1.3284,
         "aspect": 1.3284
       },
-      "title": "Landscape II",
+      "title": "Ayrshire Hills 2",
       "dimensions": "",
       "medium": "oil on board",
       "year": 2024,

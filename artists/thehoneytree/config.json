@@ -9,5 +9,10 @@
     "last_login_ip": "151.226.233.153",
     "slack_channel_id": "C0B6EQDJRH9",
     "slack_pinned_ts": "1779930852.398499",
-    "slack_announced": true
+    "slack_announced": true,
+    "platform_widgets": [
+        "inbox"
+    ],
+    "intake_token": "3uT49bITyw4uUkYesUQRAJ4gbEE_LGm-",
+    "handover_token": "KmpqXnWCBvNvIUPV9e1WZ1_YjskvWQPa"
 }

@@ -1,41 +1,536 @@
+/* Fonts. Prepended to every page by compile.py, so this is the one place
+   they are declared — pages must not repeat them. Paths are relative to a
+   page directory, which is always one level under the artist root. */
+@font-face { font-family: 'Archivo'; font-style: normal; font-weight: 400 900; font-display: swap; src: url('../assets/Archivo-Variable.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 300 900; font-display: swap; src: url('../assets/Inter-Variable.woff2') format('woff2'); }
+@font-face { font-family: 'Crimson Pro'; font-style: normal; font-weight: 300 900; font-display: swap; src: url('../assets/CrimsonPro-Variable.woff2') format('woff2'); }
+@font-face { font-family: 'Crimson Pro'; font-style: italic; font-weight: 300 900; font-display: swap; src: url('../assets/CrimsonPro-Italic-Variable.woff2') format('woff2'); }
+
 :root {
-    /* ── Colours ── */
-    --primary: #2a2a28;
-    --accent: #7a8a6e;
-    --accent-hover: #5d7050;
-    --bg: #f5f2ed;
-    --border: #e5e0d8;
-    --text-muted: #6b6860;
-    --text-light: #9a958c;
+    /* ── Colours ──
+       One ink. There is no grey text and no grey rule on this site: hierarchy
+       comes from size, face and weight, never from fading something out. */
+    --primary: #0a0a0a;
+    --accent: #0a0a0a;
+    --accent-hover: #333333;
+    --bg: #ffffff;
+    --surface: #f4f4f2;
+    --border: #0a0a0a;
+    --border-strong: #0a0a0a;
+
+    /* Rule weight. Matched by eye to the stem of 400 Inter at body size; a
+       1px hairline read as a different, thinner voice than the type. */
+    --rule: 1.5px;
 
     /* ── Fonts ── */
-    --text-font: 'Inter', sans-serif;
-    --heading-font: 'Cardo', serif;
+    --text-font: 'Inter', -apple-system, sans-serif;
+    --heading-font: 'Archivo', 'Inter', sans-serif;
+    --serif-font: 'Crimson Pro', Georgia, serif;
+    --mono-font: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 
     /* ── Body Text ── */
-    --body-size: 1.05rem;
+    --body-size: 1rem;
     --body-weight: 400;
-    --body-line-height: 1.7;
+    --body-line-height: 1.6;
 
     /* ── Headings ── */
-    --h1-size: 2.4rem;
-    --h1-weight: 400;
-    --h2-size: 1.6rem;
-    --h2-weight: 400;
-    --h3-size: 1.2rem;
+    --h1-size: 4.5rem;
+    --h1-weight: 700;
+    --h2-size: 1.5rem;
+    --h2-weight: 600;
+    --h3-size: 1.3rem;
     --h3-weight: 600;
-    --heading-line-height: 1.4;
+    --heading-line-height: 1;
 
-    /* ── Spacing & Layout ── */
-    --content-max-width: 640px;
-    --sidebar-width: 260px;
-    --page-padding: 48px;
-    --section-gap: 28px;
-    --border-radius: 8px;
+    /* ── Grid ──
+       One column system for the whole site. The masthead, banner, hero and
+       contact sheet all sit on these tracks, so an edge in one lines up with
+       an edge in the next. Column count steps down at the breakpoints below
+       rather than auto-filling — the hero has to know how many there are to
+       span them. */
+    --page-padding: 40px;
+    --gutter: 24px;
+    --cols: 5;
+    --section-gap: 32px;
+    --border-radius: 0px;
 
     /* ── Nav ── */
-    --nav-size: 14px;
-    --nav-weight: 400;
-    --site-name-size: 18px;
-    --site-name-weight: 600;
+    --nav-size: 12px;
+    --nav-weight: 500;
+    --site-name-size: 15px;
+    --site-name-weight: 700;
+}
+@media (min-width: 1800px) { :root { --cols: 6; } }
+@media (max-width: 1360px) { :root { --cols: 4; } }
+@media (max-width: 1080px) { :root { --cols: 3; } }
+@media (max-width: 860px)  { :root { --cols: 2; --page-padding: 22px; --gutter: 16px; --h1-size: 2.7rem; } }
+@media (max-width: 560px)  { :root { --cols: 1; } }
+
+/* ─────────────────────────────────────────────
+   Editorial wireframe — black on white, straight
+   grotesque, a serif for the writing itself, rules
+   at the weight of the type. Shared by every page;
+   page files add only what is specific to them.
+   ───────────────────────────────────────────── */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+    font-family: var(--text-font);
+    color: var(--primary);
+    background: var(--bg);
+    line-height: var(--body-line-height);
+    font-size: var(--body-size);
+    font-weight: var(--body-weight);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: clip;
+}
+
+/* ── Film grain ────────────────────────────────
+   A fractalNoise tile multiplied over the page, shuffled on a 4-step loop
+   so it reads as moving emulsion rather than a static texture PNG. Kept
+   faint: at .34 it tinted the whole page grey and read as dirt. Frozen,
+   not removed, under prefers-reduced-motion.
+   ───────────────────────────────────────────── */
+body::after {
+    content: '';
+    position: fixed;
+    inset: -140px;
+    pointer-events: none;
+    z-index: 100;
+    opacity: .16;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    animation: grain 640ms steps(1) infinite;
+}
+@keyframes grain {
+    0%   { background-position:   0px   0px; }
+    25%  { background-position: -60px  40px; }
+    50%  { background-position:  35px -55px; }
+    75%  { background-position: -25px -30px; }
+    100% { background-position:  50px  25px; }
+}
+
+::selection { background: #0a0a0a; color: #fff; }
+
+a { color: inherit; text-decoration: none; }
+
+/* ── Mono annotation label — the wireframe voice ── */
+.label {
+    font-family: var(--mono-font);
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+}
+
+/* ── .mask ─────────────────────────────────────
+   Nothing reveals on scroll any more. The slot keeps its clip anyway: an
+   unclipped .mask lets anything that animates spill across its neighbours,
+   which is exactly what a stale cached site.js did on 23 Sep.
+   ───────────────────────────────────────────── */
+.mask { overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+    body::after { animation: none; }
+    * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* ── Masthead ──
+   Full width on every page, so the wordmark sits on the same left edge as
+   everything under it. It used to be capped at 1320px while the index ran
+   edge to edge, which put the name 140px in from the work at 1600px. */
+.masthead {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--bg);
+    border-bottom: var(--rule) solid var(--border-strong);
+}
+.masthead-inner {
+    padding: 18px var(--page-padding);
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.site-name {
+    font-family: var(--heading-font);
+    font-size: var(--site-name-size);
+    font-weight: var(--site-name-weight);
+    letter-spacing: -.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 28px;
+    margin-left: auto;
+}
+.nav-links a {
+    font-family: var(--mono-font);
+    font-size: var(--nav-size);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule);
+    text-underline-offset: 6px;
+    text-decoration-color: transparent;
+    transition: text-decoration-color .15s;
+}
+.nav-links a:hover,
+.nav-links a[aria-current="page"] { text-decoration-color: currentColor; }
+
+.menu-toggle, .menu-overlay { display: none; }
+
+/* ── Main ── */
+.main-content {
+    padding: 64px var(--page-padding) 140px;
+}
+
+/* Every page runs to the same two edges as the masthead. Prose keeps its
+   measure through max-width in ch on the text itself, never by capping the
+   page — a capped page put About's right edge 20px short of the nav. */
+
+.page-head { margin-bottom: 72px; }
+.page-head h1 {
+    font-family: var(--heading-font);
+    font-size: var(--h1-size);
+    font-weight: var(--h1-weight);
+    line-height: var(--heading-line-height);
+    letter-spacing: -.045em;
+    text-transform: uppercase;
+    margin-top: 16px;
+}
+.page-head p {
+    font-family: var(--serif-font);
+    font-size: 1.45rem;
+    line-height: 1.3;
+    max-width: 34ch;
+    margin-top: 22px;
+}
+
+h2 {
+    font-family: var(--heading-font);
+    font-size: var(--h2-size);
+    font-weight: var(--h2-weight);
+    letter-spacing: -.03em;
+    text-transform: uppercase;
+    line-height: var(--heading-line-height);
+}
+h3 {
+    font-family: var(--heading-font);
+    font-size: var(--h3-size);
+    font-weight: var(--h3-weight);
+    letter-spacing: -.025em;
+    line-height: 1.16;
+}
+
+section + section { margin-top: 96px; }
+
+.section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding-bottom: 12px;
+    border-bottom: var(--rule) solid var(--border);
+    margin-bottom: 8px;
+}
+.section-head .label { margin-left: auto; }
+
+/* ── Banner ────────────────────────────────────
+   A solid black strip right under the masthead, carrying who she is in
+   four short mono lines. It is what the hero's kicker and standfirst used
+   to say in two separate grey lines; set as one band, it reads like a
+   masthead dateline instead of small print. Full-bleed, with its text on
+   the page padding so its edges match everything else.
+   ───────────────────────────────────────────── */
+.banner {
+    background: var(--primary);
+    color: var(--bg);
+    font-family: var(--mono-font);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gutter);
+    padding: 13px var(--page-padding);
+}
+.banner > * { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.banner > :last-child { grid-column: -2 / -1; text-align: right; }
+.banner a { text-decoration: underline; text-decoration-thickness: var(--rule); text-underline-offset: 4px; }
+@media (max-width: 1080px) { .banner > :nth-child(3) { display: none; } }
+@media (max-width: 860px)  { .banner > :nth-child(2) { display: none; } }
+@media (max-width: 560px)  {
+    .banner { grid-template-columns: 1fr auto; }
+    .banner > :last-child { grid-column: auto; }
+}
+
+/* ── Wireframe placeholder ─────────────────────
+   Crossed diagonals in a ruled box — the printer's "image goes here" mark.
+   ───────────────────────────────────────────── */
+.wf {
+    position: relative;
+    border: var(--rule) solid var(--border-strong);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+.wf::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(to top right, transparent calc(50% - .75px), var(--primary) 50%, transparent calc(50% + .75px)),
+        linear-gradient(to bottom right, transparent calc(50% - .75px), var(--primary) 50%, transparent calc(50% + .75px));
+}
+.wf::after {
+    content: attr(data-label);
+    position: relative;
+    font-family: var(--mono-font);
+    font-size: 10px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    background: var(--bg);
+    border: var(--rule) solid var(--border-strong);
+    padding: 3px 9px;
+}
+.wf.ratio-16-9 { aspect-ratio: 16 / 9; }
+.wf.ratio-3-2  { aspect-ratio: 3 / 2; }
+.wf.ratio-4-5  { aspect-ratio: 4 / 5; }
+.wf.ratio-1-1  { aspect-ratio: 1 / 1; }
+
+/* ── Image plates ──────────────────────────────
+   Every article image sits in a .plate, in full colour. The halftone dot
+   screen that used to sit over them is gone — Gabriel, 23 Sep: the dots
+   read as grey dirt, not print.
+
+   Hover is the one piece of motion on the site, and it is built to stay
+   on the grid: the plate box never changes size or position. Everything
+   happens inside its clip.
+
+   At rest the image is untouched: no filter at all, so hover never reads
+   as taking colour away to hand it back. On hover it gains 10% saturation
+   and a soft 3% zoom, both easing in and out over .8s.
+
+   Tried and dropped on 23 Sep: a bloom glow, then a stepped "peggy"
+   tremor. Keep it to the zoom.
+   ───────────────────────────────────────────── */
+.plate {
+    position: relative;
+    overflow: hidden;
+    border: var(--rule) solid var(--border-strong);
+    background: var(--surface);
+}
+.plate img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter .8s ease-in-out, scale .8s ease-in-out;
+}
+a:hover .plate img {
+    scale: 1.03;
+    filter: saturate(1.1);
+}
+
+.plate.ratio-3-2 { aspect-ratio: 3 / 2; }
+.plate.ratio-4-5 { aspect-ratio: 4 / 5; }
+
+/* ── Contact sheet ───────────────────────────
+   The article index. Image and text sit together in one column so the
+   pairing reads as a unit. Meta is a fixed two-line mono block above the
+   headline; the headline is set in the serif, because it is her writing
+   and the rest of the page is the frame around it.
+   ───────────────────────────────────────────── */
+.sheet {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: 64px var(--gutter);
+}
+.card { display: block; }
+.card .plate { margin-bottom: 16px; }
+.card .meta {
+    /* Fixed two-line block: publication, then kind and date. A single
+       wrapping line made one card taller than its neighbours and knocked
+       its headline out of alignment across the row. */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 10px;
+}
+.card h3 {
+    font-family: var(--serif-font);
+    font-weight: 400;
+    font-size: 1.4rem;
+    letter-spacing: -.005em;
+    line-height: 1.12;
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule);
+    text-underline-offset: 4px;
+    text-decoration-color: transparent;
+    transition: text-decoration-color .15s;
+}
+.card:hover h3 { text-decoration-color: currentColor; }
+
+.meta {
+    font-family: var(--mono-font);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+}
+
+/* ── Timeline ── */
+.entry {
+    display: grid;
+    /* date in the first column of the site grid, text from the second, so
+       the timeline lines up with the cards on the index */
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: var(--gutter);
+    padding: 28px 0;
+    border-bottom: var(--rule) solid var(--border);
+}
+.entry > :last-child { grid-column: 2 / -1; }
+.entry .when {
+    font-family: var(--mono-font);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding-top: 6px;
+}
+.entry .where { font-family: var(--mono-font); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; margin-top: 8px; }
+.entry p { font-size: .95rem; margin-top: 10px; max-width: 62ch; }
+
+/* ── Buttons ── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono-font);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    padding: 15px 24px;
+    border: var(--rule) solid var(--border-strong);
+    color: var(--primary);
+    background: transparent;
+    transition: background .2s, color .2s;
+}
+.btn:hover { background: var(--primary); color: #fff; }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--bg); color: var(--primary); }
+
+.note {
+    font-family: var(--mono-font);
+    font-size: 11px;
+    line-height: 1.8;
+    border: var(--rule) solid var(--border-strong);
+    border-left-width: 6px;
+    padding: 16px 18px;
+}
+
+/* Scroll progress hairline — element lives in the shared masthead markup,
+   so its CSS lives here rather than in any one page. */
+.progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--primary); transform-origin: 0 50%; transform: scaleX(0);
+    z-index: 60;
+}
+
+/* ── Mobile ── */
+@media (max-width: 860px) {
+    .nav-links { display: none; }
+
+    /* Two rules, not three: the lines are 2px to sit with the 700-weight
+       wordmark beside them (1px vanished, 3px shouted). */
+    .menu-toggle {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        margin-left: auto;
+        background: none; border: 0; cursor: pointer;
+        width: 26px; height: 14px;
+        padding: 0;
+        /* a 44px hit area without moving the drawn icon */
+        position: relative;
+    }
+    .menu-toggle::before { content: ''; position: absolute; inset: -15px -10px; }
+    .menu-toggle span {
+        display: block; height: 2px; width: 100%;
+        background: var(--primary);
+        transition: transform .25s cubic-bezier(.22,1,.36,1);
+    }
+    .menu-toggle.active span:first-child { transform: translateY(6px) rotate(45deg); }
+    .menu-toggle.active span:last-child { transform: translateY(-6px) rotate(-45deg); }
+
+    /* ── Menu overlay ──
+       Built by site.js as a direct child of <body>, not nested in the
+       masthead. Nested, it was a position:fixed child of a sticky (and at
+       one point backdrop-filtered) ancestor: the first made WebKit resolve
+       it against the wrong box, the second made Chromium do it too, and it
+       could end up covering its own close button. Out here it is fixed to
+       the window and always sits under the masthead (z 39 < 40), so the X
+       is reachable by construction rather than by z-index luck.
+
+       It opens as a masked reveal from the top edge, not a fade. */
+    .menu-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 39;
+        background: var(--bg);
+        padding: 96px var(--page-padding) 40px;
+        overflow-y: auto;
+        visibility: hidden;
+        clip-path: inset(0 0 100% 0);
+        transition: clip-path .4s cubic-bezier(.22,1,.36,1), visibility 0s .4s;
+    }
+    .menu-open .menu-overlay {
+        visibility: visible;
+        clip-path: inset(0 0 0 0);
+        transition: clip-path .4s cubic-bezier(.22,1,.36,1), visibility 0s;
+    }
+    /* Scroll lock on <html> only. Locking <body> as well turns body into the
+       scroll container, and the sticky masthead (with the X in it) snaps
+       back to the top of the document, off screen, wherever you had
+       scrolled to. */
+    .menu-open { overflow: hidden; }
+    .menu-overlay ul { list-style: none; }
+    .menu-overlay li { border-bottom: var(--rule) solid var(--border-strong); }
+    .menu-overlay li:first-child { border-top: var(--rule) solid var(--border-strong); }
+    .menu-overlay a {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 14px 0 12px;
+        font-family: var(--heading-font);
+        font-weight: 700;
+        font-size: 2.6rem;
+        line-height: 1;
+        letter-spacing: -.045em;
+        text-transform: uppercase;
+    }
+    .menu-overlay a::after {
+        content: attr(data-n);
+        font-family: var(--mono-font);
+        font-weight: 400;
+        font-size: 10px;
+        letter-spacing: .16em;
+        display: inline-block; /* keeps the current-page underline off it */
+    }
+    .menu-overlay a[aria-current="page"] { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+
+    .main-content { padding-top: 40px; padding-bottom: 96px; }
+    .page-head { margin-bottom: 48px; }
+    .page-head p { font-size: 1.25rem; }
+    .sheet { row-gap: 48px; }
+    .entry { grid-template-columns: 1fr; gap: 6px; }
+    .entry > :last-child { grid-column: auto; }
+    .entry .when { padding-top: 0; }
 }

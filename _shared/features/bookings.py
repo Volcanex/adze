@@ -42,8 +42,15 @@ ENDPOINT_DESCRIPTIONS = {
 }
 
 
+# Repo root, so the path does not depend on the server's CWD.
+_ROOT = Path(__file__).resolve().parents[2]
+
+
 def _get_bookings_path(artist_slug):
-    return Path(f'pages/artists/{artist_slug}/bookings.json')
+    # Was 'pages/artists/...', a directory that has never existed in this repo —
+    # every submission 500'd and was lost. Per-artist state lives beside the
+    # artist's other data (.analytics.json, data.db) under artists/<slug>/.
+    return _ROOT / 'artists' / artist_slug / 'bookings.json'
 
 
 def _load_bookings(artist_slug):
